@@ -1,4 +1,4 @@
-name: Auto-increment Version on Push
+name: Auto-increment Version on Push (.NET)
 
 on:
   push:
@@ -19,14 +19,14 @@ jobs:
       - name: Abort if last commit is from actions bot or is a version commit
         run: |
           LAST_AUTHOR="$(git log -1 --pretty=format:'%an')"
-          LAST_SUBJECT="$(git log -1 --pretty=format:'%s')"
+          LAST_SUBJECT="$(git log-1 --pretty=format:'%s' 2>/dev/null || git log -1 --pretty=format:'%s')"
           echo "Last author: $LAST_AUTHOR"
           echo "Last subject: $LAST_SUBJECT"
           if echo "$LAST_AUTHOR" | grep -Ei "github-actions|actions-user|dependabot" >/dev/null; then
             echo "Commit authored by bot; skipping auto-increment."
             exit 0
           fi
-          if echo "$LAST_SUBJECT" | grep -Ei "chore\(version\):|bump version" >/dev/null; then
+          if echo "$LAST_SUBJECT" | grep -Ei "chore\\(version\\):|bump version" >/dev/null; then
             echo "Last commit is a version bump; skipping."
             exit 0
           fi
@@ -34,13 +34,22 @@ jobs:
       - name: Determine current version
         id: current
         run: |
+          # prefer explicit VERSION file, fallback to Directory.Build.props or git tags
           if [ -f VERSION ]; then
             cur=$(cat VERSION | tr -d " \n\r")
           else
-            if git describe --tags --abbrev=0 >/dev/null 2>&1; then
-              cur=$(git describe --tags --abbrev=0)
-            else
-              cur="1.0.3"
+            # try Directory.Build.props
+            file=$(git ls-files | grep -E "(Directory.Build.props|.*\\.csproj)" | head -n1 || true)
+            if [ -n "$file" ]; then
+              # extract first <Version>...</Version> value
+              cur=$(sed -n 's:.*<Version>\\(.*\\)</Version>.*:\\1:p' "$file" | head -n1)
+            fi
+            if [ -z "$cur" ]; then
+              if git describe --tags --abbrev=0 >/dev/null 2>&1; then
+                cur=$(git describe --tags --abbrev=0)
+              else
+                cur="1.0.0"
+              fi
             fi
           fi
           cur=${cur#v}
@@ -67,7 +76,7 @@ jobs:
           echo "bump_type=$bump" >> $GITHUB_OUTPUT
           echo "Determined bump type: $bump"
 
-      - name: Bump version accordingly
+      - name: Compute new version
         id: bump
         run: |
           cur=${{ steps.current.outputs.current_version }}
@@ -87,26 +96,49 @@ jobs:
           echo "New version: $new"
           echo "new_version=$new" >> $GITHUB_OUTPUT
 
-      - name: Update package.json
+      - name: Update .csproj / Directory.Build.props version
         run: |
           new=${{ steps.bump.outputs.new_version }}
-          echo "Updating package.json to version $new"
-          jq --arg v "$new" '.version = $v' LifeAlertPlus/LifeAlertPlus.Client/package.json > tmp.$$.json && mv tmp.$$.json LifeAlertPlus/LifeAlertPlus.Client/package.json
-          git add LifeAlertPlus/LifeAlertPlus.Client/package.json
+          echo "Updating project files to version $new"
+          # Try Directory.Build.props first
+          if [ -f "Directory.Build.props" ]; then
+            if grep -q "<Version>" Directory.Build.props; then
+              sed -i.bak -E "s#<Version>.*</Version>#<Version>$new</Version>#g" Directory.Build.props
+            else
+              # inject Version property into first <PropertyGroup>
+              awk -v ver="$new" '1; /<PropertyGroup>/ && c==0 { print "  <Version>" ver "</Version>"; c=1 }' Directory.Build.props > tmp.$$ && mv tmp.$$ Directory.Build.props
+            fi
+            git add Directory.Build.props
+          else
+            # Update all csproj files (first match)
+            csproj=$(git ls-files '*.csproj' | head -n1 || true)
+            if [ -n "$csproj" ]; then
+              if grep -q "<Version>" "$csproj"; then
+                sed -i.bak -E "s#<Version>.*</Version>#<Version>$new</Version>#g" "$csproj"
+              else
+                # add Version into first PropertyGroup
+                awk -v ver="$new" '1; /<PropertyGroup>/ && c==0 { print "  <Version>" ver "</Version>"; c=1 }' "$csproj" > tmp.$$ && mv tmp.$$ "$csproj"
+              fi
+              git add "$csproj"
+            else
+              echo "No Directory.Build.props or csproj found; skipping csproj update"
+            fi
+          fi
 
-      - name: Update version.json file
+      - name: Update version.json file for client assets
         run: |
           new=${{ steps.bump.outputs.new_version }}
-          echo "Updating version.json to version $new"
-          jq -n --arg v "$new" '{ "version": $v }' > LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json
-          git add LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json
+          out="LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json"
+          mkdir -p "$(dirname "$out")"
+          printf '{"version":"%s"}\n' "$new" > "$out"
+          git add "$out" || true
 
-      - name: Commit and push new VERSION
+      - name: Commit and push new VERSION and project changes
         run: |
           new=${{ steps.bump.outputs.new_version }}
           echo "$new" > VERSION
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add VERSION
+          git add VERSION || true
           git commit -m "chore(version): bump to $new" || echo "No changes to commit"
           git push origin HEAD:${{ github.ref_name }}
