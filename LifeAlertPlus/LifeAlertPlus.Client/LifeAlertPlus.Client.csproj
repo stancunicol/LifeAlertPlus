@@ -17,7 +17,7 @@
 	</ItemGroup>
 
 	<PropertyGroup>
-		<AssemblyInformationalVersion>1.0.0</AssemblyInformationalVersion>
+		<AssemblyInformationalVersion>1.0.10-326af32318ba7fc65de58e2f8580fe883b6823cc</AssemblyInformationalVersion>
 	</PropertyGroup>
 
 </Project>
