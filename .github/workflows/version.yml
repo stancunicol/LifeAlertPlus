@@ -120,10 +120,11 @@ jobs:
 
 
 
-      - name: Commit and push version bump
+      - name: Commit version bump
         run: |
-          new=${{ steps.bump.outputs.new_version }}
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore(version): bump to $new" || echo "No changes to commit"
-          git push origin HEAD:${{ github.ref_name }}
+          git add LifeAlertPlus/LifeAlertPlus.Client/LifeAlertPlus.Client.csproj
+          git commit -m "chore(version): update AssemblyInformationalVersion to $VERSION" || echo "No changes to commit"
+          git push
+
