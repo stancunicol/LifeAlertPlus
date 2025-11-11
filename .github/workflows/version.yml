@@ -1,0 +1,112 @@
+name: Auto-increment Version on Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  autoincrement:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Abort if last commit is from actions bot or is a version commit
+        run: |
+          LAST_AUTHOR="$(git log -1 --pretty=format:'%an')"
+          LAST_SUBJECT="$(git log -1 --pretty=format:'%s')"
+          echo "Last author: $LAST_AUTHOR"
+          echo "Last subject: $LAST_SUBJECT"
+          if echo "$LAST_AUTHOR" | grep -Ei "github-actions|actions-user|dependabot" >/dev/null; then
+            echo "Commit authored by bot; skipping auto-increment."
+            exit 0
+          fi
+          if echo "$LAST_SUBJECT" | grep -Ei "chore\(version\):|bump version" >/dev/null; then
+            echo "Last commit is a version bump; skipping."
+            exit 0
+          fi
+
+      - name: Determine current version
+        id: current
+        run: |
+          if [ -f VERSION ]; then
+            cur=$(cat VERSION | tr -d " \n\r")
+          else
+            if git describe --tags --abbrev=0 >/dev/null 2>&1; then
+              cur=$(git describe --tags --abbrev=0)
+            else
+              cur="1.0.3"
+            fi
+          fi
+          cur=${cur#v}
+          echo "current_version=$cur" >> $GITHUB_OUTPUT
+          echo "Current version: $cur"
+
+      - name: Determine bump type
+        id: bump_type
+        run: |
+          msg="$(git log -1 --pretty=format:'%s' | tr '[:upper:]' '[:lower:]')"
+          echo "Commit message: $msg"
+
+          if echo "$msg" | grep -q "ui" && echo "$msg" | grep -q "backend"; then
+            bump="major"
+          elif echo "$msg" | grep -q "backend"; then
+            bump="minor"
+          elif echo "$msg" | grep -q "ui"; then
+            bump="patch"
+          else
+            echo "No relevant keyword (ui/backend) found; skipping version bump."
+            exit 0
+          fi
+
+          echo "bump_type=$bump" >> $GITHUB_OUTPUT
+          echo "Determined bump type: $bump"
+
+      - name: Bump version accordingly
+        id: bump
+        run: |
+          cur=${{ steps.current.outputs.current_version }}
+          bump=${{ steps.bump_type.outputs.bump_type }}
+          IFS='.' read -r major minor patch <<< "$cur"
+          major=${major:-0}; minor=${minor:-0}; patch=${patch:-0}
+
+          if [ "$bump" = "major" ]; then
+            major=$((major+1)); minor=0; patch=0
+          elif [ "$bump" = "minor" ]; then
+            minor=$((minor+1)); patch=0
+          elif [ "$bump" = "patch" ]; then
+            patch=$((patch+1))
+          fi
+
+          new="$major.$minor.$patch"
+          echo "New version: $new"
+          echo "new_version=$new" >> $GITHUB_OUTPUT
+
+      - name: Update package.json
+        run: |
+          new=${{ steps.bump.outputs.new_version }}
+          echo "Updating package.json to version $new"
+          jq --arg v "$new" '.version = $v' LifeAlertPlus/LifeAlertPlus.Client/package.json > tmp.$$.json && mv tmp.$$.json LifeAlertPlus/LifeAlertPlus.Client/package.json
+          git add LifeAlertPlus/LifeAlertPlus.Client/package.json
+
+      - name: Update version.json file
+        run: |
+          new=${{ steps.bump.outputs.new_version }}
+          echo "Updating version.json to version $new"
+          jq -n --arg v "$new" '{ "version": $v }' > LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json
+          git add LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json
+
+      - name: Commit and push new VERSION
+        run: |
+          new=${{ steps.bump.outputs.new_version }}
+          echo "$new" > VERSION
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          git commit -m "chore(version): bump to $new" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref_name }}
