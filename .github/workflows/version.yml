@@ -113,6 +113,12 @@ jobs:
 
           git add VERSION
 
+      - name: Set version in csproj
+        run: |
+          VERSION="1.0.${{ github.run_number }}-${{ github.sha }}"
+          sed -i 's|<Version>.*</Version>|<Version>'"$VERSION"'</Version>|' LifeAlertPlus.Client/LifeAlertPlus.Client.csproj
+
+
       - name: Commit and push version bump
         run: |
           new=${{ steps.bump.outputs.new_version }}
