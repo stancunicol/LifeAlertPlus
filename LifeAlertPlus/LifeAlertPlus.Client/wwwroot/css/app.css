@@ -1,0 +1,16 @@
+/* wwwroot/css/app.css */
+
+@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Jua", sans-serif;
+    background: linear-gradient(135deg, #FFD6EA 0%, #FFC4E1 100%);
+    min-height: 100vh;
+    overflow: hidden;
+}
