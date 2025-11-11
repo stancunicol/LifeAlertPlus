@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using LifeAlertPlus.Domain.Entities;
 
 namespace LifeAlertPlus.Domain.IRepositories
 {
-    internal interface IUserRepository
+    public interface IUserRepository
     {
+        Task<User?> GetUserByEmailAsync(string email);
     }
 }
