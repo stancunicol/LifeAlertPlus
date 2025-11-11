@@ -7,11 +7,11 @@ namespace LifeAlertPlus.Client.Pages.Login
         private string Email { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
         private bool _showPassword = false;
-        private string AppVersion { get; set; } = "1.0.0";
+        private string AppVersion { get; set; }
 
         private void OnLogin()
         {
-            // TODO: implement authentication
+            
         }
     }
 }

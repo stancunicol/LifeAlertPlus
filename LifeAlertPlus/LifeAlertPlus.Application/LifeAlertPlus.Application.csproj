@@ -6,9 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="IServices\" />
-    <Folder Include="Services\" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\LifeAlertPlus.Domain\LifeAlertPlus.Domain.csproj" />
+	</ItemGroup>
 
 </Project>
