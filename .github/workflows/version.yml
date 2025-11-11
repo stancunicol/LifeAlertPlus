@@ -1,12 +1,16 @@
-name: Auto-increment Version on Push (.NET)
+name: Auto-increment Version on Push
 
 on:
   push:
     branches:
       - main
 
+# Permitem GITHUB_TOKEN să scrie în repo (fără a folosi secrete)
+permissions:
+  contents: write
+
 jobs:
-  autoincrement:
+  bump-version:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,13 +23,15 @@ jobs:
       - name: Abort if last commit is from actions bot or is a version commit
         run: |
           LAST_AUTHOR="$(git log -1 --pretty=format:'%an')"
-          LAST_SUBJECT="$(git log-1 --pretty=format:'%s' 2>/dev/null || git log -1 --pretty=format:'%s')"
+          LAST_SUBJECT="$(git log -1 --pretty=format:'%s')"
           echo "Last author: $LAST_AUTHOR"
           echo "Last subject: $LAST_SUBJECT"
+
           if echo "$LAST_AUTHOR" | grep -Ei "github-actions|actions-user|dependabot" >/dev/null; then
             echo "Commit authored by bot; skipping auto-increment."
             exit 0
           fi
+
           if echo "$LAST_SUBJECT" | grep -Ei "chore\\(version\\):|bump version" >/dev/null; then
             echo "Last commit is a version bump; skipping."
             exit 0
@@ -34,34 +40,29 @@ jobs:
       - name: Determine current version
         id: current
         run: |
-          # prefer explicit VERSION file, fallback to Directory.Build.props or git tags
           if [ -f VERSION ]; then
             cur=$(cat VERSION | tr -d " \n\r")
           else
-            # try Directory.Build.props
-            file=$(git ls-files | grep -E "(Directory.Build.props|.*\\.csproj)" | head -n1 || true)
-            if [ -n "$file" ]; then
-              # extract first <Version>...</Version> value
-              cur=$(sed -n 's:.*<Version>\\(.*\\)</Version>.*:\\1:p' "$file" | head -n1)
-            fi
-            if [ -z "$cur" ]; then
-              if git describe --tags --abbrev=0 >/dev/null 2>&1; then
-                cur=$(git describe --tags --abbrev=0)
-              else
-                cur="1.0.0"
-              fi
+            if git describe --tags --abbrev=0 >/dev/null 2>&1; then
+              cur=$(git describe --tags --abbrev=0)
+            else
+              cur="1.0.0"
             fi
           fi
           cur=${cur#v}
           echo "current_version=$cur" >> $GITHUB_OUTPUT
           echo "Current version: $cur"
 
-      - name: Determine bump type
+      - name: Determine bump type from commit message
         id: bump_type
         run: |
           msg="$(git log -1 --pretty=format:'%s' | tr '[:upper:]' '[:lower:]')"
           echo "Commit message: $msg"
 
+          # Mapping (ajustează după nevoie):
+          # - both "ui" and "backend" -> major
+          # - "backend" -> minor
+          # - "ui" -> patch
           if echo "$msg" | grep -q "ui" && echo "$msg" | grep -q "backend"; then
             bump="major"
           elif echo "$msg" | grep -q "backend"; then
@@ -69,7 +70,7 @@ jobs:
           elif echo "$msg" | grep -q "ui"; then
             bump="patch"
           else
-            echo "No relevant keyword (ui/backend) found; skipping version bump."
+            echo "No bump keyword found in commit message; skipping."
             exit 0
           fi
 
@@ -96,49 +97,26 @@ jobs:
           echo "New version: $new"
           echo "new_version=$new" >> $GITHUB_OUTPUT
 
-      - name: Update .csproj / Directory.Build.props version
+      - name: Write VERSION and client version.json (if present)
         run: |
           new=${{ steps.bump.outputs.new_version }}
-          echo "Updating project files to version $new"
-          # Try Directory.Build.props first
-          if [ -f "Directory.Build.props" ]; then
-            if grep -q "<Version>" Directory.Build.props; then
-              sed -i.bak -E "s#<Version>.*</Version>#<Version>$new</Version>#g" Directory.Build.props
-            else
-              # inject Version property into first <PropertyGroup>
-              awk -v ver="$new" '1; /<PropertyGroup>/ && c==0 { print "  <Version>" ver "</Version>"; c=1 }' Directory.Build.props > tmp.$$ && mv tmp.$$ Directory.Build.props
-            fi
-            git add Directory.Build.props
-          else
-            # Update all csproj files (first match)
-            csproj=$(git ls-files '*.csproj' | head -n1 || true)
-            if [ -n "$csproj" ]; then
-              if grep -q "<Version>" "$csproj"; then
-                sed -i.bak -E "s#<Version>.*</Version>#<Version>$new</Version>#g" "$csproj"
-              else
-                # add Version into first PropertyGroup
-                awk -v ver="$new" '1; /<PropertyGroup>/ && c==0 { print "  <Version>" ver "</Version>"; c=1 }' "$csproj" > tmp.$$ && mv tmp.$$ "$csproj"
-              fi
-              git add "$csproj"
-            else
-              echo "No Directory.Build.props or csproj found; skipping csproj update"
-            fi
+          echo "Writing VERSION = $new"
+          echo "$new" > VERSION
+
+          client_ver_path="LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json"
+          if [ -d "$(dirname "$client_ver_path")" ] || git ls-files --error-unmatch "$client_ver_path" >/dev/null 2>&1; then
+            mkdir -p "$(dirname "$client_ver_path")"
+            printf '{"version":"%s"}\n' "$new" > "$client_ver_path"
+            echo "Updated $client_ver_path"
+            git add "$client_ver_path"
           fi
 
-      - name: Update version.json file for client assets
-        run: |
-          new=${{ steps.bump.outputs.new_version }}
-          out="LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json"
-          mkdir -p "$(dirname "$out")"
-          printf '{"version":"%s"}\n' "$new" > "$out"
-          git add "$out" || true
+          git add VERSION
 
-      - name: Commit and push new VERSION and project changes
+      - name: Commit and push version bump
         run: |
           new=${{ steps.bump.outputs.new_version }}
-          echo "$new" > VERSION
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add VERSION || true
           git commit -m "chore(version): bump to $new" || echo "No changes to commit"
           git push origin HEAD:${{ github.ref_name }}
