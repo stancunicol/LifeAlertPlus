@@ -16,17 +16,11 @@
 		<ProjectReference Include="..\LifeAlertPlus.Shared\LifeAlertPlus.Shared.csproj" />
 	</ItemGroup>
 
-  <Target Name="SetInformationalVersionFromFile" BeforeTargets="GenerateAssemblyInfo">
-    <ReadLinesFromFile File="VERSION">
-      <Output TaskParameter="Lines" ItemName="VersionFromFile" />
-    </ReadLinesFromFile>
-
-      <AssemblyInformationalVersion>1.0.11-1fee0994fa728bacbd7504c1244a7801d4e53cb0</AssemblyInformationalVersion>
-    </PropertyGroup>
-  </Target>
-
-  <PropertyGroup>
-    <AssemblyInformationalVersion Condition=" '$(AssemblyInformationalVersion)' == '' ">1.0.0</AssemblyInformationalVersion>
-	</PropertyGroup>
+	<Target Name="CopyVersionToClient" BeforeTargets="Build">
+		<Copy
+			SourceFiles="../../VERSION"
+			DestinationFiles="wwwroot/VERSION"
+			OverWriteReadOnlyFiles="true" />
+	</Target>
 
 </Project>

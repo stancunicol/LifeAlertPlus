@@ -112,19 +112,10 @@ jobs:
 
           git add VERSION
 
-      - name: Set version in csproj
-        run: |
-          VERSION="1.0.${{ github.run_number }}-${{ github.sha }}"
-          echo "Updating csproj to version $VERSION"
-          sed -z -i 's|<AssemblyInformationalVersion>[^<]*</AssemblyInformationalVersion>|<AssemblyInformationalVersion>'"$VERSION"'</AssemblyInformationalVersion>|' LifeAlertPlus/LifeAlertPlus.Client/LifeAlertPlus.Client.csproj
-
-
 
       - name: Commit version bump
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add LifeAlertPlus/LifeAlertPlus.Client/LifeAlertPlus.Client.csproj
-          git commit -m "chore(version): update AssemblyInformationalVersion to $VERSION" || echo "No changes to commit"
           git push
 

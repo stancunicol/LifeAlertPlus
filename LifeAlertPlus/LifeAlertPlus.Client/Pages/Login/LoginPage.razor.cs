@@ -14,25 +14,22 @@ namespace LifeAlertPlus.Client.Pages.Login
         private bool _showPassword = false;
         private string Version { get; set; } = string.Empty;
 
-        protected override async System.Threading.Tasks.Task OnInitializedAsync()
+        protected override async Task OnInitializedAsync()
         {
             try
             {
-                // Fetch VERSION from the client application's wwwroot (same origin)
-                // Use Navigation.BaseUri to avoid the HttpClient BaseAddress pointing to the API
                 var url = Navigation.BaseUri + "VERSION";
                 var v = await Http.GetStringAsync(url);
                 Version = (v ?? string.Empty).Trim();
 
                 if (string.IsNullOrEmpty(Version))
                 {
-                    Version = AppVersion.Version;
+                    Version = "unknown";
                 }
             }
             catch
             {
-                // Fallback to assembly attribute
-                Version = AppVersion.Version;
+                Version = "unknown";
             }
         }
 
