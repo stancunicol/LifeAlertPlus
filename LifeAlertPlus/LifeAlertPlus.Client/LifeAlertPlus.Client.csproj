@@ -21,7 +21,7 @@
       <Output TaskParameter="Lines" ItemName="VersionFromFile" />
     </ReadLinesFromFile>
 
-      <AssemblyInformationalVersion>%(VersionFromFile.Identity)</AssemblyInformationalVersion>
+      <AssemblyInformationalVersion>1.0.11-1fee0994fa728bacbd7504c1244a7801d4e53cb0</AssemblyInformationalVersion>
     </PropertyGroup>
   </Target>
 
