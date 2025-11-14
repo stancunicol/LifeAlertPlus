@@ -16,8 +16,17 @@
 		<ProjectReference Include="..\LifeAlertPlus.Shared\LifeAlertPlus.Shared.csproj" />
 	</ItemGroup>
 
-	<PropertyGroup>
-		<AssemblyInformationalVersion>1.0.10-326af32318ba7fc65de58e2f8580fe883b6823cc</AssemblyInformationalVersion>
+  <Target Name="SetInformationalVersionFromFile" BeforeTargets="GenerateAssemblyInfo">
+    <ReadLinesFromFile File="VERSION">
+      <Output TaskParameter="Lines" ItemName="VersionFromFile" />
+    </ReadLinesFromFile>
+
+      <AssemblyInformationalVersion>%(VersionFromFile.Identity)</AssemblyInformationalVersion>
+    </PropertyGroup>
+  </Target>
+
+  <PropertyGroup>
+    <AssemblyInformationalVersion Condition=" '$(AssemblyInformationalVersion)' == '' ">1.0.0</AssemblyInformationalVersion>
 	</PropertyGroup>
 
 </Project>

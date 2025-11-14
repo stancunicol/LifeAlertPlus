@@ -1,13 +1,31 @@
 ﻿using System.Reflection;
 
-namespace LifeAlertPlus.Client
+public static class AppVersion
 {
-    public static class AppVersion
+    public static string Version
     {
-        public static string Version =>
-            (typeof(AppVersion).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion?
-            .Split('-', '+')[0])
-            ?? "unknown";
+        get
+        {
+            try
+            {
+                // Dacă fișierul VERSION există, citește-l
+                if (File.Exists("LifeAlertPlus/LifeAlertPlus.Client/VERSION"))
+                {
+                    var version = File.ReadAllText("LifeAlertPlus/LifeAlertPlus.Client/VERSION").Trim();
+                    if (!string.IsNullOrEmpty(version))
+                        return version;
+                }
+
+                // Fallback la atributul din assembly
+                return typeof(AppVersion).Assembly
+                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                    .InformationalVersion
+                    ?? "unknown";
+            }
+            catch
+            {
+                return "unknown";
+            }
+        }
     }
 }
