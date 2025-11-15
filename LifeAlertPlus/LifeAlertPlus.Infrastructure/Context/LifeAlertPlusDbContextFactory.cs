@@ -8,16 +8,17 @@ namespace LifeAlertPlus.Infrastructure.Context
     {
         public LifeAlertPlusDbContext CreateDbContext(string[] args)
         {
+            var baseDir = Directory.GetCurrentDirectory();
+
+            // când rulezi "dotnet ef", currentDirectory este proiectul Infrastructure
+            var infraPath = Path.GetFullPath(Path.Combine(baseDir));
+            var dbPath = Path.Combine(infraPath, "lifealert.db");
+
+            var connectionString = $"Data Source={dbPath}";
+
             var optionsBuilder = new DbContextOptionsBuilder<LifeAlertPlusDbContext>();
-
-            // default to local sqlite file; tools may pass a connection string as first arg
-            var connectionString = "Data Source=lifealert.db";
-            if (args != null && args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]))
-            {
-                connectionString = args[0];
-            }
-
             optionsBuilder.UseSqlite(connectionString);
+
             return new LifeAlertPlusDbContext(optionsBuilder.Options);
         }
     }

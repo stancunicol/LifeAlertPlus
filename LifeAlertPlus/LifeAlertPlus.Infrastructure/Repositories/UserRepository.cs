@@ -17,5 +17,12 @@ namespace LifeAlertPlus.Infrastructure.Repositories
             return await _dbContext.Users
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
+
+        public async Task<bool> CreateUserAsync(User user)
+        {
+            _dbContext.Users.Add(user);
+            var result = await _dbContext.SaveChangesAsync();
+            return result > 0;
+        }
     }
 }
