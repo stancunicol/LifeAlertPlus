@@ -7,5 +7,6 @@ namespace LifeAlertPlus.Application.IServices
     {
         Task<User?> GetUserByEmailAsync(string email);
         Task<bool> CreateUserAsync(UserRegisterRequestDTO user);
+        Task<bool> UpdateUserAsync(User user);
     }
 }

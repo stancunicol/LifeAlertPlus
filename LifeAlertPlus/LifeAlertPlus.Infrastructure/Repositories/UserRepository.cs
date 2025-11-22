@@ -24,5 +24,12 @@ namespace LifeAlertPlus.Infrastructure.Repositories
             var result = await _dbContext.SaveChangesAsync();
             return result > 0;
         }
+
+        public async Task<bool> UpdateUserAsync(User user)
+        {
+            _dbContext.Users.Update(user);
+            var result = await _dbContext.SaveChangesAsync();
+            return result > 0;
+        }
     }
 }

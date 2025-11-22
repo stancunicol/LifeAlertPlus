@@ -3,8 +3,6 @@ using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Infrastructure.Context;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
-using LifeAlertPlus.Application.IServices;
-using LifeAlertPlus.Application.Services;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -15,10 +13,11 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IUserService _userService;
         private readonly IAuthentificationService _authentificationService;
         private readonly IJwtService _jwtService;
+        private readonly IEmailService _emailService;
         private readonly LifeAlertPlusDbContext _dbContext;
         private readonly IConfiguration _configuration;
 
-        public AuthentificationController(IUserService userService, LifeAlertPlusDbContext lifeAlertPlusDbContext, IConfiguration configuration, IAuthentificationService authentificationService, LifeAlertPlusDbContext dbContext, IJwtService jwtService)
+        public AuthentificationController(IUserService userService, LifeAlertPlusDbContext lifeAlertPlusDbContext, IConfiguration configuration, IAuthentificationService authentificationService, LifeAlertPlusDbContext dbContext, IJwtService jwtService, IEmailService emailService)
         {
             _userService = userService;
             _dbContext = lifeAlertPlusDbContext;
@@ -26,6 +25,7 @@ namespace LifeAlertPlus.API.Controllers
             _authentificationService = authentificationService;
             _dbContext = dbContext;
             _jwtService = jwtService;
+            _emailService = emailService;
         }
 
         [HttpPost("login")]
@@ -62,6 +62,18 @@ namespace LifeAlertPlus.API.Controllers
             if(response == false)
             {
                 return Ok(new UserRegisterResponseDTO { Success = false, Message = "Registration failed." });
+            }
+
+            try
+            {
+                // Point to the Blazor client login page, not the API
+                var loginUrl = "http://localhost:5254/login";
+                var userName = $"{request.FirstName} {request.LastName}";
+                await _emailService.SendRegistrationSuccessEmailAsync(request.Email, userName, loginUrl);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send registration email: {ex.Message}");
             }
 
             return Ok(new UserRegisterResponseDTO { Success = true, Message = "Registration successful." });

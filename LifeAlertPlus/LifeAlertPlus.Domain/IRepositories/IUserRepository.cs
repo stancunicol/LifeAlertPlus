@@ -6,5 +6,6 @@ namespace LifeAlertPlus.Domain.IRepositories
     {
         Task<User?> GetUserByEmailAsync(string email);
         Task<bool> CreateUserAsync(User user);
+        Task<bool> UpdateUserAsync(User user);
     }
 }

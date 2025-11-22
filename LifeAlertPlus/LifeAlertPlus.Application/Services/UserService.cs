@@ -32,13 +32,17 @@ namespace LifeAlertPlus.Application.Services
                 Email = user.Email,
                 Telephone = user.Telephone,
                 PasswordHash = _authentificationService.HashPassword(user.Password),
-                IdApp = "local",
                 IsEmailConfirmed = false,
                 CreatedAt = DateTime.UtcNow
             };
 
             await _userRepository.CreateUserAsync(newUser);
             return true;
+        }
+
+        public async Task<bool> UpdateUserAsync(User user)
+        {
+            return await _userRepository.UpdateUserAsync(user);
         }
     }
 }

@@ -6,8 +6,7 @@
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Email { get; set; }
-        public string IdApp { get; set; }
-        public bool IsEmailConfirmed { get; set; }
+        public bool IsEmailConfirmed { get; set; } = false;
         public string Telephone { get; set; }
         public string PasswordHash { get; set; }
         public string? EmailConfirmationToken { get; set; }
