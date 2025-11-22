@@ -27,7 +27,6 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     FirstName = "Nicol",
                     LastName = "Stancu",
                     Email = adminEmail,
-                    IdApp = "local",
                     IsEmailConfirmed = true,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("20042005"),
                     Telephone = "0745623166",
