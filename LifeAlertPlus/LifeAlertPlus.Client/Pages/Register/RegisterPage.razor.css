@@ -1,10 +1,10 @@
-﻿.login-rect {
+.login-rect {
     position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: min(900px, 86vw);
-    height: min(556px, 75vh);
+    width: min(1000px, 90vw);
+    height: min(680px, 85vh);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -58,14 +58,14 @@
     color: #000000;
     font-family: "Jua", sans-serif;
     margin-top: 1rem;
-    transform: translateY(180px);
+    transform: translateY(240px);
 }
 
 .login-right {
     position: absolute;
     right: 50%;
     top: 50%;
-    transform: translate(120%, -45%);
+    transform: translate(120%, -50%);
     width: 38%;
     display: flex;
     flex-direction: column;
@@ -73,11 +73,21 @@
     align-items: center;
 }
 
+.form-row {
+    display: flex;
+    gap: 0.8rem;
+    width: 100%;
+}
+
 .form-group {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
     width: 100%;
+}
+
+.form-group-half {
+    width: calc(50% - 0.4rem);
 }
 
 .form-label {
@@ -151,18 +161,6 @@
         transform: translateY(0);
     }
 
-.error-message {
-    font-family: "Jua", sans-serif;
-    font-size: 0.95rem;
-    text-align: center;
-    padding: 0.5rem;
-    border-radius: 10px;
-    width: 100%;
-    background: rgba(255, 0, 0, 0.1);
-    color: black;
-    margin-top: 10px;
-}
-
 .form-links {
     display: flex;
     flex-direction: column;
@@ -185,6 +183,26 @@ a.form-link:visited {
     a.form-link:hover {
         opacity: 0.7;
     }
+
+.success-message,
+.error-message {
+    font-family: "Jua", sans-serif;
+    font-size: 0.95rem;
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 10px;
+    width: 100%;
+}
+
+.success-message {
+    background: rgba(144, 238, 144, 0.2);
+    color: green;
+}
+
+.error-message {
+    background: rgba(255, 0, 0, 0.1);
+    color: black;
+}
 
 @media (max-width: 600px) {
     .login-rect {
@@ -223,4 +241,103 @@ a.form-link:visited {
         right: 0;
         transform: none;
     }
+
+    .form-row {
+        flex-direction: column;
+        gap: 1.2rem;
+    }
+
+    .form-group-half {
+        width: 100%;
+    }
 }
+
+/* ========== MODAL ========== */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    width: min(450px, 90vw);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+    .modal-header h3 {
+        font-family: "Jua", sans-serif;
+        font-size: 1.8rem;
+        color: #000;
+        margin: 0;
+    }
+
+.modal-body {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+    .modal-body p {
+        font-family: "Jua", sans-serif;
+        font-size: 1.1rem;
+        color: #333;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+.modal-footer {
+    display: flex;
+    justify-content: center;
+}
+
+.modal-button {
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    color: #000;
+    font-family: "Jua", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+    min-width: 120px;
+}
+
+    .modal-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+    }
+
+    .modal-button:active {
+        transform: translateY(0);
+    }
+

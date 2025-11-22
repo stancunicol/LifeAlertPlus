@@ -1,0 +1,107 @@
+@page "/register"
+@layout EmptyLayout
+
+<div class="login-rect">
+    <div class="login-left">
+        <div class="login-logo">LifeAlert +</div>
+        <div class="login-description">Because every heartbeat matters</div>
+        <div class="login-version">v @Version</div>
+    </div>
+
+    <div class="login-right">
+        <div class="form-row">
+            <div class="form-group form-group-half">
+                <label class="form-label">First Name</label>
+                <div class="input-wrapper">
+                    <input type="text" class="form-input form-input-icon"
+                           placeholder="John"
+                           @bind="FirstName" />
+                </div>
+            </div>
+
+            <div class="form-group form-group-half">
+                <label class="form-label">Last Name</label>
+                <div class="input-wrapper">
+                    <input type="text" class="form-input form-input-icon"
+                           placeholder="Doe"
+                           @bind="LastName" />
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Email</label>
+            <div class="input-wrapper">
+                <input type="email" class="form-input form-input-icon"
+                       placeholder="user@email.com"
+                       @bind="Email" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Telephone</label>
+            <div class="input-wrapper">
+                <input type="tel" class="form-input form-input-icon"
+                       placeholder="+40 123 456 789"
+                       @bind="Telephone" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Password</label>
+            <div class="input-wrapper">
+                <input type="@(_showPassword ? "text" : "password")"
+                       class="form-input form-input-icon form-input-password"
+                       placeholder="password123"
+                       @bind="Password" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            <div class="input-wrapper">
+                <input type="@(_showPassword ? "text" : "password")"
+                       class="form-input form-input-icon form-input-password"
+                       placeholder="password123"
+                       @bind="ConfirmPassword" />
+            </div>
+        </div>
+
+        <button class="login-button" @onclick="OnRegister">Register</button>
+
+        @if (!string.IsNullOrEmpty(SuccessMessage))
+        {
+            <div class="success-message" style="color: green; margin-top: 10px; text-align: center;">
+                @SuccessMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="error-message" style="color: black; margin-top: 10px; text-align: center;">
+                @ErrorMessage
+            </div>
+        }
+
+        <div class="form-links">
+            <a class="form-link" href="/login">Already have an account? Login</a>
+        </div>
+    </div>
+</div>
+
+@if (ShowModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Registration Successful</h3>
+            </div>
+            <div class="modal-body">
+                <p>An email has been sent for verification.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-button" @onclick="CloseModal">OK</button>
+            </div>
+        </div>
+    </div>
+}

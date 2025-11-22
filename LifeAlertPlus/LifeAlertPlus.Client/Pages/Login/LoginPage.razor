@@ -31,9 +31,16 @@
 
         <button class="login-button" @onclick="OnLogin">Login</button>
 
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="error-message">
+                @ErrorMessage
+            </div>
+        }
+
         <div class="form-links">
             <a class="form-link" href="#">Forgot your password?</a>
-            <a class="form-link" href="#">Create a new account</a>
+            <a class="form-link" href="/register">Create a new account</a>
         </div>
     </div>
 </div>

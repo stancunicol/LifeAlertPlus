@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using LifeAlertPlus.Client.Services;
 
-namespace LifeAlertPlus.Client.Pages.Login
+namespace LifeAlertPlus.Client.Pages.Register
 {
-    public partial class LoginPage : ComponentBase
+    public partial class RegisterPage : ComponentBase
     {
         [Inject]
         private HttpClient Http { get; set; } = default!;
@@ -13,12 +13,18 @@ namespace LifeAlertPlus.Client.Pages.Login
 
         [Inject]
         private AuthentificationService AuthentificationService { get; set; } = default!;
-        
+
+        private string FirstName { get; set; } = string.Empty;
+        private string LastName { get; set; } = string.Empty;
         private string Email { get; set; } = string.Empty;
+        private string Telephone { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
+        private string ConfirmPassword { get; set; } = string.Empty;
         private bool _showPassword = false;
         private string Version { get; set; } = string.Empty;
         private string ErrorMessage { get; set; } = string.Empty;
+        private string SuccessMessage { get; set; } = string.Empty;
+        private bool ShowModal { get; set; } = false;
 
         protected override async Task OnInitializedAsync()
         {
@@ -39,36 +45,42 @@ namespace LifeAlertPlus.Client.Pages.Login
             }
         }
 
-        private async Task OnLogin()
+        private async Task OnRegister()
         {
             ErrorMessage = string.Empty;
+            SuccessMessage = string.Empty;
 
-            var request = new Shared.DTOs.Requests.User.UserLoginRequestDTO
+            if (Password != ConfirmPassword)
             {
+                ErrorMessage = "Passwords do not match.";
+                return;
+            }
+
+            var request = new Shared.DTOs.Requests.User.UserRegisterRequestDTO
+            {
+                FirstName = FirstName,
+                LastName = LastName,
                 Email = Email,
+                Telephone = Telephone,
                 Password = Password
             };
 
-            var response = await AuthentificationService.LoginAsync(request);
-            
-            if(response != null)
+            var response = await AuthentificationService.RegisterAsync(request);
+
+            if (response != null)
             {
-                if(response.Success == true)
-                {
-                    Navigation.NavigateTo("/");
-                    Console.WriteLine("Login successful.");
-                }
-                else
-                {
-                    ErrorMessage = response.Message ?? "Login failed.";
-                    Console.WriteLine("Login failed: " + ErrorMessage);
-                }
+                ShowModal = true;
             }
             else
             {
-                ErrorMessage = "An error occurred during login.";
-                Console.WriteLine("Login error: No response from server.");
+                ErrorMessage = "Registration failed. Please try again.";
             }
+        }
+
+        private void CloseModal()
+        {
+            ShowModal = false;
+            Navigation.NavigateTo("/login");
         }
     }
 }
