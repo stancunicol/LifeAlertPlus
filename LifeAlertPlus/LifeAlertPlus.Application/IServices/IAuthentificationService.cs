@@ -10,5 +10,6 @@ namespace LifeAlertPlus.Application.IServices
     {
         bool VerifyPassword(string password, string passwordHash);
         string HashPassword(string password);
+        string GeneratePasswordResetToken();
     }
 }

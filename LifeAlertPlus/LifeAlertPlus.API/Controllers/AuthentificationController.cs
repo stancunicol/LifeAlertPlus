@@ -37,6 +37,12 @@ namespace LifeAlertPlus.API.Controllers
             {
                 return Ok(new UserLoginResponseDTO { Success = false, Message = "Login failed.", Token = string.Empty });
             }
+
+            if(user.IsEmailConfirmed == false)
+            {
+                return Ok(new UserLoginResponseDTO { Success = false, Message = "Email not confirmed.", Token = string.Empty });
+            }
+
             var token = _jwtService.GenerateToken(user);
 
             return Ok(new UserLoginResponseDTO
@@ -66,10 +72,13 @@ namespace LifeAlertPlus.API.Controllers
 
             try
             {
-                // Point to the Blazor client login page, not the API
-                var loginUrl = "http://localhost:5254/login";
-                var userName = $"{request.FirstName} {request.LastName}";
-                await _emailService.SendRegistrationSuccessEmailAsync(request.Email, userName, loginUrl);
+                var newUser = await _userService.GetUserByEmailAsync(request.Email);
+                if (newUser != null && !string.IsNullOrEmpty(newUser.EmailConfirmationToken))
+                {
+                    var verificationUrl = $"http://localhost:5176/api/authentification/verify-email?token={Uri.EscapeDataString(newUser.EmailConfirmationToken)}";
+                    var userName = $"{request.FirstName} {request.LastName}";
+                    await _emailService.SendRegistrationSuccessEmailAsync(request.Email, userName, verificationUrl);
+                }
             }
             catch (Exception ex)
             {
@@ -77,6 +86,90 @@ namespace LifeAlertPlus.API.Controllers
             }
 
             return Ok(new UserRegisterResponseDTO { Success = true, Message = "Registration successful." });
+        }
+
+        [HttpGet("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+        {
+            if (string.IsNullOrEmpty(token))
+            {
+                return Redirect("http://localhost:5254/login?verified=false&reason=invalid");
+            }
+
+            var user = await _userService.VerifyEmailAsync(token);
+
+            if (user == null)
+            {
+                return Redirect("http://localhost:5254/login?verified=false&reason=expired");
+            }
+
+            return Redirect("http://localhost:5254/login?verified=true");
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] UserResetPasswordRequestDTO request)
+        {
+            if (string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.NewPassword))
+            {
+                return BadRequest("Invalid token or password.");
+            }
+
+            var user = await _userService.GetUserByResetTokenAsync(request.Token);
+
+            if (user == null || user.PasswordResetExpires == null || user.PasswordResetExpires < DateTime.UtcNow)
+            {
+                return BadRequest("Invalid or expired token.");
+            }
+
+            if(user.IsEmailConfirmed == false)
+            {
+                return BadRequest("Email not confirmed.");
+            }
+
+            user.PasswordHash = _authentificationService.HashPassword(request.NewPassword);
+            user.PasswordResetToken = null;
+            user.PasswordResetExpires = null;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userService.UpdateUserAsync(user);
+
+            return Ok("Password has been reset successfully.");
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] UserForgotPasswordRequestDTO request)
+        {
+            if (string.IsNullOrEmpty(request.Email))
+            {
+                return BadRequest("Email is required.");
+            }
+
+            var user = await _userService.GetUserByEmailAsync(request.Email);
+
+            if (user == null)
+            {
+                return Ok(new { Success = true, Message = "If the email exists, a password reset link has been sent." });
+            }
+
+            var resetToken = _userService.GeneratePasswordResetToken();
+            user.PasswordResetToken = resetToken;
+            user.PasswordResetExpires = DateTime.UtcNow.AddHours(24);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userService.UpdateUserAsync(user);
+
+            try
+            {
+                var resetUrl = $"http://localhost:5254/reset-password?token={Uri.EscapeDataString(resetToken)}";
+                var userName = $"{user.FirstName} {user.LastName}";
+                await _emailService.SendPasswordResetEmailAsync(user.Email, userName, resetUrl);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send password reset email: {ex.Message}");
+            }
+
+            return Ok(new { Success = true, Message = "If the email exists, a password reset link has been sent." });
         }
     }
 }

@@ -22,8 +22,39 @@ namespace LifeAlertPlus.Application.Services
             return await _userRepository.GetUserByEmailAsync(email);
         }
 
+        public async Task<User?> GetUserByIdAsync(Guid id)
+        {
+            return await _userRepository.GetUserByIdAsync(id);
+        }
+
+        public string GenerateEmailVerificationToken()
+        {
+            return Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        }
+
+        public async Task<User?> VerifyEmailAsync(string token)
+        {
+            var users = await _userRepository.GetAllUsersAsync();
+            var user = users.FirstOrDefault(u => u.EmailConfirmationToken == token);
+
+            if (user == null || user.EmailConfirmationExpires == null || user.EmailConfirmationExpires < DateTime.UtcNow)
+            {
+                return null;
+            }
+
+            user.IsEmailConfirmed = true;
+            user.EmailConfirmationToken = null;
+            user.EmailConfirmationExpires = null;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userRepository.UpdateUserAsync(user);
+            return user;
+        }
+
         public async Task<bool> CreateUserAsync(UserRegisterRequestDTO user)
         {
+            var emailToken = GenerateEmailVerificationToken();
+            
             var newUser = new User
             {
                 Id = Guid.NewGuid(),
@@ -33,6 +64,8 @@ namespace LifeAlertPlus.Application.Services
                 Telephone = user.Telephone,
                 PasswordHash = _authentificationService.HashPassword(user.Password),
                 IsEmailConfirmed = false,
+                EmailConfirmationToken = emailToken,
+                EmailConfirmationExpires = DateTime.UtcNow.AddHours(24),
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -43,6 +76,17 @@ namespace LifeAlertPlus.Application.Services
         public async Task<bool> UpdateUserAsync(User user)
         {
             return await _userRepository.UpdateUserAsync(user);
+        }
+
+        public async Task<User?> GetUserByResetTokenAsync(string token)
+        {
+            var users = await _userRepository.GetAllUsersAsync();
+            return users.FirstOrDefault(u => u.PasswordResetToken == token);
+        }
+
+        public string GeneratePasswordResetToken()
+        {
+            return Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
         }
     }
 }

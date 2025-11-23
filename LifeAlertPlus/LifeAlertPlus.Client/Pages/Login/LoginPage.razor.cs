@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using System.Net.Http.Json;
 using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Pages.Login
@@ -19,6 +20,10 @@ namespace LifeAlertPlus.Client.Pages.Login
         private bool _showPassword = false;
         private string Version { get; set; } = string.Empty;
         private string ErrorMessage { get; set; } = string.Empty;
+        private bool ShowForgotPasswordModal { get; set; } = false;
+        private string ForgotPasswordEmail { get; set; } = string.Empty;
+        private string ForgotPasswordMessage { get; set; } = string.Empty;
+        private bool IsForgotPasswordSuccess { get; set; } = false;
 
         protected override async Task OnInitializedAsync()
         {
@@ -68,6 +73,63 @@ namespace LifeAlertPlus.Client.Pages.Login
             {
                 ErrorMessage = "An error occurred during login.";
                 Console.WriteLine("Login error: No response from server.");
+            }
+        }
+
+        private void OpenForgotPasswordModal()
+        {
+            ShowForgotPasswordModal = true;
+            ForgotPasswordEmail = string.Empty;
+            ForgotPasswordMessage = string.Empty;
+            IsForgotPasswordSuccess = false;
+        }
+
+        private void CloseForgotPasswordModal()
+        {
+            ShowForgotPasswordModal = false;
+        }
+
+        private async Task OnSendResetEmail()
+        {
+            ForgotPasswordMessage = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(ForgotPasswordEmail))
+            {
+                ForgotPasswordMessage = "Please enter your email address.";
+                IsForgotPasswordSuccess = false;
+                return;
+            }
+
+            if (!ForgotPasswordEmail.Contains("@"))
+            {
+                ForgotPasswordMessage = "Please enter a valid email address.";
+                IsForgotPasswordSuccess = false;
+                return;
+            }
+
+            try
+            {
+                var response = await Http.PostAsJsonAsync("api/authentification/forgot-password", new { Email = ForgotPasswordEmail });
+
+                if (response.IsSuccessStatusCode)
+                {
+                    ForgotPasswordMessage = "A password reset link has been sent to your email.";
+                    IsForgotPasswordSuccess = true;
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    ForgotPasswordMessage = error.Contains("not found") 
+                        ? "No account found with this email address." 
+                        : "Failed to send reset email. Please try again.";
+                    IsForgotPasswordSuccess = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                ForgotPasswordMessage = "An error occurred. Please try again later.";
+                IsForgotPasswordSuccess = false;
+                Console.WriteLine($"Forgot password error: {ex.Message}");
             }
         }
     }

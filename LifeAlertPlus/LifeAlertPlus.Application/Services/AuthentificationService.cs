@@ -18,5 +18,10 @@ namespace LifeAlertPlus.Application.Services
         {
             return BCrypt.Net.BCrypt.HashPassword(password);
         }
+
+        public string GeneratePasswordResetToken()
+        {
+            return Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        }
     }
 }

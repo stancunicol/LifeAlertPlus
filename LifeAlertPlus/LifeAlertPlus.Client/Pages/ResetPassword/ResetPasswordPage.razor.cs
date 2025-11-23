@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Components;
-using LifeAlertPlus.Client.Services;
+using System.Net.Http.Json;
+using LifeAlertPlus.Shared.DTOs.Requests.User;
 
-namespace LifeAlertPlus.Client.Pages.Register
+namespace LifeAlertPlus.Client.Pages.ResetPassword
 {
-    public partial class RegisterPage : ComponentBase
+    public partial class ResetPasswordPage : ComponentBase
     {
         [Inject]
         private HttpClient Http { get; set; } = default!;
@@ -11,23 +12,25 @@ namespace LifeAlertPlus.Client.Pages.Register
         [Inject]
         private NavigationManager Navigation { get; set; } = default!;
 
-        [Inject]
-        private AuthentificationService AuthentificationService { get; set; } = default!;
-
-        private string FirstName { get; set; } = string.Empty;
-        private string LastName { get; set; } = string.Empty;
-        private string Email { get; set; } = string.Empty;
-        private string Telephone { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
         private string ConfirmPassword { get; set; } = string.Empty;
         private bool _showPassword = false;
         private string Version { get; set; } = string.Empty;
         private string ErrorMessage { get; set; } = string.Empty;
         private string SuccessMessage { get; set; } = string.Empty;
-        private bool ShowModal { get; set; } = false;
+        private string ResetToken { get; set; } = string.Empty;
 
         protected override async Task OnInitializedAsync()
         {
+            var uri = new Uri(Navigation.Uri);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            ResetToken = query["token"] ?? string.Empty;
+
+            if (string.IsNullOrEmpty(ResetToken))
+            {
+                ErrorMessage = "Invalid reset link. Please request a new password reset.";
+            }
+
             try
             {
                 var url = Navigation.BaseUri + "VERSION";
@@ -45,19 +48,11 @@ namespace LifeAlertPlus.Client.Pages.Register
             }
         }
 
-        private async Task OnRegister()
+        private async Task OnResetPassword()
         {
             ErrorMessage = string.Empty;
             SuccessMessage = string.Empty;
 
-            if(string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(LastName) ||
-               string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Telephone) ||
-               string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(ConfirmPassword))
-            {
-                ErrorMessage = "All fields are required.";
-                return;
-            }
-            
             var passwordValidation = ValidatePassword(Password);
             if (!passwordValidation.IsValid)
             {
@@ -71,31 +66,35 @@ namespace LifeAlertPlus.Client.Pages.Register
                 return;
             }
 
-            var request = new Shared.DTOs.Requests.User.UserRegisterRequestDTO
+            try
             {
-                FirstName = FirstName,
-                LastName = LastName,
-                Email = Email,
-                Telephone = Telephone,
-                Password = Password
-            };
+                var request = new UserResetPasswordRequestDTO
+                {
+                    Token = ResetToken,
+                    NewPassword = Password
+                };
 
-            var response = await AuthentificationService.RegisterAsync(request);
+                var response = await Http.PostAsJsonAsync("api/authentification/reset-password", request);
 
-            if (response != null)
-            {
-                ShowModal = true;
+                if (response.IsSuccessStatusCode)
+                {
+                    SuccessMessage = "Password reset successful! Redirecting to login...";
+                    await Task.Delay(2000);
+                    Navigation.NavigateTo("/login");
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    ErrorMessage = error.Contains("expired") 
+                        ? "Reset link has expired. Please request a new password reset." 
+                        : "Failed to reset password. Please try again.";
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ErrorMessage = "Registration failed. Please try again.";
+                ErrorMessage = "An error occurred. Please try again later.";
+                Console.WriteLine($"Reset password error: {ex.Message}");
             }
-        }
-
-        private void CloseModal()
-        {
-            ShowModal = false;
-            Navigation.NavigateTo("/login");
         }
 
         private (bool IsValid, string ErrorMessage) ValidatePassword(string password)

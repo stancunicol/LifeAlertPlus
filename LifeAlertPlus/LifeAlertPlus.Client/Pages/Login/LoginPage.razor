@@ -39,8 +39,50 @@
         }
 
         <div class="form-links">
-            <a class="form-link" href="#">Forgot your password?</a>
+            <a class="form-link" @onclick="OpenForgotPasswordModal" @onclick:preventDefault>Forgot your password?</a>
             <a class="form-link" href="/register">Create a new account</a>
         </div>
     </div>
 </div>
+
+@if (ShowForgotPasswordModal)
+{
+    <div class="modal-overlay" @onclick="CloseForgotPasswordModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Reset Password</h3>
+            </div>
+            <div class="modal-body">
+                @if (!IsForgotPasswordSuccess)
+                {
+                    <p>Enter your email address and we'll send you a link to reset your password.</p>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <div class="input-wrapper">
+                            <input type="email" class="form-input"
+                                   placeholder="user@email.com"
+                                   @bind="ForgotPasswordEmail" />
+                        </div>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(ForgotPasswordMessage))
+                {
+                    <div class="@(IsForgotPasswordSuccess ? "success-message" : "error-message")">
+                        @ForgotPasswordMessage
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                @if (!IsForgotPasswordSuccess)
+                {
+                    <button class="modal-button" @onclick="OnSendResetEmail">Send Reset Link</button>
+                    <button class="modal-button-secondary" @onclick="CloseForgotPasswordModal">Cancel</button>
+                }
+                else
+                {
+                    <button class="modal-button" @onclick="CloseForgotPasswordModal">Close</button>
+                }
+            </div>
+        </div>
+    </div>
+}

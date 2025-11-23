@@ -18,6 +18,17 @@ namespace LifeAlertPlus.Infrastructure.Repositories
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
 
+        public async Task<User?> GetUserByIdAsync(Guid id)
+        {
+            return await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.Id == id);
+        }
+
+        public async Task<IEnumerable<User>> GetAllUsersAsync()
+        {
+            return await _dbContext.Users.ToListAsync();
+        }
+
         public async Task<bool> CreateUserAsync(User user)
         {
             _dbContext.Users.Add(user);

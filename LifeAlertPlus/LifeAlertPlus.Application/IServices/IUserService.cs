@@ -6,7 +6,12 @@ namespace LifeAlertPlus.Application.IServices
     public interface IUserService
     {
         Task<User?> GetUserByEmailAsync(string email);
+        Task<User?> GetUserByIdAsync(Guid id);
+        Task<User?> GetUserByResetTokenAsync(string token);
         Task<bool> CreateUserAsync(UserRegisterRequestDTO user);
         Task<bool> UpdateUserAsync(User user);
+        Task<User?> VerifyEmailAsync(string token);
+        string GenerateEmailVerificationToken();
+        string GeneratePasswordResetToken();
     }
 }
