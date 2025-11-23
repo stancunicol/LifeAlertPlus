@@ -1,0 +1,17 @@
+.page {
+    min-height: 100vh;
+    background: #f9f9f9;
+    margin: 0;
+    padding: 0;
+}
+
+main {
+    padding-top: 65px;
+    min-height: calc(100vh - 65px);
+}
+
+.content {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}

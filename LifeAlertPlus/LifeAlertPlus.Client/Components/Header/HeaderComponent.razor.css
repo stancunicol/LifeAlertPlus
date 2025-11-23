@@ -1,0 +1,232 @@
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    padding: 0;
+}
+
+.header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0.8rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+}
+
+.header-logo {
+    font-family: "Jua", sans-serif;
+    font-size: 28px;
+    font-weight: 550;
+    color: #000;
+    text-decoration: none;
+    transition: opacity 0.3s ease;
+}
+
+    .header-logo:hover {
+        opacity: 0.8;
+    }
+
+.header-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.nav-link {
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    color: #000;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+    .nav-link:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .nav-link.active {
+        background: rgba(255, 255, 255, 0.3);
+        font-weight: 500;
+    }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background: #000;
+            border-radius: 2px;
+        }
+
+.header-right {
+    position: relative;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+    .user-profile:hover {
+        background: rgba(255, 255, 255, 0.25);
+    }
+
+.user-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Jua", sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #D88BB7;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.user-name {
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    color: #000;
+    font-weight: 500;
+}
+
+.dropdown-icon {
+    font-size: 0.7rem;
+    color: #000;
+    transition: transform 0.3s ease;
+}
+
+.user-profile:hover .dropdown-icon {
+    transform: translateY(2px);
+}
+
+.profile-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
+    overflow: hidden;
+    animation: menuFadeIn 0.2s ease;
+    z-index: 1001;
+}
+
+@keyframes menuFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.profile-menu-item {
+    display: block;
+    padding: 0.8rem 1.2rem;
+    font-family: "Jua", sans-serif;
+    font-size: 0.95rem;
+    color: #333;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .profile-menu-item:hover {
+        background: rgba(232, 165, 200, 0.1);
+        color: #000;
+    }
+
+    .profile-menu-item.logout {
+        color: #dc3545;
+    }
+
+        .profile-menu-item.logout:hover {
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+.profile-menu-divider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 0.3rem 0;
+}
+
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .header-container {
+        padding: 0.8rem 1rem;
+    }
+
+    .header-left {
+        gap: 1.5rem;
+    }
+
+    .header-logo {
+        font-size: 24px;
+    }
+
+    .header-nav {
+        gap: 0.8rem;
+    }
+
+    .nav-link {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+
+    .user-name {
+        display: none;
+    }
+
+    .user-profile {
+        padding: 0.4rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .header-nav {
+        display: none;
+    }
+
+    .header-logo {
+        font-size: 20px;
+    }
+}

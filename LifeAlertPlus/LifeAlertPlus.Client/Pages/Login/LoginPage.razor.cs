@@ -60,7 +60,7 @@ namespace LifeAlertPlus.Client.Pages.Login
             {
                 if(response.Success == true)
                 {
-                    Navigation.NavigateTo("/");
+                    Navigation.NavigateTo("/dashboard");
                     Console.WriteLine("Login successful.");
                 }
                 else

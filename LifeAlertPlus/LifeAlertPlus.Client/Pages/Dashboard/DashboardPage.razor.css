@@ -1,0 +1,10 @@
+.dashboard-content {
+    padding: 2rem;
+}
+
+    .dashboard-content h1 {
+        font-family: "Jua", sans-serif;
+        font-size: 2rem;
+        color: #000;
+        margin-bottom: 1.5rem;
+    }
