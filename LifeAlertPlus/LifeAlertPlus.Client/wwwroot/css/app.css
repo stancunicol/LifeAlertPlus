@@ -12,5 +12,5 @@ body {
     font-family: "Jua", sans-serif;
     background: linear-gradient(135deg, #FFD6EA 0%, #FFC4E1 100%);
     min-height: 100vh;
-    overflow: hidden;
+    overflow-y: auto;
 }

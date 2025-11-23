@@ -1,10 +1,413 @@
-.dashboard-content {
+.dashboard-container {
     padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
-    .dashboard-content h1 {
+.dashboard-header {
+    margin-bottom: 2rem;
+}
+
+    .dashboard-header h1 {
         font-family: "Jua", sans-serif;
-        font-size: 2rem;
+        font-size: 2.2rem;
         color: #000;
-        margin-bottom: 1.5rem;
+        margin: 0 0 0.5rem 0;
     }
+
+.dashboard-subtitle {
+    font-family: "Jua", sans-serif;
+    font-size: 1.1rem;
+    color: #666;
+    margin: 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+
+.stat-icon {
+    font-size: 2.5rem;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+}
+
+.stat-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-family: "Jua", sans-serif;
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.3rem;
+}
+
+.stat-value {
+    font-family: "Jua", sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #000;
+}
+
+    .stat-value.critical {
+        color: #dc3545;
+    }
+
+    .stat-value.ok {
+        color: #28a745;
+    }
+
+.content-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.section {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+    .section.full-width {
+        width: 100%;
+    }
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+    .section-header h2 {
+        font-family: "Jua", sans-serif;
+        font-size: 1.5rem;
+        color: #000;
+        margin: 0;
+    }
+
+.view-all-link {
+    font-family: "Jua", sans-serif;
+    font-size: 0.95rem;
+    color: #D88BB7;
+    text-decoration: none;
+    transition: opacity 0.3s ease;
+}
+
+    .view-all-link:hover {
+        opacity: 0.7;
+    }
+
+.monitored-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.person-card-simple {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+    .person-card-simple:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+.card-header-colored {
+    padding: 2rem 1.5rem;
+}
+
+    .card-header-colored.ok {
+        background: linear-gradient(135deg, #d4f4dd 0%, #b8e6c3 100%);
+    }
+
+    .card-header-colored.warning {
+        background: linear-gradient(135deg, #fff4b3 0%, #ffe680 100%);
+    }
+
+    .card-header-colored.critical {
+        background: linear-gradient(135deg, #ffd4cc 0%, #ffb3a6 100%);
+    }
+
+.person-name {
+    font-family: "Jua", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #000;
+    margin: 0 0 0.3rem 0;
+}
+
+.person-age-text {
+    font-family: "Jua", sans-serif;
+    font-size: 1.1rem;
+    color: #333;
+    margin: 0 0 1rem 0;
+}
+
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.card-header-colored.ok .status-dot {
+    background: #28a745;
+}
+
+.card-header-colored.warning .status-dot {
+    background: #ffc107;
+}
+
+.card-header-colored.critical .status-dot {
+    background: #dc3545;
+}
+
+.status-text {
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.card-header-colored.ok .status-text {
+    color: #1e7e34;
+}
+
+.card-header-colored.warning .status-text {
+    color: #d39e00;
+}
+
+.card-header-colored.critical .status-text {
+    color: #c82333;
+}
+
+.card-body-white {
+    padding: 1.5rem;
+    background: white;
+}
+
+.vitals-inline {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.vital-inline {
+    font-family: "Jua", sans-serif;
+    font-size: 1.1rem;
+    color: #000;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.last-update {
+    font-family: "Jua", sans-serif;
+    font-size: 0.95rem;
+    color: #666;
+    margin: 0;
+}
+
+.status-badge {
+    font-family: "Jua", sans-serif;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+    .status-badge.critical {
+        background: rgba(220, 53, 69, 0.15);
+        color: #dc3545;
+    }
+
+    .status-badge.warning {
+        background: rgba(255, 193, 7, 0.15);
+        color: #d39e00;
+    }
+
+    .status-badge.ok {
+        background: rgba(40, 167, 69, 0.15);
+        color: #28a745;
+    }
+
+.alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.alert-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 12px;
+    border-left: 4px solid #17a2b8;
+    transition: all 0.3s ease;
+}
+
+    .alert-item:hover {
+        background: #f0f0f0;
+    }
+
+    .alert-item.critical {
+        border-left-color: #dc3545;
+        background: rgba(220, 53, 69, 0.05);
+    }
+
+    .alert-item.warning {
+        border-left-color: #ffc107;
+        background: rgba(255, 193, 7, 0.05);
+    }
+
+    .alert-item.info {
+        border-left-color: #17a2b8;
+        background: rgba(23, 162, 184, 0.05);
+    }
+
+.alert-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+    .alert-content h4 {
+        font-family: "Jua", sans-serif;
+        font-size: 1rem;
+        color: #000;
+        margin: 0 0 0.3rem 0;
+    }
+
+    .alert-content p {
+        font-family: "Jua", sans-serif;
+        font-size: 0.9rem;
+        color: #666;
+        margin: 0 0 0.5rem 0;
+    }
+
+.alert-time {
+    font-family: "Jua", sans-serif;
+    font-size: 0.8rem;
+    color: #999;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.action-button {
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    padding: 0.9rem 1.5rem;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+    .action-button.primary {
+        background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+        color: #000;
+        box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+    }
+
+        .action-button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+        }
+
+    .action-button.secondary {
+        background: white;
+        color: #000;
+        border: 2px solid #E8A5C8;
+    }
+
+        .action-button.secondary:hover {
+            background: rgba(232, 165, 200, 0.1);
+            transform: translateY(-2px);
+        }
+
+.button-icon {
+    font-size: 1.2rem;
+}
+
+@media (max-width: 1024px) {
+    .monitored-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .monitored-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-actions {
+        flex-direction: column;
+    }
+
+    .action-button {
+        width: 100%;
+        justify-content: center;
+    }
+}

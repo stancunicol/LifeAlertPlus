@@ -1,7 +1,121 @@
 @page "/dashboard"
 
-<HeaderComponent UserName="John Doe" />
+<HeaderComponent UserName="@CurrentUser" />
 
-<div class="dashboard-content">
-    <h1>Dashboard</h1>
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Dashboard</h1>
+        <p class="dashboard-subtitle">Welcome back, @CurrentUser! Here's your health monitoring overview.</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon heart">❤️</div>
+            <div class="stat-info">
+                <span class="stat-label">Total Monitored</span>
+                <span class="stat-value">@MonitoredPeople.Count</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon alert">⚠️</div>
+            <div class="stat-info">
+                <span class="stat-label">Active Alerts</span>
+                <span class="stat-value critical">@ActiveAlerts</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon check">✓</div>
+            <div class="stat-info">
+                <span class="stat-label">Stable Status</span>
+                <span class="stat-value ok">@StableCount</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon chart">📊</div>
+            <div class="stat-info">
+                <span class="stat-label">Measurements Today</span>
+                <span class="stat-value">@TodayMeasurements</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+        <!-- Monitored People -->
+        <div class="section monitored-section full-width">
+            <div class="section-header">
+                <h2>Monitored People</h2>
+                <a href="/monitored" class="view-all-link">View All →</a>
+            </div>
+            
+            <div class="monitored-grid">
+                @foreach (var person in MonitoredPeople)
+                {
+                    <div class="person-card-simple @GetStatusClass(person.Status)">
+                        <div class="card-header-colored @person.Status.ToLower()">
+                            <h3 class="person-name">@person.Name</h3>
+                            <p class="person-age-text">@person.Age ani</p>
+                            <div class="status-row">
+                                <span class="status-dot"></span>
+                                <span class="status-text">@GetStatusText(person.Status)</span>
+                            </div>
+                        </div>
+                        <div class="card-body-white">
+                            <div class="vitals-inline">
+                                <span class="vital-inline">❤️ @person.HeartRate bpm</span>
+                                @if (!string.IsNullOrEmpty(person.BloodPressure) && person.BloodPressure != "N/A")
+                                {
+                                    <span class="vital-inline">🩸 @person.BloodPressure</span>
+                                }
+                                <span class="vital-inline">🌡️ @person.Temperature°C</span>
+                            </div>
+                            <p class="last-update">Acum @person.LastUpdate</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Recent Alerts -->
+        <div class="section alerts-section">
+            <div class="section-header">
+                <h2>Recent Alerts</h2>
+                <a href="/notifications" class="view-all-link">View All →</a>
+            </div>
+            
+            <div class="alerts-list">
+                @foreach (var alert in RecentAlerts)
+                {
+                    <div class="alert-item @alert.Type.ToLower()">
+                        <div class="alert-icon">@GetAlertIcon(alert.Type)</div>
+                        <div class="alert-content">
+                            <h4>@alert.Title</h4>
+                            <p>@alert.Description</p>
+                            <span class="alert-time">@alert.Time</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <button class="action-button primary">
+            <span class="button-icon">➕</span>
+            Add Monitored Person
+        </button>
+        <button class="action-button secondary">
+            <span class="button-icon">📊</span>
+            View Full History
+        </button>
+        <button class="action-button secondary">
+            <span class="button-icon">⚙️</span>
+            Settings
+        </button>
+    </div>
 </div>
