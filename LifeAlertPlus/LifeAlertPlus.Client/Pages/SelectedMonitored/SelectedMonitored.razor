@@ -1,0 +1,172 @@
+@page "/monitored/{PersonId:int}"
+@using LifeAlertPlus.Client.Components.Header
+@layout MainLayout
+
+<HeaderComponent UserName="Maria Popescu" />
+
+<div class="selected-monitored-container">
+    @if (Person != null)
+    {
+        <div class="back-navigation">
+            <button class="btn-back" @onclick="GoBack">
+                <span class="back-icon">←</span> Go Back to Monitored List
+            </button>
+        </div>
+
+        <div class="person-profile-header">
+            <div class="profile-left">
+                <div class="person-avatar-huge">@GetInitials(Person.Name)</div>
+                <div class="profile-info-main">
+                    <h1 class="person-name-main">@Person.Name</h1>
+                    <p class="person-meta">@Person.Age years • @Person.Relationship</p>
+                    <div class="status-badge @Person.Status.ToLower()">
+                        <span class="status-dot-large"></span>
+                        @GetStatusText(Person.Status)
+                    </div>
+                </div>
+            </div>
+            <div class="profile-right">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <span class="contact-icon">📍</span>
+                        <span class="contact-text">@Person.Location</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">📞</span>
+                        <span class="contact-text">@Person.Phone</span>
+                    </div>
+                    <div class="contact-item">
+                        <span class="contact-icon">⏰</span>
+                        <span class="contact-text">Last Update: @Person.LastUpdate</span>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-action-main">📞 Call</button>
+                    <button class="btn-action-main">✉️ Message</button>
+                    <button class="btn-action-main">⚙️ Edit Profile</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-overview">
+            <div class="stat-card-large heart-rate">
+                <div class="stat-icon-huge">❤️</div>
+                <div class="stat-content">
+                    <h3>Heart Rate</h3>
+                    <div class="stat-value-huge">@Person.HeartRate <span class="stat-unit">bpm</span></div>
+                    <p class="stat-status @GetVitalStatus(Person.HeartRate, 60, 100)">@GetVitalStatusText(Person.HeartRate, 60, 100)</p>
+                </div>
+            </div>
+            <div class="stat-card-large blood-pressure">
+                <div class="stat-icon-huge">🩸</div>
+                <div class="stat-content">
+                    <h3>Blood Pressure</h3>
+                    <div class="stat-value-huge">@Person.BloodPressure <span class="stat-unit">mmHg</span></div>
+                    <p class="stat-status normal">Normal</p>
+                </div>
+            </div>
+            <div class="stat-card-large temperature">
+                <div class="stat-icon-huge">🌡️</div>
+                <div class="stat-content">
+                    <h3>Temperature</h3>
+                    <div class="stat-value-huge">@Person.Temperature <span class="stat-unit">°C</span></div>
+                    <p class="stat-status @GetTempStatus(Person.Temperature)">@GetTempStatusText(Person.Temperature)</p>
+                </div>
+            </div>
+            <div class="stat-card-large glucose">
+                <div class="stat-icon-huge">🍬</div>
+                <div class="stat-content">
+                    <h3>Glucose</h3>
+                    <div class="stat-value-huge">@Person.Glucose <span class="stat-unit">mg/dL</span></div>
+                    <p class="stat-status @GetVitalStatus(Person.Glucose, 70, 140)">@GetVitalStatusText(Person.Glucose, 70, 140)</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="chart-section">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>📊 Heart Rate Evolution (Last Week)</h2>
+                    </div>
+                    <div class="chart-placeholder">
+                        <div class="chart-bars">
+                            @foreach (var day in HeartRateHistory)
+                            {
+                                <div class="chart-bar-group">
+                                    <div class="chart-bar" style="height: @(day.Value)%;"></div>
+                                    <span class="chart-label">@day.Day</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>🩸 Blood Pressure Evolution (Last Week)</h2>
+                    </div>
+                    <div class="chart-placeholder">
+                        <div class="chart-bars">
+                            @foreach (var day in BloodPressureHistory)
+                            {
+                                <div class="chart-bar-group">
+                                    <div class="chart-bar systolic" style="height: @(day.Systolic)%;"></div>
+                                    <div class="chart-bar diastolic" style="height: @(day.Diastolic)%;"></div>
+                                    <span class="chart-label">@day.Day</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>🔔 Recent Alerts</h2>
+                    </div>
+                    <div class="alerts-list">
+                        @foreach (var alert in RecentAlerts)
+                        {
+                            <div class="alert-item @alert.Severity.ToLower()">
+                                <div class="alert-icon">@GetAlertIcon(alert.Severity)</div>
+                                <div class="alert-content">
+                                    <h4>@alert.Title</h4>
+                                    <p>@alert.Description</p>
+                                    <span class="alert-time">@alert.Time</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>📋 Recent Measurements</h2>
+                    </div>
+                    <div class="measurements-list">
+                        @foreach (var measurement in RecentMeasurements)
+                        {
+                            <div class="measurement-item">
+                                <div class="measurement-icon">@measurement.Icon</div>
+                                <div class="measurement-content">
+                                    <h4>@measurement.Type</h4>
+                                    <p class="measurement-value">@measurement.Value</p>
+                                    <span class="measurement-time">@measurement.Time</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+    }
+</div>

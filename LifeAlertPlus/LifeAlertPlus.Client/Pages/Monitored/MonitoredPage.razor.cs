@@ -4,6 +4,9 @@ namespace LifeAlertPlus.Client.Pages.Monitored;
 
 public partial class MonitoredPage : ComponentBase
 {
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
     private string CurrentUser = "John Doe";
     private string FilterStatus = "All";
     private bool ShowAddPersonModal = false;
@@ -12,6 +15,7 @@ public partial class MonitoredPage : ComponentBase
     {
         new MonitoredPersonDetailed
         {
+            Id = 1,
             Name = "Elena Popescu",
             Age = 76,
             Relationship = "Mother",
@@ -25,6 +29,7 @@ public partial class MonitoredPage : ComponentBase
         },
         new MonitoredPersonDetailed
         {
+            Id = 2,
             Name = "Ion Popa",
             Age = 82,
             Relationship = "Father",
@@ -38,6 +43,7 @@ public partial class MonitoredPage : ComponentBase
         },
         new MonitoredPersonDetailed
         {
+            Id = 3,
             Name = "Maria Ionescu",
             Age = 75,
             Relationship = "Aunt",
@@ -51,6 +57,7 @@ public partial class MonitoredPage : ComponentBase
         },
         new MonitoredPersonDetailed
         {
+            Id = 4,
             Name = "Vasile Dumitrescu",
             Age = 70,
             Relationship = "Uncle",
@@ -64,6 +71,7 @@ public partial class MonitoredPage : ComponentBase
         },
         new MonitoredPersonDetailed
         {
+            Id = 5,
             Name = "Ana Marin",
             Age = 63,
             Relationship = "Mother-in-law",
@@ -77,6 +85,7 @@ public partial class MonitoredPage : ComponentBase
         },
         new MonitoredPersonDetailed
         {
+            Id = 6,
             Name = "Gheorghe Stan",
             Age = 79,
             Relationship = "Grandfather",
@@ -90,6 +99,7 @@ public partial class MonitoredPage : ComponentBase
         },
         new MonitoredPersonDetailed
         {
+            Id = 7,
             Name = "Ioana Radu",
             Age = 68,
             Relationship = "Grandmother",
@@ -103,6 +113,7 @@ public partial class MonitoredPage : ComponentBase
         },
         new MonitoredPersonDetailed
         {
+            Id = 8,
             Name = "Mihai Petre",
             Age = 85,
             Relationship = "Neighbor",
@@ -165,8 +176,14 @@ public partial class MonitoredPage : ComponentBase
         ShowAddPersonModal = false;
     }
 
+    private void ViewDetails(int personId)
+    {
+        NavigationManager.NavigateTo($"/monitored/{personId}");
+    }
+
     public class MonitoredPersonDetailed
     {
+        public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public int Age { get; set; }
         public string Relationship { get; set; } = string.Empty;
