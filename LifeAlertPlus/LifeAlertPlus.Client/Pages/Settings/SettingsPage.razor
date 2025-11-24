@@ -1,0 +1,310 @@
+@page "/settings"
+@using LifeAlertPlus.Client.Components.Header
+@layout MainLayout
+
+<HeaderComponent UserName="Maria Popescu" />
+
+<div class="settings-container">
+    <div class="settings-header">
+        <h1>⚙️ Settings</h1>
+        <p>Personalize your application according to your preferences</p>
+    </div>
+
+    <div class="settings-content">
+        <div class="settings-section">
+            <div class="section-header">
+                <h2>🎨 Appearance</h2>
+            </div>
+            <div class="section-content">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Theme</h3>
+                        <p>Choose between light and dark themes</p>
+                    </div>
+                    <select @bind="Settings.Theme" class="select-input">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="auto">Automatic</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Accent Color</h3>
+                        <p>Personalize the main color of the application</p>
+                    </div>
+                    <div class="color-picker-wrapper">
+                        <input type="color" @bind="Settings.AccentColor" class="color-input" />
+                        <span class="color-value">@Settings.AccentColor</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Font Size</h3>
+                        <p>Adjust the text size in the application</p>
+                    </div>
+                    <select @bind="Settings.FontSize" class="select-input">
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Animations</h3>
+                        <p>Enable or disable interface animations</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" @bind="Settings.EnableAnimations" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="section-header">
+                <h2>🚨 Alert Thresholds</h2>
+            </div>
+            <div class="section-content">
+                <div class="alert-threshold-group">
+                    <h3>🩸 Blood Pressure</h3>
+                    <div class="threshold-inputs">
+                        <div class="threshold-input-group">
+                            <label>Systolic Min</label>
+                            <input type="number" @bind="Settings.BPSystolicMin" class="number-input" min="80" max="180" />
+                            <span class="unit">mmHg</span>
+                        </div>
+                        <div class="threshold-input-group">
+                            <label>Systolic Max</label>
+                            <input type="number" @bind="Settings.BPSystolicMax" class="number-input" min="80" max="180" />
+                            <span class="unit">mmHg</span>
+                        </div>
+                        <div class="threshold-input-group">
+                            <label>Diastolic Min</label>
+                            <input type="number" @bind="Settings.BPDiastolicMin" class="number-input" min="50" max="120" />
+                            <span class="unit">mmHg</span>
+                        </div>
+                        <div class="threshold-input-group">
+                            <label>Diastolic Max</label>
+                            <input type="number" @bind="Settings.BPDiastolicMax" class="number-input" min="50" max="120" />
+                            <span class="unit">mmHg</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert-threshold-group">
+                    <h3>❤️ Heart Rate</h3>
+                    <div class="threshold-inputs">
+                        <div class="threshold-input-group">
+                            <label>Heart Rate Min</label>
+                            <input type="number" @bind="Settings.HeartRateMin" class="number-input" min="40" max="150" />
+                            <span class="unit">bpm</span>
+                        </div>
+                        <div class="threshold-input-group">
+                            <label>Heart Rate Max</label>
+                            <input type="number" @bind="Settings.HeartRateMax" class="number-input" min="40" max="150" />
+                            <span class="unit">bpm</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert-threshold-group">
+                    <h3>🍬 Glucose</h3>
+                    <div class="threshold-inputs">
+                        <div class="threshold-input-group">
+                            <label>Glucose Min</label>
+                            <input type="number" @bind="Settings.GlucoseMin" class="number-input" min="50" max="200" />
+                            <span class="unit">mg/dL</span>
+                        </div>
+                        <div class="threshold-input-group">
+                            <label>Glucose Max</label>
+                            <input type="number" @bind="Settings.GlucoseMax" class="number-input" min="50" max="200" />
+                            <span class="unit">mg/dL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert-threshold-group">
+                    <h3>🌡️ Temperature</h3>
+                    <div class="threshold-inputs">
+                        <div class="threshold-input-group">
+                            <label>Temperature Min</label>
+                            <input type="number" @bind="Settings.TemperatureMin" class="number-input" min="35" max="42" step="0.1" />
+                            <span class="unit">°C</span>
+                        </div>
+                        <div class="threshold-input-group">
+                            <label>Temperature Max</label>
+                            <input type="number" @bind="Settings.TemperatureMax" class="number-input" min="35" max="42" step="0.1" />
+                            <span class="unit">°C</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-reset-thresholds" @onclick="ResetThresholds">🔄 Resetează la Valorile Implicite</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="section-header">
+                <h2>🔔 Advanced Notifications</h2>
+            </div>
+            <div class="section-content">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Notification Sound</h3>
+                        <p>Play a sound when you receive a notification</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" @bind="Settings.NotificationSound" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Vibration</h3>
+                        <p>Enable vibration for notifications on mobile</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" @bind="Settings.NotificationVibration" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Desktop Notifications</h3>
+                        <p>Show notifications outside the browser</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" @bind="Settings.DesktopNotifications" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Check Interval</h3>
+                        <p>How often to check for new alerts</p>
+                    </div>
+                    <select @bind="Settings.CheckInterval" class="select-input">
+                        <option value="30">30 seconds</option>
+                        <option value="60">1 minute</option>
+                        <option value="300">5 minutes</option>
+                        <option value="600">10 minutes</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="section-header">
+                <h2>💾 Data Management</h2>
+            </div>
+            <div class="section-content">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Auto Save</h3>
+                        <p>Automatically save changes made</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" @bind="Settings.AutoSave" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Auto Backup</h3>
+                        <p>Create daily backups of data</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" @bind="Settings.AutoBackup" />
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>History Retention Duration</h3>
+                        <p>How long to keep old data</p>
+                    </div>
+                    <select @bind="Settings.HistoryRetention" class="select-input">
+                        <option value="30">30 days</option>
+                        <option value="90">90 days</option>
+                        <option value="180">6 months</option>
+                        <option value="365">1 year</option>
+                        <option value="0">Unlimited</option>
+                    </select>
+                </div>
+                <div class="data-actions">
+                    <button class="btn-data-action" @onclick="ExportData">📥 Export Data</button>
+                    <button class="btn-data-action" @onclick="ImportData">📤 Import Data</button>
+                    <button class="btn-data-action danger" @onclick="ClearCache">🧽 Clear Cache</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="section-header">
+                <h2>🔧 System</h2>
+            </div>
+            <div class="section-content">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Language</h3>
+                        <p>Select the application language</p>
+                    </div>
+                    <select @bind="Settings.Language" class="select-input">
+                        <option value="ro">Română</option>
+                        <option value="en">English</option>
+                        <option value="hu">Magyar</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Date Format</h3>
+                        <p>How to display dates in the application</p>
+                    </div>
+                    <select @bind="Settings.DateFormat" class="select-input">
+                        <option value="dd/MM/yyyy">DD/MM/YYYY</option>
+                        <option value="MM/dd/yyyy">MM/DD/YYYY</option>
+                        <option value="yyyy-MM-dd">YYYY-MM-DD</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>Time Format</h3>
+                        <p>12 or 24 hour format</p>
+                    </div>
+                    <select @bind="Settings.TimeFormat" class="select-input">
+                        <option value="24h">24 hours</option>
+                        <option value="12h">12 hours (AM/PM)</option>
+                    </select>
+                </div>
+                <div class="system-info">
+                    <h3>📊 System Information</h3>
+                    <div class="info-row">
+                        <span>Application Version:</span>
+                        <span class="info-value">v1.0.0</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Last Update:</span>
+                        <span class="info-value">24 November 2025</span>
+                    </div>
+                    <div class="info-row">
+                        <span>Used Space:</span>
+                        <span class="info-value">47.2 MB</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-footer">
+        <button class="btn-save-settings" @onclick="SaveSettings">💾 Save All Settings</button>
+        <button class="btn-reset-settings" @onclick="ResetAllSettings">🔄 Reset All</button>
+    </div>
+</div>
+
+@if (ShowSaveConfirmation)
+{
+    <div class="toast-notification">
+        ✅ Settings have been saved successfully!
+    </div>
+}
