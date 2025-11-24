@@ -1,0 +1,133 @@
+@page "/monitored"
+
+<HeaderComponent UserName="@CurrentUser" />
+
+<div class="monitored-container">
+    <div class="monitored-header">
+        <div class="header-title-section">
+            <h1>Monitored People</h1>
+            <p class="monitored-subtitle">Manage and view all people you're monitoring</p>
+        </div>
+        <button class="add-person-btn" @onclick="OpenAddPersonModal">
+            <span class="btn-icon">➕</span>
+            Add New Person
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+        <div class="filter-group">
+            <label>Status Filter:</label>
+            <div class="filter-buttons">
+                <button class="filter-btn @(FilterStatus == "All" ? "active" : "")" @onclick='() => FilterStatus = "All"'>
+                    All (@AllPeople.Count)
+                </button>
+                <button class="filter-btn critical @(FilterStatus == "Critical" ? "active" : "")" @onclick='() => FilterStatus = "Critical"'>
+                    Alert (@CriticalCount)
+                </button>
+                <button class="filter-btn warning @(FilterStatus == "Warning" ? "active" : "")" @onclick='() => FilterStatus = "Warning"'>
+                    Check Needed (@WarningCount)
+                </button>
+                <button class="filter-btn ok @(FilterStatus == "OK" ? "active" : "")" @onclick='() => FilterStatus = "OK"'>
+                    Stable (@StableCount)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- People Grid -->
+    <div class="people-grid">
+        @foreach (var person in FilteredPeople)
+        {
+            <div class="person-card-detailed @GetStatusClass(person.Status)">
+                <div class="card-header-colored @person.Status.ToLower()">
+                    <div class="header-top">
+                        <div class="person-avatar-big">@GetInitials(person.Name)</div>
+                        <div class="person-basic-info">
+                            <h3 class="person-name-big">@person.Name</h3>
+                            <p class="person-details">@person.Age ani • @person.Relationship</p>
+                        </div>
+                    </div>
+                    <div class="status-row">
+                        <span class="status-dot"></span>
+                        <span class="status-text">@GetStatusText(person.Status)</span>
+                    </div>
+                </div>
+
+                <div class="card-body-white">
+                    <div class="vitals-grid">
+                        <div class="vital-box">
+                            <span class="vital-icon-large">❤️</span>
+                            <div class="vital-info">
+                                <span class="vital-value-large">@person.HeartRate</span>
+                                <span class="vital-label-large">bpm</span>
+                            </div>
+                        </div>
+                        <div class="vital-box">
+                            <span class="vital-icon-large">🩸</span>
+                            <div class="vital-info">
+                                <span class="vital-value-large">@person.BloodPressure</span>
+                                <span class="vital-label-large">mmHg</span>
+                            </div>
+                        </div>
+                        <div class="vital-box">
+                            <span class="vital-icon-large">🌡️</span>
+                            <div class="vital-info">
+                                <span class="vital-value-large">@person.Temperature°C</span>
+                                <span class="vital-label-large">temp</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="additional-info">
+                        <div class="info-item">
+                            <span class="info-label">📍 Location:</span>
+                            <span class="info-value">@person.Location</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">📞 Contact:</span>
+                            <span class="info-value">@person.Phone</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">⏰ Last Update:</span>
+                            <span class="info-value">@person.LastUpdate</span>
+                        </div>
+                    </div>
+
+                    <div class="card-actions">
+                        <button class="action-btn primary">View Details</button>
+                        <button class="action-btn secondary">View History</button>
+                        <button class="action-btn secondary">Edit</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (FilteredPeople.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <h3>No people found</h3>
+            <p>Try adjusting your filters or add a new person to monitor.</p>
+        </div>
+    }
+</div>
+
+@if (ShowAddPersonModal)
+{
+    <div class="modal-overlay" @onclick="CloseAddPersonModal">
+        <div class="modal-content-large" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Add New Person</h3>
+                <button class="close-btn" @onclick="CloseAddPersonModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Feature coming soon! This will allow you to add new people to monitor.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" @onclick="CloseAddPersonModal">Cancel</button>
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,537 @@
+.monitored-container {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.monitored-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header-title-section h1 {
+    font-family: "Jua", sans-serif;
+    font-size: 2.2rem;
+    color: #000;
+    margin: 0 0 0.5rem 0;
+}
+
+.monitored-subtitle {
+    font-family: "Jua", sans-serif;
+    font-size: 1.1rem;
+    color: #666;
+    margin: 0;
+}
+
+.add-person-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.9rem 1.8rem;
+    border: none;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    color: #000;
+    font-family: "Jua", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+}
+
+    .add-person-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+    }
+
+.btn-icon {
+    font-size: 1.2rem;
+}
+
+.filters-section {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.filter-group label {
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 0.8rem;
+    display: block;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 0.7rem 1.5rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 25px;
+    background: white;
+    color: #333;
+    font-family: "Jua", sans-serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .filter-btn:hover {
+        border-color: #D88BB7;
+        background: rgba(232, 165, 200, 0.1);
+    }
+
+    .filter-btn.active {
+        background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+        border-color: #D88BB7;
+        color: #000;
+        font-weight: 500;
+    }
+
+    .filter-btn.critical {
+        border-color: #ffcccb;
+    }
+
+        .filter-btn.critical:hover,
+        .filter-btn.critical.active {
+            background: linear-gradient(135deg, #ffd4cc 0%, #ffb3a6 100%);
+            border-color: #dc3545;
+        }
+
+    .filter-btn.warning {
+        border-color: #fff4b3;
+    }
+
+        .filter-btn.warning:hover,
+        .filter-btn.warning.active {
+            background: linear-gradient(135deg, #fff4b3 0%, #ffe680 100%);
+            border-color: #ffc107;
+        }
+
+    .filter-btn.ok {
+        border-color: #d4f4dd;
+    }
+
+        .filter-btn.ok:hover,
+        .filter-btn.ok.active {
+            background: linear-gradient(135deg, #d4f4dd 0%, #b8e6c3 100%);
+            border-color: #28a745;
+        }
+
+.people-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
+}
+
+.person-card-detailed {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+    .person-card-detailed:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+.card-header-colored {
+    padding: 1.5rem;
+}
+
+    .card-header-colored.ok {
+        background: linear-gradient(135deg, #d4f4dd 0%, #b8e6c3 100%);
+    }
+
+    .card-header-colored.warning {
+        background: linear-gradient(135deg, #fff4b3 0%, #ffe680 100%);
+    }
+
+    .card-header-colored.critical {
+        background: linear-gradient(135deg, #ffd4cc 0%, #ffb3a6 100%);
+    }
+
+.header-top {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.person-avatar-big {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Jua", sans-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #D88BB7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.person-basic-info {
+    flex: 1;
+}
+
+.person-name-big {
+    font-family: "Jua", sans-serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #000;
+    margin: 0 0 0.3rem 0;
+}
+
+.person-details {
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    color: #333;
+    margin: 0;
+}
+
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.card-header-colored.ok .status-dot {
+    background: #28a745;
+}
+
+.card-header-colored.warning .status-dot {
+    background: #ffc107;
+}
+
+.card-header-colored.critical .status-dot {
+    background: #dc3545;
+}
+
+.status-text {
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.card-header-colored.ok .status-text {
+    color: #1e7e34;
+}
+
+.card-header-colored.warning .status-text {
+    color: #d39e00;
+}
+
+.card-header-colored.critical .status-text {
+    color: #c82333;
+}
+
+.card-body-white {
+    padding: 1.5rem;
+    background: white;
+}
+
+.vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.vital-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.vital-icon-large {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.vital-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.vital-value-large {
+    font-family: "Jua", sans-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #000;
+    line-height: 1.2;
+}
+
+.vital-label-large {
+    font-family: "Jua", sans-serif;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.additional-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 12px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    font-family: "Jua", sans-serif;
+    font-size: 0.95rem;
+}
+
+.info-label {
+    color: #666;
+}
+
+.info-value {
+    color: #000;
+    font-weight: 500;
+}
+
+.card-actions {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.action-btn {
+    flex: 1;
+    padding: 0.7rem;
+    border-radius: 25px;
+    font-family: "Jua", sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+    .action-btn.primary {
+        background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+        color: #000;
+        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.3);
+    }
+
+        .action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(232, 165, 200, 0.4);
+        }
+
+    .action-btn.secondary {
+        background: white;
+        color: #000;
+        border: 2px solid #E8A5C8;
+    }
+
+        .action-btn.secondary:hover {
+            background: rgba(232, 165, 200, 0.1);
+            transform: translateY(-2px);
+        }
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+    .empty-state h3 {
+        font-family: "Jua", sans-serif;
+        font-size: 1.5rem;
+        color: #000;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .empty-state p {
+        font-family: "Jua", sans-serif;
+        font-size: 1rem;
+        color: #666;
+        margin: 0;
+    }
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content-large {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    width: min(500px, 90vw);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+    .modal-header h3 {
+        font-family: "Jua", sans-serif;
+        font-size: 1.8rem;
+        color: #000;
+        margin: 0;
+    }
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+    .close-btn:hover {
+        background: #f0f0f0;
+        color: #000;
+    }
+
+.modal-body {
+    margin-bottom: 1.5rem;
+}
+
+    .modal-body p {
+        font-family: "Jua", sans-serif;
+        font-size: 1rem;
+        color: #666;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.modal-btn {
+    padding: 0.75rem 2rem;
+    border-radius: 30px;
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+    .modal-btn.secondary {
+        background: white;
+        color: #000;
+        border: 2px solid #E8A5C8;
+    }
+
+        .modal-btn.secondary:hover {
+            background: rgba(232, 165, 200, 0.1);
+        }
+
+@media (max-width: 1024px) {
+    .people-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .monitored-container {
+        padding: 1rem;
+    }
+
+    .monitored-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .add-person-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .people-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vitals-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card-actions {
+        flex-direction: column;
+    }
+
+    .filter-buttons {
+        flex-direction: column;
+    }
+
+    .filter-btn {
+        width: 100%;
+    }
+}
