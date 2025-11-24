@@ -1,0 +1,164 @@
+@page "/history"
+
+<HeaderComponent UserName="@CurrentUser" />
+
+<div class="history-container">
+    <div class="history-header">
+        <div class="header-title-section">
+            <h1>Measurement History</h1>
+            <p class="history-subtitle">View and analyze health measurements over time</p>
+        </div>
+        <button class="export-btn">
+            <span class="btn-icon">📥</span>
+            Export Data
+        </button>
+    </div>
+
+    <div class="filters-panel">
+        <div class="filter-row">
+            <div class="filter-item">
+                <label>Person:</label>
+                <select class="filter-select" @bind="SelectedPerson">
+                    <option value="All">All People</option>
+                    @foreach (var person in People)
+                    {
+                        <option value="@person">@person</option>
+                    }
+                </select>
+            </div>
+            
+            <div class="filter-item">
+                <label>Measurement Type:</label>
+                <select class="filter-select" @bind="SelectedMeasurementType">
+                    <option value="All">All Types</option>
+                    <option value="HeartRate">Heart Rate</option>
+                    <option value="BloodPressure">Blood Pressure</option>
+                    <option value="Temperature">Temperature</option>
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label>Time Period:</label>
+                <select class="filter-select" @bind="SelectedTimePeriod">
+                    <option value="Today">Today</option>
+                    <option value="Week">Last 7 Days</option>
+                    <option value="Month">Last 30 Days</option>
+                    <option value="Year">Last Year</option>
+                </select>
+            </div>
+
+            <button class="apply-filter-btn" @onclick="ApplyFilters">
+                <span class="btn-icon">🔍</span>
+                Apply Filters
+            </button>
+        </div>
+    </div>
+
+    <div class="stats-summary">
+        <div class="summary-card">
+            <div class="summary-icon">📊</div>
+            <div class="summary-info">
+                <span class="summary-label">Total Measurements</span>
+                <span class="summary-value">@FilteredMeasurements.Count</span>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon">⚠️</div>
+            <div class="summary-info">
+                <span class="summary-label">Abnormal Readings</span>
+                <span class="summary-value abnormal">@AbnormalCount</span>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon">📈</div>
+            <div class="summary-info">
+                <span class="summary-label">Average Heart Rate</span>
+                <span class="summary-value">@AverageHeartRate bpm</span>
+            </div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-icon">🌡️</div>
+            <div class="summary-info">
+                <span class="summary-label">Average Temperature</span>
+                <span class="summary-value">@AverageTemperature°C</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-section">
+        <div class="section-header">
+            <h2>📈 Trends Over Time</h2>
+        </div>
+        <div class="chart-placeholder">
+            <div class="chart-visual">
+                <div class="chart-bars">
+                    <div class="bar" style="height: 60%"></div>
+                    <div class="bar" style="height: 75%"></div>
+                    <div class="bar" style="height: 55%"></div>
+                    <div class="bar" style="height: 80%"></div>
+                    <div class="bar" style="height: 70%"></div>
+                    <div class="bar" style="height: 85%"></div>
+                    <div class="bar" style="height: 65%"></div>
+                </div>
+                <p class="chart-note">Interactive charts will be implemented with a charting library</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-section">
+        <div class="section-header">
+            <h2>📋 Detailed Measurements</h2>
+            <span class="result-count">Showing @FilteredMeasurements.Count results</span>
+        </div>
+        
+        <div class="table-container">
+            <table class="measurements-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Person</th>
+                        <th>Type</th>
+                        <th>Value</th>
+                        <th>Status</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var measurement in FilteredMeasurements)
+                    {
+                        <tr class="@GetRowClass(measurement.Status)">
+                            <td class="date-cell">@measurement.DateTime</td>
+                            <td class="person-cell">
+                                <div class="person-mini">
+                                    <div class="mini-avatar">@GetInitials(measurement.PersonName)</div>
+                                    <span>@measurement.PersonName</span>
+                                </div>
+                            </td>
+                            <td class="type-cell">
+                                <span class="type-badge @measurement.Type.ToLower()">
+                                    @GetTypeIcon(measurement.Type) @measurement.Type
+                                </span>
+                            </td>
+                            <td class="value-cell">@measurement.Value</td>
+                            <td class="status-cell">
+                                <span class="status-indicator @measurement.Status.ToLower()">
+                                    @measurement.Status
+                                </span>
+                            </td>
+                            <td class="notes-cell">@measurement.Notes</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (FilteredMeasurements.Count == 0)
+        {
+            <div class="empty-table">
+                <div class="empty-icon">📭</div>
+                <h3>No measurements found</h3>
+                <p>Try adjusting your filters to see more results.</p>
+            </div>
+        }
+    </div>
+</div>
