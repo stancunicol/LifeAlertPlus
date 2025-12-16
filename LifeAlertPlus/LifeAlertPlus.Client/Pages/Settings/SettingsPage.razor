@@ -48,16 +48,6 @@
                         <option value="large">Large</option>
                     </select>
                 </div>
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <h3>Animations</h3>
-                        <p>Enable or disable interface animations</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" @bind="Settings.EnableAnimations" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
             </div>
         </div>
 
@@ -140,7 +130,7 @@
                     </div>
                 </div>
 
-                <button class="btn-reset-thresholds" @onclick="ResetThresholds">🔄 Resetează la Valorile Implicite</button>
+                <button class="btn-reset-thresholds" @onclick="ResetThresholds">🔄 Reset to default values</button>
             </div>
         </div>
 
@@ -253,7 +243,6 @@
                     <select @bind="Settings.Language" class="select-input">
                         <option value="ro">Română</option>
                         <option value="en">English</option>
-                        <option value="hu">Magyar</option>
                     </select>
                 </div>
                 <div class="setting-item">
@@ -265,16 +254,6 @@
                         <option value="dd/MM/yyyy">DD/MM/YYYY</option>
                         <option value="MM/dd/yyyy">MM/DD/YYYY</option>
                         <option value="yyyy-MM-dd">YYYY-MM-DD</option>
-                    </select>
-                </div>
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <h3>Time Format</h3>
-                        <p>12 or 24 hour format</p>
-                    </div>
-                    <select @bind="Settings.TimeFormat" class="select-input">
-                        <option value="24h">24 hours</option>
-                        <option value="12h">12 hours (AM/PM)</option>
                     </select>
                 </div>
                 <div class="system-info">

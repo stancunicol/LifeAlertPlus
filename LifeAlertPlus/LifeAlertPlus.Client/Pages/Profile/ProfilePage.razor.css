@@ -550,3 +550,18 @@ input:checked + .slider:before {
         width: 95%;
     }
 }
+
+.success-content p {
+    margin-bottom: 15px;
+    line-height: 1.6;
+    color: #333;
+}
+
+.success-content p:first-child {
+    color: #22c55e;
+    font-weight: 600;
+}
+
+.success-content strong {
+    color: #D88BB7;
+}

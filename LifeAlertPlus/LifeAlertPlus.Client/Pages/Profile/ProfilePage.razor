@@ -2,18 +2,17 @@
 @using LifeAlertPlus.Client.Components.Header
 @layout MainLayout
 
-<HeaderComponent UserName="@CurrentUser.FullName" />
+<HeaderComponent UserName="@CurrentUser.FirstName"/>
 
 <div class="profile-container">
     <div class="profile-header">
         <div class="profile-avatar-section">
-            <div class="profile-avatar-large">@GetUserInitials(CurrentUser.FullName)</div>
+            <div class="profile-avatar-large">@GetUserInitials(CurrentUser.FirstName)</div>
             <button class="btn-change-photo">📸 Change Picture</button>
         </div>
         <div class="profile-info">
-            <h1>@CurrentUser.FullName</h1>
+            <h1>@CurrentUser.FirstName @CurrentUser.LastName</h1>
             <p class="profile-email">@CurrentUser.Email</p>
-            <p class="profile-role">@CurrentUser.Role</p>
             <div class="profile-stats-mini">
                 <div class="stat-mini">
                     <span class="stat-mini-value">@MonitoredCount</span>
@@ -34,7 +33,7 @@
     <div class="profile-content">
         <div class="profile-section">
             <div class="section-header">
-                <h2>📋 Informații Personale</h2>
+                <h2>📋 Personal information</h2>
                 @if (!IsEditingPersonal)
                 {
                     <button class="btn-edit" @onclick="EnableEditPersonal">✏️ Edit</button>
@@ -50,63 +49,35 @@
             <div class="section-content">
                 <div class="info-grid">
                     <div class="info-item">
-                        <label>Full Name</label>
+                        <label>First Name</label>
                         @if (!IsEditingPersonal)
                         {
-                            <p>@CurrentUser.FullName</p>
+                            <p>@CurrentUser.FirstName</p>
                         }
                         else
                         {
-                            <input type="text" @bind="EditUser.FullName" class="input-edit" />
+                            <input type="text" @bind="EditUser.FirstName" class="input-edit" />
                         }
-                    </div>
-                    <div class="info-item">
-                        <label>Email</label>
+                        <label>Last Name</label>
                         @if (!IsEditingPersonal)
                         {
-                            <p>@CurrentUser.Email</p>
+                            <p>@CurrentUser.LastName</p>
                         }
                         else
                         {
-                            <input type="email" @bind="EditUser.Email" class="input-edit" />
+                            <input type="text" @bind="EditUser.LastName" class="input-edit" />
                         }
                     </div>
                     <div class="info-item">
-                        <label>Phone</label>
+                        <label>Telephone</label>
                         @if (!IsEditingPersonal)
                         {
-                            <p>@CurrentUser.Phone</p>
+                            <p>@CurrentUser.Telephone</p>
                         }
                         else
                         {
-                            <input type="tel" @bind="EditUser.Phone" class="input-edit" />
+                            <input type="tel" @bind="EditUser.Telephone" class="input-edit" />
                         }
-                    </div>
-                    <div class="info-item">
-                        <label>Address</label>
-                        @if (!IsEditingPersonal)
-                        {
-                            <p>@CurrentUser.Address</p>
-                        }
-                        else
-                        {
-                            <input type="text" @bind="EditUser.Address" class="input-edit" />
-                        }
-                    </div>
-                    <div class="info-item">
-                        <label>Birth Date</label>
-                        @if (!IsEditingPersonal)
-                        {
-                            <p>@CurrentUser.BirthDate</p>
-                        }
-                        else
-                        {
-                            <input type="text" @bind="EditUser.BirthDate" class="input-edit" placeholder="ex: 15 Martie 1985" />
-                        }
-                    </div>
-                    <div class="info-item">
-                        <label>Age</label>
-                        <p>@CurrentUser.Age years</p>
                     </div>
                 </div>
             </div>
@@ -126,10 +97,10 @@
                 </div>
                 <div class="security-item">
                     <div class="security-info">
-                        <h3>Two-Factor Authentication</h3>
-                        <p>Add an extra layer of security</p>
+                        <h3>Change Email</h3>
+                        <p>Update your email address</p>
                     </div>
-                    <button class="btn-security" disabled>Coming Soon</button>
+                    <button class="btn-security" @onclick="OpenChangeEmailModal">Change Email</button>
                 </div>
                 <div class="security-item">
                     <div class="security-info">
@@ -242,6 +213,62 @@
             <div class="modal-footer">
                 <button class="btn-modal-cancel" @onclick="CloseChangePasswordModal">Cancel</button>
                 <button class="btn-modal-confirm" @onclick="ChangePassword">Change Password</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (ShowChangeEmailModal)
+{
+    <div class="modal-overlay" @onclick="CloseChangeEmailModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>📧 Change Email</h2>
+                <button class="modal-close" @onclick="CloseChangeEmailModal">✖️</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>New Email</label>
+                    <input type="email" @bind="EmailChange.NewEmail" placeholder="Enter new email address" class="input-modal" />
+                </div>
+                <div class="form-group">
+                    <label>Confirm New Email</label>
+                    <input type="email" @bind="EmailChange.ConfirmEmail" placeholder="Re-enter new email address" class="input-modal" />
+                </div>
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" @bind="EmailChange.CurrentPassword" placeholder="Enter your password to confirm" class="input-modal" />
+                </div>
+                @if (!string.IsNullOrEmpty(EmailError))
+                {
+                    <div class="error-message">@EmailError</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" @onclick="CloseChangeEmailModal">Cancel</button>
+                <button class="btn-modal-confirm" @onclick="ChangeEmail">Change Email</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal pentru succes schimbare email *@
+@if (ShowEmailChangeSuccess)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✅ Email Changed Successfully</h3>
+            </div>
+            <div class="modal-body">
+                <div class="success-content">
+                    <p><strong>Your email address has been updated successfully!</strong></p>
+                    <p>📧 A confirmation email has been sent to your new email address. Please check your inbox and click the verification link to complete the process.</p>
+                    <p><strong>Note:</strong> For security reasons, you will be logged out automatically. Please log in again with your new email address after verification.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-confirm" @onclick="CloseEmailChangeSuccessModal">OK, Log me out</button>
             </div>
         </div>
     </div>

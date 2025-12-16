@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using System.Net.Http.Json;
 using LifeAlertPlus.Client.Services;
 
@@ -14,6 +15,9 @@ namespace LifeAlertPlus.Client.Pages.Login
 
         [Inject]
         private AuthentificationService AuthentificationService { get; set; } = default!;
+        
+        [Inject]
+        private IJSRuntime JSRuntime { get; set; } = default!;
         
         private string Email { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
@@ -60,6 +64,9 @@ namespace LifeAlertPlus.Client.Pages.Login
             {
                 if(response.Success == true)
                 {
+                    // Salvez token-ul în localStorage
+                    await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", response.Token);
+                    
                     Navigation.NavigateTo("/dashboard");
                     Console.WriteLine("Login successful.");
                 }

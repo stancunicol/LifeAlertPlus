@@ -71,7 +71,8 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
                 var request = new UserResetPasswordRequestDTO
                 {
                     Token = ResetToken,
-                    NewPassword = Password
+                    NewPassword = Password,
+                    ConfirmPassword = ConfirmPassword
                 };
 
                 var response = await Http.PostAsJsonAsync("api/authentification/reset-password", request);

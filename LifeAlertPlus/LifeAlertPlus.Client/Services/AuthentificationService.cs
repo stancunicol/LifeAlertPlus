@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using Microsoft.JSInterop;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
 
@@ -7,9 +8,12 @@ namespace LifeAlertPlus.Client.Services
     public class AuthentificationService
     {
         private readonly HttpClient _httpClient;
-        public AuthentificationService(HttpClient httpClient)
+        private readonly IJSRuntime _jsRuntime;
+        
+        public AuthentificationService(HttpClient httpClient, IJSRuntime jsRuntime)
         {
             _httpClient = httpClient;
+            _jsRuntime = jsRuntime;
         }
 
         public async Task<UserLoginResponseDTO?> LoginAsync(UserLoginRequestDTO request)
@@ -34,6 +38,23 @@ namespace LifeAlertPlus.Client.Services
                 return result;
             }
             return null;
+        }
+
+        public async Task<UserUpdateEmailResponseDTO?> UpdateEmailAsync(UserChangeEmailRequestDTO request)
+        {
+            var response = await _httpClient.PatchAsJsonAsync("api/authentification/change-email", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UserUpdateEmailResponseDTO>();
+                return result;
+            }
+            return null;
+        }
+        
+        public async Task LogoutAsync()
+        {
+            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
         }
     }
 }

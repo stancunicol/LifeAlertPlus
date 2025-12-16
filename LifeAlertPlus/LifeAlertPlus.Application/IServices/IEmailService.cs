@@ -4,5 +4,6 @@ namespace LifeAlertPlus.Application.IServices
     {
         Task SendRegistrationSuccessEmailAsync(string recipientEmail, string recipientName, string verificationUrl);
         Task SendPasswordResetEmailAsync(string recipientEmail, string recipientName, string resetUrl);
+        Task SendEmailChangeVerificationAsync(string recipientEmail, string recipientName, string verificationUrl, string oldEmail);
     }
 }
