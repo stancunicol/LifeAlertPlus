@@ -109,7 +109,7 @@ namespace LifeAlertPlus.API.Controllers
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] UserResetPasswordRequestDTO request)
         {
-            if (string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.NewPassword))
+            if (string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.NewPassword) || string.IsNullOrEmpty(request.ConfirmPassword) || request.NewPassword != request.ConfirmPassword)
             {
                 return BadRequest("Invalid token or password.");
             }
@@ -119,6 +119,11 @@ namespace LifeAlertPlus.API.Controllers
             if (user == null || user.PasswordResetExpires == null || user.PasswordResetExpires < DateTime.UtcNow)
             {
                 return BadRequest("Invalid or expired token.");
+            }
+
+            if(request.NewPassword != request.ConfirmPassword)
+            {
+                return BadRequest("Passwords do not match.");
             }
 
             if(user.IsEmailConfirmed == false)
@@ -171,5 +176,76 @@ namespace LifeAlertPlus.API.Controllers
 
             return Ok(new { Success = true, Message = "If the email exists, a password reset link has been sent." });
         }
+
+        [HttpPatch("change-email")]
+        public async Task<IActionResult> ChangeEmail([FromBody] UserChangeEmailRequestDTO request)
+        {
+            if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewEmail) || string.IsNullOrEmpty(request.ConfirmEmail) || request.NewEmail !=  request.ConfirmEmail)
+            {
+                return Ok(new UserUpdateEmailResponseDTO { Success = false, Message = "All fields are required and new email must match confirmation." });
+            }
+
+            var user = await _userService.GetUserByEmailAsync(request.CurrentEmail);
+
+            if (user == null)
+            {
+                return Ok(new UserUpdateEmailResponseDTO { Success = false, Message = "User with the current email does not exist." });
+            }
+
+            var existingUserWithNewEmail = await _userService.GetUserByEmailAsync(request.NewEmail);
+            if (existingUserWithNewEmail != null)
+            {
+                return Ok(new UserUpdateEmailResponseDTO { Success = false, Message = "The new email address is already in use." });
+            }
+
+            user.Email = request.NewEmail;
+            user.IsEmailConfirmed = false;
+            user.EmailConfirmationToken = _userService.GenerateEmailVerificationToken();
+            user.EmailConfirmationExpires = DateTime.UtcNow.AddHours(24);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userService.UpdateUserAsync(user);
+
+            try
+            {
+                var verificationUrl = $"http://localhost:5176/api/authentification/verify-email?token={Uri.EscapeDataString(user.EmailConfirmationToken)}";
+                var userName = $"{user.FirstName} {user.LastName}";
+                await _emailService.SendEmailChangeVerificationAsync(user.Email, userName, verificationUrl, request.CurrentEmail);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send email change verification email: {ex.Message}");
+            }
+
+            return Ok(new UserUpdateEmailResponseDTO { Success = true, Message = "Email change initiated. Please verify your new email address.", RequiresLogout = true });
+        }
+
+        // [HttpPost("change-password/{id}")]
+        // public async Task<IActionResult> ChangePassword([FromBody] UserChangePasswordRequestDTO request)
+        // {
+        //     if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword) || string.IsNullOrEmpty(request.ConfirmPassword))
+        //     {
+        //         return BadRequest("All fields are required.");
+        //     }
+
+        //     if (request.NewPassword != request.ConfirmPassword)
+        //     {
+        //         return BadRequest("New password and confirmation do not match.");
+        //     }
+
+        //     var user = await _userService.GetUserByIdAsync(id);
+
+        //     if (user == null || !_authentificationService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
+        //     {
+        //         return BadRequest("Invalid email or current password.");
+        //     }
+
+        //     user.PasswordHash = _authentificationService.HashPassword(request.NewPassword);
+        //     user.UpdatedAt = DateTime.UtcNow;
+
+        //     await _userService.UpdateUserAsync(user);
+
+        //     return Ok("Password has been changed successfully.");
+        // }
     }
 }
