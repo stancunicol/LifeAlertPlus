@@ -27,6 +27,11 @@ namespace LifeAlertPlus.Application.Services
             return await _userRepository.GetUserByIdAsync(id);
         }
 
+        public async Task<IEnumerable<User>> GetAllUsersAsync()
+        {
+            return await _userRepository.GetAllUsersAsync();
+        }
+
         public string GenerateEmailVerificationToken()
         {
             return Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
@@ -87,6 +92,52 @@ namespace LifeAlertPlus.Application.Services
         public string GeneratePasswordResetToken()
         {
             return Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        }
+
+        public string GenerateEmailChangeCancelToken()
+        {
+            return Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        }
+
+        public async Task<User?> GetUserByEmailChangeCancelTokenAsync(string token)
+        {
+            var users = await _userRepository.GetAllUsersAsync();
+            return users.FirstOrDefault(u => u.EmailChangeCancelToken == token);
+        }
+        /// <summary>
+        /// Caută sau creează un utilizator pe baza datelor Google (email, nume, googleId)
+        /// </summary>
+        public async Task<User?> FindOrCreateGoogleUserAsync(string email, string? name, string googleId)
+        {
+            var user = await _userRepository.GetUserByEmailAsync(email);
+            if (user != null)
+            {
+                // Actualizează provider info dacă e nevoie
+                if (user.Provider != "Google" || user.ProviderKey != googleId)
+                {
+                    user.Provider = "Google";
+                    user.ProviderKey = googleId;
+                    await _userRepository.UpdateUserAsync(user);
+                }
+                return user;
+            }
+
+            // Creează user nou
+            var firstName = name?.Split(' ').FirstOrDefault() ?? "Google";
+            var lastName = name?.Contains(' ') == true ? string.Join(' ', name.Split(' ').Skip(1)) : "User";
+            var newUser = new User
+            {
+                Id = Guid.NewGuid(),
+                FirstName = firstName,
+                LastName = lastName,
+                Email = email,
+                IsEmailConfirmed = true,
+                Provider = "Google",
+                ProviderKey = googleId,
+                CreatedAt = DateTime.UtcNow
+            };
+            var created = await _userRepository.CreateUserAsync(newUser);
+            return created ? newUser : null;
         }
     }
 }

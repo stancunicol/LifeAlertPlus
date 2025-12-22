@@ -29,7 +29,15 @@
             </div>
         </div>
 
+
         <button class="login-button" @onclick="OnLogin">Login</button>
+
+        <div style="text-align:center; margin: 1px 0; color: #888; font-weight: bold;">or</div>
+
+        <button class="login-button google-login" @onclick="LoginWithGoogle">
+            <img src="/google-logo.png" alt="Google" style="height:20px; margin-right:8px; vertical-align:middle;" />
+            Login with Google
+        </button>
 
         @if (!string.IsNullOrEmpty(ErrorMessage))
         {

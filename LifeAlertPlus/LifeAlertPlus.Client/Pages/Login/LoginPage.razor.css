@@ -347,3 +347,29 @@ a.form-link:visited {
         transform: none;
     }
 }
+
+/* Stil pentru butonul Google Login */
+.google-login {
+    background: #fff;
+    color: #222;
+    border: 1.5px solid #d1d1d1;
+    border-radius: 30px;
+    font-family: "Jua", sans-serif;
+    font-size: 1.1rem;
+    font-weight: 500;
+    padding: 0.7rem 1.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    cursor: pointer;
+    transition: box-shadow 0.2s, border 0.2s;
+}
+
+.google-login:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    border: 1.5px solid #aaa;
+}

@@ -198,26 +198,100 @@ namespace LifeAlertPlus.API.Controllers
                 return Ok(new UserUpdateEmailResponseDTO { Success = false, Message = "The new email address is already in use." });
             }
 
-            user.Email = request.NewEmail;
-            user.IsEmailConfirmed = false;
-            user.EmailConfirmationToken = _userService.GenerateEmailVerificationToken();
-            user.EmailConfirmationExpires = DateTime.UtcNow.AddHours(24);
+            // Generez token-uri pentru procesul de schimbare
+            var verificationToken = _userService.GenerateEmailVerificationToken();
+            var cancelToken = _userService.GenerateEmailChangeCancelToken();
+
+            // Salvez datele pentru schimbarea email-ului (fără a actualiza email-ul încă)
+            user.PendingEmail = request.NewEmail;
+            user.EmailChangeToken = verificationToken;
+            user.EmailChangeExpires = DateTime.UtcNow.AddHours(24);
+            user.EmailChangeCancelToken = cancelToken;
             user.UpdatedAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(user);
 
             try
             {
-                var verificationUrl = $"http://localhost:5176/api/authentification/verify-email?token={Uri.EscapeDataString(user.EmailConfirmationToken)}";
                 var userName = $"{user.FirstName} {user.LastName}";
-                await _emailService.SendEmailChangeVerificationAsync(user.Email, userName, verificationUrl, request.CurrentEmail);
+                
+                // Trimitem email de verificare pe noul email
+                var verificationUrl = $"http://localhost:5176/api/authentification/verify-email-change?token={Uri.EscapeDataString(verificationToken)}";
+                await _emailService.SendEmailChangeVerificationAsync(request.NewEmail, userName, verificationUrl, request.CurrentEmail);
+                
+                // Trimitem email de notificare pe vechiul email
+                var cancelUrl = $"http://localhost:5176/api/authentification/cancel-email-change?token={Uri.EscapeDataString(cancelToken)}";
+                await _emailService.SendEmailChangeNotificationAsync(request.CurrentEmail, userName, request.NewEmail, cancelUrl);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to send email change verification email: {ex.Message}");
             }
 
-            return Ok(new UserUpdateEmailResponseDTO { Success = true, Message = "Email change initiated. Please verify your new email address.", RequiresLogout = true });
+            return Ok(new UserUpdateEmailResponseDTO { Success = true, Message = "Email change initiated. Please check both your current and new email addresses.", RequiresLogout = true });
+        }
+
+        [HttpGet("verify-email-change")]
+        public async Task<IActionResult> VerifyEmailChange([FromQuery] string token)
+        {
+            if (string.IsNullOrEmpty(token))
+            {
+                return BadRequest("Token is required.");
+            }
+
+            var users = await _userService.GetAllUsersAsync();
+            var user = users.FirstOrDefault(u => u.EmailChangeToken == token);
+
+            if (user == null || user.EmailChangeExpires == null || user.EmailChangeExpires < DateTime.UtcNow)
+            {
+                return BadRequest("Invalid or expired verification token.");
+            }
+
+            // Verifică dacă schimbarea nu a fost anulată
+            if (string.IsNullOrEmpty(user.EmailChangeCancelToken))
+            {
+                return BadRequest("Email change request has been cancelled.");
+            }
+
+            // Efectuează schimbarea email-ului
+            user.Email = user.PendingEmail;
+            user.IsEmailConfirmed = true;
+            user.EmailChangeToken = null;
+            user.EmailChangeExpires = null;
+            user.EmailChangeCancelToken = null;
+            user.PendingEmail = null;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userService.UpdateUserAsync(user);
+
+            return Ok("Email address successfully changed and verified.");
+        }
+
+        [HttpGet("cancel-email-change")]
+        public async Task<IActionResult> CancelEmailChange([FromQuery] string token)
+        {
+            if (string.IsNullOrEmpty(token))
+            {
+                return BadRequest("Token is required.");
+            }
+
+            var user = await _userService.GetUserByEmailChangeCancelTokenAsync(token);
+
+            if (user == null || user.EmailChangeExpires == null || user.EmailChangeExpires < DateTime.UtcNow)
+            {
+                return BadRequest("Invalid or expired cancellation token.");
+            }
+
+            // Anulează schimbarea email-ului
+            user.EmailChangeToken = null;
+            user.EmailChangeExpires = null;
+            user.EmailChangeCancelToken = null;
+            user.PendingEmail = null;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _userService.UpdateUserAsync(user);
+
+            return Ok("Email change request has been successfully cancelled. Your account is secure.");
         }
 
         // [HttpPost("change-password/{id}")]

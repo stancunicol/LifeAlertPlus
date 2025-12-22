@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Google;
 using System.Text;
 using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Application.Services;
@@ -45,9 +46,10 @@ var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services
     .AddAuthentication(options =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme = "Cookies";
+        options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
     })
+    .AddCookie("Cookies")
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -60,6 +62,13 @@ builder.Services
             ValidAudience = jwtSettings["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
         };
+    })
+    .AddGoogle(googleOptions =>
+    {
+        var googleAuthNSection = builder.Configuration.GetSection("Authentication:Google");
+        googleOptions.ClientId = googleAuthNSection["ClientId"]!;
+        googleOptions.ClientSecret = googleAuthNSection["ClientSecret"]!;
+        googleOptions.CallbackPath = "/signin-google";
     });
 
 var app = builder.Build();

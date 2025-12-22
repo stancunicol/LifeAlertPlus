@@ -139,5 +139,14 @@ namespace LifeAlertPlus.Client.Pages.Login
                 Console.WriteLine($"Forgot password error: {ex.Message}");
             }
         }
+
+        private void LoginWithGoogle()
+        {
+            // Adresa completă a API-ului (modifică portul dacă e altul la API)
+            var apiBaseUrl = "http://localhost:5176";
+            var clientDashboardUrl = "http://localhost:5254/dashboard";
+            var googleAuthUrl = $"{apiBaseUrl}/api/auth/google-login?returnUrl={Uri.EscapeDataString(clientDashboardUrl)}";
+            Navigation.NavigateTo(googleAuthUrl, forceLoad: true);
+        }
     }
 }
