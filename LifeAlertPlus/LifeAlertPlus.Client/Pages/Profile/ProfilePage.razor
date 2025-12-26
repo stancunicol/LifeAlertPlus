@@ -88,20 +88,34 @@
                 <h2>🔒 Security</h2>
             </div>
             <div class="section-content">
-                <div class="security-item">
-                    <div class="security-info">
-                        <h3>Change Password</h3>
-                        <p>Last changed 3 months ago</p>
+                @if (CurrentUser.Provider == "Local")
+                {
+                    <div class="security-item">
+                        <div class="security-info">
+                            <h3>Change Password</h3>
+                            <p>Last changed 3 months ago</p>
+                        </div>
+                        <button class="btn-security" @onclick="OpenChangePasswordModal">Change Password</button>
                     </div>
-                    <button class="btn-security" @onclick="OpenChangePasswordModal">Change Password</button>
-                </div>
-                <div class="security-item">
-                    <div class="security-info">
-                        <h3>Change Email</h3>
-                        <p>Update your email address</p>
+                    <div class="security-item">
+                        <div class="security-info">
+                            <h3>Change Email</h3>
+                            <p>Update your email address</p>
+                        </div>
+                        <button class="btn-security" @onclick="OpenChangeEmailModal">Change Email</button>
                     </div>
-                    <button class="btn-security" @onclick="OpenChangeEmailModal">Change Email</button>
-                </div>
+                }
+                else
+                {
+                    <div class="security-info">
+                        <h3>Password Managed Externally</h3>
+                        <p>Your password is managed through @CurrentUser.Provider</p>
+                    </div>
+                    <div class="security-info">
+                        <h3>Email Managed Externally</h3>
+                        <p>Your email is managed through @CurrentUser.Provider</p>
+                    </div>
+                }
                 <div class="security-item">
                     <div class="security-info">
                         <h3>Active Sessions</h3>

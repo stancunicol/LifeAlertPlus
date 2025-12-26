@@ -33,7 +33,7 @@ namespace LifeAlertPlus.API.Controllers
         {
             var user = await _userService.GetUserByEmailAsync(request.Email);
 
-            if (user == null || !_authentificationService.VerifyPassword(request.Password, user.PasswordHash))
+            if (user == null || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(user.PasswordHash) || !_authentificationService.VerifyPassword(request.Password, user.PasswordHash))
             {
                 return Ok(new UserLoginResponseDTO { Success = false, Message = "Login failed.", Token = string.Empty });
             }
