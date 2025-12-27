@@ -68,17 +68,6 @@
                             <input type="text" @bind="EditUser.LastName" class="input-edit" />
                         }
                     </div>
-                    <div class="info-item">
-                        <label>Telephone</label>
-                        @if (!IsEditingPersonal)
-                        {
-                            <p>@CurrentUser.Telephone</p>
-                        }
-                        else
-                        {
-                            <input type="tel" @bind="EditUser.Telephone" class="input-edit" />
-                        }
-                    </div>
                 </div>
             </div>
         </div>
@@ -93,7 +82,7 @@
                     <div class="security-item">
                         <div class="security-info">
                             <h3>Change Password</h3>
-                            <p>Last changed 3 months ago</p>
+                            <p>Last changed: @(CurrentUser.LastChangedPasswordAt.HasValue ? CurrentUser.LastChangedPasswordAt.Value.ToString("dd MMMM yyyy") : "Never")</p>
                         </div>
                         <button class="btn-security" @onclick="OpenChangePasswordModal">Change Password</button>
                     </div>

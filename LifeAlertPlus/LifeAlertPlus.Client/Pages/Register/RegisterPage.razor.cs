@@ -17,7 +17,6 @@ namespace LifeAlertPlus.Client.Pages.Register
         private string FirstName { get; set; } = string.Empty;
         private string LastName { get; set; } = string.Empty;
         private string Email { get; set; } = string.Empty;
-        private string Telephone { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
         private string ConfirmPassword { get; set; } = string.Empty;
         private bool _showPassword = false;
@@ -51,13 +50,13 @@ namespace LifeAlertPlus.Client.Pages.Register
             SuccessMessage = string.Empty;
 
             if(string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(LastName) ||
-               string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Telephone) ||
+               string.IsNullOrWhiteSpace(Email) ||
                string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(ConfirmPassword))
             {
                 ErrorMessage = "All fields are required.";
                 return;
             }
-            
+                    
             var passwordValidation = ValidatePassword(Password);
             if (!passwordValidation.IsValid)
             {
@@ -76,7 +75,6 @@ namespace LifeAlertPlus.Client.Pages.Register
                 FirstName = FirstName,
                 LastName = LastName,
                 Email = Email,
-                Telephone = Telephone,
                 Password = Password
             };
 

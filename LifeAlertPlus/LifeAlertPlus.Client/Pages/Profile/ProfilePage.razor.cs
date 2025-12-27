@@ -76,6 +76,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
                     var lastNameClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName");
                     var userIdClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
                     var providerClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "provider");
+                    var lastChangedPasswordAtClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastChangedPasswordAt");
 
                     if (emailClaim != null)
                     {
@@ -104,33 +105,16 @@ namespace LifeAlertPlus.Client.Pages.Profile
                         {
                             CurrentUser.Provider = "Local";
                         }
-
-                        // Telephone nu e în JWT, folosim valoare default pentru moment
-                        if (string.IsNullOrEmpty(CurrentUser.Telephone))
+                        if (lastChangedPasswordAtClaim != null && DateTime.TryParse(lastChangedPasswordAtClaim.Value, out var lastChanged))
                         {
-                            CurrentUser.Telephone = "+40 700 000 000";
+                            CurrentUser.LastChangedPasswordAt = lastChanged;
                         }
                     }
-                }
-                
-                // Dacă nu avem un token valid sau datele sunt incomplete, folosim valori default
-                if (string.IsNullOrEmpty(CurrentUser.Email))
-                {
-                    // Pentru debugging, setăm valori temporare
-                    CurrentUser.FirstName = "User";
-                    CurrentUser.LastName = "Test";
-                    CurrentUser.Email = "test@email.com";
-                    CurrentUser.Telephone = "+40 700 000 000";
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error loading user data: {ex.Message}");
-                // Setăm valori default în caz de eroare
-                CurrentUser.FirstName = "User";
-                CurrentUser.LastName = "Test";
-                CurrentUser.Email = "test@email.com";
-                CurrentUser.Telephone = "+40 700 000 000";
             }
         }
 
@@ -150,8 +134,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             EditUser = new UserUpdateRequestDTO
             {
                 FirstName = CurrentUser.FirstName,
-                LastName = CurrentUser.LastName,
-                Telephone = CurrentUser.Telephone,
+                LastName = CurrentUser.LastName
             };
             IsEditingPersonal = true;
         }
@@ -166,9 +149,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
             if(!string.IsNullOrWhiteSpace(EditUser.LastName))
                 CurrentUser.LastName = EditUser.LastName;
-
-            if(!string.IsNullOrWhiteSpace(EditUser.Telephone))
-                CurrentUser.Telephone = EditUser.Telephone;
 
             IsEditingPersonal = false;
         }

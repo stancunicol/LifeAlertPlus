@@ -59,14 +59,12 @@ namespace LifeAlertPlus.Application.Services
         public async Task<bool> CreateUserAsync(UserRegisterRequestDTO user)
         {
             var emailToken = GenerateEmailVerificationToken();
-            
             var newUser = new User
             {
                 Id = Guid.NewGuid(),
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                Telephone = user.Telephone,
                 PasswordHash = _authentificationService.HashPassword(user.Password),
                 IsEmailConfirmed = false,
                 EmailConfirmationToken = emailToken,
