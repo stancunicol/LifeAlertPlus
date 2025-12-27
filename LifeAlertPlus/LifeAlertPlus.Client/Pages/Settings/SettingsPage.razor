@@ -2,7 +2,10 @@
 @using LifeAlertPlus.Client.Components.Header
 @layout MainLayout
 
-<HeaderComponent UserName="Maria Popescu" />
+@using LifeAlertPlus.Domain.Entities
+@inject IJSRuntime JSRuntime
+
+<HeaderComponent UserName="@UserFullName" />
 
 <div class="settings-container">
     <div class="settings-header">

@@ -2,12 +2,12 @@
 @using LifeAlertPlus.Client.Components.Header
 @layout MainLayout
 
-<HeaderComponent UserName="@CurrentUser.FirstName"/>
+<HeaderComponent UserName="@($"{CurrentUser.FirstName} {CurrentUser.LastName}")"/>
 
 <div class="profile-container">
     <div class="profile-header">
         <div class="profile-avatar-section">
-            <div class="profile-avatar-large">@GetUserInitials(CurrentUser.FirstName)</div>
+            <div class="profile-avatar-large">@GetUserInitials($"{CurrentUser.FirstName} {CurrentUser.LastName}")</div>
             <button class="btn-change-photo">📸 Change Picture</button>
         </div>
         <div class="profile-info">
@@ -284,6 +284,27 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-modal-confirm" @onclick="CloseEmailChangeSuccessModal">OK, Log me out</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal pentru succes schimbare parolă *@
+@if (ShowPasswordChangeSuccess)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✅ Password Changed Successfully</h3>
+            </div>
+            <div class="modal-body">
+                <div class="success-content">
+                    <p><strong>Your password has been changed successfully!</strong></p>
+                    <p>🔒 Please use your new password the next time you log in.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-confirm" @onclick="ClosePasswordChangeSuccessModal">OK</button>
             </div>
         </div>
     </div>

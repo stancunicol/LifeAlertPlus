@@ -1,11 +1,14 @@
 @page "/dashboard"
 
-<HeaderComponent UserName="@CurrentUser" />
+@using LifeAlertPlus.Domain.Entities
+@inject IJSRuntime JSRuntime
+
+<HeaderComponent UserName="@UserFullName" />
 
 <div class="dashboard-container">
     <div class="dashboard-header">
         <h1>Dashboard</h1>
-        <p class="dashboard-subtitle">Welcome back, @CurrentUser! Here's your health monitoring overview.</p>
+        <p class="dashboard-subtitle">Welcome back, @UserFullName! Here's your health monitoring overview.</p>
     </div>
 
     <div class="stats-grid">

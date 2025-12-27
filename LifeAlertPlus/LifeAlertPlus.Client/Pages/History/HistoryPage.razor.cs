@@ -4,7 +4,23 @@ namespace LifeAlertPlus.Client.Pages.History;
 
 public partial class HistoryPage : ComponentBase
 {
-    private string CurrentUser = "John Doe";
+    private string UserFullName = "";
+        protected override async Task OnInitializedAsync()
+        {
+            var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
+            if (!string.IsNullOrEmpty(token))
+            {
+                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                var jsonToken = handler.ReadJwtToken(token);
+                var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? "";
+                var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? "";
+                UserFullName = $"{firstName} {lastName}".Trim();
+            }
+            else
+            {
+                UserFullName = "User";
+            }
+        }
     private string SelectedPerson = "All";
     private string SelectedMeasurementType = "All";
     private string SelectedTimePeriod = "Week";

@@ -306,32 +306,37 @@ namespace LifeAlertPlus.API.Controllers
             return Ok("Email change request has been successfully cancelled. Your account is secure.");
         }
 
-        // [HttpPost("change-password/{id}")]
-        // public async Task<IActionResult> ChangePassword([FromBody] UserChangePasswordRequestDTO request)
-        // {
-        //     if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword) || string.IsNullOrEmpty(request.ConfirmPassword))
-        //     {
-        //         return BadRequest("All fields are required.");
-        //     }
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] UserChangePasswordRequestDTO request)
+        {
+            if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword) || string.IsNullOrEmpty(request.ConfirmPassword))
+            {
+                return BadRequest("All fields are required.");
+            }
 
-        //     if (request.NewPassword != request.ConfirmPassword)
-        //     {
-        //         return BadRequest("New password and confirmation do not match.");
-        //     }
+            if (request.NewPassword != request.ConfirmPassword)
+            {
+                return BadRequest("New password and confirmation do not match.");
+            }
 
-        //     var user = await _userService.GetUserByIdAsync(id);
+            if(request.CurrentPassword == request.NewPassword)
+            {
+                return BadRequest("New password must be different from the current password.");
+            }
 
-        //     if (user == null || !_authentificationService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
-        //     {
-        //         return BadRequest("Invalid email or current password.");
-        //     }
+            var user = await _userService.GetUserByEmailAsync(request.Email);
 
-        //     user.PasswordHash = _authentificationService.HashPassword(request.NewPassword);
-        //     user.UpdatedAt = DateTime.UtcNow;
+            if (user == null || !_authentificationService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
+            {
+                return BadRequest("Invalid email or current password.");
+            }
 
-        //     await _userService.UpdateUserAsync(user);
+            user.PasswordHash = _authentificationService.HashPassword(request.NewPassword);
+            user.UpdatedAt = DateTime.UtcNow;
 
-        //     return Ok("Password has been changed successfully.");
-        // }
+            await _userService.UpdateUserAsync(user);
+
+            return Ok("Password has been changed successfully.");
+        }
     }
 }

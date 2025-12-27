@@ -51,6 +51,13 @@ namespace LifeAlertPlus.Client.Services
             }
             return null;
         }
+
+        public async Task<bool> UpdatePasswordAsync(UserChangePasswordRequestDTO request)
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/authentification/change-password", request);
+
+            return response.IsSuccessStatusCode;
+        }
         
         public async Task LogoutAsync()
         {

@@ -46,6 +46,12 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private string EmailError { get; set; } = string.Empty;
 
         private bool ShowEmailChangeSuccess { get; set; } = false;
+        private bool ShowPasswordChangeSuccess { get; set; } = false;
+
+        private void ClosePasswordChangeSuccessModal()
+        {
+            ShowPasswordChangeSuccess = false;
+        }
 
         protected override async Task OnInitializedAsync()
         {
@@ -69,26 +75,36 @@ namespace LifeAlertPlus.Client.Pages.Profile
                     var firstNameClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName");
                     var lastNameClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName");
                     var userIdClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
-                    
+                    var providerClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "provider");
+
                     if (emailClaim != null)
                     {
                         CurrentUser.Email = emailClaim.Value;
-                        
+
                         if (firstNameClaim != null)
                         {
                             CurrentUser.FirstName = firstNameClaim.Value;
                         }
-                        
+
                         if (lastNameClaim != null)
                         {
                             CurrentUser.LastName = lastNameClaim.Value;
                         }
-                        
+
                         if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
                         {
                             CurrentUser.Id = userId;
                         }
-                        
+
+                        if (providerClaim != null)
+                        {
+                            CurrentUser.Provider = providerClaim.Value;
+                        }
+                        else
+                        {
+                            CurrentUser.Provider = "Local";
+                        }
+
                         // Telephone nu e în JWT, folosim valoare default pentru moment
                         if (string.IsNullOrEmpty(CurrentUser.Telephone))
                         {
@@ -176,7 +192,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             PasswordError = string.Empty;
         }
 
-        private void ChangePassword()
+        private async Task ChangePassword()
         {
             PasswordError = string.Empty;
 
@@ -204,7 +220,24 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 return;
             }
 
+            UserChangePasswordRequestDTO request = new UserChangePasswordRequestDTO
+            {
+                Email = CurrentUser.Email,
+                CurrentPassword = PasswordChange.CurrentPassword,
+                NewPassword = PasswordChange.NewPassword,
+                ConfirmPassword = PasswordChange.ConfirmPassword
+            };
+
+            var result = await AuthentificationService.UpdatePasswordAsync(request);
+
+            if (!result)
+            {
+                PasswordError = "Failed to change password. Please try again.";
+                return;
+            }
+
             CloseChangePasswordModal();
+            ShowPasswordChangeSuccess = true;
         }
 
         private void OpenChangeEmailModal()

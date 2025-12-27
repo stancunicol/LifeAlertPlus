@@ -1,6 +1,9 @@
 @page "/monitored"
 
-<HeaderComponent UserName="@CurrentUser" />
+@using LifeAlertPlus.Domain.Entities
+@inject IJSRuntime JSRuntime
+
+<HeaderComponent UserName="@UserFullName" />
 
 <div class="monitored-container">
     <div class="monitored-header">

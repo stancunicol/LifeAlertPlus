@@ -15,6 +15,7 @@ namespace LifeAlertPlus.Client.Components.Header
 
         private bool ShowProfileMenu { get; set; } = false;
 
+
         private bool IsActive(string path)
         {
             var currentPath = new Uri(Navigation.Uri).AbsolutePath;
@@ -29,10 +30,11 @@ namespace LifeAlertPlus.Client.Components.Header
             var parts = UserName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
                 return $"{parts[0][0]}{parts[1][0]}".ToUpper();
-            
-            return parts[0].Length >= 2 
-                ? parts[0].Substring(0, 2).ToUpper() 
-                : parts[0].ToUpper();
+            if (parts.Length == 1 && parts[0].Length >= 2)
+                return parts[0].Substring(0, 2).ToUpper();
+            if (parts.Length == 1 && parts[0].Length == 1)
+                return parts[0].ToUpper();
+            return "GU";
         }
 
         private void ToggleProfileMenu()

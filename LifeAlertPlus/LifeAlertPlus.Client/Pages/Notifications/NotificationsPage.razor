@@ -1,6 +1,9 @@
 @page "/notifications"
 
-<HeaderComponent UserName="@CurrentUser" />
+@using LifeAlertPlus.Domain.Entities
+@inject IJSRuntime JSRuntime
+
+<HeaderComponent UserName="@UserFullName" />
 
 <div class="notifications-container">
     <div class="notifications-header">

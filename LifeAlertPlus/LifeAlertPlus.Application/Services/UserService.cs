@@ -71,7 +71,8 @@ namespace LifeAlertPlus.Application.Services
                 IsEmailConfirmed = false,
                 EmailConfirmationToken = emailToken,
                 EmailConfirmationExpires = DateTime.UtcNow.AddHours(24),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                Provider = "Local"
             };
 
             await _userRepository.CreateUserAsync(newUser);
