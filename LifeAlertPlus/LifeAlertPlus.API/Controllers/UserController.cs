@@ -30,6 +30,7 @@ namespace LifeAlertPlus.API.Controllers
 
             user.FirstName = updatedUser.FirstName;
             user.LastName = updatedUser.LastName;
+            user.Telephone = updatedUser.Telephone;
             user.Email = updatedUser.Email;
             user.UpdatedAt = DateTime.UtcNow;
 

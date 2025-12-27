@@ -28,8 +28,8 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     LastName = "Stancu",
                     Email = adminEmail,
                     IsEmailConfirmed = true,
-                    Provider = "Local",
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("20042005"),
+                    Telephone = "0745623166",
                     CreatedAt = DateTime.UtcNow
                 };
 
