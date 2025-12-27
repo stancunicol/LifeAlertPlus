@@ -63,6 +63,21 @@ namespace LifeAlertPlus.API.Controllers
                 return Ok(new UserRegisterResponseDTO { Success = false, Message = "Email already in use." });
             }
 
+            if(string.IsNullOrEmpty(request.Password))
+            {
+                return Ok(new UserRegisterResponseDTO { Success = false, Message = "Password is required." });
+            }
+
+            if(request.Password.Length < 8)
+            {
+                return Ok(new UserRegisterResponseDTO { Success = false, Message = "Password must be at least 8 characters long." });
+            }
+
+            if(request.Password.All(char.IsLower) || request.Password.All(char.IsUpper) || !request.Password.Any(char.IsDigit) || !request.Password.Any(ch => !char.IsLetterOrDigit(ch)))
+            {
+                return Ok(new UserRegisterResponseDTO { Success = false, Message = "Password must contain uppercase, lowercase, digit, and special character." });
+            }
+
             var response = await _userService.CreateUserAsync(request);
 
             if(response == false)
@@ -135,6 +150,7 @@ namespace LifeAlertPlus.API.Controllers
             user.PasswordResetToken = null;
             user.PasswordResetExpires = null;
             user.UpdatedAt = DateTime.UtcNow;
+            user.LastChangedPasswordAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(user);
 
@@ -333,6 +349,7 @@ namespace LifeAlertPlus.API.Controllers
 
             user.PasswordHash = _authentificationService.HashPassword(request.NewPassword);
             user.UpdatedAt = DateTime.UtcNow;
+            user.LastChangedPasswordAt = DateTime.UtcNow;
 
             await _userService.UpdateUserAsync(user);
 

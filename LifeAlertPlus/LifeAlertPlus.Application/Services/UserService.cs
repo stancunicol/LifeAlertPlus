@@ -66,7 +66,6 @@ namespace LifeAlertPlus.Application.Services
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                Telephone = user.Telephone,
                 PasswordHash = _authentificationService.HashPassword(user.Password),
                 IsEmailConfirmed = false,
                 EmailConfirmationToken = emailToken,
