@@ -153,7 +153,19 @@ namespace LifeAlertPlus.API.Controllers
 
             if (user == null)
             {
-                return Ok(new { Success = true, Message = "If the email exists, a password reset link has been sent." });
+                return Ok(new { Success = false, Message = "This email is not registered." });
+            }
+            else 
+            {
+                if(user.Provider != "Local")
+                {
+                    return Ok(new { Success = false, Message = "This email is registered via a third-party provider. Password reset is not applicable." });
+                }
+
+                if(user.IsEmailConfirmed == false)
+                {
+                    return Ok(new { Success = false, Message = "Email not confirmed. Cannot reset password." });
+                }
             }
 
             var resetToken = _userService.GeneratePasswordResetToken();

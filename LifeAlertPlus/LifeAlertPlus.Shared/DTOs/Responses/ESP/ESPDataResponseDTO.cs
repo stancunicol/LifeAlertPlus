@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace LifeAlertPlus.Shared.DTOs.Responses.ESP
 {
-    public class ESPDataResponse
+    public class ESPDataResponseDTO
     {
         public string Serial { get; set; }
         public long Date { get; set; }

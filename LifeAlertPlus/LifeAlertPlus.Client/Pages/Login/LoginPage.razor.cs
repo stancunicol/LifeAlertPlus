@@ -117,20 +117,23 @@ namespace LifeAlertPlus.Client.Pages.Login
             try
             {
                 var response = await Http.PostAsJsonAsync("api/authentification/forgot-password", new { Email = ForgotPasswordEmail });
+                var content = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[ForgotPassword API raw response]: {content}");
+                string? message = null;
+                bool? success = false;
+                try
+                {
+                    var json = System.Text.Json.JsonDocument.Parse(content);
+                    if (json.RootElement.TryGetProperty("message", out var msgProp))
+                        message = msgProp.GetString();
+                    if (json.RootElement.TryGetProperty("success", out var succProp))
+                        success = succProp.GetBoolean();
+                }
+                catch { message = content; }
 
-                if (response.IsSuccessStatusCode)
-                {
-                    ForgotPasswordMessage = "A password reset link has been sent to your email.";
-                    IsForgotPasswordSuccess = true;
-                }
-                else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    ForgotPasswordMessage = error.Contains("not found") 
-                        ? "No account found with this email address." 
-                        : "Failed to send reset email. Please try again.";
-                    IsForgotPasswordSuccess = false;
-                }
+                // Afișează mereu mesajul din răspuns, indiferent de status sau success
+                ForgotPasswordMessage = message ?? "Failed to send reset email. Please try again.";
+                IsForgotPasswordSuccess = success == true;
             }
             catch (Exception ex)
             {

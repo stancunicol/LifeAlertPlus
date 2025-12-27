@@ -35,7 +35,7 @@ namespace ESPController
                     return StatusCode((int)response.StatusCode, $"Failed to fetch data for serial {serial}");
                 }
                 var json = await response.Content.ReadAsStringAsync(cancellationToken);
-                var data = JsonSerializer.Deserialize<ESPDataResponse>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var data = JsonSerializer.Deserialize<ESPDataResponseDTO>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (data == null)
                 {
                     return BadRequest("Invalid data format received.");
