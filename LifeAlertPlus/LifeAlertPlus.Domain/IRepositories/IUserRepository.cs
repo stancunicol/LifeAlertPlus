@@ -9,5 +9,6 @@ namespace LifeAlertPlus.Domain.IRepositories
         Task<IEnumerable<User>> GetAllUsersAsync();
         Task<bool> CreateUserAsync(User user);
         Task<bool> UpdateUserAsync(User user);
+        Task<bool> DeleteUserAsync(Guid id);
     }
 }

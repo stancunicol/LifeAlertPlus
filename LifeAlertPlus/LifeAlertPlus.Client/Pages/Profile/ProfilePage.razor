@@ -173,14 +173,14 @@
                         <h3>Deactivate Account</h3>
                         <p>Your account will be temporarily suspended</p>
                     </div>
-                    <button class="btn-danger" disabled>Deactivate</button>
+                    <button class="btn-danger" @onclick="ShowDeactivateConfirmModal">Deactivate</button>
                 </div>
                 <div class="danger-item">
                     <div class="danger-info">
                         <h3>Delete Account</h3>
                         <p>Permanent action, all data will be deleted</p>
                     </div>
-                    <button class="btn-danger" disabled>Delete Permanently</button>
+                    <button class="btn-danger" @onclick="ShowDeleteConfirmModal">Delete Permanently</button>
                 </div>
             </div>
         </div>
@@ -294,6 +294,81 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-modal-confirm" @onclick="ClosePasswordChangeSuccessModal">OK</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal pentru confirmare dezactivare cont *@
+@if (ShowDeactivateConfirmModalBool)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Are you sure?</h3>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to deactivate your account?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" @onclick="CloseDeactivateConfirmModal">Cancel</button>
+                <button class="btn-modal-confirm" @onclick="ConfirmDeactivateAccount">Yes</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal pentru informare dezactivare *@
+@if (ShowDeactivateInfoModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Account Deactivated</h3>
+            </div>
+            <div class="modal-body">
+                <p>Your account has been deactivated. It will be reactivated automatically the next time you log in.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-confirm" @onclick="DeactivateAccount">OK</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (ShowDeleteConfirmModalBool)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Are you sure?</h3>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete your account permanently?</p>
+                <p> This action cannot be undone.</p>
+                <p>Please make sure to back up any important data before proceeding.</p>
+                <p>All your data will be permanently removed from our system.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" @onclick="CloseDeleteConfirmModal">Cancel</button>
+                <button class="btn-modal-confirm" @onclick="ConfirmDeleteAccount">Yes</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (ShowDeleteInfoModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Account Deleted</h3>
+            </div>
+            <div class="modal-body">
+                <p>Your account has been deleted permanently. Thank you for using our service.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-confirm" @onclick="DeleteAccount">OK</button>
             </div>
         </div>
     </div>

@@ -21,5 +21,6 @@ namespace LifeAlertPlus.Application.IServices
         /// Caută sau creează un utilizator pe baza datelor Google (email, nume, googleId)
         /// </summary>
         Task<User?> FindOrCreateGoogleUserAsync(string email, string? name, string googleId);
+        Task<bool> DeleteUserAsync(Guid id);
     }
 }

@@ -139,5 +139,10 @@ namespace LifeAlertPlus.Application.Services
             var created = await _userRepository.CreateUserAsync(newUser);
             return created ? newUser : null;
         }
+
+        public async Task<bool> DeleteUserAsync(Guid id)
+        {
+            return await _userRepository.DeleteUserAsync(id);
+        }
     }
 }

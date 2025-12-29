@@ -43,6 +43,12 @@ namespace LifeAlertPlus.API.Controllers
                 return Ok(new UserLoginResponseDTO { Success = false, Message = "Email not confirmed.", Token = string.Empty });
             }
 
+            if(user.DeletedAt != null)
+            {
+                user.DeletedAt = null;
+                await _userService.UpdateUserAsync(user);
+            }
+
             var token = _jwtService.GenerateToken(user);
 
             return Ok(new UserLoginResponseDTO

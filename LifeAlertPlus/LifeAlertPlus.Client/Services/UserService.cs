@@ -17,5 +17,26 @@ namespace LifeAlertPlus.Client.Services
 
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<bool> DeactivateUserAsync(Guid userId)
+        {
+            var response = await _httpClient.PatchAsync($"api/user/deactivate/{userId}", null);
+
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> ActivateUserAsync(Guid userId)
+        {
+            var response = await _httpClient.PatchAsync($"api/user/activate/{userId}", null);
+
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DeleteUserAsync(Guid userId)
+        {
+            var response = await _httpClient.DeleteAsync($"api/user/delete/{userId}");
+
+            return response.IsSuccessStatusCode;
+        }
     }
 }

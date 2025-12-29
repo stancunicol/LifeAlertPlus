@@ -15,6 +15,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private AuthentificationService AuthentificationService { get; set; } = null!;
 
         [Inject]
+        private UserService UserService { get; set; } = null!;
+
+        [Inject]
         private IJSRuntime JSRuntime { get; set; } = null!;
 
         [Inject]
@@ -324,6 +327,84 @@ namespace LifeAlertPlus.Client.Pages.Profile
             {
                 return false;
             }
+        }
+
+        private async Task DeactivateAccount()
+        {
+            ShowDeactivateInfoModal = false;
+            var result = await UserService.DeactivateUserAsync(CurrentUser.Id);
+            if (result)
+            {
+                await AuthentificationService.LogoutAsync();
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                Console.WriteLine("Failed to deactivate account.");
+            }
+        }
+
+        private bool ShowDeactivateConfirmModalBool { get; set; } = false;
+        private bool ShowDeactivateInfoModal { get; set; } = false;
+
+        private void ShowDeactivateConfirmModal()
+        {
+            ShowDeactivateConfirmModalBool = true;
+        }
+
+        private void CloseDeactivateConfirmModal()
+        {
+            ShowDeactivateConfirmModalBool = false;
+        }
+
+        private void ConfirmDeactivateAccount()
+        {
+            ShowDeactivateConfirmModalBool = false;
+            ShowDeactivateInfoModal = true;
+        }
+
+        private void CloseDeactivateInfoModal()
+        {
+            ShowDeactivateInfoModal = false;
+        }
+
+        private async Task DeleteAccount()
+        {
+            ShowDeleteInfoModal = false;
+            var result = await UserService.DeleteUserAsync(CurrentUser.Id);
+            if (result)
+            {
+                await AuthentificationService.LogoutAsync();
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                Console.WriteLine("Failed to delete account.");
+            }
+        }
+
+        private bool ShowDeleteConfirmModalBool { get; set; } = false;
+        private bool ShowDeleteInfoModal { get; set; } = false;
+
+        private void ShowDeleteConfirmModal()
+        {
+            ShowDeleteConfirmModalBool = true;
+        }
+
+        private void CloseDeleteConfirmModal()
+        {
+            ShowDeleteConfirmModalBool = false;
+        }
+
+        private void ConfirmDeleteAccount()
+        {
+            ShowDeleteConfirmModalBool = false;
+            ShowDeleteInfoModal = true;
+        }
+
+        private void CloseDeleteInfoModal()
+        {
+            ShowDeleteInfoModal = false;
         }
 
         private class NotificationPreferences

@@ -41,5 +41,66 @@ namespace LifeAlertPlus.API.Controllers
 
             return Ok(new { Message = "User updated successfully." });
         }
+
+        [HttpPatch("deactivate/{id}")]
+        public async Task<IActionResult> DeactivateUser(Guid id)
+        {
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { Message = "User not found." });
+            }
+
+            user.UpdatedAt = DateTime.UtcNow;
+            user.DeletedAt = DateTime.UtcNow;
+
+            var result = await _userService.UpdateUserAsync(user);
+            if (!result)
+            {
+                return StatusCode(500, new { Message = "Failed to deactivate user." });
+            }
+
+            return Ok(new { Message = "User deactivated successfully." });
+        }
+
+        [HttpPatch("activate/{id}")]
+        public async Task<IActionResult> ActivateUser(Guid id)
+        {
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { Message = "User not found." });
+            }
+
+            user.UpdatedAt = DateTime.UtcNow;
+            user.DeletedAt = null;
+
+            var result = await _userService.UpdateUserAsync(user);
+            if (!result)
+            {
+                return StatusCode(500, new { Message = "Failed to activate user." });
+            }
+
+            return Ok(new { Message = "User activated successfully." });
+        }
+
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteUser(Guid id)
+        {
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { Message = "User not found." });
+            }
+
+            var result = await _userService.DeleteUserAsync(id);
+            
+            if (!result)
+            {
+                return StatusCode(500, new { Message = "Failed to delete user." });
+            }
+
+            return Ok(new { Message = "User deleted successfully." });
+        }
     }
 }
