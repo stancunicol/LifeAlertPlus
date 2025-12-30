@@ -33,7 +33,8 @@ namespace LifeAlertPlus.Application.Services
                 new Claim("firstName", user.FirstName),
                 new Claim("lastName", user.LastName),
                 new Claim("provider", user.Provider ?? "Local"),
-                new Claim("lastChangedPasswordAt", user.LastChangedPasswordAt?.ToString("o") ?? string.Empty)
+                new Claim("lastChangedPasswordAt", user.LastChangedPasswordAt?.ToString("o") ?? string.Empty),
+                new Claim("profilePictureUrl", user.ProfilePictureUrl ?? string.Empty)
             };
 
             var token = new JwtSecurityToken(

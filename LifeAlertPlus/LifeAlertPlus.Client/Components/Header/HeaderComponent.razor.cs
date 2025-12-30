@@ -7,14 +7,17 @@ namespace LifeAlertPlus.Client.Components.Header
         [Inject]
         private NavigationManager Navigation { get; set; } = default!;
 
+
         [Parameter]
         public string UserName { get; set; } = "Guest User";
+
+        [Parameter]
+        public string? ProfilePictureUrl { get; set; }
 
         [Parameter]
         public EventCallback OnLogoutClick { get; set; }
 
         private bool ShowProfileMenu { get; set; } = false;
-
 
         private bool IsActive(string path)
         {

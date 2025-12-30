@@ -5,6 +5,7 @@ namespace LifeAlertPlus.Client.Pages.Notifications;
 public partial class NotificationsPage : ComponentBase
 {
     private string UserFullName = "";
+    private string ProfilePictureUrl = "";
         protected override async Task OnInitializedAsync()
         {
             var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
@@ -14,7 +15,9 @@ public partial class NotificationsPage : ComponentBase
                 var jsonToken = handler.ReadJwtToken(token);
                 var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? "";
                 var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? "";
+                var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? "";
                 UserFullName = $"{firstName} {lastName}".Trim();
+                ProfilePictureUrl = profilePictureUrl;
             }
             else
             {

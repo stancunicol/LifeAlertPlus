@@ -14,7 +14,14 @@
         
         <div class="header-right">
             <div class="user-profile" @onclick="ToggleProfileMenu">
-                <div class="user-avatar">@GetUserInitials()</div>
+                @if (!string.IsNullOrEmpty(ProfilePictureUrl))
+                {
+                    <img src="@ProfilePictureUrl" class="user-avatar-img" />
+                }
+                else
+                {
+                    <div class="user-avatar">@GetUserInitials()</div>
+                }
                 <span class="user-name">@UserName</span>
                 <span class="dropdown-icon">▼</span>
             </div>

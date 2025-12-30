@@ -102,5 +102,41 @@ namespace LifeAlertPlus.API.Controllers
 
             return Ok(new { Message = "User deleted successfully." });
         }
+
+        [HttpPost("upload-profile-image/{id}")]
+        public async Task<IActionResult> UploadProfileImage(Guid id, IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { Message = "No file uploaded." });
+
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+                return NotFound(new { Message = "User not found." });
+
+            // Creează folderul dacă nu există
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "profile-images");
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            // Nume unic pentru fișier
+            var fileName = $"{id}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // Setează URL absolut pentru acces din client (ex: http://localhost:5176/profile-images/...) 
+            var request = HttpContext.Request;
+            var baseUrl = $"{request.Scheme}://{request.Host}";
+            var absoluteUrl = $"{baseUrl}/profile-images/{fileName}";
+            user.ProfilePictureUrl = absoluteUrl;
+            user.UpdatedAt = DateTime.UtcNow;
+            var result = await _userService.UpdateUserAsync(user);
+            if (!result)
+                return StatusCode(500, new { Message = "Failed to update user profile image." });
+
+            return Ok(new { Message = "Profile image uploaded successfully.", ImageUrl = absoluteUrl });
+        }
     }
 }

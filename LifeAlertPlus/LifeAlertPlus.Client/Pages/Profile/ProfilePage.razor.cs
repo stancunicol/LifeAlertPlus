@@ -6,6 +6,8 @@ using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Client.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace LifeAlertPlus.Client.Pages.Profile
 {
@@ -22,6 +24,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
         [Inject]
         private NavigationManager Navigation { get; set; } = null!;
+
+        [Inject]
+        private IJSRuntime JS { get; set; } = null!;
 
         private User CurrentUser { get; set; } = new User();
 
@@ -80,6 +85,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
                     var userIdClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
                     var providerClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "provider");
                     var lastChangedPasswordAtClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastChangedPasswordAt");
+                    var profilePictureUrlClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl");
 
                     if (emailClaim != null)
                     {
@@ -111,6 +117,10 @@ namespace LifeAlertPlus.Client.Pages.Profile
                         if (lastChangedPasswordAtClaim != null && DateTime.TryParse(lastChangedPasswordAtClaim.Value, out var lastChanged))
                         {
                             CurrentUser.LastChangedPasswordAt = lastChanged;
+                        }
+                        if (profilePictureUrlClaim != null)
+                        {
+                            CurrentUser.ProfilePictureUrl = profilePictureUrlClaim.Value;
                         }
                     }
                 }
@@ -405,6 +415,31 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private void CloseDeleteInfoModal()
         {
             ShowDeleteInfoModal = false;
+        }
+
+        private async Task OnProfileImageSelected(InputFileChangeEventArgs e)
+        {
+            var file = e.File;
+            if (file == null)
+                return;
+
+            using var stream = file.OpenReadStream(5 * 1024 * 1024); // max 5MB
+            var imageUrl = await UserService.UploadProfilePictureAsync(CurrentUser.Id, stream, file.Name);
+            if (!string.IsNullOrEmpty(imageUrl))
+            {
+                CurrentUser.ProfilePictureUrl = imageUrl;
+                StateHasChanged();
+            }
+        }
+
+        private async Task TriggerProfileImageInput()
+        {
+            await JS.InvokeVoidAsync("triggerProfileImageInput", "profileImageInput");
+        }
+
+        public class UploadResult
+        {
+            public string? ImageUrl { get; set; }
         }
 
         private class NotificationPreferences

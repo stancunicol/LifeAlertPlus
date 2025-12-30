@@ -38,5 +38,25 @@ namespace LifeAlertPlus.Client.Services
 
             return response.IsSuccessStatusCode;
         }
+
+        public class UploadResult
+        {
+            public string? ImageUrl { get; set; }
+        }
+
+        public async Task<string?> UploadProfilePictureAsync(Guid userId, Stream imageStream, string fileName)
+        {
+            var content = new MultipartFormDataContent();
+            var imageContent = new StreamContent(imageStream);
+            imageContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+            content.Add(imageContent, "file", fileName);
+
+            var response = await _httpClient.PostAsync($"api/user/upload-profile-image/{userId}", content);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var result = await response.Content.ReadFromJsonAsync<UploadResult>();
+            return result?.ImageUrl;
+        }
     }
 }

@@ -2,13 +2,23 @@
 @using LifeAlertPlus.Client.Components.Header
 @layout MainLayout
 
-<HeaderComponent UserName="@($"{CurrentUser.FirstName} {CurrentUser.LastName}")"/>
+<HeaderComponent UserName="@($"{CurrentUser.FirstName} {CurrentUser.LastName}")" ProfilePictureUrl="@CurrentUser.ProfilePictureUrl" />
 
 <div class="profile-container">
     <div class="profile-header">
         <div class="profile-avatar-section">
-            <div class="profile-avatar-large">@GetUserInitials($"{CurrentUser.FirstName} {CurrentUser.LastName}")</div>
-            <button class="btn-change-photo">📸 Change Picture</button>
+            <div class="profile-avatar-large">
+                @if (!string.IsNullOrEmpty(CurrentUser.ProfilePictureUrl))
+                {
+                    <img src="@CurrentUser.ProfilePictureUrl" alt="Profile" class="profile-avatar-img" />
+                }
+                else
+                {
+                    @GetUserInitials($"{CurrentUser.FirstName} {CurrentUser.LastName}")
+                }
+            </div>
+            <InputFile id="profileImageInput" style="display:none" OnChange="OnProfileImageSelected" />
+            <button class="btn-change-photo" @onclick="TriggerProfileImageInput">📸 Change Picture</button>
         </div>
         <div class="profile-info">
             <h1>@CurrentUser.FirstName @CurrentUser.LastName</h1>
