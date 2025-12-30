@@ -21,6 +21,8 @@
         public string? ProviderKey { get; set; }
         public string? PendingEmail { get; set; }
         public string? FirstDayOfTheWeek { get; set; }
+        public string Language { get; set; } = "en";
+        public string ThemeColor { get; set; } = "pink";
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }

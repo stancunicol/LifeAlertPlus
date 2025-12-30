@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Infrastructure.Context;
+using LifeAlertPlus.Shared.DTOs.Requests.User;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -20,25 +21,30 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         [HttpPut("update/{id}")]
-        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] Domain.Entities.User updatedUser)
+        public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateRequestDTO updatedUser)
         {
             var user = await _userService.GetUserByIdAsync(id);
+            Console.WriteLine($"[UpdateUser] Received: FirstName={updatedUser.FirstName}, LastName={updatedUser.LastName}, FirstDayOfTheWeek={updatedUser.FirstDayOfTheWeek}");
             if (user == null)
             {
+                Console.WriteLine($"[UpdateUser] User not found for id {id}");
                 return NotFound(new { Message = "User not found." });
             }
 
             user.FirstName = updatedUser.FirstName;
             user.LastName = updatedUser.LastName;
-            user.Email = updatedUser.Email;
+            user.FirstDayOfTheWeek = updatedUser.FirstDayOfTheWeek;
             user.UpdatedAt = DateTime.UtcNow;
 
             var result = await _userService.UpdateUserAsync(user);
+            Console.WriteLine($"[UpdateUser] Update result: {result}");
             if (!result)
             {
+                Console.WriteLine($"[UpdateUser] Failed to update user in DB");
                 return StatusCode(500, new { Message = "Failed to update user." });
             }
 
+            Console.WriteLine($"[UpdateUser] User updated successfully: FirstName={user.FirstName}, LastName={user.LastName}");
             return Ok(new { Message = "User updated successfully." });
         }
 
@@ -137,6 +143,18 @@ namespace LifeAlertPlus.API.Controllers
                 return StatusCode(500, new { Message = "Failed to update user profile image." });
 
             return Ok(new { Message = "Profile image uploaded successfully.", ImageUrl = absoluteUrl });
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetUserById(Guid id)
+        {
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                return NotFound(new { Message = "User not found." });
+            }
+
+            return Ok(user);
         }
     }
 }

@@ -64,6 +64,15 @@ namespace LifeAlertPlus.Client.Pages.Profile
         protected override async Task OnInitializedAsync()
         {
             await LoadCurrentUserAsync();
+            // Dacă ai userId, poți încărca din API:
+            if (CurrentUser.Id != Guid.Empty)
+            {
+                var userFromApi = await UserService.GetUserByIdAsync(CurrentUser.Id);
+                if (userFromApi != null)
+                {
+                    CurrentUser = userFromApi;
+                }
+            }
         }
 
         private async Task LoadCurrentUserAsync()
@@ -152,22 +161,33 @@ namespace LifeAlertPlus.Client.Pages.Profile
             IsEditingPersonal = true;
         }
 
-        private void SavePersonalInfo()
+        private async Task SavePersonalInfo()
         {
-            if(!string.IsNullOrWhiteSpace(EditUser.FirstName))
-                CurrentUser.FirstName = EditUser.FirstName;
-
             if(!string.IsNullOrWhiteSpace(EditUser.FirstName))
                 CurrentUser.FirstName = EditUser.FirstName;
 
             if(!string.IsNullOrWhiteSpace(EditUser.LastName))
                 CurrentUser.LastName = EditUser.LastName;
 
+            var updateRequest = new UserUpdateRequestDTO
+            {
+                FirstName = CurrentUser.FirstName,
+                LastName = CurrentUser.LastName
+            };
+
+            var request = await UserService.UpdateUserAsync(CurrentUser.Id, updateRequest);
+
+            if (!request) {
+                Console.WriteLine("Failed to update user information.");
+            }
+
+            EditUser = new UserUpdateRequestDTO();
             IsEditingPersonal = false;
         }
 
         private void CancelEditPersonal()
         {
+            EditUser = new UserUpdateRequestDTO();
             IsEditingPersonal = false;
         }
 

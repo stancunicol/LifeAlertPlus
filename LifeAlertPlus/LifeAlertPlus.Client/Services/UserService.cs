@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
+using LifeAlertPlus.Domain.Entities;
 
 namespace LifeAlertPlus.Client.Services
 {
@@ -11,9 +12,9 @@ namespace LifeAlertPlus.Client.Services
             _httpClient = httpClient;
         }
 
-        public async Task<bool> UpdateUserAsync(UserUpdateRequestDTO request)
+        public async Task<bool> UpdateUserAsync(Guid userId, UserUpdateRequestDTO request)
         {
-            var response = await _httpClient.PutAsJsonAsync("api/user/update", request);
+            var response = await _httpClient.PutAsJsonAsync($"api/user/update/{userId}", request);
 
             return response.IsSuccessStatusCode;
         }
@@ -57,6 +58,16 @@ namespace LifeAlertPlus.Client.Services
 
             var result = await response.Content.ReadFromJsonAsync<UploadResult>();
             return result?.ImageUrl;
+        }
+
+        public async Task<User?> GetUserByIdAsync(Guid userId)
+        {
+            var response = await _httpClient.GetAsync($"api/user/{userId}");
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var user = await response.Content.ReadFromJsonAsync<User>();
+            return user;
         }
     }
 }
