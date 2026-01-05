@@ -12,7 +12,7 @@ namespace LifeAlertPlus.Client.Pages.Register
         private NavigationManager Navigation { get; set; } = default!;
 
         [Inject]
-        private AuthentificationService AuthentificationService { get; set; } = default!;
+        private AuthenticationService AuthenticationService { get; set; } = default!;
 
         private string FirstName { get; set; } = string.Empty;
         private string LastName { get; set; } = string.Empty;
@@ -78,7 +78,7 @@ namespace LifeAlertPlus.Client.Pages.Register
                 Password = Password
             };
 
-            var response = await AuthentificationService.RegisterAsync(request);
+            var response = await AuthenticationService.RegisterAsync(request);
 
             if (response != null)
             {

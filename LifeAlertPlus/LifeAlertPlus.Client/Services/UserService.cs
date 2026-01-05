@@ -40,11 +40,6 @@ namespace LifeAlertPlus.Client.Services
             return response.IsSuccessStatusCode;
         }
 
-        public class UploadResult
-        {
-            public string? ImageUrl { get; set; }
-        }
-
         public async Task<string?> UploadProfilePictureAsync(Guid userId, Stream imageStream, string fileName)
         {
             var content = new MultipartFormDataContent();
@@ -68,6 +63,21 @@ namespace LifeAlertPlus.Client.Services
 
             var user = await response.Content.ReadFromJsonAsync<User>();
             return user;
+        }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            var response = await _httpClient.GetAsync($"api/user/email/{email}");
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var user = await response.Content.ReadFromJsonAsync<User>();
+            return user;
+        }
+
+        public class UploadResult
+        {
+            public string? ImageUrl { get; set; }
         }
     }
 }

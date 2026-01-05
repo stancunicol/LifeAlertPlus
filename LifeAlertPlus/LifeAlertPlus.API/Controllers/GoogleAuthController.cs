@@ -45,7 +45,6 @@ namespace LifeAlertPlus.API.Controllers
                 return Redirect($"/login?error=GoogleAuthNoEmail");
             }
 
-            // Caută sau creează utilizatorul cu GoogleId/email
             var user = await _userService.FindOrCreateGoogleUserAsync(email, name, googleId);
             if (user == null)
             {
@@ -53,7 +52,7 @@ namespace LifeAlertPlus.API.Controllers
             }
 
             var jwt = _jwtService.GenerateToken(user);
-            // Redirectează către client cu tokenul JWT ca parametru
+
             return Redirect($"{returnUrl}?token={jwt}");
         }
     }

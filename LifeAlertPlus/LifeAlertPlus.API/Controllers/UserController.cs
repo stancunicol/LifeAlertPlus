@@ -34,6 +34,8 @@ namespace LifeAlertPlus.API.Controllers
             user.FirstName = updatedUser.FirstName;
             user.LastName = updatedUser.LastName;
             user.FirstDayOfTheWeek = updatedUser.FirstDayOfTheWeek;
+            user.Language = updatedUser.Language;
+            user.ThemeColor = updatedUser.ThemeColor;
             user.UpdatedAt = DateTime.UtcNow;
 
             var result = await _userService.UpdateUserAsync(user);
@@ -119,12 +121,10 @@ namespace LifeAlertPlus.API.Controllers
             if (user == null)
                 return NotFound(new { Message = "User not found." });
 
-            // Creează folderul dacă nu există
             var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "profile-images");
             if (!Directory.Exists(uploadsFolder))
                 Directory.CreateDirectory(uploadsFolder);
 
-            // Nume unic pentru fișier
             var fileName = $"{id}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
             var filePath = Path.Combine(uploadsFolder, fileName);
             using (var stream = new FileStream(filePath, FileMode.Create))
@@ -132,7 +132,6 @@ namespace LifeAlertPlus.API.Controllers
                 await file.CopyToAsync(stream);
             }
 
-            // Setează URL absolut pentru acces din client (ex: http://localhost:5176/profile-images/...) 
             var request = HttpContext.Request;
             var baseUrl = $"{request.Scheme}://{request.Host}";
             var absoluteUrl = $"{baseUrl}/profile-images/{fileName}";
@@ -156,5 +155,17 @@ namespace LifeAlertPlus.API.Controllers
 
             return Ok(user);
         }
+
+        [HttpGet("email/{email}")]
+        public async Task<IActionResult> GetUserByEmail(string email)
+        {
+            var user = await _userService.GetUserByEmailAsync(email);
+            if (user == null)
+            {
+                return NotFound(new { Message = "User not found." });
+            }
+
+            return Ok(user);
+        } 
     }
 }

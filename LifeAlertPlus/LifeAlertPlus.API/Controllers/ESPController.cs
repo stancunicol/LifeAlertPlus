@@ -17,11 +17,7 @@ namespace ESPController
         {
             _httpClientFactory = httpClientFactory;
         }
-        /// <summary>
-        /// Get ESP device data by serial number.
-        /// </summary>
-        /// <param name="serial">Serial number of the ESP device</param>
-        /// <returns>ESP device data in the required format</returns>
+
         [HttpGet("data/{serial}")]
         public async Task<IActionResult> GetESPData(string serial, CancellationToken cancellationToken)
         {
@@ -47,11 +43,5 @@ namespace ESPController
                 return StatusCode(500, $"Error fetching data: {ex.Message}");
             }
         }
-    }
-
-    public class ActivateRequest
-    {
-        public string DeviceId { get; set; }
-        public string UserId { get; set; }
     }
 }

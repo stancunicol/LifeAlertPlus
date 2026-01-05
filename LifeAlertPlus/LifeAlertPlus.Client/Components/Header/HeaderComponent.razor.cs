@@ -7,7 +7,6 @@ namespace LifeAlertPlus.Client.Components.Header
         [Inject]
         private NavigationManager Navigation { get; set; } = default!;
 
-
         [Parameter]
         public string UserName { get; set; } = "Guest User";
 

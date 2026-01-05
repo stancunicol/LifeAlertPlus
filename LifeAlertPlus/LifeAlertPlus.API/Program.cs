@@ -11,15 +11,12 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add CORS policy to allow Blazor client
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
@@ -32,14 +29,18 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IMonitoredRepository, MonitoredRepository>();
+builder.Services.AddScoped<IUserMonitoredRepository, UserMonitoredRepository>();
+
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IAuthentificationService, AuthentificationService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IMonitoredService, MonitoredService>();
+builder.Services.AddScoped<IUserMonitoredService, UserMonitoredService>();
 
 var connString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=lifealert.db";
 
-// add context
 builder.Services.AddLifeAlertPlusDbContext(connString);
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -76,7 +77,6 @@ var app = builder.Build();
 
 UserSeed.Seed(app.Services);
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -85,7 +85,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Enable CORS
 app.UseCors("AllowBlazorClient");
 
 app.UseAuthentication();

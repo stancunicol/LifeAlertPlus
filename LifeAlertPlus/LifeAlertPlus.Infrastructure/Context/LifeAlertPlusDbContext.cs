@@ -30,6 +30,17 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<WeeklyHistory>().HasKey(w => w.Id);
 
             modelBuilder.Entity<UserMonitored>().HasKey(um => new { um.IdUser, um.IdMonitored });
+            modelBuilder.Entity<UserMonitored>()
+            .HasOne(um => um.User)
+            .WithMany()
+            .HasForeignKey(um => um.IdUser)
+            .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<UserMonitored>()
+            .HasOne(um => um.Monitored)
+            .WithMany()
+            .HasForeignKey(um => um.IdMonitored)
+            .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Measurement>()
                 .HasIndex(m => m.IdMonitored);

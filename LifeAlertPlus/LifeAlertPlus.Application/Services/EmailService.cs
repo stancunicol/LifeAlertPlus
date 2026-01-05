@@ -207,7 +207,7 @@ namespace LifeAlertPlus.Application.Services
                             <p>If you did not create an account, please ignore this email.</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; 2025 LifeAlert+. All rights reserved.</p>
+                            <p>&copy; 2026 LifeAlert+. All rights reserved.</p>
                         </div>
                     </div>
                 </body>
@@ -296,7 +296,7 @@ namespace LifeAlertPlus.Application.Services
                             <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; 2025 LifeAlert+. All rights reserved.</p>
+                            <p>&copy; 2026 LifeAlert+. All rights reserved.</p>
                         </div>
                     </div>
                 </body>
@@ -399,7 +399,7 @@ namespace LifeAlertPlus.Application.Services
                             <p><strong>Important:</strong> If you did not request this change, please contact our support team immediately.</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; 2025 LifeAlert+. All rights reserved.</p>
+                            <p>&copy; 2026 LifeAlert+. All rights reserved.</p>
                         </div>
                     </div>
                 </body>
@@ -523,7 +523,7 @@ namespace LifeAlertPlus.Application.Services
                             <p>If you're experiencing issues, please contact our support team immediately.</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; 2025 LifeAlert+. All rights reserved.</p>
+                            <p>&copy; 2026 LifeAlert+. All rights reserved.</p>
                         </div>
                     </div>
                 </body>

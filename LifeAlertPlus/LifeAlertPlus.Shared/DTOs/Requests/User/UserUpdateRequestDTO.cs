@@ -5,5 +5,7 @@ namespace LifeAlertPlus.Shared.DTOs.Requests.User
         public string? FirstName { get; set; } = string.Empty;
         public string? LastName { get; set; } = string.Empty;
         public string? FirstDayOfTheWeek { get; set; } = string.Empty;
+        public string? Language { get; set; } = string.Empty;
+        public string? ThemeColor { get; set; } = string.Empty;
     }
 }

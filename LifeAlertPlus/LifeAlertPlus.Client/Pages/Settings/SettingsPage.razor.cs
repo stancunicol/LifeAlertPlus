@@ -1,15 +1,32 @@
 using Microsoft.AspNetCore.Components;
+using LifeAlertPlus.Shared.DTOs.Requests.User;
+using LifeAlertPlus.Client.Services;
+using Microsoft.JSInterop;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace LifeAlertPlus.Client.Pages.Settings
 {
     public partial class SettingsPage : ComponentBase
     {
+        [Inject]
+        private UserService UserService { get; set; } = default!;
+
+        [Inject]
+        private IJSRuntime JSRuntime { get; set; } = default!;
+
+        [Inject]
+        private HttpClient Http { get; set; } = default!;
+
+        [Inject]
+        private NavigationManager Navigation { get; set; } = default!;
+
         private AppSettings Settings { get; set; } = new AppSettings
         {
-            Theme = "light",
+            Theme = "pink",
             AccentColor = "#E8A5C8",
             FontSize = "medium",
             EnableAnimations = true,
+            FirstDayOfWeek = "monday",
 
             BPSystolicMin = 90,
             BPSystolicMax = 140,
@@ -37,9 +54,28 @@ namespace LifeAlertPlus.Client.Pages.Settings
         };
 
         private bool ShowSaveConfirmation { get; set; } = false;
+        private string UserFullName = "";
+        private string ProfilePictureUrl = "";
+        private string Version = "";
+        private Guid UserId;
 
-        private void SaveSettings()
+        private async Task SaveSettings()
         {
+            var settings = new UserUpdateRequestDTO
+            {
+                FirstDayOfTheWeek = Settings.FirstDayOfWeek,
+                Language = Settings.Language,
+                ThemeColor = Settings.Theme
+            };
+
+            var request = await UserService.UpdateUserAsync(UserId, settings);
+
+            if(request == false)
+            {
+                Console.WriteLine("Failed to save settings.");
+                return;
+            }
+
             ShowSaveConfirmation = true;
             StateHasChanged();
 
@@ -50,20 +86,40 @@ namespace LifeAlertPlus.Client.Pages.Settings
             });
         }
 
-        private string UserFullName = "";
-        private string ProfilePictureUrl = "";
         protected override async Task OnInitializedAsync()
         {
+            try
+            {
+                var url = Navigation.BaseUri + "VERSION";
+                var v = await Http.GetStringAsync(url);
+                Version = (v ?? string.Empty).Trim();
+
+                if (string.IsNullOrEmpty(Version))
+                {
+                    Version = AppVersion.Version;
+                }
+            }
+            catch
+            {
+                Version = AppVersion.Version;
+            }
+
             var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
             if (!string.IsNullOrEmpty(token))
             {
                 var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
                 var jsonToken = handler.ReadJwtToken(token);
                 var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? "";
+                var userIdClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
                 var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? "";
                 var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? "";
                 UserFullName = $"{firstName} {lastName}".Trim();
                 ProfilePictureUrl = profilePictureUrl;
+
+                if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out Guid userId))
+                {
+                    UserId = userId;
+                }
             }
             else
             {
@@ -89,10 +145,11 @@ namespace LifeAlertPlus.Client.Pages.Settings
         {
             Settings = new AppSettings
             {
-                Theme = "light",
+                Theme = "pink",
                 AccentColor = "#E8A5C8",
                 FontSize = "medium",
                 EnableAnimations = true,
+                FirstDayOfWeek = "monday",
                 BPSystolicMin = 90,
                 BPSystolicMax = 140,
                 BPDiastolicMin = 60,
@@ -138,6 +195,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             public string AccentColor { get; set; } = string.Empty;
             public string FontSize { get; set; } = string.Empty;
             public bool EnableAnimations { get; set; }
+            public string FirstDayOfWeek { get; set; } = string.Empty;
 
             // Alert Thresholds
             public int BPSystolicMin { get; set; }

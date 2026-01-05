@@ -8,21 +8,21 @@ namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AuthentificationController : ControllerBase
+    public class AuthenticationController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly IAuthentificationService _authentificationService;
+        private readonly IAuthenticationService _authenticationService;
         private readonly IJwtService _jwtService;
         private readonly IEmailService _emailService;
         private readonly LifeAlertPlusDbContext _dbContext;
         private readonly IConfiguration _configuration;
 
-        public AuthentificationController(IUserService userService, LifeAlertPlusDbContext lifeAlertPlusDbContext, IConfiguration configuration, IAuthentificationService authentificationService, LifeAlertPlusDbContext dbContext, IJwtService jwtService, IEmailService emailService)
+        public AuthenticationController(IUserService userService, LifeAlertPlusDbContext lifeAlertPlusDbContext, IConfiguration configuration, IAuthenticationService authenticationService, LifeAlertPlusDbContext dbContext, IJwtService jwtService, IEmailService emailService)
         {
             _userService = userService;
             _dbContext = lifeAlertPlusDbContext;
             _configuration = configuration;
-            _authentificationService = authentificationService;
+            _authenticationService = authenticationService;
             _dbContext = dbContext;
             _jwtService = jwtService;
             _emailService = emailService;
@@ -33,7 +33,7 @@ namespace LifeAlertPlus.API.Controllers
         {
             var user = await _userService.GetUserByEmailAsync(request.Email);
 
-            if (user == null || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(user.PasswordHash) || !_authentificationService.VerifyPassword(request.Password, user.PasswordHash))
+            if (user == null || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(user.PasswordHash) || !_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
             {
                 return Ok(new UserLoginResponseDTO { Success = false, Message = "Login failed.", Token = string.Empty });
             }
@@ -152,7 +152,7 @@ namespace LifeAlertPlus.API.Controllers
                 return BadRequest("Email not confirmed.");
             }
 
-            user.PasswordHash = _authentificationService.HashPassword(request.NewPassword);
+            user.PasswordHash = _authenticationService.HashPassword(request.NewPassword);
             user.PasswordResetToken = null;
             user.PasswordResetExpires = null;
             user.UpdatedAt = DateTime.UtcNow;
@@ -232,11 +232,9 @@ namespace LifeAlertPlus.API.Controllers
                 return Ok(new UserUpdateEmailResponseDTO { Success = false, Message = "The new email address is already in use." });
             }
 
-            // Generez token-uri pentru procesul de schimbare
             var verificationToken = _userService.GenerateEmailVerificationToken();
             var cancelToken = _userService.GenerateEmailChangeCancelToken();
 
-            // Salvez datele pentru schimbarea email-ului (fără a actualiza email-ul încă)
             user.PendingEmail = request.NewEmail;
             user.EmailChangeToken = verificationToken;
             user.EmailChangeExpires = DateTime.UtcNow.AddHours(24);
@@ -249,11 +247,9 @@ namespace LifeAlertPlus.API.Controllers
             {
                 var userName = $"{user.FirstName} {user.LastName}";
                 
-                // Trimitem email de verificare pe noul email
                 var verificationUrl = $"http://localhost:5176/api/authentification/verify-email-change?token={Uri.EscapeDataString(verificationToken)}";
                 await _emailService.SendEmailChangeVerificationAsync(request.NewEmail, userName, verificationUrl, request.CurrentEmail);
-                
-                // Trimitem email de notificare pe vechiul email
+
                 var cancelUrl = $"http://localhost:5176/api/authentification/cancel-email-change?token={Uri.EscapeDataString(cancelToken)}";
                 await _emailService.SendEmailChangeNotificationAsync(request.CurrentEmail, userName, request.NewEmail, cancelUrl);
             }
@@ -281,13 +277,11 @@ namespace LifeAlertPlus.API.Controllers
                 return BadRequest("Invalid or expired verification token.");
             }
 
-            // Verifică dacă schimbarea nu a fost anulată
             if (string.IsNullOrEmpty(user.EmailChangeCancelToken))
             {
                 return BadRequest("Email change request has been cancelled.");
             }
 
-            // Efectuează schimbarea email-ului
             user.Email = user.PendingEmail;
             user.IsEmailConfirmed = true;
             user.EmailChangeToken = null;
@@ -316,7 +310,6 @@ namespace LifeAlertPlus.API.Controllers
                 return BadRequest("Invalid or expired cancellation token.");
             }
 
-            // Anulează schimbarea email-ului
             user.EmailChangeToken = null;
             user.EmailChangeExpires = null;
             user.EmailChangeCancelToken = null;
@@ -348,12 +341,12 @@ namespace LifeAlertPlus.API.Controllers
 
             var user = await _userService.GetUserByEmailAsync(request.Email);
 
-            if (user == null || !_authentificationService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
+            if (user == null || !_authenticationService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
             {
                 return BadRequest("Invalid email or current password.");
             }
 
-            user.PasswordHash = _authentificationService.HashPassword(request.NewPassword);
+            user.PasswordHash = _authenticationService.HashPassword(request.NewPassword);
             user.UpdatedAt = DateTime.UtcNow;
             user.LastChangedPasswordAt = DateTime.UtcNow;
 

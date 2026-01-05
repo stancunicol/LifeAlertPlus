@@ -9,12 +9,12 @@ namespace LifeAlertPlus.Application.Services
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
-        private readonly IAuthentificationService _authentificationService;
+        private readonly IAuthenticationService _authenticationService;
 
-        public UserService(IUserRepository userRepository, IAuthentificationService authentificationService)
+        public UserService(IUserRepository userRepository, IAuthenticationService authenticationService)
         {
             _userRepository = userRepository;
-            _authentificationService = authentificationService;
+            _authenticationService = authenticationService;
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)
@@ -66,7 +66,7 @@ namespace LifeAlertPlus.Application.Services
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
-                PasswordHash = _authentificationService.HashPassword(user.Password),
+                PasswordHash = _authenticationService.HashPassword(user.Password),
                 IsEmailConfirmed = false,
                 EmailConfirmationToken = emailToken,
                 EmailConfirmationExpires = DateTime.UtcNow.AddHours(24),
@@ -104,15 +104,12 @@ namespace LifeAlertPlus.Application.Services
             var users = await _userRepository.GetAllUsersAsync();
             return users.FirstOrDefault(u => u.EmailChangeCancelToken == token);
         }
-        /// <summary>
-        /// Caută sau creează un utilizator pe baza datelor Google (email, nume, googleId)
-        /// </summary>
+
         public async Task<User?> FindOrCreateGoogleUserAsync(string email, string? name, string googleId)
         {
             var user = await _userRepository.GetUserByEmailAsync(email);
             if (user != null)
             {
-                // Actualizează provider info dacă e nevoie
                 if (user.Provider != "Google" || user.ProviderKey != googleId)
                 {
                     user.Provider = "Google";
@@ -122,7 +119,6 @@ namespace LifeAlertPlus.Application.Services
                 return user;
             }
 
-            // Creează user nou
             var firstName = name?.Split(' ').FirstOrDefault() ?? "Google";
             var lastName = name?.Contains(' ') == true ? string.Join(' ', name.Split(' ').Skip(1)) : "User";
             var newUser = new User

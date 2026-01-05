@@ -16,10 +16,6 @@ namespace LifeAlertPlus.Application.IServices
         string GeneratePasswordResetToken();
         string GenerateEmailChangeCancelToken();
         Task<User?> GetUserByEmailChangeCancelTokenAsync(string token);
-
-        /// <summary>
-        /// Caută sau creează un utilizator pe baza datelor Google (email, nume, googleId)
-        /// </summary>
         Task<User?> FindOrCreateGoogleUserAsync(string email, string? name, string googleId);
         Task<bool> DeleteUserAsync(Guid id);
     }

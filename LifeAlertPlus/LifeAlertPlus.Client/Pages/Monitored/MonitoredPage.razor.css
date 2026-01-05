@@ -390,12 +390,22 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
+    animation: overlayFadeIn 0.3s ease;
+}
+
+@keyframes overlayFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 .modal-content-large {
@@ -417,6 +427,30 @@
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+.error-alert {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 0.9rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-family: "Jua", sans-serif;
+    color: #856404;
+    font-size: 0.95rem;
+}
+
+.form-group {
+    margin-bottom: 1.2rem;
+}
+
+.form-group label {
+    display: block;
+    font-family: "Jua", sans-serif;
+    font-size: 0.95rem;
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
 }
 
 .modal-header {
@@ -483,6 +517,17 @@
     border: none;
 }
 
+    .modal-btn.primary {
+        background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+        color: #000;
+        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.3);
+    }
+
+        .modal-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(232, 165, 200, 0.4);
+        }
+
     .modal-btn.secondary {
         background: white;
         color: #000;
@@ -534,4 +579,51 @@
     .filter-btn {
         width: 100%;
     }
+}
+
+::deep .form-control,
+::deep input.form-control,
+::deep select.form-control,
+::deep textarea.form-control {
+    width: 100% !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: 8px !important;
+    border: 2px solid #ddd !important;
+    font-family: "Jua", sans-serif !important;
+    font-size: 1rem !important;
+    outline: none !important;
+    background: #ffffff !important;
+    color: #333 !important;
+    transition: all 0.3s ease !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+}
+
+::deep .form-control::placeholder {
+    color: #999 !important;
+    opacity: 1 !important;
+    font-style: normal !important;
+}
+
+::deep .form-control:focus {
+    border-color: #D88BB7 !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(232, 165, 200, 0.15) !important;
+}
+
+::deep .form-control:hover:not(:focus) {
+    border-color: #E8A5C8 !important;
+}
+
+::deep select.form-control {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background: #ffffff url('data:image/svg+xml;utf8,<svg fill="%23666" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 1rem center/1em auto !important;
+    padding-right: 2.5rem !important;
+    cursor: pointer !important;
+}
+
+::deep input[type="date"].form-control {
+    cursor: pointer !important;
 }

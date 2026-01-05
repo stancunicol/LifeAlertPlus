@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LifeAlertPlus.Application.IServices
 {
-    public interface IAuthentificationService
+    public interface IAuthenticationService
     {
         bool VerifyPassword(string password, string passwordHash);
         string HashPassword(string password);

@@ -1,166 +1,192 @@
+using System;
+using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using LifeAlertPlus.Client.Services;
+using LifeAlertPlus.Domain.Entities;
+using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
+using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 
 namespace LifeAlertPlus.Client.Pages.Monitored;
 
-public partial class MonitoredPage : ComponentBase
+public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 {
     [Inject]
-    private NavigationManager NavigationManager { get; set; } = default!;
+    private IJSRuntime JSRuntime { get; set; } = default!;
 
-    private string UserFullName = "";
-    private string ProfilePictureUrl = "";
-        protected override async Task OnInitializedAsync()
-        {
-            var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
-            if (!string.IsNullOrEmpty(token))
-            {
-                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-                var jsonToken = handler.ReadJwtToken(token);
-                var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? "";
-                var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? "";
-                var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? "";
-                UserFullName = $"{firstName} {lastName}".Trim();
-                ProfilePictureUrl = profilePictureUrl;
-            }
-            else
-            {
-                UserFullName = "User";
-            }
-        }
+    [Inject]
+    private MonitoredService MonitoredService { get; set; } = default!;
+
+    [Inject]
+    private UserMonitoredService UserMonitoredService { get; set; } = default!;
+
+    [Inject]
+    private UserService UserService { get; set; } = default!;
+
+    private string UserFullName = string.Empty;
+    private string ProfilePictureUrl = string.Empty;
+    private MonitorCreateRequestDTO newPerson = new();
     private string FilterStatus = "All";
-    private bool ShowAddPersonModal = false;
+    private bool ShowAddPersonModal;
+    private string ErrorMessage = string.Empty;
 
-    private List<MonitoredPersonDetailed> AllPeople = new()
+    private Guid _currentUserId;
+    private string? CurrentUserEmail;
+    private IReadOnlyList<LifeAlertPlus.Domain.Entities.Monitored> _monitoredPeople = Array.Empty<LifeAlertPlus.Domain.Entities.Monitored>();
+    private List<MonitoredCard> _monitoredCards = new();
+    private bool _isLoadingMonitored = true;
+    private string _dataError = string.Empty;
+    private CancellationTokenSource? _pollingCts;
+    private IEnumerable<MonitoredCard> AllPeople = new List<MonitoredCard>();
+    private int CriticalCount => _monitoredCards.Count(c => GetCardStatus(c) == "Critical");
+    private int WarningCount => _monitoredCards.Count(c => GetCardStatus(c) == "Warning");
+    private int StableCount => _monitoredCards.Count(c => GetCardStatus(c) == "OK");
+
+    protected override async Task OnInitializedAsync()
     {
-        new MonitoredPersonDetailed
+        await LoadUserFromTokenAsync();
+
+        if (_currentUserId == Guid.Empty)
         {
-            Id = 1,
-            Name = "Elena Popescu",
-            Age = 76,
-            Relationship = "Mother",
-            HeartRate = 78,
-            BloodPressure = "120/80",
-            Temperature = 36.5,
-            Status = "OK",
-            LastUpdate = "Acum 2h",
-            Location = "Bucuresti, Romania",
-            Phone = "+40 721 234 567"
-        },
-        new MonitoredPersonDetailed
-        {
-            Id = 2,
-            Name = "Ion Popa",
-            Age = 82,
-            Relationship = "Father",
-            HeartRate = 95,
-            BloodPressure = "138/88",
-            Temperature = 36.9,
-            Status = "Warning",
-            LastUpdate = "Acum 1h",
-            Location = "Cluj-Napoca, Romania",
-            Phone = "+40 732 345 678"
-        },
-        new MonitoredPersonDetailed
-        {
-            Id = 3,
-            Name = "Maria Ionescu",
-            Age = 75,
-            Relationship = "Aunt",
-            HeartRate = 105,
-            BloodPressure = "145/89",
-            Temperature = 37.1,
-            Status = "Critical",
-            LastUpdate = "Acum 30min",
-            Location = "Timisoara, Romania",
-            Phone = "+40 743 456 789"
-        },
-        new MonitoredPersonDetailed
-        {
-            Id = 4,
-            Name = "Vasile Dumitrescu",
-            Age = 70,
-            Relationship = "Uncle",
-            HeartRate = 82,
-            BloodPressure = "125/82",
-            Temperature = 36.7,
-            Status = "OK",
-            LastUpdate = "Acum 1h",
-            Location = "Iasi, Romania",
-            Phone = "+40 754 567 890"
-        },
-        new MonitoredPersonDetailed
-        {
-            Id = 5,
-            Name = "Ana Marin",
-            Age = 63,
-            Relationship = "Mother-in-law",
-            HeartRate = 78,
-            BloodPressure = "118/78",
-            Temperature = 36.5,
-            Status = "OK",
-            LastUpdate = "Acum 3h",
-            Location = "Constanta, Romania",
-            Phone = "+40 765 678 901"
-        },
-        new MonitoredPersonDetailed
-        {
-            Id = 6,
-            Name = "Gheorghe Stan",
-            Age = 79,
-            Relationship = "Grandfather",
-            HeartRate = 92,
-            BloodPressure = "142/86",
-            Temperature = 37.0,
-            Status = "Warning",
-            LastUpdate = "Acum 45min",
-            Location = "Brasov, Romania",
-            Phone = "+40 776 789 012"
-        },
-        new MonitoredPersonDetailed
-        {
-            Id = 7,
-            Name = "Ioana Radu",
-            Age = 68,
-            Relationship = "Grandmother",
-            HeartRate = 75,
-            BloodPressure = "115/75",
-            Temperature = 36.4,
-            Status = "OK",
-            LastUpdate = "Acum 2h",
-            Location = "Sibiu, Romania",
-            Phone = "+40 787 890 123"
-        },
-        new MonitoredPersonDetailed
-        {
-            Id = 8,
-            Name = "Mihai Petre",
-            Age = 85,
-            Relationship = "Neighbor",
-            HeartRate = 110,
-            BloodPressure = "150/92",
-            Temperature = 37.3,
-            Status = "Critical",
-            LastUpdate = "Acum 15min",
-            Location = "Bucuresti, Romania",
-            Phone = "+40 798 901 234"
+            _dataError = "User not authenticated.";
+            _isLoadingMonitored = false;
+            return;
         }
-    };
 
-    private List<MonitoredPersonDetailed> FilteredPeople =>
-        FilterStatus == "All" 
-            ? AllPeople 
-            : AllPeople.Where(p => p.Status.Equals(FilterStatus, StringComparison.OrdinalIgnoreCase)).ToList();
+        await LoadMonitoredPeopleAsync();
+        StartPolling();
+    }
 
-    private int CriticalCount => AllPeople.Count(p => p.Status.Equals("Critical", StringComparison.OrdinalIgnoreCase));
-    private int WarningCount => AllPeople.Count(p => p.Status.Equals("Warning", StringComparison.OrdinalIgnoreCase));
-    private int StableCount => AllPeople.Count(p => p.Status.Equals("OK", StringComparison.OrdinalIgnoreCase));
+    private async Task LoadUserFromTokenAsync()
+    {
+        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
+        if (string.IsNullOrEmpty(token))
+        {
+            UserFullName = "User";
+            CurrentUserEmail = string.Empty;
+            _currentUserId = Guid.Empty;
+            return;
+        }
+
+        var handler = new JwtSecurityTokenHandler();
+        var jsonToken = handler.ReadJwtToken(token);
+
+        CurrentUserEmail = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "email")?.Value ?? string.Empty;
+        var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? string.Empty;
+        var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? string.Empty;
+        var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? string.Empty;
+        var sub = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub)?.Value;
+
+        Guid.TryParse(sub, out _currentUserId);
+
+        UserFullName = $"{firstName} {lastName}".Trim();
+        ProfilePictureUrl = profilePictureUrl;
+    }
+
+    private async Task LoadMonitoredPeopleAsync()
+    {
+        _isLoadingMonitored = true;
+        _dataError = string.Empty;
+
+        try
+        {
+            if (_currentUserId == Guid.Empty)
+            {
+                _monitoredPeople = Array.Empty<LifeAlertPlus.Domain.Entities.Monitored>();
+                _monitoredCards.Clear();
+                return;
+            }
+
+            _monitoredPeople = await UserMonitoredService.GetMonitoredPeopleAsync(_currentUserId);
+            await RefreshEspDataAsync(_pollingCts?.Token ?? CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _dataError = $"Failed to load monitored people: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingMonitored = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void StartPolling()
+    {
+        _pollingCts = new CancellationTokenSource();
+        _ = PollLoopAsync(_pollingCts.Token);
+    }
+
+    private async Task PollLoopAsync(CancellationToken token)
+    {
+        while (!token.IsCancellationRequested)
+        {
+            await RefreshEspDataAsync(token);
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromMinutes(2), token);
+            }
+            catch (TaskCanceledException)
+            {
+                break;
+            }
+        }
+    }
+
+    private async Task RefreshEspDataAsync(CancellationToken token)
+    {
+        if (_monitoredPeople.Count == 0)
+        {
+            _monitoredCards.Clear();
+            return;
+        }
+
+        var cards = new List<MonitoredCard>();
+
+        foreach (var person in _monitoredPeople)
+        {
+            token.ThrowIfCancellationRequested();
+
+            ESPDataResponseDTO? latestData = null;
+            try
+            {
+                latestData = await MonitoredService.GetEspDataAsync(person.DeviceSerialNumber, token);
+            }
+            catch (TaskCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                // Ignore per-device failures to keep other updates flowing.
+            }
+
+            cards.Add(new MonitoredCard
+            {
+                Person = person,
+                LastData = latestData,
+                LastUpdatedUtc = DateTime.UtcNow
+            });
+        }
+
+        _monitoredCards = cards;
+        await InvokeAsync(StateHasChanged);
+    }
 
     private string GetInitials(string name)
     {
-        var parts = name.Split(' ');
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (parts.Length >= 2)
-            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
-        return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
+        {
+            return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+        }
+
+        return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
     }
 
     private string GetStatusClass(string status)
@@ -170,7 +196,7 @@ public partial class MonitoredPage : ComponentBase
             "critical" => "status-critical",
             "warning" => "status-warning",
             "ok" => "status-ok",
-            _ => ""
+            _ => string.Empty
         };
     }
 
@@ -187,6 +213,10 @@ public partial class MonitoredPage : ComponentBase
 
     private void OpenAddPersonModal()
     {
+        newPerson = new MonitorCreateRequestDTO
+        {
+            Birthdate = DateTime.Today
+        };
         ShowAddPersonModal = true;
     }
 
@@ -195,23 +225,259 @@ public partial class MonitoredPage : ComponentBase
         ShowAddPersonModal = false;
     }
 
-    private void ViewDetails(int personId)
+    private async Task HandleAddPerson()
     {
-        NavigationManager.NavigateTo($"/monitored/{personId}");
+        ErrorMessage = string.Empty;
+
+        if (string.IsNullOrEmpty(newPerson.FirstName) || string.IsNullOrEmpty(newPerson.LastName) ||
+            string.IsNullOrEmpty(newPerson.DeviceSerialNumber) || string.IsNullOrEmpty(newPerson.Address) ||
+            newPerson.Birthdate == null || string.IsNullOrEmpty(newPerson.Gender) || string.IsNullOrEmpty(newPerson.Relationship))
+        {
+            ErrorMessage = "All fields are required.";
+            return;
+        }
+
+        var request = await MonitoredService.AddMonitoredPersonAsync(newPerson);
+
+        if (!request)
+        {
+            ErrorMessage = "Failed to add monitored person. Please try again.";
+            return;
+        }
+
+        var monitoredPerson = await MonitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(newPerson.DeviceSerialNumber);
+
+        if (monitoredPerson == null)
+        {
+            ErrorMessage = "Failed to retrieve monitored person after creation. Please try again.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(CurrentUserEmail))
+        {
+            ErrorMessage = "Failed to retrieve current user. Please try again.";
+            return;
+        }
+
+        var currentUser = await UserService.GetUserByEmailAsync(CurrentUserEmail);
+        if (currentUser == null)
+        {
+            ErrorMessage = "Failed to retrieve current user. Please try again.";
+            return;
+        }
+
+        var result = await UserMonitoredService.AddMonitoredPersonToUserAsync(currentUser.Id, monitoredPerson.Id);
+
+        if (!result)
+        {
+            ErrorMessage = "Failed to link monitored person to user. Please try again.";
+            return;
+        }
+
+        await LoadMonitoredPeopleAsync();
+        ShowAddPersonModal = false;
     }
 
-    public class MonitoredPersonDetailed
+    private string FormatIntList(IEnumerable<int>? values)
     {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public int Age { get; set; }
-        public string Relationship { get; set; } = string.Empty;
-        public int HeartRate { get; set; }
-        public string BloodPressure { get; set; } = string.Empty;
-        public double Temperature { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public string LastUpdate { get; set; } = string.Empty;
-        public string Location { get; set; } = string.Empty;
-        public string Phone { get; set; } = string.Empty;
+        return values == null ? "N/A" : string.Join(", ", values);
+    }
+
+    private string FormatGps(string? values)
+    {
+        if (string.IsNullOrWhiteSpace(values))
+        {
+            return "N/A";
+        }
+
+        var lines = values
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToArray();
+
+        return lines.Length == 0 ? "N/A" : string.Join(" / ", lines);
+    }
+
+    private string FormatLastUpdate(MonitoredCard card)
+    {
+        return card.LastUpdatedUtc.ToLocalTime().ToString("g");
+    }
+
+    private string FormatEspTimestamp(long value)
+    {
+        if (value > 1_000_000_000)
+        {
+            try
+            {
+                return DateTimeOffset.FromUnixTimeSeconds(value).ToLocalTime().ToString("g");
+            }
+            catch
+            {
+                // fall through
+            }
+        }
+
+        return $"T+{value}s";
+    }
+
+    private string GetPulse(ESPDataResponseDTO? data)
+    {
+        if (data?.Max30100 == null || data.Max30100.Count == 0)
+        {
+            return "N/A";
+        }
+
+        var pulse = data.Max30100[0];
+        return pulse > 0 ? pulse.ToString() : "N/A";
+    }
+
+    private string GetOxygen(ESPDataResponseDTO? data)
+    {
+        if (data?.Max30100 == null || data.Max30100.Count < 2)
+        {
+            return "N/A";
+        }
+
+        var spo2 = data.Max30100[1];
+        return spo2 > 0 ? spo2.ToString() : "N/A";
+    }
+
+    private string GetTemperature(ESPDataResponseDTO? data)
+    {
+        const double temp = 36.8;
+        return temp.ToString("F1");
+    }
+
+    private string FormatGpsStatus(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "GPS: fără date";
+        }
+
+        var lines = raw.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (lines.Any(l => l.Contains(",V,", StringComparison.OrdinalIgnoreCase)))
+        {
+            return "GPS: fără fix (semnal slab)";
+        }
+
+        var gprmc = lines.FirstOrDefault(l => l.StartsWith("$GPRMC", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(gprmc))
+        {
+            var parts = gprmc.Split(',');
+            if (parts.Length > 6 && !string.IsNullOrWhiteSpace(parts[3]) && !string.IsNullOrWhiteSpace(parts[5]))
+            {
+                var lat = parts[3] + parts.ElementAtOrDefault(4);
+                var lon = parts[5] + parts.ElementAtOrDefault(6);
+                return $"Coordonate: {lat} {lon}";
+            }
+        }
+
+        var gpgll = lines.FirstOrDefault(l => l.StartsWith("$GPGLL", StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(gpgll))
+        {
+            var parts = gpgll.Split(',');
+            if (parts.Length > 5 && !string.IsNullOrWhiteSpace(parts[1]) && !string.IsNullOrWhiteSpace(parts[3]))
+            {
+                var lat = parts[1] + parts.ElementAtOrDefault(2);
+                var lon = parts[3] + parts.ElementAtOrDefault(4);
+                return $"Coordonate: {lat} {lon}";
+            }
+        }
+
+        return "GPS activ: date în curs";
+    }
+
+    private string FormatFallRisk(MonitoredCard card)
+    {
+        var mpu = card.LastData?.Mpu6050;
+        var gyro = card.LastData?.Gyro;
+        var hmc = card.LastData?.Hmc5883l;
+
+        double accelScore = 0;
+        if (mpu != null && mpu.Count >= 3)
+        {
+            accelScore = Math.Sqrt(mpu[0] * (double)mpu[0] + mpu[1] * (double)mpu[1] + mpu[2] * (double)mpu[2]);
+        }
+
+        double gyroScore = 0;
+        if (gyro != null && gyro.Count >= 3)
+        {
+            gyroScore = Math.Sqrt(gyro[0] * (double)gyro[0] + gyro[1] * (double)gyro[1] + gyro[2] * (double)gyro[2]);
+        }
+
+        var highAccel = accelScore > 35000; // heuristic threshold
+        var highGyro = gyroScore > 4000;    // heuristic threshold
+        var hmcSpike = hmc.HasValue && Math.Abs(hmc.Value) > 500; // arbitrary spike detection
+
+        if (highAccel || highGyro || hmcSpike)
+        {
+            return "Posibil eveniment (cădere/impact)";
+        }
+
+        return "Stabil";
+    }
+
+    private string GetCardStatus(MonitoredCard card)
+    {
+        var pulse = card.LastData?.Max30100?.ElementAtOrDefault(0) ?? 0;
+        var spo2 = card.LastData?.Max30100?.ElementAtOrDefault(1) ?? 0;
+        var fallRisk = FormatFallRisk(card);
+
+        if (fallRisk.Contains("Posibil eveniment") || pulse > 100 || pulse < 50 || spo2 < 90)
+        {
+            return "Critical";
+        }
+
+        if (pulse > 90 || pulse < 60 || spo2 < 95)
+        {
+            return "Warning";
+        }
+
+        return "OK";
+    }
+
+    private string GetCardStatusClass(MonitoredCard card)
+    {
+        return GetStatusClass(GetCardStatus(card));
+    }
+
+    private int GetAge(LifeAlertPlus.Domain.Entities.Monitored person)
+    {
+        if (person.Birthdate == null)
+        {
+            return 0;
+        }
+
+        var today = DateTime.Today;
+        var age = today.Year - person.Birthdate.Value.Year;
+        if (person.Birthdate.Value.Date > today.AddYears(-age))
+        {
+            age--;
+        }
+
+        return age;
+    }
+
+    private void ViewDetails(Guid personId)
+    {
+        
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        if (_pollingCts != null)
+        {
+            _pollingCts.Cancel();
+            _pollingCts.Dispose();
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    private sealed class MonitoredCard
+    {
+        public required LifeAlertPlus.Domain.Entities.Monitored Person { get; init; }
+        public ESPDataResponseDTO? LastData { get; init; }
+        public DateTime LastUpdatedUtc { get; init; }
     }
 }

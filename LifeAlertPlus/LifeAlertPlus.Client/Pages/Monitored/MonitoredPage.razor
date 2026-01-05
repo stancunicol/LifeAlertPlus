@@ -1,7 +1,7 @@
 @page "/monitored"
 
 @using LifeAlertPlus.Domain.Entities
-@inject IJSRuntime JSRuntime
+@using LifeAlertPlus.Client.Components.Header
 
 <HeaderComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl"/>
 
@@ -22,7 +22,7 @@
             <label>Status Filter:</label>
             <div class="filter-buttons">
                 <button class="filter-btn @(FilterStatus == "All" ? "active" : "")" @onclick='() => FilterStatus = "All"'>
-                    All (@AllPeople.Count)
+                    All (@AllPeople.Count())
                 </button>
                 <button class="filter-btn critical @(FilterStatus == "Critical" ? "active" : "")" @onclick='() => FilterStatus = "Critical"'>
                     Alert (@CriticalCount)
@@ -37,82 +37,99 @@
         </div>
     </div>
 
-    <div class="people-grid">
-        @foreach (var person in FilteredPeople)
+    <div class="live-updates">
+        @if (_isLoadingMonitored)
         {
-            <div class="person-card-detailed @GetStatusClass(person.Status)">
-                <div class="card-header-colored @person.Status.ToLower()">
-                    <div class="header-top">
-                        <div class="person-avatar-big">@GetInitials(person.Name)</div>
-                        <div class="person-basic-info">
-                            <h3 class="person-name-big">@person.Name</h3>
-                            <p class="person-details">@person.Age ani • @person.Relationship</p>
-                        </div>
-                    </div>
-                    <div class="status-row">
-                        <span class="status-dot"></span>
-                        <span class="status-text">@GetStatusText(person.Status)</span>
-                    </div>
-                </div>
-
-                <div class="card-body-white">
-                    <div class="vitals-grid">
-                        <div class="vital-box">
-                            <span class="vital-icon-large">❤️</span>
-                            <div class="vital-info">
-                                <span class="vital-value-large">@person.HeartRate</span>
-                                <span class="vital-label-large">bpm</span>
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Loading monitored people...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(_dataError))
+        {
+            <div class="error-state">
+                <p>@_dataError</p>
+            </div>
+        }
+        else if (_monitoredCards.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <h3>No monitored people</h3>
+                <p>Add a person to start receiving ESP data.</p>
+            </div>
+        }
+        else
+        {
+            <div class="people-grid">
+                @foreach (var card in _monitoredCards)
+                {
+                    <div class="person-card-detailed @GetCardStatusClass(card)">
+                        <div class="card-header-colored @GetCardStatus(card).ToLower()">
+                            <div class="header-top">
+                                <div class="person-avatar-big">@GetInitials($"{card.Person.FirstName} {card.Person.LastName}")</div>
+                                <div class="person-basic-info">
+                                    <h3 class="person-name-big">@card.Person.FirstName @card.Person.LastName</h3>
+                                    <p class="person-details">@GetAge(card.Person) ani • @(card.Person.Address ?? "N/A")</p>
+                                </div>
+                            </div>
+                            <div class="status-row">
+                                <span class="status-dot"></span>
+                                <span class="status-text">@GetStatusText(GetCardStatus(card))</span>
                             </div>
                         </div>
-                        <div class="vital-box">
-                            <span class="vital-icon-large">🩸</span>
-                            <div class="vital-info">
-                                <span class="vital-value-large">@person.BloodPressure</span>
-                                <span class="vital-label-large">mmHg</span>
+
+                        <div class="card-body-white">
+                            <div class="vitals-grid">
+                                <div class="vital-box">
+                                    <span class="vital-icon-large">❤️</span>
+                                    <div class="vital-info">
+                                        <span class="vital-value-large">@GetPulse(card.LastData)</span>
+                                        <span class="vital-label-large">Pulse (bpm)</span>
+                                    </div>
+                                </div>
+                                <div class="vital-box">
+                                    <span class="vital-icon-large">🩸</span>
+                                    <div class="vital-info">
+                                        <span class="vital-value-large">@GetOxygen(card.LastData)</span>
+                                        <span class="vital-label-large">SpO₂ (%)</span>
+                                    </div>
+                                </div>
+                                <div class="vital-box">
+                                    <span class="vital-icon-large">🌡️</span>
+                                    <div class="vital-info">
+                                        <span class="vital-value-large">@GetTemperature(card.LastData)</span>
+                                        <span class="vital-label-large">Temperature (°C)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="additional-info">
+                                <div class="info-item">
+                                    <span class="info-label">📍 GPS:</span>
+                                    <span class="info-value">@FormatGpsStatus(card.LastData?.Neo6m)</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">🧭 Fall detection:</span>
+                                    <span class="info-value">@FormatFallRisk(card)</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">⏰ Last Update:</span>
+                                    <span class="info-value">@FormatEspTimestamp(card.LastData?.Date ?? 0)</span>
+                                </div>
+                            </div>
+
+                            <div class="card-actions">
+                                <button class="action-btn primary" @onclick="() => ViewDetails(card.Person.Id)">View Details</button>
+                                <button class="action-btn secondary">View History</button>
+                                <button class="action-btn secondary">Edit</button>
                             </div>
                         </div>
-                        <div class="vital-box">
-                            <span class="vital-icon-large">🌡️</span>
-                            <div class="vital-info">
-                                <span class="vital-value-large">@person.Temperature°C</span>
-                                <span class="vital-label-large">temp</span>
-                            </div>
-                        </div>
                     </div>
-
-                    <div class="additional-info">
-                        <div class="info-item">
-                            <span class="info-label">📍 Location:</span>
-                            <span class="info-value">@person.Location</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">📞 Contact:</span>
-                            <span class="info-value">@person.Phone</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">⏰ Last Update:</span>
-                            <span class="info-value">@person.LastUpdate</span>
-                        </div>
-                    </div>
-
-                    <div class="card-actions">
-                        <button class="action-btn primary" @onclick="() => ViewDetails(person.Id)">View Details</button>
-                        <button class="action-btn secondary">View History</button>
-                        <button class="action-btn secondary">Edit</button>
-                    </div>
-                </div>
+                }
             </div>
         }
     </div>
-
-    @if (FilteredPeople.Count == 0)
-    {
-        <div class="empty-state">
-            <div class="empty-icon">🔍</div>
-            <h3>No people found</h3>
-            <p>Try adjusting your filters or add a new person to monitor.</p>
-        </div>
-    }
 </div>
 
 @if (ShowAddPersonModal)
@@ -120,14 +137,73 @@
     <div class="modal-overlay" @onclick="CloseAddPersonModal">
         <div class="modal-content-large" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h3>Add New Person</h3>
+                <h3>Add Monitored Person</h3>
                 <button class="close-btn" @onclick="CloseAddPersonModal">✕</button>
             </div>
             <div class="modal-body">
-                <p>Feature coming soon! This will allow you to add new people to monitor.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="modal-btn secondary" @onclick="CloseAddPersonModal">Cancel</button>
+                <EditForm Model="@newPerson" OnValidSubmit="HandleAddPerson">
+                    @if (!string.IsNullOrEmpty(ErrorMessage))
+                    {
+                        <div class="error-alert">
+                            @ErrorMessage
+                        </div>
+                    }
+                    
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <InputText class="form-control" @bind-Value="newPerson.FirstName" placeholder="First name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <InputText class="form-control" @bind-Value="newPerson.LastName" placeholder="Last name" />
+                    </div>
+                    <div class="form-group">
+                        <label>Birthdate</label>
+                        <InputDate class="form-control" @bind-Value="newPerson.Birthdate" />
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <InputSelect class="form-control" @bind-Value="newPerson.Gender">
+                            <option value="">Select...</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </InputSelect>
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <InputText class="form-control" @bind-Value="newPerson.Address" placeholder="Address" />
+                    </div>
+                    <div class="form-group">
+                        <label>Device Serial Number</label>
+                        <InputText class="form-control" @bind-Value="newPerson.DeviceSerialNumber" placeholder="ESP32-XXXXXXXXX" />
+                    </div>
+                    <div class="form-group">
+                        <label>Relationship</label>
+                        <InputSelect class="form-control" @bind-Value="newPerson.Relationship">
+                            <option value="">Select...</option>
+                            <option value="mother">Mother</option>
+                            <option value="father">Father</option>
+                            <option value="grandmother">Grandmother</option>
+                            <option value="grandfather">Grandfather</option>
+                            <option value="aunt">Aunt</option>
+                            <option value="uncle">Uncle</option>
+                            <option value="husband">Husband</option>
+                            <option value="wife">Wife</option>
+                            <option value="sister">Sister</option>
+                            <option value="brother">Brother</option>
+                            <option value="friend">Friend</option>
+                            <option value="daughter">Daughter</option>
+                            <option value="son">Son</option>
+                            <option value="nephew">Nephew</option>
+                            <option value="niece">Niece</option>
+                        </InputSelect>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="modal-btn secondary" @onclick="CloseAddPersonModal">Cancel</button>
+                        <button type="submit" class="modal-btn primary">Add Person</button>
+                    </div>
+                </EditForm>
             </div>
         </div>
     </div>

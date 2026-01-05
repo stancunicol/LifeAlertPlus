@@ -14,7 +14,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
     public partial class ProfilePage : ComponentBase
     {
         [Inject]
-        private AuthentificationService AuthentificationService { get; set; } = null!;
+        private AuthenticationService AuthenticationService { get; set; } = null!;
 
         [Inject]
         private UserService UserService { get; set; } = null!;
@@ -35,7 +35,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
         private int MonitoredCount { get; set; } = 8;
         private int AlertsCount { get; set; } = 4;
-        private int DaysActive { get; set; } = 127;
+        private int DaysActive { get; set; }
 
         private NotificationPreferences Preferences { get; set; } = new NotificationPreferences
         {
@@ -56,6 +56,12 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private bool ShowEmailChangeSuccess { get; set; } = false;
         private bool ShowPasswordChangeSuccess { get; set; } = false;
 
+        private bool ShowDeactivateConfirmModalBool { get; set; } = false;
+        private bool ShowDeactivateInfoModal { get; set; } = false;
+
+        private bool ShowDeleteConfirmModalBool { get; set; } = false;
+        private bool ShowDeleteInfoModal { get; set; } = false;
+
         private void ClosePasswordChangeSuccessModal()
         {
             ShowPasswordChangeSuccess = false;
@@ -64,7 +70,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
         protected override async Task OnInitializedAsync()
         {
             await LoadCurrentUserAsync();
-            // Dacă ai userId, poți încărca din API:
             if (CurrentUser.Id != Guid.Empty)
             {
                 var userFromApi = await UserService.GetUserByIdAsync(CurrentUser.Id);
@@ -72,6 +77,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 {
                     CurrentUser = userFromApi;
                 }
+
+                DaysActive = (DateTime.UtcNow - CurrentUser.CreatedAt).Days;
             }
         }
 
@@ -79,12 +86,10 @@ namespace LifeAlertPlus.Client.Pages.Profile
         {
             try
             {
-                // Încercăm să obținem token-ul din localStorage
                 var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
                 
                 if (!string.IsNullOrEmpty(token))
                 {
-                    // Extragem informațiile din JWT token
                     var handler = new JwtSecurityTokenHandler();
                     var jsonToken = handler.ReadJwtToken(token);
                     
@@ -241,7 +246,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 ConfirmPassword = PasswordChange.ConfirmPassword
             };
 
-            var result = await AuthentificationService.UpdatePasswordAsync(request);
+            var result = await AuthenticationService.UpdatePasswordAsync(request);
 
             if (!result)
             {
@@ -310,7 +315,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 CurrentPassword = EmailChange.CurrentPassword
             };
 
-            var result = await AuthentificationService.UpdateEmailAsync(request);
+            var result = await AuthenticationService.UpdateEmailAsync(request);
 
             if (result != null)
             {
@@ -318,7 +323,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 {
                     if (result.RequiresLogout)
                     {
-                        // Afișez modal-ul de succes înainte de delogare
                         CloseChangeEmailModal();
                         ShowEmailChangeSuccess = true;
                         return;
@@ -341,8 +345,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private async Task CloseEmailChangeSuccessModal()
         {
             ShowEmailChangeSuccess = false;
-            // Delogez utilizatorul și îl redirect la login
-            await AuthentificationService.LogoutAsync();
+            await AuthenticationService.LogoutAsync();
             Navigation.NavigateTo("/login");
         }
 
@@ -365,7 +368,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             var result = await UserService.DeactivateUserAsync(CurrentUser.Id);
             if (result)
             {
-                await AuthentificationService.LogoutAsync();
+                await AuthenticationService.LogoutAsync();
                 Navigation.NavigateTo("/login");
             }
             else
@@ -373,9 +376,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 Console.WriteLine("Failed to deactivate account.");
             }
         }
-
-        private bool ShowDeactivateConfirmModalBool { get; set; } = false;
-        private bool ShowDeactivateInfoModal { get; set; } = false;
 
         private void ShowDeactivateConfirmModal()
         {
@@ -404,7 +404,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             var result = await UserService.DeleteUserAsync(CurrentUser.Id);
             if (result)
             {
-                await AuthentificationService.LogoutAsync();
+                await AuthenticationService.LogoutAsync();
                 Navigation.NavigateTo("/login");
             }
             else
@@ -412,9 +412,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 Console.WriteLine("Failed to delete account.");
             }
         }
-
-        private bool ShowDeleteConfirmModalBool { get; set; } = false;
-        private bool ShowDeleteInfoModal { get; set; } = false;
 
         private void ShowDeleteConfirmModal()
         {

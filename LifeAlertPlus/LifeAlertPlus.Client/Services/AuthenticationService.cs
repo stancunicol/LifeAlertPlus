@@ -5,12 +5,12 @@ using LifeAlertPlus.Shared.DTOs.Responses.User;
 
 namespace LifeAlertPlus.Client.Services
 {
-    public class AuthentificationService
+    public class AuthenticationService
     {
         private readonly HttpClient _httpClient;
         private readonly IJSRuntime _jsRuntime;
         
-        public AuthentificationService(HttpClient httpClient, IJSRuntime jsRuntime)
+        public AuthenticationService(HttpClient httpClient, IJSRuntime jsRuntime)
         {
             _httpClient = httpClient;
             _jsRuntime = jsRuntime;
@@ -18,7 +18,7 @@ namespace LifeAlertPlus.Client.Services
 
         public async Task<UserLoginResponseDTO?> LoginAsync(UserLoginRequestDTO request)
         {
-            var response = await _httpClient.PostAsJsonAsync("api/authentification/login", request);
+            var response = await _httpClient.PostAsJsonAsync("api/authentication/login", request);
 
             if (response.IsSuccessStatusCode)
             {
@@ -30,7 +30,7 @@ namespace LifeAlertPlus.Client.Services
 
         public async Task<UserRegisterRequestDTO?> RegisterAsync(UserRegisterRequestDTO request)
         {
-            var response = await _httpClient.PostAsJsonAsync("api/authentification/register", request);
+            var response = await _httpClient.PostAsJsonAsync("api/authentication/register", request);
 
             if (response.IsSuccessStatusCode)
             {
@@ -42,7 +42,7 @@ namespace LifeAlertPlus.Client.Services
 
         public async Task<UserUpdateEmailResponseDTO?> UpdateEmailAsync(UserChangeEmailRequestDTO request)
         {
-            var response = await _httpClient.PatchAsJsonAsync("api/authentification/change-email", request);
+            var response = await _httpClient.PatchAsJsonAsync("api/authentication/change-email", request);
 
             if (response.IsSuccessStatusCode)
             {
@@ -54,7 +54,7 @@ namespace LifeAlertPlus.Client.Services
 
         public async Task<bool> UpdatePasswordAsync(UserChangePasswordRequestDTO request)
         {
-            var response = await _httpClient.PostAsJsonAsync("api/authentification/change-password", request);
+            var response = await _httpClient.PostAsJsonAsync("api/authentication/change-password", request);
 
             return response.IsSuccessStatusCode;
         }

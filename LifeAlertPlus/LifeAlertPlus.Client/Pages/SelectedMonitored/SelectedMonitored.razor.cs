@@ -16,6 +16,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private List<BPChartDataPoint> BloodPressureHistory { get; set; } = new();
         private List<Alert> RecentAlerts { get; set; } = new();
         private List<Measurement> RecentMeasurements { get; set; } = new();
+        private string UserFullName = "";
+        private string ProfilePictureUrl = "";
 
         protected override void OnInitialized()
         {
@@ -27,7 +29,6 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private void LoadPersonData()
         {
-            // Simulate loading person data based on PersonId
             var allPeople = new List<PersonDetail>
             {
                 new PersonDetail { Id = 1, Name = "Elena Popescu", Age = 76, Relationship = "Mother", HeartRate = 78, BloodPressure = "120/80", Temperature = 36.5, Glucose = 95, Status = "OK", LastUpdate = "Acum 2h", Location = "București, Romania", Phone = "+40 721 234 567" },
@@ -108,8 +109,6 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             };
         }
 
-        private string UserFullName = "";
-        private string ProfilePictureUrl = "";
         protected override async Task OnInitializedAsync()
         {
             var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });

@@ -14,7 +14,7 @@ namespace LifeAlertPlus.Client.Pages.Login
         private NavigationManager Navigation { get; set; } = default!;
 
         [Inject]
-        private AuthentificationService AuthentificationService { get; set; } = default!;
+        private AuthenticationService AuthenticationService { get; set; } = default!;
         
         [Inject]
         private IJSRuntime JSRuntime { get; set; } = default!;
@@ -58,13 +58,12 @@ namespace LifeAlertPlus.Client.Pages.Login
                 Password = Password
             };
 
-            var response = await AuthentificationService.LoginAsync(request);
+            var response = await AuthenticationService.LoginAsync(request);
             
             if(response != null)
             {
                 if(response.Success == true)
                 {
-                    // Salvez token-ul în localStorage
                     await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", response.Token);
                     
                     Navigation.NavigateTo("/dashboard");
@@ -116,7 +115,7 @@ namespace LifeAlertPlus.Client.Pages.Login
 
             try
             {
-                var response = await Http.PostAsJsonAsync("api/authentification/forgot-password", new { Email = ForgotPasswordEmail });
+                var response = await Http.PostAsJsonAsync("api/authentication/forgot-password", new { Email = ForgotPasswordEmail });
                 var content = await response.Content.ReadAsStringAsync();
                 Console.WriteLine($"[ForgotPassword API raw response]: {content}");
                 string? message = null;
@@ -131,7 +130,6 @@ namespace LifeAlertPlus.Client.Pages.Login
                 }
                 catch { message = content; }
 
-                // Afișează mereu mesajul din răspuns, indiferent de status sau success
                 ForgotPasswordMessage = message ?? "Failed to send reset email. Please try again.";
                 IsForgotPasswordSuccess = success == true;
             }
@@ -145,7 +143,6 @@ namespace LifeAlertPlus.Client.Pages.Login
 
         private void LoginWithGoogle()
         {
-            // Adresa completă a API-ului (modifică portul dacă e altul la API)
             var apiBaseUrl = "http://localhost:5176";
             var clientDashboardUrl = "http://localhost:5254/dashboard";
             var googleAuthUrl = $"{apiBaseUrl}/api/auth/google-login?returnUrl={Uri.EscapeDataString(clientDashboardUrl)}";

@@ -7,7 +7,7 @@ using LifeAlertPlus.Application.IServices;
 
 namespace LifeAlertPlus.Application.Services
 {
-    public class AuthentificationService : IAuthentificationService
+    public class AuthenticationService : IAuthenticationService
     {
         public bool VerifyPassword(string password, string passwordHash)
         {

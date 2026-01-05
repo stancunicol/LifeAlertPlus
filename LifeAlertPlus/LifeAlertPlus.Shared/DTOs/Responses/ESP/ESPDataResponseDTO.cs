@@ -10,6 +10,6 @@ namespace LifeAlertPlus.Shared.DTOs.Responses.ESP
         public List<int> Gyro { get; set; }
         public List<int>? Max30100 { get; set; }
         public double Hmc5883l { get; set; }
-        public List<string>? Neo6m { get; set; }
+        public string? Neo6m { get; set; }
     }
 }
