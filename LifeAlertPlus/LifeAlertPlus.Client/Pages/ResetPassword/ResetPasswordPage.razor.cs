@@ -75,7 +75,7 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
                     ConfirmPassword = ConfirmPassword
                 };
 
-                var response = await Http.PostAsJsonAsync("api/authentification/reset-password", request);
+                var response = await Http.PostAsJsonAsync("api/authentication/reset-password", request);
 
                 if (response.IsSuccessStatusCode)
                 {

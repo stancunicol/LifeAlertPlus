@@ -18,6 +18,9 @@ namespace LifeAlertPlus.Client.Pages.Login
         
         [Inject]
         private IJSRuntime JSRuntime { get; set; } = default!;
+
+        [Inject]
+        private IConfiguration Configuration { get; set; } = default!;
         
         private string Email { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
@@ -143,8 +146,9 @@ namespace LifeAlertPlus.Client.Pages.Login
 
         private void LoginWithGoogle()
         {
-            var apiBaseUrl = "http://localhost:5176";
-            var clientDashboardUrl = "http://localhost:5254/dashboard";
+            var apiBaseUrl = (Configuration["ApiBaseUrl"] ?? "http://localhost:5176").TrimEnd('/');
+            var clientBaseUrl = Navigation.BaseUri.TrimEnd('/');
+            var clientDashboardUrl = $"{clientBaseUrl}/dashboard";
             var googleAuthUrl = $"{apiBaseUrl}/api/auth/google-login?returnUrl={Uri.EscapeDataString(clientDashboardUrl)}";
             Navigation.NavigateTo(googleAuthUrl, forceLoad: true);
         }

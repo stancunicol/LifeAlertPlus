@@ -1,0 +1,21 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY LifeAlertPlus/LifeAlertPlus.API/LifeAlertPlus.API.csproj LifeAlertPlus/LifeAlertPlus.API/
+COPY LifeAlertPlus/LifeAlertPlus.Application/LifeAlertPlus.Application.csproj LifeAlertPlus/LifeAlertPlus.Application/
+COPY LifeAlertPlus/LifeAlertPlus.Infrastructure/LifeAlertPlus.Infrastructure.csproj LifeAlertPlus/LifeAlertPlus.Infrastructure/
+COPY LifeAlertPlus/LifeAlertPlus.Shared/LifeAlertPlus.Shared.csproj LifeAlertPlus/LifeAlertPlus.Shared/
+COPY LifeAlertPlus/LifeAlertPlus.Domain/LifeAlertPlus.Domain.csproj LifeAlertPlus/LifeAlertPlus.Domain/
+
+RUN dotnet restore LifeAlertPlus/LifeAlertPlus.API/LifeAlertPlus.API.csproj
+
+COPY LifeAlertPlus/ LifeAlertPlus/
+WORKDIR /src/LifeAlertPlus/LifeAlertPlus.API
+RUN dotnet publish -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "LifeAlertPlus.API.dll"]

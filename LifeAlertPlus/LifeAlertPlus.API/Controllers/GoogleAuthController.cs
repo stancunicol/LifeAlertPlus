@@ -12,11 +12,24 @@ namespace LifeAlertPlus.API.Controllers
     {
         private readonly IUserService _userService;
         private readonly IJwtService _jwtService;
+        private readonly IConfiguration _configuration;
 
-        public GoogleAuthController(IUserService userService, IJwtService jwtService)
+        public GoogleAuthController(IUserService userService, IJwtService jwtService, IConfiguration configuration)
         {
             _userService = userService;
             _jwtService = jwtService;
+            _configuration = configuration;
+        }
+
+        private string GetClientBaseUrl()
+        {
+            var configured = _configuration["Urls:ClientBaseUrl"];
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured.TrimEnd('/');
+            }
+
+            return $"{Request.Scheme}://{Request.Host}";
         }
 
         [HttpGet("google-login")]
@@ -33,7 +46,7 @@ namespace LifeAlertPlus.API.Controllers
             var authenticateResult = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
             if (!authenticateResult.Succeeded || authenticateResult.Principal == null)
             {
-                return Redirect($"/login?error=GoogleAuthFailed");
+                return Redirect($"{GetClientBaseUrl()}/login?error=GoogleAuthFailed");
             }
 
             var email = authenticateResult.Principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value;
@@ -42,13 +55,13 @@ namespace LifeAlertPlus.API.Controllers
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(googleId))
             {
-                return Redirect($"/login?error=GoogleAuthNoEmail");
+                return Redirect($"{GetClientBaseUrl()}/login?error=GoogleAuthNoEmail");
             }
 
             var user = await _userService.FindOrCreateGoogleUserAsync(email, name, googleId);
             if (user == null)
             {
-                return Redirect($"/login?error=GoogleUserCreateFailed");
+                return Redirect($"{GetClientBaseUrl()}/login?error=GoogleUserCreateFailed");
             }
 
             var jwt = _jwtService.GenerateToken(user);

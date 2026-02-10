@@ -28,6 +28,28 @@ namespace LifeAlertPlus.API.Controllers
             _emailService = emailService;
         }
 
+        private string GetApiBaseUrl()
+        {
+            var configured = _configuration["Urls:ApiBaseUrl"];
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured.TrimEnd('/');
+            }
+
+            return $"{Request.Scheme}://{Request.Host}";
+        }
+
+        private string GetClientBaseUrl()
+        {
+            var configured = _configuration["Urls:ClientBaseUrl"];
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured.TrimEnd('/');
+            }
+
+            return $"{Request.Scheme}://{Request.Host}";
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginRequestDTO request)
         {
@@ -96,7 +118,7 @@ namespace LifeAlertPlus.API.Controllers
                 var newUser = await _userService.GetUserByEmailAsync(request.Email);
                 if (newUser != null && !string.IsNullOrEmpty(newUser.EmailConfirmationToken))
                 {
-                    var verificationUrl = $"http://localhost:5176/api/authentification/verify-email?token={Uri.EscapeDataString(newUser.EmailConfirmationToken)}";
+                    var verificationUrl = $"{GetApiBaseUrl()}/api/authentication/verify-email?token={Uri.EscapeDataString(newUser.EmailConfirmationToken)}";
                     var userName = $"{request.FirstName} {request.LastName}";
                     await _emailService.SendRegistrationSuccessEmailAsync(request.Email, userName, verificationUrl);
                 }
@@ -114,17 +136,17 @@ namespace LifeAlertPlus.API.Controllers
         {
             if (string.IsNullOrEmpty(token))
             {
-                return Redirect("http://localhost:5254/login?verified=false&reason=invalid");
+                return Redirect($"{GetClientBaseUrl()}/login?verified=false&reason=invalid");
             }
 
             var user = await _userService.VerifyEmailAsync(token);
 
             if (user == null)
             {
-                return Redirect("http://localhost:5254/login?verified=false&reason=expired");
+                return Redirect($"{GetClientBaseUrl()}/login?verified=false&reason=expired");
             }
 
-            return Redirect("http://localhost:5254/login?verified=true");
+            return Redirect($"{GetClientBaseUrl()}/login?verified=true");
         }
 
         [HttpPost("reset-password")]
@@ -199,7 +221,7 @@ namespace LifeAlertPlus.API.Controllers
 
             try
             {
-                var resetUrl = $"http://localhost:5254/reset-password?token={Uri.EscapeDataString(resetToken)}";
+                var resetUrl = $"{GetClientBaseUrl()}/reset-password?token={Uri.EscapeDataString(resetToken)}";
                 var userName = $"{user.FirstName} {user.LastName}";
                 await _emailService.SendPasswordResetEmailAsync(user.Email, userName, resetUrl);
             }
@@ -246,11 +268,11 @@ namespace LifeAlertPlus.API.Controllers
             try
             {
                 var userName = $"{user.FirstName} {user.LastName}";
-                
-                var verificationUrl = $"http://localhost:5176/api/authentification/verify-email-change?token={Uri.EscapeDataString(verificationToken)}";
+
+                var verificationUrl = $"{GetApiBaseUrl()}/api/authentication/verify-email-change?token={Uri.EscapeDataString(verificationToken)}";
                 await _emailService.SendEmailChangeVerificationAsync(request.NewEmail, userName, verificationUrl, request.CurrentEmail);
 
-                var cancelUrl = $"http://localhost:5176/api/authentification/cancel-email-change?token={Uri.EscapeDataString(cancelToken)}";
+                var cancelUrl = $"{GetApiBaseUrl()}/api/authentication/cancel-email-change?token={Uri.EscapeDataString(cancelToken)}";
                 await _emailService.SendEmailChangeNotificationAsync(request.CurrentEmail, userName, request.NewEmail, cancelUrl);
             }
             catch (Exception ex)
