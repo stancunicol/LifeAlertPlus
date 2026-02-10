@@ -80,7 +80,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git commit -m "chore(version): bump to ${{ steps.new.outputs.version }}"
+          git commit -m "chore(version): bump to ${{ steps.new.outputs.version }}" || exit 0
           git tag v${{ steps.new.outputs.version }}
           git push
           git push --tags
+
