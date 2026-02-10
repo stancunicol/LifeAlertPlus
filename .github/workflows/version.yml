@@ -19,9 +19,10 @@ jobs:
       - name: Get commit message
         id: msg
         run: |
-          echo "message<<EOF" >> $GITHUB_OUTPUT
-          git log -1 --pretty=format:'%B' >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          msg="$(git log -1 --pretty=format:%B)"
+          msg="${msg//$'\n'/ }"
+          echo "message=$msg" >> $GITHUB_OUTPUT
+
 
       - name: Determine bump type
         id: bump
