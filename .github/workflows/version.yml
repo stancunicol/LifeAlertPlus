@@ -1,122 +1,87 @@
-name: Auto-increment Version on Push
+name: Auto Version Bump
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
-  bump-version:
+  version:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true
 
-      - name: Abort if last commit is from actions bot or is a version commit
+      - name: Get commit message
+        id: msg
         run: |
-          LAST_AUTHOR="$(git log -1 --pretty=format:'%an')"
-          LAST_SUBJECT="$(git log -1 --pretty=format:'%s')"
-          echo "Last author: $LAST_AUTHOR"
-          echo "Last subject: $LAST_SUBJECT"
+          msg="$(git log -1 --pretty=format:%B)"
+          msg="${msg//$'\n'/ }"
+          echo "message=$msg" >> $GITHUB_OUTPUT
 
-          if echo "$LAST_AUTHOR" | grep -Ei "github-actions|actions-user|dependabot" >/dev/null; then
-            echo "Commit authored by bot; skipping auto-increment."
+
+      - name: Determine bump type
+        id: bump
+        run: |
+          msg="$(echo "${{ steps.msg.outputs.message }}" | tr '[:upper:]' '[:lower:]')"
+
+          if echo "$msg" | grep -q "breaking change" || echo "$msg" | grep -q "!:"; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif echo "$msg" | grep -q "^feat"; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+          elif echo "$msg" | grep -q "^fix"; then
+            echo "type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "No version bump"
             exit 0
           fi
 
-          if echo "$LAST_SUBJECT" | grep -Ei "chore\\(version\\):|bump version" >/dev/null; then
-            echo "Last commit is a version bump; skipping."
-            exit 0
-          fi
-
-      - name: Determine current version
+      - name: Read current version
         id: current
         run: |
           if [ -f VERSION ]; then
-            cur=$(cat VERSION | tr -d " \n\r")
+            v=$(cat VERSION)
           else
-            if git describe --tags --abbrev=0 >/dev/null 2>&1; then
-              cur=$(git describe --tags --abbrev=0)
-            else
-              cur="1.0.0"
-            fi
+            v="1.0.0"
           fi
-          cur=${cur#v}
-          echo "current_version=$cur" >> $GITHUB_OUTPUT
-          echo "Current version: $cur"
+          echo "version=$v" >> $GITHUB_OUTPUT
 
-      - name: Determine bump type from commit message
-        id: bump_type
+      - name: Bump version
+        id: new
         run: |
-          msg="$(git log -1 --pretty=format:'%s' | tr '[:upper:]' '[:lower:]')"
-          echo "Commit message: $msg"
+          IFS='.' read -r major minor patch <<< "${{ steps.current.outputs.version }}"
 
-          # Mapping (ajustează după nevoie):
-          # - both "ui" and "backend" -> major
-          # - "backend" -> minor
-          # - "ui" -> patch
-          if echo "$msg" | grep -q "ui" && echo "$msg" | grep -q "backend"; then
-            bump="major"
-          elif echo "$msg" | grep -q "backend"; then
-            bump="minor"
-          elif echo "$msg" | grep -q "ui"; then
-            bump="patch"
-          else
-            echo "No bump keyword found in commit message; skipping."
-            exit 0
-          fi
+          case "${{ steps.bump.outputs.type }}" in
+            major) major=$((major+1)); minor=0; patch=0 ;;
+            minor) minor=$((minor+1)); patch=0 ;;
+            patch) patch=$((patch+1)) ;;
+          esac
 
-          echo "bump_type=$bump" >> $GITHUB_OUTPUT
-          echo "Determined bump type: $bump"
+          echo "version=$major.$minor.$patch" >> $GITHUB_OUTPUT
 
-      - name: Compute new version
-        id: bump
+      - name: Write files
         run: |
-          cur=${{ steps.current.outputs.current_version }}
-          bump=${{ steps.bump_type.outputs.bump_type }}
-          IFS='.' read -r major minor patch <<< "$cur"
-          major=${major:-0}; minor=${minor:-0}; patch=${patch:-0}
+          echo "${{ steps.new.outputs.version }}" > VERSION
 
-          if [ "$bump" = "major" ]; then
-            major=$((major+1)); minor=0; patch=0
-          elif [ "$bump" = "minor" ]; then
-            minor=$((minor+1)); patch=0
-          elif [ "$bump" = "patch" ]; then
-            patch=$((patch+1))
-          fi
-
-          new="$major.$minor.$patch"
-          echo "New version: $new"
-          echo "new_version=$new" >> $GITHUB_OUTPUT
-
-      - name: Write VERSION and client version.json (if present)
-        run: |
-          new=${{ steps.bump.outputs.new_version }}
-          echo "Writing VERSION = $new"
-          echo "$new" > VERSION
-
-          client_ver_path="LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json"
-          if [ -d "$(dirname "$client_ver_path")" ] || git ls-files --error-unmatch "$client_ver_path" >/dev/null 2>&1; then
-            mkdir -p "$(dirname "$client_ver_path")"
-            printf '{"version":"%s"}\n' "$new" > "$client_ver_path"
-            echo "Updated $client_ver_path"
-            git add "$client_ver_path"
+          if [ -f LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json ]; then
+            echo "{\"version\":\"${{ steps.new.outputs.version }}\"}" \
+              > LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json
+            git add LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json
           fi
 
           git add VERSION
 
-
-      - name: Commit version bump
+      - name: Commit & tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore(version): bump to ${{ steps.bump.outputs.new_version }}" || echo "No changes to commit"
+
+          git commit -m "chore(version): bump to ${{ steps.new.outputs.version }}" || exit 0
+          git tag v${{ steps.new.outputs.version }}
           git push
+          git push --tags
 
