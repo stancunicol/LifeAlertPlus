@@ -33,9 +33,9 @@ jobs:
           file: .github/workflows/Dockerfile.api
           push: true
           tags: |
-            stancunicol/lifealertplus-api:latest
-            stancunicol/lifealertplus-api:${{ env.SHORT_SHA }}
-            stancunicol/lifealertplus-api:${{ env.VERSION }}
+            stancunicol/lifealertplus/lifealertplus-api:latest
+            stancunicol/lifealertplus/lifealertplus-api:${{ env.SHORT_SHA }}
+            stancunicol/lifealertplus/lifealertplus-api:${{ env.VERSION }}
 
       - name: Build and push Client image
         uses: docker/build-push-action@v6
@@ -44,6 +44,6 @@ jobs:
           file: .github/workflows/Dockerfile.client
           push: true
           tags: |
-            stancunicol/lifealertplus-client:latest
-            stancunicol/lifealertplus-client:${{ env.SHORT_SHA }}
-            stancunicol/lifealertplus-client:${{ env.VERSION }}
+            stancunicol/lifealertplus/lifealertplus-client:latest
+            stancunicol/lifealertplus/lifealertplus-client:${{ env.SHORT_SHA }}
+            stancunicol/lifealertplus/lifealertplus-client:${{ env.VERSION }}
