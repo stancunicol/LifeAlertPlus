@@ -14,12 +14,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set tag vars
-        shell: bash
-        run: |
-          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
-
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -34,8 +28,6 @@ jobs:
           push: true
           tags: |
             stancunicol/lifealertplus:api-latest
-            stancunicol/lifealertplus:api-${{ env.SHORT_SHA }}
-            stancunicol/lifealertplus:api-${{ env.VERSION }}
 
       - name: Build and push Client image
         uses: docker/build-push-action@v6
@@ -45,5 +37,3 @@ jobs:
           push: true
           tags: |
             stancunicol/lifealertplus:client-latest
-            stancunicol/lifealertplus:client-${{ env.SHORT_SHA }}
-            stancunicol/lifealertplus:client-${{ env.VERSION }}
