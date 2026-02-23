@@ -28,13 +28,13 @@ namespace LifeAlertPlus.Client.Services
             return null;
         }
 
-        public async Task<UserRegisterRequestDTO?> RegisterAsync(UserRegisterRequestDTO request)
+        public async Task<UserRegisterResponseDTO?> RegisterAsync(UserRegisterRequestDTO request)
         {
             var response = await _httpClient.PostAsJsonAsync("api/authentication/register", request);
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<UserRegisterRequestDTO>();
+                var result = await response.Content.ReadFromJsonAsync<UserRegisterResponseDTO>();
                 return result;
             }
             return null;

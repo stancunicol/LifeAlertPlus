@@ -16,7 +16,7 @@ namespace LifeAlertPlus.Client.Services
             _httpClient = httpClient;
         }
 
-        public async Task<bool> AddMonitoredPersonAsync(MonitorCreateRequestDTO monitoredPerson)
+        public async Task<bool> AddMonitoredPersonAsync(MonitorAddRequestDTO monitoredPerson)
         {
             var response = await _httpClient.PostAsJsonAsync("api/monitored/add", monitoredPerson);
 
@@ -26,6 +26,19 @@ namespace LifeAlertPlus.Client.Services
         public async Task<Monitored?> GetMonitoredPersonByDeviceSerialNumberAsync(string deviceSerialNumber)
         {
             var response = await _httpClient.GetAsync($"api/monitored/{deviceSerialNumber}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<Monitored>();
+            return result;
+        }
+
+        public async Task<Monitored?> GetMonitoredPersonByIdAsync(Guid id)
+        {
+            var response = await _httpClient.GetAsync($"api/monitored/id/{id}");
 
             if (!response.IsSuccessStatusCode)
             {

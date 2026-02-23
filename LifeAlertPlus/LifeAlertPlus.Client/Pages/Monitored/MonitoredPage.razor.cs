@@ -27,6 +27,9 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     [Inject]
     private UserService UserService { get; set; } = default!;
 
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
     private string UserFullName = string.Empty;
     private string ProfilePictureUrl = string.Empty;
     private MonitorCreateRequestDTO newPerson = new();
@@ -230,47 +233,24 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         ErrorMessage = string.Empty;
 
         if (string.IsNullOrEmpty(newPerson.FirstName) || string.IsNullOrEmpty(newPerson.LastName) ||
-            string.IsNullOrEmpty(newPerson.DeviceSerialNumber) || string.IsNullOrEmpty(newPerson.Address) ||
-            newPerson.Birthdate == null || string.IsNullOrEmpty(newPerson.Gender) || string.IsNullOrEmpty(newPerson.Relationship))
+            string.IsNullOrEmpty(newPerson.DeviceSerialNumber) || string.IsNullOrEmpty(newPerson.Address)
+             || string.IsNullOrEmpty(newPerson.Gender) || string.IsNullOrEmpty(newPerson.Relationship))
         {
             ErrorMessage = "All fields are required.";
             return;
         }
 
-        var request = await MonitoredService.AddMonitoredPersonAsync(newPerson);
+        var dto = new MonitorAddRequestDTO
+        {
+            MonitoredPerson = newPerson,
+            CurrentUserEmail = CurrentUserEmail ?? string.Empty
+        };
+
+        var request = await MonitoredService.AddMonitoredPersonAsync(dto);
 
         if (!request)
         {
             ErrorMessage = "Failed to add monitored person. Please try again.";
-            return;
-        }
-
-        var monitoredPerson = await MonitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(newPerson.DeviceSerialNumber);
-
-        if (monitoredPerson == null)
-        {
-            ErrorMessage = "Failed to retrieve monitored person after creation. Please try again.";
-            return;
-        }
-
-        if (string.IsNullOrEmpty(CurrentUserEmail))
-        {
-            ErrorMessage = "Failed to retrieve current user. Please try again.";
-            return;
-        }
-
-        var currentUser = await UserService.GetUserByEmailAsync(CurrentUserEmail);
-        if (currentUser == null)
-        {
-            ErrorMessage = "Failed to retrieve current user. Please try again.";
-            return;
-        }
-
-        var result = await UserMonitoredService.AddMonitoredPersonToUserAsync(currentUser.Id, monitoredPerson.Id);
-
-        if (!result)
-        {
-            ErrorMessage = "Failed to link monitored person to user. Please try again.";
             return;
         }
 
@@ -460,7 +440,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     private void ViewDetails(Guid personId)
     {
-        
+        NavigationManager.NavigateTo($"/monitored/{personId}");
     }
 
     public ValueTask DisposeAsync()

@@ -1,16 +1,22 @@
 using Microsoft.AspNetCore.Components;
+using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 {
     public partial class SelectedMonitored : ComponentBase
     {
         [Parameter]
-        public int PersonId { get; set; }
+        public Guid PersonId { get; set; }
 
         [Inject]
         private NavigationManager NavigationManager { get; set; } = default!;
 
+        [Inject]
+        private MonitoredService MonitoredService { get; set; } = default!;
+
         private PersonDetail? Person { get; set; }
+        private bool IsLoading { get; set; } = true;
+        private string? LoadError { get; set; }
 
         private List<ChartDataPoint> HeartRateHistory { get; set; } = new();
         private List<BPChartDataPoint> BloodPressureHistory { get; set; } = new();
@@ -19,29 +25,54 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
 
-        protected override void OnInitialized()
+        private async Task LoadPersonDataAsync()
         {
-            LoadPersonData();
-            LoadChartData();
-            LoadRecentAlerts();
-            LoadRecentMeasurements();
-        }
+            IsLoading = true;
+            LoadError = null;
 
-        private void LoadPersonData()
-        {
-            var allPeople = new List<PersonDetail>
+            var monitored = await MonitoredService.GetMonitoredPersonByIdAsync(PersonId);
+            if (monitored == null)
             {
-                new PersonDetail { Id = 1, Name = "Elena Popescu", Age = 76, Relationship = "Mother", HeartRate = 78, BloodPressure = "120/80", Temperature = 36.5, Glucose = 95, Status = "OK", LastUpdate = "Acum 2h", Location = "București, Romania", Phone = "+40 721 234 567" },
-                new PersonDetail { Id = 2, Name = "Ion Popa", Age = 82, Relationship = "Father", HeartRate = 95, BloodPressure = "138/88", Temperature = 36.9, Glucose = 118, Status = "Warning", LastUpdate = "Acum 1h", Location = "Cluj-Napoca, Romania", Phone = "+40 732 345 678" },
-                new PersonDetail { Id = 3, Name = "Maria Ionescu", Age = 75, Relationship = "Aunt", HeartRate = 105, BloodPressure = "145/89", Temperature = 37.1, Glucose = 145, Status = "Critical", LastUpdate = "Acum 30min", Location = "Timișoara, Romania", Phone = "+40 743 456 789" },
-                new PersonDetail { Id = 4, Name = "Vasile Dumitrescu", Age = 70, Relationship = "Uncle", HeartRate = 82, BloodPressure = "125/82", Temperature = 36.7, Glucose = 102, Status = "OK", LastUpdate = "Acum 1h", Location = "Iași, Romania", Phone = "+40 754 567 890" },
-                new PersonDetail { Id = 5, Name = "Ana Marin", Age = 63, Relationship = "Mother-in-law", HeartRate = 78, BloodPressure = "118/78", Temperature = 36.5, Glucose = 88, Status = "OK", LastUpdate = "Acum 3h", Location = "Constanța, Romania", Phone = "+40 765 678 901" },
-                new PersonDetail { Id = 6, Name = "Gheorghe Stan", Age = 79, Relationship = "Grandfather", HeartRate = 92, BloodPressure = "142/86", Temperature = 37.0, Glucose = 125, Status = "Warning", LastUpdate = "Acum 45min", Location = "Brașov, Romania", Phone = "+40 776 789 012" },
-                new PersonDetail { Id = 7, Name = "Ioana Radu", Age = 68, Relationship = "Grandmother", HeartRate = 75, BloodPressure = "115/75", Temperature = 36.4, Glucose = 92, Status = "OK", LastUpdate = "Acum 2h", Location = "Sibiu, Romania", Phone = "+40 787 890 123" },
-                new PersonDetail { Id = 8, Name = "Mihai Petre", Age = 85, Relationship = "Neighbor", HeartRate = 110, BloodPressure = "150/92", Temperature = 37.3, Glucose = 152, Status = "Critical", LastUpdate = "Acum 15min", Location = "București, Romania", Phone = "+40 798 901 234" }
+                Person = null;
+                LoadError = "Monitored person not found.";
+                IsLoading = false;
+                return;
+            }
+
+            Person = new PersonDetail
+            {
+                Id = monitored.Id,
+                Name = $"{monitored.FirstName} {monitored.LastName}".Trim(),
+                Age = GetAge(monitored.Birthdate),
+                Relationship = "Family",
+                HeartRate = 0,
+                BloodPressure = "N/A",
+                Temperature = 0,
+                Glucose = 0,
+                Status = "OK",
+                LastUpdate = monitored.UpdatedAt?.ToLocalTime().ToString("g") ?? monitored.CreatedAt.ToLocalTime().ToString("g"),
+                Location = string.IsNullOrWhiteSpace(monitored.Address) ? "N/A" : monitored.Address,
+                Phone = "N/A"
             };
 
-            Person = allPeople.FirstOrDefault(p => p.Id == PersonId);
+            IsLoading = false;
+        }
+
+        private int GetAge(DateTime? birthdate)
+        {
+            if (!birthdate.HasValue)
+            {
+                return 0;
+            }
+
+            var today = DateTime.Today;
+            var age = today.Year - birthdate.Value.Year;
+            if (birthdate.Value.Date > today.AddYears(-age))
+            {
+                age--;
+            }
+
+            return age;
         }
 
         private void LoadChartData()
@@ -126,6 +157,11 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             {
                 UserFullName = "User";
             }
+
+            await LoadPersonDataAsync();
+            LoadChartData();
+            LoadRecentAlerts();
+            LoadRecentMeasurements();
         }
 
         private string GetVitalStatus(int value, int min, int max)
@@ -178,7 +214,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         public class PersonDetail
         {
-            public int Id { get; set; }
+            public Guid Id { get; set; }
             public string Name { get; set; } = string.Empty;
             public int Age { get; set; }
             public string Relationship { get; set; } = string.Empty;

@@ -13,23 +13,29 @@ namespace LifeAlertPlus.API.Controllers
     public class MonitoredController : ControllerBase
     {
         private readonly IMonitoredService _monitoredService;
+        private readonly IUserMonitoredService _userMonitoredService;
+        private readonly IUserService _userService;
 
-        public MonitoredController(IMonitoredService monitoredService)
+        public MonitoredController(IMonitoredService monitoredService, IUserMonitoredService userMonitoredService, IUserService userService)
         {
             _monitoredService = monitoredService;
+            _userMonitoredService = userMonitoredService;
+            _userService = userService;
         }
 
         [HttpPost("add")]
-        public async Task<IActionResult> AddMonitoredPerson([FromBody] MonitorCreateRequestDTO newPerson)
+        public async Task<IActionResult> AddMonitoredPerson([FromBody] MonitorAddRequestDTO newMonitored)
         {
+            var newPerson = newMonitored.MonitoredPerson;
+
             if(newPerson == null)
             {
                 return BadRequest(new { Message = "Invalid monitored person data." });
             }
 
             if(string.IsNullOrEmpty(newPerson.FirstName) || string.IsNullOrEmpty(newPerson.LastName) || 
-            string.IsNullOrEmpty(newPerson.DeviceSerialNumber) || string.IsNullOrEmpty(newPerson.Address) || 
-            newPerson.Birthdate == null || string.IsNullOrEmpty(newPerson.Gender))
+            string.IsNullOrEmpty(newPerson.DeviceSerialNumber) || string.IsNullOrEmpty(newPerson.Address) ||
+            string.IsNullOrEmpty(newPerson.Gender))
             {
                 return BadRequest(new { Message = "All fields are required are required." });
             }
@@ -46,6 +52,14 @@ namespace LifeAlertPlus.API.Controllers
                 return StatusCode(500, new { Message = "Failed to add monitored person." });
             }
 
+            var currentUser = await _userService.GetUserByEmailAsync(newMonitored.CurrentUserEmail);
+            if (currentUser == null)
+            {
+                return NotFound(new { Message = "Current user not found." });
+            }
+
+            await _userMonitoredService.AddMonitoredPersonToUserAsync(currentUser.Id, createdPerson.Id);
+
             return Ok(new { Message = "Monitored person added successfully.", MonitoredPerson = createdPerson });
         }
 
@@ -53,6 +67,18 @@ namespace LifeAlertPlus.API.Controllers
         public async Task<IActionResult> GetMonitoredPersonByDeviceSerialNumber(string deviceSerialNumber)
         {
             var monitoredPerson = await _monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(deviceSerialNumber);
+            if (monitoredPerson == null)
+            {
+                return NotFound(new { Message = "Monitored person not found." });
+            }
+
+            return Ok(monitoredPerson);
+        }
+
+        [HttpGet("id/{id:guid}")]
+        public async Task<IActionResult> GetMonitoredPersonById(Guid id)
+        {
+            var monitoredPerson = await _monitoredService.GetMonitoredPersonByIdAsync(id);
             if (monitoredPerson == null)
             {
                 return NotFound(new { Message = "Monitored person not found." });

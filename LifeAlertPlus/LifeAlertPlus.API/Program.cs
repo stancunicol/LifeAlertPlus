@@ -76,6 +76,7 @@ builder.Services
         googleOptions.ClientId = googleAuthNSection["ClientId"]!;
         googleOptions.ClientSecret = googleAuthNSection["ClientSecret"]!;
         googleOptions.CallbackPath = "/signin-google";
+        googleOptions.Scope.Add("profile");
     });
 
 var app = builder.Build();

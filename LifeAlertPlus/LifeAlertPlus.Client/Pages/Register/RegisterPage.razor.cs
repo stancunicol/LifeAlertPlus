@@ -80,13 +80,13 @@ namespace LifeAlertPlus.Client.Pages.Register
 
             var response = await AuthenticationService.RegisterAsync(request);
 
-            if (response != null)
+            if (response != null && response.Message == "Registration successful.")
             {
                 ShowModal = true;
             }
             else
             {
-                ErrorMessage = "Registration failed. Please try again.";
+                ErrorMessage = response?.Message ?? "Registration failed. Please try again.";
             }
         }
 

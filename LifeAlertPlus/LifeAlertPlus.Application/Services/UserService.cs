@@ -105,28 +105,40 @@ namespace LifeAlertPlus.Application.Services
             return users.FirstOrDefault(u => u.EmailChangeCancelToken == token);
         }
 
-        public async Task<User?> FindOrCreateGoogleUserAsync(string email, string? name, string googleId)
+        public async Task<User?> FindOrCreateGoogleUserAsync(string email, string? fullName, string googleId, string? givenName, string? familyName, string? profilePictureUrl)
         {
             var user = await _userRepository.GetUserByEmailAsync(email);
+            var resolvedFirstName = !string.IsNullOrWhiteSpace(givenName)
+                ? givenName.Trim()
+                : fullName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "Google";
+            var resolvedLastName = !string.IsNullOrWhiteSpace(familyName)
+                ? familyName.Trim()
+                : fullName?.Contains(' ') == true ? string.Join(' ', fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(1)) : "User";
+
             if (user != null)
             {
-                if (user.Provider != "Google" || user.ProviderKey != googleId)
+                if (user.Provider != "Google" || user.ProviderKey != googleId ||
+                    user.FirstName != resolvedFirstName || user.LastName != resolvedLastName ||
+                    user.ProfilePictureUrl != profilePictureUrl)
                 {
                     user.Provider = "Google";
                     user.ProviderKey = googleId;
+                    user.FirstName = resolvedFirstName;
+                    user.LastName = resolvedLastName;
+                    user.ProfilePictureUrl = profilePictureUrl;
+                    user.UpdatedAt = DateTime.UtcNow;
                     await _userRepository.UpdateUserAsync(user);
                 }
                 return user;
             }
 
-            var firstName = name?.Split(' ').FirstOrDefault() ?? "Google";
-            var lastName = name?.Contains(' ') == true ? string.Join(' ', name.Split(' ').Skip(1)) : "User";
             var newUser = new User
             {
                 Id = Guid.NewGuid(),
-                FirstName = firstName,
-                LastName = lastName,
+                FirstName = resolvedFirstName,
+                LastName = resolvedLastName,
                 Email = email,
+                ProfilePictureUrl = profilePictureUrl,
                 IsEmailConfirmed = true,
                 Provider = "Google",
                 ProviderKey = googleId,

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Application.IServices;
+using System.Security.Claims;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -49,16 +50,20 @@ namespace LifeAlertPlus.API.Controllers
                 return Redirect($"{GetClientBaseUrl()}/login?error=GoogleAuthFailed");
             }
 
-            var email = authenticateResult.Principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value;
+            var email = authenticateResult.Principal.FindFirst(c => c.Type == ClaimTypes.Email)?.Value;
             var name = authenticateResult.Principal.Identity?.Name;
-            var googleId = authenticateResult.Principal.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var givenName = authenticateResult.Principal.FindFirst(c => c.Type == ClaimTypes.GivenName)?.Value;
+            var familyName = authenticateResult.Principal.FindFirst(c => c.Type == ClaimTypes.Surname)?.Value;
+            var profilePictureUrl = authenticateResult.Principal.FindFirst(c => c.Type == "picture")?.Value
+                ?? authenticateResult.Principal.FindFirst(c => c.Type == "urn:google:picture")?.Value;
+            var googleId = authenticateResult.Principal.FindFirst(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(googleId))
             {
                 return Redirect($"{GetClientBaseUrl()}/login?error=GoogleAuthNoEmail");
             }
 
-            var user = await _userService.FindOrCreateGoogleUserAsync(email, name, googleId);
+            var user = await _userService.FindOrCreateGoogleUserAsync(email, name, googleId, givenName, familyName, profilePictureUrl);
             if (user == null)
             {
                 return Redirect($"{GetClientBaseUrl()}/login?error=GoogleUserCreateFailed");

@@ -16,7 +16,7 @@ namespace LifeAlertPlus.Application.IServices
         string GeneratePasswordResetToken();
         string GenerateEmailChangeCancelToken();
         Task<User?> GetUserByEmailChangeCancelTokenAsync(string token);
-        Task<User?> FindOrCreateGoogleUserAsync(string email, string? name, string googleId);
+        Task<User?> FindOrCreateGoogleUserAsync(string email, string? fullName, string googleId, string? givenName, string? familyName, string? profilePictureUrl);
         Task<bool> DeleteUserAsync(Guid id);
     }
 }
