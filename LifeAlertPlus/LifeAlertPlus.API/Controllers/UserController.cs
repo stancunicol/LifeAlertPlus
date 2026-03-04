@@ -31,11 +31,16 @@ namespace LifeAlertPlus.API.Controllers
                 return NotFound(new { Message = "User not found." });
             }
 
-            user.FirstName = updatedUser.FirstName;
-            user.LastName = updatedUser.LastName;
-            user.FirstDayOfTheWeek = updatedUser.FirstDayOfTheWeek;
-            user.Language = updatedUser.Language;
-            user.ThemeColor = updatedUser.ThemeColor;
+            user.FirstName = updatedUser.FirstName ?? user.FirstName;
+            user.LastName = updatedUser.LastName ?? user.LastName;
+            user.FirstDayOfTheWeek = updatedUser.FirstDayOfTheWeek ?? user.FirstDayOfTheWeek;
+            user.Language = updatedUser.Language ?? user.Language;
+            user.ThemeColor = updatedUser.ThemeColor ?? user.ThemeColor;
+            user.FontSize = updatedUser.FontSize ?? user.FontSize;
+            user.MinHeartRate = updatedUser.MinHeartRate ?? user.MinHeartRate;
+            user.MaxHeartRate = updatedUser.MaxHeartRate ?? user.MaxHeartRate;
+            user.MinTemperature = updatedUser.MinTemperature ?? user.MinTemperature;
+            user.MaxTemperature = updatedUser.MaxTemperature ?? user.MaxTemperature;
             user.UpdatedAt = DateTime.UtcNow;
 
             var result = await _userService.UpdateUserAsync(user);

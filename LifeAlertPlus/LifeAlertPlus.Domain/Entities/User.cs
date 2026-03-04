@@ -23,6 +23,11 @@
         public string? FirstDayOfTheWeek { get; set; }
         public string Language { get; set; } = "en";
         public string ThemeColor { get; set; } = "pink";
+        public string FontSize { get; set; } = "medium";
+        public int MinHeartRate { get; set; } = 60;
+        public int MaxHeartRate { get; set; } = 100;
+        public float MinTemperature { get; set; } = 36.0f;
+        public float MaxTemperature { get; set; } = 37.5f;
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }

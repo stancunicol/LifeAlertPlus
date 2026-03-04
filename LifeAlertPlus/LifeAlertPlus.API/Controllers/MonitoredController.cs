@@ -1,4 +1,5 @@
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
+using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Application.IServices;
 using System.Net.Http;
 using System.Text.Json;
@@ -64,7 +65,7 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         [HttpGet("{deviceSerialNumber}")]
-        public async Task<IActionResult> GetMonitoredPersonByDeviceSerialNumber(string deviceSerialNumber)
+        public async Task<IActionResult> GetMonitoredPersonByDeviceSerialNumber([FromQuery] string deviceSerialNumber)
         {
             var monitoredPerson = await _monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(deviceSerialNumber);
             if (monitoredPerson == null)
@@ -76,7 +77,7 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         [HttpGet("id/{id:guid}")]
-        public async Task<IActionResult> GetMonitoredPersonById(Guid id)
+        public async Task<IActionResult> GetMonitoredPersonById([FromQuery] Guid id)
         {
             var monitoredPerson = await _monitoredService.GetMonitoredPersonByIdAsync(id);
             if (monitoredPerson == null)

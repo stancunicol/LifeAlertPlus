@@ -82,6 +82,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? string.Empty;
         var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? string.Empty;
         var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? string.Empty;
+        var storedProfilePicture = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "profilePictureUrl");
+        if (!string.IsNullOrEmpty(storedProfilePicture)) profilePictureUrl = storedProfilePicture;
         var sub = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub)?.Value;
 
         Guid.TryParse(sub, out _currentUserId);

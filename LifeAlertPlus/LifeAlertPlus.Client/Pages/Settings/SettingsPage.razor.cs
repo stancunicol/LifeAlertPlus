@@ -65,7 +65,12 @@ namespace LifeAlertPlus.Client.Pages.Settings
             {
                 FirstDayOfTheWeek = Settings.FirstDayOfWeek,
                 Language = Settings.Language,
-                ThemeColor = Settings.Theme
+                ThemeColor = Settings.Theme,
+                FontSize = Settings.FontSize,
+                MinHeartRate = Settings.HeartRateMin,
+                MaxHeartRate = Settings.HeartRateMax,
+                MinTemperature = (float)Settings.TemperatureMin,
+                MaxTemperature = (float)Settings.TemperatureMax
             };
 
             var request = await UserService.UpdateUserAsync(UserId, settings);
@@ -79,7 +84,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             ShowSaveConfirmation = true;
             StateHasChanged();
 
-            Task.Delay(3000).ContinueWith(_ =>
+            _ = Task.Delay(3000).ContinueWith(_ =>
             {
                 ShowSaveConfirmation = false;
                 InvokeAsync(StateHasChanged);
@@ -113,12 +118,30 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 var userIdClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
                 var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? "";
                 var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? "";
+                var storedProfilePicture = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "profilePictureUrl");
+                if (!string.IsNullOrEmpty(storedProfilePicture)) profilePictureUrl = storedProfilePicture;
                 UserFullName = $"{firstName} {lastName}".Trim();
                 ProfilePictureUrl = profilePictureUrl;
 
                 if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out Guid userId))
                 {
                     UserId = userId;
+                    var userFromApi = await UserService.GetUserByIdAsync(UserId);
+                    if (userFromApi != null)
+                    {
+                        if (!string.IsNullOrEmpty(userFromApi.FirstDayOfTheWeek))
+                            Settings.FirstDayOfWeek = userFromApi.FirstDayOfTheWeek;
+                        if (!string.IsNullOrEmpty(userFromApi.Language))
+                            Settings.Language = userFromApi.Language;
+                        if (!string.IsNullOrEmpty(userFromApi.ThemeColor))
+                            Settings.Theme = userFromApi.ThemeColor;
+                        if (!string.IsNullOrEmpty(userFromApi.FontSize))
+                            Settings.FontSize = userFromApi.FontSize;
+                        Settings.HeartRateMin = userFromApi.MinHeartRate;
+                        Settings.HeartRateMax = userFromApi.MaxHeartRate;
+                        Settings.TemperatureMin = userFromApi.MinTemperature;
+                        Settings.TemperatureMax = userFromApi.MaxTemperature;
+                    }
                 }
             }
             else
@@ -171,21 +194,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 DateFormat = "dd/MM/yyyy",
                 TimeFormat = "24h"
             };
-        }
-
-        private void ExportData()
-        {
-            Console.WriteLine("Exporting data...");
-        }
-
-        private void ImportData()
-        {
-            Console.WriteLine("Importing data...");
-        }
-
-        private void ClearCache()
-        {
-            Console.WriteLine("Clearing cache...");
         }
 
         private class AppSettings

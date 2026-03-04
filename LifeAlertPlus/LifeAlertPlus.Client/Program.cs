@@ -8,7 +8,16 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5176";
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
+
+builder.Services.AddScoped<TokenAuthorizationHandler>();
+
+builder.Services.AddScoped(sp =>
+{
+    var handler = sp.GetRequiredService<TokenAuthorizationHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    return new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
+});
+
 builder.Services.AddScoped<AuthenticationService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<MonitoredService>();
