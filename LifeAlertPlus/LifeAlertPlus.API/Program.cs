@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Authentication.Google;
 using System.Text;
+using LifeAlertPlus.API.Services;
 using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Application.Services;
 using LifeAlertPlus.Domain.IRepositories;
 using LifeAlertPlus.Infrastructure.Context;
 using LifeAlertPlus.Infrastructure.Repositories;
 using LifeAlertPlus.Infrastructure.Seed;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -43,6 +43,8 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IMonitoredService, MonitoredService>();
 builder.Services.AddScoped<IUserMonitoredService, UserMonitoredService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<GetUrlService>();
 
 var connString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=lifealert.db";
 
@@ -81,7 +83,7 @@ builder.Services
 
 var app = builder.Build();
 
-UserSeed.Seed(app.Services);
+await UserSeed.SeedAsync(app.Services);
 
 if (app.Environment.IsDevelopment())
 {
@@ -93,10 +95,10 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowBlazorClient");
 
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseStaticFiles();
 
 app.MapControllers();
 

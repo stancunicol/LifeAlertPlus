@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Application.IServices;
 using System.Security.Claims;
+using LifeAlertPlus.API.Services;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -14,23 +14,16 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IUserService _userService;
         private readonly IJwtService _jwtService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<GoogleAuthController> _logger;
+        private readonly GetUrlService _getUrlService;
 
-        public GoogleAuthController(IUserService userService, IJwtService jwtService, IConfiguration configuration)
+        public GoogleAuthController(IUserService userService, IJwtService jwtService, IConfiguration configuration, ILogger<GoogleAuthController> logger, GetUrlService getUrlService)
         {
             _userService = userService;
             _jwtService = jwtService;
             _configuration = configuration;
-        }
-
-        private string GetClientBaseUrl()
-        {
-            var configured = _configuration["Urls:ClientBaseUrl"];
-            if (!string.IsNullOrWhiteSpace(configured))
-            {
-                return configured.TrimEnd('/');
-            }
-
-            return $"{Request.Scheme}://{Request.Host}";
+            _logger = logger;
+            _getUrlService = getUrlService;
         }
 
         [HttpGet("google-login")]
@@ -44,10 +37,21 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("google-response")]
         public async Task<IActionResult> GoogleResponse(string? returnUrl = "/")
         {
-            var authenticateResult = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
+            if (!string.IsNullOrEmpty(returnUrl))
+            {
+                // If the client sent an absolute URL (e.g. http://localhost:5254/dashboard),
+                // extract only the path to prevent a double-prefix in the final redirect.
+                if (Uri.TryCreate(returnUrl, UriKind.Absolute, out var parsedUri))
+                    returnUrl = parsedUri.PathAndQuery;
+                else if (!Url.IsLocalUrl(returnUrl))
+                    returnUrl = "/";
+            }
+
+            var authenticateResult = await HttpContext.AuthenticateAsync("Cookies");
             if (!authenticateResult.Succeeded || authenticateResult.Principal == null)
             {
-                return Redirect($"{GetClientBaseUrl()}/login?error=GoogleAuthFailed");
+                _logger.LogWarning("Google authentication failed");
+                return Redirect($"{_getUrlService.GetClientBaseUrl()}/login?error=GoogleAuthFailed");
             }
 
             var email = authenticateResult.Principal.FindFirst(c => c.Type == ClaimTypes.Email)?.Value;
@@ -60,18 +64,20 @@ namespace LifeAlertPlus.API.Controllers
 
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(googleId))
             {
-                return Redirect($"{GetClientBaseUrl()}/login?error=GoogleAuthNoEmail");
+                _logger.LogWarning("Google authentication missing email or googleId");
+                return Redirect($"{_getUrlService.GetClientBaseUrl()}/login?error=GoogleAuthNoEmail");
             }
 
             var user = await _userService.FindOrCreateGoogleUserAsync(email, name, googleId, givenName, familyName, profilePictureUrl);
             if (user == null)
             {
-                return Redirect($"{GetClientBaseUrl()}/login?error=GoogleUserCreateFailed");
+                _logger.LogError("Failed to find or create Google user for email {Email}", email);
+                return Redirect($"{_getUrlService.GetClientBaseUrl()}/login?error=GoogleUserCreateFailed");
             }
 
             var jwt = _jwtService.GenerateToken(user);
 
-            return Redirect($"{returnUrl}?token={jwt}");
+            return Redirect($"{_getUrlService.GetClientBaseUrl()}{returnUrl}#token={jwt}");
         }
     }
 }

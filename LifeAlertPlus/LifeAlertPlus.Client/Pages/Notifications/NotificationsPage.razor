@@ -1,7 +1,6 @@
 @page "/notifications"
 
 @using LifeAlertPlus.Domain.Entities
-@inject IJSRuntime JSRuntime
 
 <HeaderComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl"/>
 
@@ -11,91 +10,20 @@
             <h1>Notifications</h1>
             <p class="notifications-subtitle">Stay updated with all health alerts and updates</p>
         </div>
-        <button class="mark-all-btn" @onclick="MarkAllAsRead">
-            <span class="btn-icon">✓</span>
-            Mark All as Read
-        </button>
     </div>
 
     <div class="stats-row">
         <div class="stat-mini-card critical">
-            <span class="stat-number">@CriticalCount</span>
             <span class="stat-label">Critical Alerts</span>
         </div>
         <div class="stat-mini-card warning">
-            <span class="stat-number">@WarningCount</span>
             <span class="stat-label">Warnings</span>
         </div>
         <div class="stat-mini-card info">
-            <span class="stat-number">@InfoCount</span>
             <span class="stat-label">Info Messages</span>
         </div>
         <div class="stat-mini-card unread">
-            <span class="stat-number">@UnreadCount</span>
             <span class="stat-label">Unread</span>
         </div>
     </div>
-
-    <div class="filter-tabs">
-        <button class="tab-btn @(ActiveFilter == "All" ? "active" : "")" @onclick='() => ActiveFilter = "All"'>
-            All (@AllNotifications.Count)
-        </button>
-        <button class="tab-btn critical @(ActiveFilter == "Critical" ? "active" : "")" @onclick='() => ActiveFilter = "Critical"'>
-            Critical (@CriticalCount)
-        </button>
-        <button class="tab-btn warning @(ActiveFilter == "Warning" ? "active" : "")" @onclick='() => ActiveFilter = "Warning"'>
-            Warnings (@WarningCount)
-        </button>
-        <button class="tab-btn info @(ActiveFilter == "Info" ? "active" : "")" @onclick='() => ActiveFilter = "Info"'>
-            Info (@InfoCount)
-        </button>
-        <button class="tab-btn unread @(ActiveFilter == "Unread" ? "active" : "")" @onclick='() => ActiveFilter = "Unread"'>
-            Unread (@UnreadCount)
-        </button>
-    </div>
-
-    <div class="notifications-feed">
-        @foreach (var notification in FilteredNotifications)
-        {
-            <div class="notification-card @notification.Type.ToLower() @(notification.IsRead ? "read" : "unread")" @onclick="() => MarkAsRead(notification.Id)">
-                <div class="notification-icon @notification.Type.ToLower()">
-                    @GetNotificationIcon(notification.Type)
-                </div>
-                <div class="notification-content">
-                    <div class="notification-header-row">
-                        <h3 class="notification-title">@notification.Title</h3>
-                        @if (!notification.IsRead)
-                        {
-                            <span class="unread-badge">•</span>
-                        }
-                    </div>
-                    <p class="notification-description">@notification.Description</p>
-                    <div class="notification-meta">
-                        <span class="notification-person">👤 @notification.PersonName</span>
-                        <span class="notification-time">⏰ @notification.Time</span>
-                    </div>
-                </div>
-                <div class="notification-actions">
-                    @if (!notification.IsRead)
-                    {
-                        <button class="action-icon-btn" @onclick:stopPropagation="true" @onclick="() => MarkAsRead(notification.Id)" title="Mark as read">
-                            ✓
-                        </button>
-                    }
-                    <button class="action-icon-btn delete" @onclick:stopPropagation="true" @onclick="() => DeleteNotification(notification.Id)" title="Delete">
-                        🗑️
-                    </button>
-                </div>
-            </div>
-        }
-    </div>
-
-    @if (FilteredNotifications.Count == 0)
-    {
-        <div class="empty-notifications">
-            <div class="empty-icon">🔔</div>
-            <h3>No notifications</h3>
-            <p>@GetEmptyMessage()</p>
-        </div>
-    }
 </div>

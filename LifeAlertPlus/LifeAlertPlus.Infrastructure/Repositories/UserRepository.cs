@@ -51,22 +51,29 @@ namespace LifeAlertPlus.Infrastructure.Repositories
                 return false;
             }
 
-            var userMonitoreds = _dbContext.UserMonitoreds.Where(um => um.IdUser == id).ToList();
+            var userMonitoreds = await _dbContext.UserMonitoreds.Where(um => um.IdUser == id).ToListAsync();
             var monitoredIds = userMonitoreds.Select(um => um.IdMonitored).Distinct().ToList();
             _dbContext.UserMonitoreds.RemoveRange(userMonitoreds);
 
             foreach (var monitoredId in monitoredIds)
             {
-                var measurements = _dbContext.Measurements.Where(m => m.IdMonitored == monitoredId);
+                // Only delete the monitored person and their data if no other user also monitors them
+                var hasOtherMonitors = await _dbContext.UserMonitoreds
+                    .AnyAsync(um => um.IdMonitored == monitoredId && um.IdUser != id);
+
+                if (hasOtherMonitors)
+                    continue;
+
+                var measurements = await _dbContext.Measurements.Where(m => m.IdMonitored == monitoredId).ToListAsync();
                 _dbContext.Measurements.RemoveRange(measurements);
 
-                var notifications = _dbContext.Notifications.Where(n => n.IdMonitored == monitoredId);
+                var notifications = await _dbContext.Notifications.Where(n => n.IdMonitored == monitoredId).ToListAsync();
                 _dbContext.Notifications.RemoveRange(notifications);
 
-                var dailyHistories = _dbContext.DailyHistories.Where(d => d.IdMonitored == monitoredId);
+                var dailyHistories = await _dbContext.DailyHistories.Where(d => d.IdMonitored == monitoredId).ToListAsync();
                 _dbContext.DailyHistories.RemoveRange(dailyHistories);
 
-                var weeklyHistories = _dbContext.WeeklyHistories.Where(w => w.IdMonitored == monitoredId);
+                var weeklyHistories = await _dbContext.WeeklyHistories.Where(w => w.IdMonitored == monitoredId).ToListAsync();
                 _dbContext.WeeklyHistories.RemoveRange(weeklyHistories);
 
                 var monitored = await _dbContext.Monitoreds.FindAsync(monitoredId);
@@ -79,6 +86,26 @@ namespace LifeAlertPlus.Infrastructure.Repositories
             _dbContext.Users.Remove(user);
             var result = await _dbContext.SaveChangesAsync();
             return result > 0;
+        }
+
+        public async Task<User?> GetUserByEmailChangeTokenAsync(string token)
+        {
+            return await _dbContext.Users.FirstOrDefaultAsync(u => u.EmailChangeToken == token);
+        }
+
+        public async Task<User?> GetUserByEmailConfirmationTokenAsync(string token)
+        {
+            return await _dbContext.Users.FirstOrDefaultAsync(u => u.EmailConfirmationToken == token);
+        }
+
+        public async Task<User?> GetUserByPasswordResetTokenAsync(string token)
+        {
+            return await _dbContext.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == token);
+        }
+
+        public async Task<User?> GetUserByEmailChangeCancelTokenAsync(string token)
+        {
+            return await _dbContext.Users.FirstOrDefaultAsync(u => u.EmailChangeCancelToken == token);
         }
     }
 }

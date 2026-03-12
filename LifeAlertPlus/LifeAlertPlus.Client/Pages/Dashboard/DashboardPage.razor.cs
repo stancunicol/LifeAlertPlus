@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Pages.Dashboard;
 
@@ -7,6 +8,12 @@ public partial class DashboardPage : ComponentBase
 {
     [Inject]
     private NavigationManager Navigation { get; set; } = default!;
+
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = default!;
+
+    [Inject]
+    private TokenParserService TokenParser { get; set; } = default!;
 
     private string UserFullName = "";
     private string ProfilePictureUrl = "";
@@ -17,29 +24,22 @@ public partial class DashboardPage : ComponentBase
     protected override async Task OnInitializedAsync()
     {
         var currentUri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        if (!string.IsNullOrWhiteSpace(currentUri.Query))
+        if (!string.IsNullOrWhiteSpace(currentUri.Fragment))
         {
-            var tokenFromQuery = TryGetQueryParameter(currentUri.Query, "token");
-            if (!string.IsNullOrWhiteSpace(tokenFromQuery))
+            var tokenFromFragment = TryGetQueryParameter(currentUri.Fragment.TrimStart('#'), "token");
+            if (!string.IsNullOrWhiteSpace(tokenFromFragment))
             {
-                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", tokenFromQuery);
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", tokenFromFragment);
                 Navigation.NavigateTo("/dashboard", replace: true);
                 return;
             }
         }
 
-        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
-        if (!string.IsNullOrEmpty(token))
+        var claims = await TokenParser.GetClaimsAsync();
+        if (claims != null)
         {
-            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-            var jsonToken = handler.ReadJwtToken(token);
-            var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? "";
-            var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? "";
-            var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? "";
-            var storedProfilePicture = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "profilePictureUrl");
-            if (!string.IsNullOrEmpty(storedProfilePicture)) profilePictureUrl = storedProfilePicture;
-            UserFullName = $"{firstName} {lastName}".Trim();
-            ProfilePictureUrl = profilePictureUrl;
+            UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
+            ProfilePictureUrl = claims.ProfilePictureUrl;
         }
         else
         {

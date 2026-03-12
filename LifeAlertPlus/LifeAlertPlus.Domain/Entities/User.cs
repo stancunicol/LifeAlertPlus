@@ -3,9 +3,9 @@
     public class User
     {
         public Guid Id { get; set; }
-        public string FirstName { get; set; }
-        public string LastName { get; set; }
-        public string Email { get; set; }
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
         public string? ProfilePictureUrl { get; set; }
         public bool IsEmailConfirmed { get; set; } = false;
         public string? PasswordHash { get; set; }
@@ -21,13 +21,13 @@
         public string? ProviderKey { get; set; }
         public string? PendingEmail { get; set; }
         public string? FirstDayOfTheWeek { get; set; }
-        public string Language { get; set; } = "en";
-        public string ThemeColor { get; set; } = "pink";
-        public string FontSize { get; set; } = "medium";
-        public int MinHeartRate { get; set; } = 60;
-        public int MaxHeartRate { get; set; } = 100;
-        public float MinTemperature { get; set; } = 36.0f;
-        public float MaxTemperature { get; set; } = 37.5f;
+        public string? Language { get; set; }
+        public string? ThemeColor { get; set; }
+        public string? FontSize { get; set; }
+        public int? MinHeartRate { get; set; }
+        public int? MaxHeartRate { get; set; }
+        public double? MinTemperature { get; set; }
+        public double? MaxTemperature { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }

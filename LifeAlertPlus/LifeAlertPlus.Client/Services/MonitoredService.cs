@@ -1,6 +1,4 @@
 using System.Net.Http.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using LifeAlertPlus.Domain.Entities;
@@ -25,7 +23,7 @@ namespace LifeAlertPlus.Client.Services
 
         public async Task<Monitored?> GetMonitoredPersonByDeviceSerialNumberAsync(string deviceSerialNumber)
         {
-            var response = await _httpClient.GetAsync($"api/monitored/{deviceSerialNumber}");
+            var response = await _httpClient.GetAsync($"api/monitored/serial/{deviceSerialNumber}");
 
             if (!response.IsSuccessStatusCode)
             {

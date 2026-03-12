@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using LifeAlertPlus.Domain.Entities;
-using LifeAlertPlus.Infrastructure.Seed;
 
 namespace LifeAlertPlus.Infrastructure.Context
 {

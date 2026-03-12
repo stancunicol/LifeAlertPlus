@@ -1,8 +1,5 @@
-﻿using System;
-using System.Linq;
-using LifeAlertPlus.Domain.Entities;
+﻿using LifeAlertPlus.Domain.Entities;
 using LifeAlertPlus.Infrastructure.Context;
-using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,16 +7,16 @@ namespace LifeAlertPlus.Infrastructure.Seed
 {
     public static class UserSeed
     {
-        public static void Seed(IServiceProvider services)
+        public static async Task SeedAsync(IServiceProvider services)
         {
             using var scope = services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
 
-            context.Database.EnsureCreated();
+            await context.Database.MigrateAsync();
 
             var adminEmail = "admin@gmail.com";
 
-            if (!context.Users.Any(u => u.Email == adminEmail))
+            if (!await context.Users.AnyAsync(u => u.Email == adminEmail))
             {
                 var admin = new User
                 {
@@ -28,13 +25,13 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     LastName = "Stancu",
                     Email = adminEmail,
                     IsEmailConfirmed = true,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("20042005"),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("20042005!Nicol"),
                     Provider = "Local",
                     CreatedAt = DateTime.UtcNow
                 };
 
                 context.Users.Add(admin);
-                context.SaveChanges();
+                await context.SaveChangesAsync();
             }
         }
     }

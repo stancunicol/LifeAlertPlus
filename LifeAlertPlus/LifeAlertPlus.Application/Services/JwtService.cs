@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
 using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Domain.Entities;
 using Microsoft.Extensions.Configuration;
@@ -15,6 +11,7 @@ namespace LifeAlertPlus.Application.Services
     public class JwtService : IJwtService
     {
         private readonly IConfiguration _config;
+        private static readonly JwtSecurityTokenHandler _tokenHandler = new();
 
         public JwtService(IConfiguration config)
         {
@@ -37,15 +34,18 @@ namespace LifeAlertPlus.Application.Services
                 new Claim("profilePictureUrl", user.ProfilePictureUrl ?? string.Empty)
             };
 
+            int.TryParse(_config["Jwt:ExpiresInMinutes"], out var expiresInMinutes);
+            if (expiresInMinutes <= 0) expiresInMinutes = 60;
+
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(int.Parse(_config["Jwt:ExpiresInMinutes"])),
+                expires: DateTime.UtcNow.AddMinutes(expiresInMinutes),
                 signingCredentials: creds
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return _tokenHandler.WriteToken(token);
         }
     }
 }

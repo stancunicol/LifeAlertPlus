@@ -1,12 +1,8 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
-using LifeAlertPlus.Domain.Entities;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
+using LifeAlertPlus.Shared.DTOs.Responses.User;
 using LifeAlertPlus.Client.Services;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.Forms;
 
 namespace LifeAlertPlus.Client.Pages.Profile
@@ -26,9 +22,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private NavigationManager Navigation { get; set; } = null!;
 
         [Inject]
-        private IJSRuntime JS { get; set; } = null!;
+        private TokenParserService TokenParser { get; set; } = null!;
 
-        private User CurrentUser { get; set; } = new User();
+        private UserProfileDTO CurrentUser { get; set; } = new UserProfileDTO();
 
         private UserUpdateRequestDTO EditUser { get; set; } = new UserUpdateRequestDTO();
         private bool IsEditingPersonal { get; set; } = false;
@@ -88,65 +84,16 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
         private async Task LoadCurrentUserAsync()
         {
-            try
-            {
-                var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
-                
-                if (!string.IsNullOrEmpty(token))
-                {
-                    var handler = new JwtSecurityTokenHandler();
-                    var jsonToken = handler.ReadJwtToken(token);
-                    
-                    var emailClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Email || x.Type == "email");
-                    var firstNameClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName");
-                    var lastNameClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName");
-                    var userIdClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
-                    var providerClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "provider");
-                    var lastChangedPasswordAtClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastChangedPasswordAt");
-                    var profilePictureUrlClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl");
+            var claims = await TokenParser.GetClaimsAsync();
+            if (claims == null)
+                return;
 
-                    if (emailClaim != null)
-                    {
-                        CurrentUser.Email = emailClaim.Value;
-
-                        if (firstNameClaim != null)
-                        {
-                            CurrentUser.FirstName = firstNameClaim.Value;
-                        }
-
-                        if (lastNameClaim != null)
-                        {
-                            CurrentUser.LastName = lastNameClaim.Value;
-                        }
-
-                        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
-                        {
-                            CurrentUser.Id = userId;
-                        }
-
-                        if (providerClaim != null)
-                        {
-                            CurrentUser.Provider = providerClaim.Value;
-                        }
-                        else
-                        {
-                            CurrentUser.Provider = "Local";
-                        }
-                        if (lastChangedPasswordAtClaim != null && DateTime.TryParse(lastChangedPasswordAtClaim.Value, out var lastChanged))
-                        {
-                            CurrentUser.LastChangedPasswordAt = lastChanged;
-                        }
-                        if (profilePictureUrlClaim != null)
-                        {
-                            CurrentUser.ProfilePictureUrl = profilePictureUrlClaim.Value;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading user data: {ex.Message}");
-            }
+            CurrentUser.Id = claims.UserId;
+            CurrentUser.Email = claims.Email;
+            CurrentUser.FirstName = claims.FirstName;
+            CurrentUser.LastName = claims.LastName;
+            CurrentUser.Provider = string.IsNullOrEmpty(claims.Provider) ? "Local" : claims.Provider;
+            CurrentUser.ProfilePictureUrl = claims.ProfilePictureUrl;
         }
 
         private string GetUserInitials(string fullName)
@@ -186,8 +133,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
             var request = await UserService.UpdateUserAsync(CurrentUser.Id, updateRequest);
 
-            if (!request) {
-                Console.WriteLine("Failed to update user information.");
+            if(request == false)
+            {
+                return;
             }
 
             EditUser = new UserUpdateRequestDTO();
@@ -274,7 +222,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
             ShowChangeEmailModal = false;
             EmailChange = new UserChangeEmailRequestDTO();
             EmailError = string.Empty;
-            ShowEmailChangeSuccess = true;
         }
 
         private async Task ChangeEmail()
@@ -323,7 +270,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
             if (result != null)
             {
-                if (result.Success == true)
+                if (result.Success)
                 {
                     if (result.RequiresLogout)
                     {
@@ -375,10 +322,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 await AuthenticationService.LogoutAsync();
                 Navigation.NavigateTo("/login");
             }
-            else
-            {
-                Console.WriteLine("Failed to deactivate account.");
-            }
         }
 
         private void ShowDeactivateConfirmModal()
@@ -410,10 +353,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
             {
                 await AuthenticationService.LogoutAsync();
                 Navigation.NavigateTo("/login");
-            }
-            else
-            {
-                Console.WriteLine("Failed to delete account.");
             }
         }
 
@@ -456,12 +395,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
         private async Task TriggerProfileImageInput()
         {
-            await JS.InvokeVoidAsync("triggerProfileImageInput", "profileImageInput");
-        }
-
-        public class UploadResult
-        {
-            public string? ImageUrl { get; set; }
+            await JSRuntime.InvokeVoidAsync("triggerProfileImageInput", "profileImageInput");
         }
 
         private class NotificationPreferences

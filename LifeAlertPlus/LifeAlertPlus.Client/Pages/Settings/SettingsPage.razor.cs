@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Client.Services;
 using Microsoft.JSInterop;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace LifeAlertPlus.Client.Pages.Settings
 {
@@ -19,6 +18,9 @@ namespace LifeAlertPlus.Client.Pages.Settings
 
         [Inject]
         private NavigationManager Navigation { get; set; } = default!;
+
+        [Inject]
+        private TokenParserService TokenParser { get; set; } = default!;
 
         private AppSettings Settings { get; set; } = new AppSettings
         {
@@ -77,18 +79,14 @@ namespace LifeAlertPlus.Client.Pages.Settings
 
             if(request == false)
             {
-                Console.WriteLine("Failed to save settings.");
                 return;
             }
 
             ShowSaveConfirmation = true;
             StateHasChanged();
 
-            _ = Task.Delay(3000).ContinueWith(_ =>
-            {
-                ShowSaveConfirmation = false;
-                InvokeAsync(StateHasChanged);
-            });
+            await Task.Delay(3000);
+            ShowSaveConfirmation = false;
         }
 
         protected override async Task OnInitializedAsync()
@@ -109,39 +107,28 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 Version = AppVersion.Version;
             }
 
-            var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
-            if (!string.IsNullOrEmpty(token))
+            var claims = await TokenParser.GetClaimsAsync();
+            if (claims != null)
             {
-                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-                var jsonToken = handler.ReadJwtToken(token);
-                var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? "";
-                var userIdClaim = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub);
-                var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? "";
-                var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? "";
-                var storedProfilePicture = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "profilePictureUrl");
-                if (!string.IsNullOrEmpty(storedProfilePicture)) profilePictureUrl = storedProfilePicture;
-                UserFullName = $"{firstName} {lastName}".Trim();
-                ProfilePictureUrl = profilePictureUrl;
+                UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
+                ProfilePictureUrl = claims.ProfilePictureUrl;
+                UserId = claims.UserId;
 
-                if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out Guid userId))
+                var userFromApi = await UserService.GetUserByIdAsync(UserId);
+                if (userFromApi != null)
                 {
-                    UserId = userId;
-                    var userFromApi = await UserService.GetUserByIdAsync(UserId);
-                    if (userFromApi != null)
-                    {
-                        if (!string.IsNullOrEmpty(userFromApi.FirstDayOfTheWeek))
-                            Settings.FirstDayOfWeek = userFromApi.FirstDayOfTheWeek;
-                        if (!string.IsNullOrEmpty(userFromApi.Language))
-                            Settings.Language = userFromApi.Language;
-                        if (!string.IsNullOrEmpty(userFromApi.ThemeColor))
-                            Settings.Theme = userFromApi.ThemeColor;
-                        if (!string.IsNullOrEmpty(userFromApi.FontSize))
-                            Settings.FontSize = userFromApi.FontSize;
-                        Settings.HeartRateMin = userFromApi.MinHeartRate;
-                        Settings.HeartRateMax = userFromApi.MaxHeartRate;
-                        Settings.TemperatureMin = userFromApi.MinTemperature;
-                        Settings.TemperatureMax = userFromApi.MaxTemperature;
-                    }
+                    if (!string.IsNullOrEmpty(userFromApi.FirstDayOfTheWeek))
+                        Settings.FirstDayOfWeek = userFromApi.FirstDayOfTheWeek;
+                    if (!string.IsNullOrEmpty(userFromApi.Language))
+                        Settings.Language = userFromApi.Language;
+                    if (!string.IsNullOrEmpty(userFromApi.ThemeColor))
+                        Settings.Theme = userFromApi.ThemeColor;
+                    if (!string.IsNullOrEmpty(userFromApi.FontSize))
+                        Settings.FontSize = userFromApi.FontSize;
+                    Settings.HeartRateMin = userFromApi.MinHeartRate;
+                    Settings.HeartRateMax = userFromApi.MaxHeartRate;
+                    Settings.TemperatureMin = userFromApi.MinTemperature;
+                    Settings.TemperatureMax = userFromApi.MaxTemperature;
                 }
             }
             else

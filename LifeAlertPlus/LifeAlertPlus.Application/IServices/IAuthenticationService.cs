@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using LifeAlertPlus.Shared.DTOs.Requests.User;
+using LifeAlertPlus.Shared.DTOs.Responses.User;
 
 namespace LifeAlertPlus.Application.IServices
 {
@@ -10,6 +7,8 @@ namespace LifeAlertPlus.Application.IServices
     {
         bool VerifyPassword(string password, string passwordHash);
         string HashPassword(string password);
-        string GeneratePasswordResetToken();
+        Task<UserResponseDTO> VerifyPassword(string password);
+        Task<UserResponseDTO> ValidateChangePassword(string? currentPassword, string? newPassword, string? confirmPassword);
+        Task<UserResponseDTO> ValidateChangeEmail(UserChangeEmailRequestDTO request);
     }
 }

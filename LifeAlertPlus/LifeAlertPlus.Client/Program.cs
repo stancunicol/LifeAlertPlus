@@ -22,5 +22,6 @@ builder.Services.AddScoped<AuthenticationService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<MonitoredService>();
 builder.Services.AddScoped<UserMonitoredService>();
+builder.Services.AddScoped<TokenParserService>();
 
 await builder.Build().RunAsync();

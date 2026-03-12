@@ -1,33 +1,55 @@
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Application.IServices;
-using LifeAlertPlus.Infrastructure.Context;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
+using LifeAlertPlus.Shared.DTOs.Responses.User;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
-        private readonly LifeAlertPlusDbContext _context;
-        private readonly IConfiguration _configuration;
+        private readonly ILogger<UserController> _logger;
 
-        public UserController(IUserService userService, LifeAlertPlusDbContext context, IConfiguration configuration)
+        public UserController(IUserService userService, ILogger<UserController> logger)
         {
             _userService = userService;
-            _context = context;
-            _configuration = configuration;
+            _logger = logger;
         }
+
+        private bool CallerOwns(Guid id)
+        {
+            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return callerIdStr != null && Guid.TryParse(callerIdStr, out var callerGuid) && callerGuid == id;
+        }
+
+        private bool CallerOwn(string email)
+        {
+            var callerEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            return callerEmail != null && callerEmail.Equals(email, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static readonly HashSet<string> _allowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+            { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+
+        private static readonly HashSet<string> _allowedImageMimeTypes = new(StringComparer.OrdinalIgnoreCase)
+            { "image/jpeg", "image/png", "image/gif", "image/webp" };
 
         [HttpPut("update/{id}")]
         public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UserUpdateRequestDTO updatedUser)
         {
+            if (!CallerOwns(id))
+                return Forbid();
+
             var user = await _userService.GetUserByIdAsync(id);
-            Console.WriteLine($"[UpdateUser] Received: FirstName={updatedUser.FirstName}, LastName={updatedUser.LastName}, FirstDayOfTheWeek={updatedUser.FirstDayOfTheWeek}");
+            _logger.LogInformation("[UpdateUser] Received: FirstName={FirstName}, LastName={LastName}, FirstDayOfTheWeek={FirstDayOfTheWeek}", updatedUser.FirstName, updatedUser.LastName, updatedUser.FirstDayOfTheWeek);
             if (user == null)
             {
-                Console.WriteLine($"[UpdateUser] User not found for id {id}");
+                _logger.LogWarning("[UpdateUser] User not found for id {Id}", id);
                 return NotFound(new { Message = "User not found." });
             }
 
@@ -44,20 +66,22 @@ namespace LifeAlertPlus.API.Controllers
             user.UpdatedAt = DateTime.UtcNow;
 
             var result = await _userService.UpdateUserAsync(user);
-            Console.WriteLine($"[UpdateUser] Update result: {result}");
             if (!result)
             {
-                Console.WriteLine($"[UpdateUser] Failed to update user in DB");
+                _logger.LogError("[UpdateUser] Failed to update user {Id} in DB", id);
                 return StatusCode(500, new { Message = "Failed to update user." });
             }
 
-            Console.WriteLine($"[UpdateUser] User updated successfully: FirstName={user.FirstName}, LastName={user.LastName}");
+            _logger.LogInformation("[UpdateUser] User {Id} updated successfully", id);
             return Ok(new { Message = "User updated successfully." });
         }
 
         [HttpPatch("deactivate/{id}")]
         public async Task<IActionResult> DeactivateUser(Guid id)
         {
+            if (!CallerOwns(id))
+                return Forbid();
+
             var user = await _userService.GetUserByIdAsync(id);
             if (user == null)
             {
@@ -79,6 +103,9 @@ namespace LifeAlertPlus.API.Controllers
         [HttpPatch("activate/{id}")]
         public async Task<IActionResult> ActivateUser(Guid id)
         {
+            if (!CallerOwns(id))
+                return Forbid();
+
             var user = await _userService.GetUserByIdAsync(id);
             if (user == null)
             {
@@ -100,6 +127,9 @@ namespace LifeAlertPlus.API.Controllers
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteUser(Guid id)
         {
+            if (!CallerOwns(id))
+                return Forbid();
+
             var user = await _userService.GetUserByIdAsync(id);
             if (user == null)
             {
@@ -119,8 +149,21 @@ namespace LifeAlertPlus.API.Controllers
         [HttpPost("upload-profile-image/{id}")]
         public async Task<IActionResult> UploadProfileImage(Guid id, IFormFile file)
         {
+            if (!CallerOwns(id))
+                return Forbid();
+
             if (file == null || file.Length == 0)
                 return BadRequest(new { Message = "No file uploaded." });
+
+            var extension = Path.GetExtension(file.FileName);
+            if (!_allowedImageExtensions.Contains(extension))
+                return BadRequest(new { Message = "Invalid file type. Only JPG, PNG, GIF and WebP images are allowed." });
+
+            if (!_allowedImageMimeTypes.Contains(file.ContentType))
+                return BadRequest(new { Message = "Invalid file type. Only image files are allowed." });
+
+            if (file.Length > 5 * 1024 * 1024)
+                return BadRequest(new { Message = "File size exceeds the 5 MB limit." });
 
             var user = await _userService.GetUserByIdAsync(id);
             if (user == null)
@@ -132,7 +175,7 @@ namespace LifeAlertPlus.API.Controllers
 
             var fileName = $"{id}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
             var filePath = Path.Combine(uploadsFolder, fileName);
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            await using (var stream = new FileStream(filePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream);
             }
@@ -152,25 +195,72 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUserById(Guid id)
         {
+            if (!CallerOwns(id))
+                return Forbid();
+
             var user = await _userService.GetUserByIdAsync(id);
             if (user == null)
             {
                 return NotFound(new { Message = "User not found." });
             }
 
-            return Ok(user);
+            return Ok(new UserProfileDTO
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                ProfilePictureUrl = user.ProfilePictureUrl,
+                IsEmailConfirmed = user.IsEmailConfirmed,
+                Provider = user.Provider,
+                FirstDayOfTheWeek = user.FirstDayOfTheWeek,
+                Language = user.Language,
+                ThemeColor = user.ThemeColor,
+                FontSize = user.FontSize,
+                MinHeartRate = user.MinHeartRate ?? 0,
+                MaxHeartRate = user.MaxHeartRate ?? 0,
+                MinTemperature = (float)(user.MinTemperature ?? 0),
+                MaxTemperature = (float)(user.MaxTemperature ?? 0),
+                LastChangedPasswordAt = user.LastChangedPasswordAt,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
+            });
         }
 
         [HttpGet("email/{email}")]
         public async Task<IActionResult> GetUserByEmail(string email)
         {
+            if(!CallerOwn(email))
+                return Forbid();
+
             var user = await _userService.GetUserByEmailAsync(email);
+
             if (user == null)
             {
                 return NotFound(new { Message = "User not found." });
             }
 
-            return Ok(user);
+            return Ok(new UserProfileDTO
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                ProfilePictureUrl = user.ProfilePictureUrl,
+                IsEmailConfirmed = user.IsEmailConfirmed,
+                Provider = user.Provider,
+                FirstDayOfTheWeek = user.FirstDayOfTheWeek,
+                Language = user.Language,
+                ThemeColor = user.ThemeColor,
+                FontSize = user.FontSize,
+                MinHeartRate = user.MinHeartRate ?? 0,
+                MaxHeartRate = user.MaxHeartRate ?? 0,
+                MinTemperature = (float)(user.MinTemperature ?? 0),
+                MaxTemperature = (float)(user.MaxTemperature ?? 0),
+                LastChangedPasswordAt = user.LastChangedPasswordAt,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt
+            });
         } 
     }
 }

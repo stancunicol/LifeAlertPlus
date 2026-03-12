@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Net.Http.Json;
-using Microsoft.JSInterop;
 using LifeAlertPlus.Domain.Entities;
 
 namespace LifeAlertPlus.Client.Services
@@ -17,8 +14,8 @@ namespace LifeAlertPlus.Client.Services
 
         public async Task<bool> AddMonitoredPersonToUserAsync(Guid userId, Guid monitoredPersonId)
         {
-            var response = await _httpClient.PostAsJsonAsync<object>($"api/usermonitored/{userId}/monitored/{monitoredPersonId}", null);
-            
+            var response = await _httpClient.PostAsync($"api/usermonitored/{userId}/monitored/{monitoredPersonId}", null);
+
             return response.IsSuccessStatusCode;
         }
 

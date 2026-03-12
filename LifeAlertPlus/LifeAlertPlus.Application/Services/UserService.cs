@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using LifeAlertPlus.Application.IServices;
+﻿using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Domain.IRepositories;
 using LifeAlertPlus.Domain.Entities;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
@@ -39,8 +38,7 @@ namespace LifeAlertPlus.Application.Services
 
         public async Task<User?> VerifyEmailAsync(string token)
         {
-            var users = await _userRepository.GetAllUsersAsync();
-            var user = users.FirstOrDefault(u => u.EmailConfirmationToken == token);
+            var user = await _userRepository.GetUserByEmailConfirmationTokenAsync(token);
 
             if (user == null || user.EmailConfirmationExpires == null || user.EmailConfirmationExpires < DateTime.UtcNow)
             {
@@ -74,8 +72,8 @@ namespace LifeAlertPlus.Application.Services
                 Provider = "Local"
             };
 
-            await _userRepository.CreateUserAsync(newUser);
-            return true;
+            var result = await _userRepository.CreateUserAsync(newUser);
+            return result;
         }
 
         public async Task<bool> UpdateUserAsync(User user)
@@ -85,8 +83,7 @@ namespace LifeAlertPlus.Application.Services
 
         public async Task<User?> GetUserByResetTokenAsync(string token)
         {
-            var users = await _userRepository.GetAllUsersAsync();
-            return users.FirstOrDefault(u => u.PasswordResetToken == token);
+            return await _userRepository.GetUserByPasswordResetTokenAsync(token);
         }
 
         public string GeneratePasswordResetToken()
@@ -101,8 +98,7 @@ namespace LifeAlertPlus.Application.Services
 
         public async Task<User?> GetUserByEmailChangeCancelTokenAsync(string token)
         {
-            var users = await _userRepository.GetAllUsersAsync();
-            return users.FirstOrDefault(u => u.EmailChangeCancelToken == token);
+            return await _userRepository.GetUserByEmailChangeCancelTokenAsync(token);
         }
 
         public async Task<User?> FindOrCreateGoogleUserAsync(string email, string? fullName, string googleId, string? givenName, string? familyName, string? profilePictureUrl)
@@ -151,6 +147,71 @@ namespace LifeAlertPlus.Application.Services
         public async Task<bool> DeleteUserAsync(Guid id)
         {
             return await _userRepository.DeleteUserAsync(id);
+        }
+
+        public async Task CancelEmailChangeAsync(User user)
+        {
+            user.EmailChangeCancelToken = null;
+            user.EmailChangeExpires = null;
+            user.EmailChangeToken = null;
+            user.PendingEmail = null;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateUserAsync(user);
+        }
+
+        public async Task EmailChangeAsync(User user)
+        {
+            if (string.IsNullOrEmpty(user.PendingEmail))
+            {
+                return;
+            }
+
+            user.Email = user.PendingEmail;
+            user.IsEmailConfirmed = true;
+            user.PendingEmail = null;
+            user.EmailChangeToken = null;
+            user.EmailChangeCancelToken = null;
+            user.EmailChangeExpires = null;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateUserAsync(user);
+        }
+
+        public async Task<User?> GetUserByEmailChangeTokenAsync(string token)
+        {
+            return await _userRepository.GetUserByEmailChangeTokenAsync(token);
+        }
+
+        public async Task InitiateEmailChangeAsync(User user, string newEmail)
+        {
+            var emailChangeToken = GenerateEmailVerificationToken();
+            var cancelToken = GenerateEmailChangeCancelToken();
+
+            user.PendingEmail = newEmail;
+            user.EmailChangeCancelToken = cancelToken;
+            user.EmailChangeToken = emailChangeToken;
+            user.EmailChangeExpires = DateTime.UtcNow.AddHours(24);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateUserAsync(user);
+        }
+
+        public async Task InitiatePasswordResetAsync(User user)
+        {
+            var resetToken = GeneratePasswordResetToken();
+
+            user.PasswordResetToken = resetToken;
+            user.PasswordResetExpires = DateTime.UtcNow.AddHours(1);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateUserAsync(user);
+        }
+
+        public async Task PasswordChangeAsync(User user, string newPassword)
+        {
+            user.PasswordHash = _authenticationService.HashPassword(newPassword);
+            user.PasswordResetToken = null;
+            user.PasswordResetExpires = null;
+            user.LastChangedPasswordAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userRepository.UpdateUserAsync(user);
         }
     }
 }

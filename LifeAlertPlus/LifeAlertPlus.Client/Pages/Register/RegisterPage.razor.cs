@@ -80,7 +80,7 @@ namespace LifeAlertPlus.Client.Pages.Register
 
             var response = await AuthenticationService.RegisterAsync(request);
 
-            if (response != null && response.Message == "Registration successful.")
+            if (response != null && response.Success)
             {
                 ShowModal = true;
             }
@@ -123,10 +123,9 @@ namespace LifeAlertPlus.Client.Pages.Register
                 return (false, "Password must contain at least one number.");
             }
 
-            var specialCharacters = "!#$%^&*-_./\\";
-            if (!password.Any(c => specialCharacters.Contains(c)))
+            if(!password.Any(ch => !char.IsLetterOrDigit(ch)))
             {
-                return (false, "Password must contain at least one special character (!#$%^&*-_./\\).");
+                return (false, "Password must contain at least one special character.");
             }
 
             return (true, string.Empty);

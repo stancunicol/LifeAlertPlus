@@ -2,9 +2,6 @@ using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Domain.Entities;
 using LifeAlertPlus.Domain.IRepositories;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace LifeAlertPlus.Application.Services
 {
@@ -44,12 +41,12 @@ namespace LifeAlertPlus.Application.Services
             return await _monitoredRepository.GetAllMonitoredPeopleAsync();
         }
 
-        public async Task<Monitored> GetMonitoredPersonByDeviceSerialNumberAsync(string deviceSerialNumber)
+        public async Task<Monitored?> GetMonitoredPersonByDeviceSerialNumberAsync(string deviceSerialNumber)
         {
             return await _monitoredRepository.GetMonitoredPersonByDeviceSerialNumberAsync(deviceSerialNumber);
         }
 
-        public async Task<Monitored> GetMonitoredPersonByIdAsync(Guid id)
+        public async Task<Monitored?> GetMonitoredPersonByIdAsync(Guid id)
         {
             return await _monitoredRepository.GetMonitoredPersonByIdAsync(id);
         }

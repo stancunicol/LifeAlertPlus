@@ -14,24 +14,35 @@ namespace LifeAlertPlus.Application.Services
             _configuration = configuration;
         }
 
-        public async Task SendRegistrationSuccessEmailAsync(string recipientEmail, string recipientName, string verificationUrl)
+        private SmtpClient CreateSmtpClient()
         {
-            var smtpHost = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
-            var smtpPort = int.Parse(_configuration["Email:SmtpPort"] ?? "587");
-            var smtpUsername = _configuration["Email:Username"] ?? string.Empty;
-            var smtpPassword = _configuration["Email:Password"] ?? string.Empty;
-            var fromEmail = _configuration["Email:FromEmail"] ?? smtpUsername;
-            var fromName = _configuration["Email:FromName"] ?? "LifeAlert+";
+            var host = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
+            var port = int.Parse(_configuration["Email:SmtpPort"] ?? "587");
+            var username = _configuration["Email:Username"] ?? string.Empty;
+            var password = _configuration["Email:Password"] ?? string.Empty;
 
-            using var smtpClient = new SmtpClient(smtpHost, smtpPort)
+            return new SmtpClient(host, port)
             {
-                Credentials = new NetworkCredential(smtpUsername, smtpPassword),
+                Credentials = new NetworkCredential(username, password),
                 EnableSsl = true
             };
+        }
+
+        private MailAddress GetSenderAddress()
+        {
+            var username = _configuration["Email:Username"] ?? string.Empty;
+            var fromEmail = _configuration["Email:FromEmail"] ?? username;
+            var fromName = _configuration["Email:FromName"] ?? "LifeAlert+";
+            return new MailAddress(fromEmail, fromName);
+        }
+
+        public async Task SendRegistrationSuccessEmailAsync(string recipientEmail, string recipientName, string verificationUrl)
+        {
+            using var smtpClient = CreateSmtpClient();
 
             var mailMessage = new MailMessage
             {
-                From = new MailAddress(fromEmail, fromName),
+                From = GetSenderAddress(),
                 Subject = "Welcome to LifeAlert+ - Please Verify Your Email",
                 Body = GenerateRegistrationEmailBody(recipientName, verificationUrl),
                 IsBodyHtml = true
@@ -44,22 +55,11 @@ namespace LifeAlertPlus.Application.Services
 
         public async Task SendPasswordResetEmailAsync(string recipientEmail, string recipientName, string resetUrl)
         {
-            var smtpHost = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
-            var smtpPort = int.Parse(_configuration["Email:SmtpPort"] ?? "587");
-            var smtpUsername = _configuration["Email:Username"] ?? string.Empty;
-            var smtpPassword = _configuration["Email:Password"] ?? string.Empty;
-            var fromEmail = _configuration["Email:FromEmail"] ?? smtpUsername;
-            var fromName = _configuration["Email:FromName"] ?? "LifeAlert+";
-
-            using var smtpClient = new SmtpClient(smtpHost, smtpPort)
-            {
-                Credentials = new NetworkCredential(smtpUsername, smtpPassword),
-                EnableSsl = true
-            };
+            using var smtpClient = CreateSmtpClient();
 
             var mailMessage = new MailMessage
             {
-                From = new MailAddress(fromEmail, fromName),
+                From = GetSenderAddress(),
                 Subject = "LifeAlert+ - Password Reset Request",
                 Body = GeneratePasswordResetEmailBody(recipientName, resetUrl),
                 IsBodyHtml = true
@@ -72,22 +72,11 @@ namespace LifeAlertPlus.Application.Services
 
         public async Task SendEmailChangeVerificationAsync(string recipientEmail, string recipientName, string verificationUrl, string oldEmail)
         {
-            var smtpHost = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
-            var smtpPort = int.Parse(_configuration["Email:SmtpPort"] ?? "587");
-            var smtpUsername = _configuration["Email:Username"] ?? string.Empty;
-            var smtpPassword = _configuration["Email:Password"] ?? string.Empty;
-            var fromEmail = _configuration["Email:FromEmail"] ?? smtpUsername;
-            var fromName = _configuration["Email:FromName"] ?? "LifeAlert+";
-
-            using var smtpClient = new SmtpClient(smtpHost, smtpPort)
-            {
-                Credentials = new NetworkCredential(smtpUsername, smtpPassword),
-                EnableSsl = true
-            };
+            using var smtpClient = CreateSmtpClient();
 
             var mailMessage = new MailMessage
             {
-                From = new MailAddress(fromEmail, fromName),
+                From = GetSenderAddress(),
                 Subject = "LifeAlert+ - Verify Your New Email Address",
                 Body = GenerateEmailChangeVerificationBody(recipientName, verificationUrl, oldEmail, recipientEmail),
                 IsBodyHtml = true
@@ -100,22 +89,11 @@ namespace LifeAlertPlus.Application.Services
 
         public async Task SendEmailChangeNotificationAsync(string oldEmail, string recipientName, string newEmail, string cancelUrl)
         {
-            var smtpHost = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
-            var smtpPort = int.Parse(_configuration["Email:SmtpPort"] ?? "587");
-            var smtpUsername = _configuration["Email:Username"] ?? string.Empty;
-            var smtpPassword = _configuration["Email:Password"] ?? string.Empty;
-            var fromEmail = _configuration["Email:FromEmail"] ?? smtpUsername;
-            var fromName = _configuration["Email:FromName"] ?? "LifeAlert+";
-
-            using var smtpClient = new SmtpClient(smtpHost, smtpPort)
-            {
-                Credentials = new NetworkCredential(smtpUsername, smtpPassword),
-                EnableSsl = true
-            };
+            using var smtpClient = CreateSmtpClient();
 
             var mailMessage = new MailMessage
             {
-                From = new MailAddress(fromEmail, fromName),
+                From = GetSenderAddress(),
                 Subject = "LifeAlert+ - Email Change Security Notification",
                 Body = GenerateEmailChangeNotificationBody(recipientName, oldEmail, newEmail, cancelUrl),
                 IsBodyHtml = true

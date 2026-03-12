@@ -1,11 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using LifeAlertPlus.Client.Services;
-using LifeAlertPlus.Domain.Entities;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using Microsoft.AspNetCore.Components;
@@ -29,6 +22,9 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     [Inject]
     private NavigationManager NavigationManager { get; set; } = default!;
+
+    [Inject]
+    private TokenParserService TokenParser { get; set; } = default!;
 
     private string UserFullName = string.Empty;
     private string ProfilePictureUrl = string.Empty;
@@ -66,8 +62,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     private async Task LoadUserFromTokenAsync()
     {
-        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
-        if (string.IsNullOrEmpty(token))
+        var claims = await TokenParser.GetClaimsAsync();
+        if (claims == null)
         {
             UserFullName = "User";
             CurrentUserEmail = string.Empty;
@@ -75,21 +71,10 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             return;
         }
 
-        var handler = new JwtSecurityTokenHandler();
-        var jsonToken = handler.ReadJwtToken(token);
-
-        CurrentUserEmail = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "email")?.Value ?? string.Empty;
-        var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? string.Empty;
-        var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? string.Empty;
-        var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? string.Empty;
-        var storedProfilePicture = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "profilePictureUrl");
-        if (!string.IsNullOrEmpty(storedProfilePicture)) profilePictureUrl = storedProfilePicture;
-        var sub = jsonToken?.Claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Sub)?.Value;
-
-        Guid.TryParse(sub, out _currentUserId);
-
-        UserFullName = $"{firstName} {lastName}".Trim();
-        ProfilePictureUrl = profilePictureUrl;
+        CurrentUserEmail = claims.Email;
+        _currentUserId = claims.UserId;
+        UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
+        ProfilePictureUrl = claims.ProfilePictureUrl;
     }
 
     private async Task LoadMonitoredPeopleAsync()

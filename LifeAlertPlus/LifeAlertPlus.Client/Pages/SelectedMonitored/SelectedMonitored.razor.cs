@@ -14,6 +14,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         [Inject]
         private MonitoredService MonitoredService { get; set; } = default!;
 
+        [Inject]
+        private TokenParserService TokenParserService { get; set; } = default!;
+
         private PersonDetail? Person { get; set; }
         private bool IsLoading { get; set; } = true;
         private string? LoadError { get; set; }
@@ -142,18 +145,11 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         protected override async Task OnInitializedAsync()
         {
-            var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
-            if (!string.IsNullOrEmpty(token))
+            var claims = await TokenParserService.GetClaimsAsync();
+            if (claims != null)
             {
-                var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
-                var jsonToken = handler.ReadJwtToken(token);
-                var firstName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "firstName")?.Value ?? "";
-                var lastName = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "lastName")?.Value ?? "";
-                var profilePictureUrl = jsonToken?.Claims?.FirstOrDefault(x => x.Type == "profilePictureUrl")?.Value ?? "";
-                var storedProfilePicture = await JSRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "profilePictureUrl" });
-                if (!string.IsNullOrEmpty(storedProfilePicture)) profilePictureUrl = storedProfilePicture;
-                UserFullName = $"{firstName} {lastName}".Trim();
-                ProfilePictureUrl = profilePictureUrl;
+                UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
+                ProfilePictureUrl = claims.ProfilePictureUrl;
             }
             else
             {

@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Application.IServices;
-using LifeAlertPlus.Infrastructure.Context;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
+using Microsoft.AspNetCore.Authorization;
+using LifeAlertPlus.API.Services;
+using System.Security.Claims;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -14,57 +16,34 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IAuthenticationService _authenticationService;
         private readonly IJwtService _jwtService;
         private readonly IEmailService _emailService;
-        private readonly LifeAlertPlusDbContext _dbContext;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthenticationController> _logger;
+        private readonly GetUrlService _getUrlService;
 
-        public AuthenticationController(IUserService userService, LifeAlertPlusDbContext lifeAlertPlusDbContext, IConfiguration configuration, IAuthenticationService authenticationService, LifeAlertPlusDbContext dbContext, IJwtService jwtService, IEmailService emailService)
+        public AuthenticationController(IUserService userService, IConfiguration configuration, IAuthenticationService authenticationService, IJwtService jwtService, IEmailService emailService, ILogger<AuthenticationController> logger, GetUrlService getUrlService)
         {
             _userService = userService;
-            _dbContext = lifeAlertPlusDbContext;
             _configuration = configuration;
             _authenticationService = authenticationService;
-            _dbContext = dbContext;
             _jwtService = jwtService;
             _emailService = emailService;
-        }
-
-        private string GetApiBaseUrl()
-        {
-            var configured = _configuration["Urls:ApiBaseUrl"];
-            if (!string.IsNullOrWhiteSpace(configured))
-            {
-                return configured.TrimEnd('/');
-            }
-
-            return $"{Request.Scheme}://{Request.Host}";
-        }
-
-        private string GetClientBaseUrl()
-        {
-            var configured = _configuration["Urls:ClientBaseUrl"];
-            if (!string.IsNullOrWhiteSpace(configured))
-            {
-                return configured.TrimEnd('/');
-            }
-
-            return $"{Request.Scheme}://{Request.Host}";
+            _logger = logger;
+            _getUrlService = getUrlService;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] UserLoginRequestDTO request)
         {
             var user = await _userService.GetUserByEmailAsync(request.Email);
-
-            if (user == null || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(user.PasswordHash) || !_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
+            if (user == null || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(user.PasswordHash) || 
+            !_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
             {
-                return Ok(new UserLoginResponseDTO { Success = false, Message = "Login failed.", Token = string.Empty });
+                return Unauthorized(new UserLoginResponseDTO { Success = false, Message = "Login failed.", Token = string.Empty });
             }
-
-            if(user.IsEmailConfirmed == false)
+            if(!user.IsEmailConfirmed)
             {
-                return Ok(new UserLoginResponseDTO { Success = false, Message = "Email not confirmed.", Token = string.Empty });
+                return Unauthorized(new UserLoginResponseDTO { Success = false, Message = "Email not confirmed.", Token = string.Empty });
             }
-
             if(user.DeletedAt != null)
             {
                 user.DeletedAt = null;
@@ -85,32 +64,21 @@ namespace LifeAlertPlus.API.Controllers
         public async Task<IActionResult> Register([FromBody] UserRegisterRequestDTO request)
         {
             var existingUser = await _userService.GetUserByEmailAsync(request.Email);
-
             if (existingUser != null)
             {
-                return Ok(new UserRegisterResponseDTO { Success = false, Message = "Email already in use." });
+                return Conflict(new UserResponseDTO { Success = false, Message = "Email already in use." });
             }
 
-            if(string.IsNullOrEmpty(request.Password))
+            var passwordValidation = await _authenticationService.VerifyPassword(request.Password);
+            if (!passwordValidation.Success)
             {
-                return Ok(new UserRegisterResponseDTO { Success = false, Message = "Password is required." });
+                return BadRequest(passwordValidation);
             }
 
-            if(request.Password.Length < 8)
+            var created = await _userService.CreateUserAsync(request);
+            if(!created)
             {
-                return Ok(new UserRegisterResponseDTO { Success = false, Message = "Password must be at least 8 characters long." });
-            }
-
-            if(request.Password.All(char.IsLower) || request.Password.All(char.IsUpper) || !request.Password.Any(char.IsDigit) || !request.Password.Any(ch => !char.IsLetterOrDigit(ch)))
-            {
-                return Ok(new UserRegisterResponseDTO { Success = false, Message = "Password must contain uppercase, lowercase, digit, and special character." });
-            }
-
-            var response = await _userService.CreateUserAsync(request);
-
-            if(response == false)
-            {
-                return Ok(new UserRegisterResponseDTO { Success = false, Message = "Registration failed." });
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Registration failed." });
             }
 
             try
@@ -118,17 +86,17 @@ namespace LifeAlertPlus.API.Controllers
                 var newUser = await _userService.GetUserByEmailAsync(request.Email);
                 if (newUser != null && !string.IsNullOrEmpty(newUser.EmailConfirmationToken))
                 {
-                    var verificationUrl = $"{GetApiBaseUrl()}/api/authentication/verify-email?token={Uri.EscapeDataString(newUser.EmailConfirmationToken)}";
+                    var verificationUrl = $"{_getUrlService.GetApiBaseUrl()}/api/authentication/verify-email?token={Uri.EscapeDataString(newUser.EmailConfirmationToken)}";
                     var userName = $"{request.FirstName} {request.LastName}";
                     await _emailService.SendRegistrationSuccessEmailAsync(request.Email, userName, verificationUrl);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to send registration email: {ex.Message}");
+                _logger.LogError(ex, "Failed to send registration email for {Email}", request.Email);
             }
 
-            return Ok(new UserRegisterResponseDTO { Success = true, Message = "Registration successful." });
+            return Ok(new UserResponseDTO { Success = true, Message = "Registration successful." });
         }
 
         [HttpGet("verify-email")]
@@ -136,29 +104,27 @@ namespace LifeAlertPlus.API.Controllers
         {
             if (string.IsNullOrEmpty(token))
             {
-                return Redirect($"{GetClientBaseUrl()}/login?verified=false&reason=invalid");
+                return Redirect($"{_getUrlService.GetClientBaseUrl()}/login?verified=false&reason=invalid");
             }
 
             var user = await _userService.VerifyEmailAsync(token);
-
             if (user == null)
             {
-                return Redirect($"{GetClientBaseUrl()}/login?verified=false&reason=expired");
+                return Redirect($"{_getUrlService.GetClientBaseUrl()}/login?verified=false&reason=expired");
             }
 
-            return Redirect($"{GetClientBaseUrl()}/login?verified=true");
+            return Redirect($"{_getUrlService.GetClientBaseUrl()}/login?verified=true");
         }
 
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] UserResetPasswordRequestDTO request)
         {
-            if (string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.NewPassword) || string.IsNullOrEmpty(request.ConfirmPassword) || request.NewPassword != request.ConfirmPassword)
+            if (string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.NewPassword) || string.IsNullOrEmpty(request.ConfirmPassword))
             {
                 return BadRequest("Invalid token or password.");
             }
 
             var user = await _userService.GetUserByResetTokenAsync(request.Token);
-
             if (user == null || user.PasswordResetExpires == null || user.PasswordResetExpires < DateTime.UtcNow)
             {
                 return BadRequest("Invalid or expired token.");
@@ -169,18 +135,12 @@ namespace LifeAlertPlus.API.Controllers
                 return BadRequest("Passwords do not match.");
             }
 
-            if(user.IsEmailConfirmed == false)
+            if(!user.IsEmailConfirmed)
             {
                 return BadRequest("Email not confirmed.");
             }
 
-            user.PasswordHash = _authenticationService.HashPassword(request.NewPassword);
-            user.PasswordResetToken = null;
-            user.PasswordResetExpires = null;
-            user.UpdatedAt = DateTime.UtcNow;
-            user.LastChangedPasswordAt = DateTime.UtcNow;
-
-            await _userService.UpdateUserAsync(user);
+            await _userService.PasswordChangeAsync(user, request.NewPassword);
 
             return Ok("Password has been reset successfully.");
         }
@@ -194,90 +154,85 @@ namespace LifeAlertPlus.API.Controllers
             }
 
             var user = await _userService.GetUserByEmailAsync(request.Email);
-
             if (user == null)
             {
-                return Ok(new { Success = false, Message = "This email is not registered." });
+                return BadRequest(new UserResponseDTO { Success = false, Message = "This email is not registered." });
             }
-            else 
+            if(user.Provider != "Local")
             {
-                if(user.Provider != "Local")
-                {
-                    return Ok(new { Success = false, Message = "This email is registered via a third-party provider. Password reset is not applicable." });
-                }
-
-                if(user.IsEmailConfirmed == false)
-                {
-                    return Ok(new { Success = false, Message = "Email not confirmed. Cannot reset password." });
-                }
+                return BadRequest(new UserResponseDTO { Success = false, Message = "This email is registered via a third-party provider. Password reset is not applicable." });
             }
 
-            var resetToken = _userService.GeneratePasswordResetToken();
-            user.PasswordResetToken = resetToken;
-            user.PasswordResetExpires = DateTime.UtcNow.AddHours(24);
-            user.UpdatedAt = DateTime.UtcNow;
+            if(!user.IsEmailConfirmed)
+            {
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Email not confirmed. Cannot reset password." });
+            }
 
-            await _userService.UpdateUserAsync(user);
+            await _userService.InitiatePasswordResetAsync(user);
 
             try
             {
-                var resetUrl = $"{GetClientBaseUrl()}/reset-password?token={Uri.EscapeDataString(resetToken)}";
+                var resetUrl = $"{_getUrlService.GetClientBaseUrl()}/reset-password?token={Uri.EscapeDataString(user.PasswordResetToken!)}";
                 var userName = $"{user.FirstName} {user.LastName}";
                 await _emailService.SendPasswordResetEmailAsync(user.Email, userName, resetUrl);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to send password reset email: {ex.Message}");
+                _logger.LogError(ex, "Failed to send password reset email for {Email}", request.Email);
             }
 
-            return Ok(new { Success = true, Message = "If the email exists, a password reset link has been sent." });
+            return Ok(new UserResponseDTO { Success = true, Message = "If the email exists, a password reset link has been sent." });
         }
 
+        [Authorize]
         [HttpPatch("change-email")]
         public async Task<IActionResult> ChangeEmail([FromBody] UserChangeEmailRequestDTO request)
         {
-            if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewEmail) || string.IsNullOrEmpty(request.ConfirmEmail) || request.NewEmail !=  request.ConfirmEmail)
-            {
-                return Ok(new UserUpdateEmailResponseDTO { Success = false, Message = "All fields are required and new email must match confirmation." });
+            var callerEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+            if (string.IsNullOrEmpty(callerEmail))
+                return Unauthorized(new UserResponseDTO { Success = false, Message = "Unable to determine authenticated user." });
+
+            // Override with the identity from the JWT — prevents modifying another user's email
+            request.CurrentEmail = callerEmail;
+
+            var emailChangeValidation = await _authenticationService.ValidateChangeEmail(request);
+            if (!emailChangeValidation.Success) {
+                return BadRequest(emailChangeValidation);
             }
 
             var user = await _userService.GetUserByEmailAsync(request.CurrentEmail);
-
             if (user == null)
             {
-                return Ok(new UserUpdateEmailResponseDTO { Success = false, Message = "User with the current email does not exist." });
+                return NotFound(new UserResponseDTO { Success = false, Message = "User with the current email does not exist." });
             }
 
             var existingUserWithNewEmail = await _userService.GetUserByEmailAsync(request.NewEmail);
             if (existingUserWithNewEmail != null)
             {
-                return Ok(new UserUpdateEmailResponseDTO { Success = false, Message = "The new email address is already in use." });
+                return Conflict(new UserResponseDTO { Success = false, Message = "The new email address is already in use." });
             }
 
-            var verificationToken = _userService.GenerateEmailVerificationToken();
-            var cancelToken = _userService.GenerateEmailChangeCancelToken();
+            if (string.IsNullOrEmpty(user.PasswordHash) || 
+                !_authenticationService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
+            {
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Invalid password." });
+            }
 
-            user.PendingEmail = request.NewEmail;
-            user.EmailChangeToken = verificationToken;
-            user.EmailChangeExpires = DateTime.UtcNow.AddHours(24);
-            user.EmailChangeCancelToken = cancelToken;
-            user.UpdatedAt = DateTime.UtcNow;
-
-            await _userService.UpdateUserAsync(user);
+            await _userService.InitiateEmailChangeAsync(user, request.NewEmail);
 
             try
             {
                 var userName = $"{user.FirstName} {user.LastName}";
 
-                var verificationUrl = $"{GetApiBaseUrl()}/api/authentication/verify-email-change?token={Uri.EscapeDataString(verificationToken)}";
+                var verificationUrl = $"{_getUrlService.GetApiBaseUrl()}/api/authentication/verify-email-change?token={Uri.EscapeDataString(user.EmailChangeToken!)}";
                 await _emailService.SendEmailChangeVerificationAsync(request.NewEmail, userName, verificationUrl, request.CurrentEmail);
 
-                var cancelUrl = $"{GetApiBaseUrl()}/api/authentication/cancel-email-change?token={Uri.EscapeDataString(cancelToken)}";
+                var cancelUrl = $"{_getUrlService.GetApiBaseUrl()}/api/authentication/cancel-email-change?token={Uri.EscapeDataString(user.EmailChangeCancelToken!)}";
                 await _emailService.SendEmailChangeNotificationAsync(request.CurrentEmail, userName, request.NewEmail, cancelUrl);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to send email change verification email: {ex.Message}");
+                _logger.LogError(ex, "Failed to send email change emails for {Email}", request.CurrentEmail);
             }
 
             return Ok(new UserUpdateEmailResponseDTO { Success = true, Message = "Email change initiated. Please check both your current and new email addresses.", RequiresLogout = true });
@@ -288,33 +243,24 @@ namespace LifeAlertPlus.API.Controllers
         {
             if (string.IsNullOrEmpty(token))
             {
-                return BadRequest("Token is required.");
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Token is required." });
             }
 
-            var users = await _userService.GetAllUsersAsync();
-            var user = users.FirstOrDefault(u => u.EmailChangeToken == token);
+            var user = await _userService.GetUserByEmailChangeTokenAsync(token);
 
             if (user == null || user.EmailChangeExpires == null || user.EmailChangeExpires < DateTime.UtcNow)
             {
-                return BadRequest("Invalid or expired verification token.");
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Invalid or expired verification token." });
             }
 
             if (string.IsNullOrEmpty(user.EmailChangeCancelToken))
             {
-                return BadRequest("Email change request has been cancelled.");
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Email change request has been cancelled." });
             }
 
-            user.Email = user.PendingEmail;
-            user.IsEmailConfirmed = true;
-            user.EmailChangeToken = null;
-            user.EmailChangeExpires = null;
-            user.EmailChangeCancelToken = null;
-            user.PendingEmail = null;
-            user.UpdatedAt = DateTime.UtcNow;
+            await _userService.EmailChangeAsync(user);
 
-            await _userService.UpdateUserAsync(user);
-
-            return Ok("Email address successfully changed and verified.");
+            return Ok(new UserResponseDTO { Success = true, Message = "Email address successfully changed and verified." });
         }
 
         [HttpGet("cancel-email-change")]
@@ -322,59 +268,44 @@ namespace LifeAlertPlus.API.Controllers
         {
             if (string.IsNullOrEmpty(token))
             {
-                return BadRequest("Token is required.");
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Token is required." });
             }
 
             var user = await _userService.GetUserByEmailChangeCancelTokenAsync(token);
 
             if (user == null || user.EmailChangeExpires == null || user.EmailChangeExpires < DateTime.UtcNow)
             {
-                return BadRequest("Invalid or expired cancellation token.");
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Invalid or expired cancellation token." });
             }
 
-            user.EmailChangeToken = null;
-            user.EmailChangeExpires = null;
-            user.EmailChangeCancelToken = null;
-            user.PendingEmail = null;
-            user.UpdatedAt = DateTime.UtcNow;
+            await _userService.CancelEmailChangeAsync(user);
 
-            await _userService.UpdateUserAsync(user);
-
-            return Ok("Email change request has been successfully cancelled. Your account is secure.");
+            return Ok(new UserResponseDTO { Success = true, Message = "Email change request has been successfully cancelled. Your account is secure." });
         }
 
+        [Authorize]
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword([FromBody] UserChangePasswordRequestDTO request)
         {
-            if (string.IsNullOrEmpty(request.CurrentPassword) || string.IsNullOrEmpty(request.NewPassword) || string.IsNullOrEmpty(request.ConfirmPassword))
-            {
-                return BadRequest("All fields are required.");
+            var callerEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email");
+            if (string.IsNullOrEmpty(callerEmail))
+                return Unauthorized(new UserResponseDTO { Success = false, Message = "Unable to determine authenticated user." });
+
+            var passwordValidation = await _authenticationService.ValidateChangePassword(request.CurrentPassword, request.NewPassword, request.ConfirmPassword);
+            if (!passwordValidation.Success) {
+                return BadRequest(passwordValidation);
             }
 
-            if (request.NewPassword != request.ConfirmPassword)
+            var user = await _userService.GetUserByEmailAsync(callerEmail);
+
+            if (user == null || string.IsNullOrEmpty(user.PasswordHash) || !_authenticationService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
             {
-                return BadRequest("New password and confirmation do not match.");
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Invalid current password." });
             }
 
-            if(request.CurrentPassword == request.NewPassword)
-            {
-                return BadRequest("New password must be different from the current password.");
-            }
+            await _userService.PasswordChangeAsync(user, request.NewPassword);
 
-            var user = await _userService.GetUserByEmailAsync(request.Email);
-
-            if (user == null || !_authenticationService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
-            {
-                return BadRequest("Invalid email or current password.");
-            }
-
-            user.PasswordHash = _authenticationService.HashPassword(request.NewPassword);
-            user.UpdatedAt = DateTime.UtcNow;
-            user.LastChangedPasswordAt = DateTime.UtcNow;
-
-            await _userService.UpdateUserAsync(user);
-
-            return Ok("Password has been changed successfully.");
+            return Ok(new UserResponseDTO { Success = true, Message = "Password has been changed successfully." });
         }
     }
 }

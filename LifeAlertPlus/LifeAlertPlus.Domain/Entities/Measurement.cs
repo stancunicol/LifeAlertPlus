@@ -1,18 +1,17 @@
-﻿using System;
-
-namespace LifeAlertPlus.Domain.Entities
+﻿namespace LifeAlertPlus.Domain.Entities
 {
     public class Measurement
     {
         public Guid Id { get; set; }
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         public Guid IdMonitored { get; set; }
-        public Monitored Monitored { get; set; }
         public bool FallDetection { get; set; }
-        public float Pulse { get; set; }
-        public float Temperature { get; set; }
-        public float Longitude { get; set; }
-        public float Latitude { get; set; }
+        public double Pulse { get; set; }
+        public double Temperature { get; set; }
+        public double Longitude { get; set; }
+        public double Latitude { get; set; }
         public DateTime CreatedAt { get; set; }
+        
+        public Monitored Monitored { get; set; } = null!;
     }
 }

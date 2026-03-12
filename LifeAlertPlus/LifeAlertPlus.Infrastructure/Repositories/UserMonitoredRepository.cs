@@ -1,9 +1,6 @@
 using LifeAlertPlus.Domain.Entities;
 using LifeAlertPlus.Domain.IRepositories;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using LifeAlertPlus.Infrastructure.Context;
 
 namespace LifeAlertPlus.Infrastructure.Repositories
@@ -17,15 +14,12 @@ namespace LifeAlertPlus.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<Guid>> GetMonitoredPeopleByUserIdAsync(Guid userId)
+        public async Task<IEnumerable<Monitored>> GetMonitoredPeopleWithDetailsByUserIdAsync(Guid userId)
         {
-            var monitoredPeople = await _context.UserMonitoreds
-                .Include(um => um.Monitored)
+            return await _context.UserMonitoreds
                 .Where(um => um.IdUser == userId)
-                .Select(um => um.IdMonitored)
+                .Select(um => um.Monitored)
                 .ToListAsync();
-
-            return monitoredPeople;
         }
 
         public async Task AddMonitoredPersonToUserAsync(Guid userId, Guid monitoredPersonId)

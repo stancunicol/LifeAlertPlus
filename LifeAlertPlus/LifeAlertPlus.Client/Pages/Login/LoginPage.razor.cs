@@ -65,23 +65,20 @@ namespace LifeAlertPlus.Client.Pages.Login
             
             if(response != null)
             {
-                if(response.Success == true)
+                if(response.Success)
                 {
                     await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", response.Token);
                     
                     Navigation.NavigateTo("/dashboard");
-                    Console.WriteLine("Login successful.");
                 }
                 else
                 {
                     ErrorMessage = response.Message ?? "Login failed.";
-                    Console.WriteLine("Login failed: " + ErrorMessage);
                 }
             }
             else
             {
                 ErrorMessage = "An error occurred during login.";
-                Console.WriteLine("Login error: No response from server.");
             }
         }
 
@@ -140,7 +137,6 @@ namespace LifeAlertPlus.Client.Pages.Login
             {
                 ForgotPasswordMessage = "An error occurred. Please try again later.";
                 IsForgotPasswordSuccess = false;
-                Console.WriteLine($"Forgot password error: {ex.Message}");
             }
         }
 
