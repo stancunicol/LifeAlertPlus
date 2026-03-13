@@ -12,7 +12,7 @@ public partial class NotificationsPage : ComponentBase
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
         private string ActiveFilter = "All";
-        private List<Notification> AllNotifications;
+        private List<Notification> AllNotifications = new();
 
         protected override async Task OnInitializedAsync()
         {

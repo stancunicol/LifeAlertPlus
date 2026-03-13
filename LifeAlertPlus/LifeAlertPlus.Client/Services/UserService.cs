@@ -57,20 +57,34 @@ namespace LifeAlertPlus.Client.Services
 
         public async Task<UserProfileDTO?> GetUserByIdAsync(Guid userId)
         {
-            var response = await _httpClient.GetAsync($"api/user/{userId}");
-            if (!response.IsSuccessStatusCode)
-                return null;
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/user/{userId}");
+                if (!response.IsSuccessStatusCode)
+                    return null;
 
-            return await response.Content.ReadFromJsonAsync<UserProfileDTO>();
+                return await response.Content.ReadFromJsonAsync<UserProfileDTO>();
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public async Task<UserProfileDTO?> GetUserByEmailAsync(string email)
         {
-            var response = await _httpClient.GetAsync($"api/user/email/{email}");
-            if (!response.IsSuccessStatusCode)
-                return null;
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/user/email/{email}");
+                if (!response.IsSuccessStatusCode)
+                    return null;
 
-            return await response.Content.ReadFromJsonAsync<UserProfileDTO>();
+                return await response.Content.ReadFromJsonAsync<UserProfileDTO>();
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public class UploadResult

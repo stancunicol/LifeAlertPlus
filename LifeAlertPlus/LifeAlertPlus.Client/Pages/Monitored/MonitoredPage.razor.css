@@ -162,6 +162,10 @@
         background: linear-gradient(135deg, #ffd4cc 0%, #ffb3a6 100%);
     }
 
+    .card-header-colored.nodata {
+        background: linear-gradient(135deg, #ececec 0%, #dddddd 100%);
+    }
+
 .header-top {
     display: flex;
     gap: 1rem;
@@ -228,6 +232,10 @@
     background: #dc3545;
 }
 
+.card-header-colored.nodata .status-dot {
+    background: #6c757d;
+}
+
 .status-text {
     font-family: "Jua", sans-serif;
     font-size: 1rem;
@@ -244,6 +252,10 @@
 
 .card-header-colored.critical .status-text {
     color: #c82333;
+}
+
+.card-header-colored.nodata .status-text {
+    color: #495057;
 }
 
 .card-body-white {

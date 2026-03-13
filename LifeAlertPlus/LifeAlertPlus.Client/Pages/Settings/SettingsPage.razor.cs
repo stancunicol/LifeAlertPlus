@@ -87,6 +87,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
 
             await Task.Delay(3000);
             ShowSaveConfirmation = false;
+            StateHasChanged();
         }
 
         protected override async Task OnInitializedAsync()
@@ -108,32 +109,48 @@ namespace LifeAlertPlus.Client.Pages.Settings
             }
 
             var claims = await TokenParser.GetClaimsAsync();
-            if (claims != null)
+            if (claims == null)
             {
-                UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
-                ProfilePictureUrl = claims.ProfilePictureUrl;
-                UserId = claims.UserId;
+                Navigation.NavigateTo("/login");
+                return;
+            }
 
-                var userFromApi = await UserService.GetUserByIdAsync(UserId);
-                if (userFromApi != null)
-                {
-                    if (!string.IsNullOrEmpty(userFromApi.FirstDayOfTheWeek))
-                        Settings.FirstDayOfWeek = userFromApi.FirstDayOfTheWeek;
-                    if (!string.IsNullOrEmpty(userFromApi.Language))
-                        Settings.Language = userFromApi.Language;
-                    if (!string.IsNullOrEmpty(userFromApi.ThemeColor))
-                        Settings.Theme = userFromApi.ThemeColor;
-                    if (!string.IsNullOrEmpty(userFromApi.FontSize))
-                        Settings.FontSize = userFromApi.FontSize;
-                    Settings.HeartRateMin = userFromApi.MinHeartRate;
-                    Settings.HeartRateMax = userFromApi.MaxHeartRate;
-                    Settings.TemperatureMin = userFromApi.MinTemperature;
-                    Settings.TemperatureMax = userFromApi.MaxTemperature;
-                }
+            UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
+            ProfilePictureUrl = claims.ProfilePictureUrl;
+            UserId = claims.UserId;
+
+            var userFromApi = await UserService.GetUserByIdAsync(UserId);
+            if (userFromApi == null)
+            {
+                // User no longer exists in DB (e.g. after DB reset) — clear all client state
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+                Navigation.NavigateTo("/login");
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(userFromApi.FirstDayOfTheWeek))
+                Settings.FirstDayOfWeek = userFromApi.FirstDayOfTheWeek;
+            if (!string.IsNullOrEmpty(userFromApi.Language))
+                Settings.Language = userFromApi.Language;
+            if (!string.IsNullOrEmpty(userFromApi.ThemeColor))
+                Settings.Theme = userFromApi.ThemeColor;
+            if (!string.IsNullOrEmpty(userFromApi.FontSize))
+                Settings.FontSize = userFromApi.FontSize;
+            Settings.HeartRateMin = userFromApi.MinHeartRate;
+            Settings.HeartRateMax = userFromApi.MaxHeartRate;
+            Settings.TemperatureMin = userFromApi.MinTemperature;
+            Settings.TemperatureMax = userFromApi.MaxTemperature;
+
+            if (!string.IsNullOrEmpty(userFromApi.ProfilePictureUrl))
+            {
+                ProfilePictureUrl = userFromApi.ProfilePictureUrl;
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "profilePictureUrl", userFromApi.ProfilePictureUrl);
             }
             else
             {
-                UserFullName = "User";
+                ProfilePictureUrl = string.Empty;
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
             }
         }
 

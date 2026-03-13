@@ -8,7 +8,7 @@ using System.Security.Claims;
 namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
-    [Authorize]
+    //[Authorize]
     [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
@@ -23,13 +23,16 @@ namespace LifeAlertPlus.API.Controllers
 
         private bool CallerOwns(Guid id)
         {
-            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value
+                ?? User.FindFirst("nameid")?.Value;
             return callerIdStr != null && Guid.TryParse(callerIdStr, out var callerGuid) && callerGuid == id;
         }
 
         private bool CallerOwn(string email)
         {
-            var callerEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var callerEmail = User.FindFirst(ClaimTypes.Email)?.Value
+                ?? User.FindFirst("email")?.Value;
             return callerEmail != null && callerEmail.Equals(email, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -136,6 +139,8 @@ namespace LifeAlertPlus.API.Controllers
                 return NotFound(new { Message = "User not found." });
             }
 
+            TryDeleteProfileImageFile(user.ProfilePictureUrl);
+
             var result = await _userService.DeleteUserAsync(id);
             
             if (!result)
@@ -144,6 +149,29 @@ namespace LifeAlertPlus.API.Controllers
             }
 
             return Ok(new { Message = "User deleted successfully." });
+        }
+
+        private static void TryDeleteProfileImageFile(string? profilePictureUrl)
+        {
+            if (string.IsNullOrWhiteSpace(profilePictureUrl))
+                return;
+
+            if (!Uri.TryCreate(profilePictureUrl, UriKind.Absolute, out var pictureUri))
+                return;
+
+            if (!pictureUri.AbsolutePath.StartsWith("/profile-images/", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "profile-images");
+            var fileName = Path.GetFileName(pictureUri.LocalPath);
+            if (string.IsNullOrWhiteSpace(fileName))
+                return;
+
+            var filePath = Path.Combine(uploadsFolder, fileName);
+            if (System.IO.File.Exists(filePath))
+            {
+                System.IO.File.Delete(filePath);
+            }
         }
 
         [HttpPost("upload-profile-image/{id}")]
@@ -172,6 +200,21 @@ namespace LifeAlertPlus.API.Controllers
             var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "profile-images");
             if (!Directory.Exists(uploadsFolder))
                 Directory.CreateDirectory(uploadsFolder);
+
+            if (!string.IsNullOrWhiteSpace(user.ProfilePictureUrl) &&
+                Uri.TryCreate(user.ProfilePictureUrl, UriKind.Absolute, out var previousPictureUri) &&
+                previousPictureUri.AbsolutePath.StartsWith("/profile-images/", StringComparison.OrdinalIgnoreCase))
+            {
+                var previousFileName = Path.GetFileName(previousPictureUri.LocalPath);
+                if (!string.IsNullOrWhiteSpace(previousFileName))
+                {
+                    var previousFilePath = Path.Combine(uploadsFolder, previousFileName);
+                    if (System.IO.File.Exists(previousFilePath))
+                    {
+                        System.IO.File.Delete(previousFilePath);
+                    }
+                }
+            }
 
             var fileName = $"{id}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
             var filePath = Path.Combine(uploadsFolder, fileName);
@@ -214,9 +257,9 @@ namespace LifeAlertPlus.API.Controllers
                 IsEmailConfirmed = user.IsEmailConfirmed,
                 Provider = user.Provider,
                 FirstDayOfTheWeek = user.FirstDayOfTheWeek,
-                Language = user.Language,
-                ThemeColor = user.ThemeColor,
-                FontSize = user.FontSize,
+                Language = user.Language ?? "en",
+                ThemeColor = user.ThemeColor ?? "pink",
+                FontSize = user.FontSize ?? "medium",
                 MinHeartRate = user.MinHeartRate ?? 0,
                 MaxHeartRate = user.MaxHeartRate ?? 0,
                 MinTemperature = (float)(user.MinTemperature ?? 0),
@@ -250,9 +293,9 @@ namespace LifeAlertPlus.API.Controllers
                 IsEmailConfirmed = user.IsEmailConfirmed,
                 Provider = user.Provider,
                 FirstDayOfTheWeek = user.FirstDayOfTheWeek,
-                Language = user.Language,
-                ThemeColor = user.ThemeColor,
-                FontSize = user.FontSize,
+                Language = user.Language ?? "en",
+                ThemeColor = user.ThemeColor ?? "pink",
+                FontSize = user.FontSize ?? "medium",
                 MinHeartRate = user.MinHeartRate ?? 0,
                 MaxHeartRate = user.MaxHeartRate ?? 0,
                 MinTemperature = (float)(user.MinTemperature ?? 0),

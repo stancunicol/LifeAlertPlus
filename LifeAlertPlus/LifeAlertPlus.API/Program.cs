@@ -55,8 +55,12 @@ var jwtSettings = builder.Configuration.GetSection("Jwt");
 builder.Services
     .AddAuthentication(options =>
     {
-        options.DefaultScheme = "Cookies";
-        options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
+        // API requests are authenticated via JWT Bearer.
+        // DefaultSignInScheme stays as Cookies so Google OAuth callback
+        // can temporarily store the Google identity in a cookie.
+        options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultSignInScheme = "Cookies";
     })
     .AddCookie("Cookies")
     .AddJwtBearer(options =>
@@ -70,6 +74,17 @@ builder.Services
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
+        };
+        // Return 401 JSON instead of redirecting to Google OAuth on auth failure.
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnChallenge = context =>
+            {
+                context.HandleResponse();
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                context.Response.ContentType = "application/json";
+                return context.Response.WriteAsync("{\"success\":false,\"message\":\"Unauthorized. Token is missing or expired.\"}");
+            }
         };
     })
     .AddGoogle(googleOptions =>

@@ -15,7 +15,7 @@
             <div class="stat-icon heart">❤️</div>
             <div class="stat-info">
                 <span class="stat-label">Total Monitored</span>
-                <!-- <span class="stat-value">@MonitoredPeople.Count</span> -->
+                <span class="stat-value">@TotalMonitored</span>
             </div>
         </div>
 
@@ -23,7 +23,7 @@
             <div class="stat-icon alert">⚠️</div>
             <div class="stat-info">
                 <span class="stat-label">Active Alerts</span>
-                <!-- <span class="stat-value critical">@ActiveAlerts</span> -->
+                <span class="stat-value critical">@ActiveAlerts</span>
             </div>
         </div>
 
@@ -31,15 +31,23 @@
             <div class="stat-icon check">✓</div>
             <div class="stat-info">
                 <span class="stat-label">Stable Status</span>
-                <!-- <span class="stat-value ok">@StableCount</span> -->
+                <span class="stat-value ok">@StableCount</span>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon off">📴</div>
+            <div class="stat-info">
+                <span class="stat-label">Users Offline</span>
+                <span class="stat-value muted">@OfflineCount</span>
             </div>
         </div>
 
         <div class="stat-card">
             <div class="stat-icon chart">📊</div>
             <div class="stat-info">
-                <span class="stat-label">Measurements Today</span>
-                <!-- <span class="stat-value">@TodayMeasurements</span> -->
+                <span class="stat-label">Total Measurements Today</span>
+                <span class="stat-value">@TodayMeasurements</span>
             </div>
         </div>
     </div>
@@ -50,17 +58,17 @@
                 <h2>Monitored People</h2>
                 <a href="/monitored" class="view-all-link">View All →</a>
             </div>
-            
-            <!-- <div class="monitored-grid">
-                @foreach (var person in MonitoredPeople)
+
+            <div class="monitored-grid">
+                @foreach (var person in MonitoredSamples)
                 {
-                    <div class="person-card-simple @GetStatusClass(person.Status)">
-                        <div class="card-header-colored @person.Status.ToLower()">
+                    <div class="person-card-simple @GetCardClass(person.Status, person.Online)">
+                        <div class="card-header-colored @GetCardClass(person.Status, person.Online)">
                             <h3 class="person-name">@person.Name</h3>
-                            <p class="person-age-text">@person.Age ani</p>
+                            <p class="person-age-text">@person.Age years</p>
                             <div class="status-row">
                                 <span class="status-dot"></span>
-                                <span class="status-text">@GetStatusText(person.Status)</span>
+                                <span class="status-text">@GetStatusText(person.Status, person.Online)</span>
                             </div>
                         </div>
                         <div class="card-body-white">
@@ -72,11 +80,11 @@
                                 }
                                 <span class="vital-inline">🌡️ @person.Temperature°C</span>
                             </div>
-                            <p class="last-update">Acum @person.LastUpdate</p>
+                            <p class="last-update"><span class="last-update-icon">🕒</span>@person.LastUpdate</p>
                         </div>
                     </div>
                 }
-            </div> -->
+            </div>
         </div>
 
         <!-- <div class="section alerts-section">

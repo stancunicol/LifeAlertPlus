@@ -14,6 +14,19 @@ namespace LifeAlertPlus.Infrastructure.Seed
 
             await context.Database.MigrateAsync();
 
+            var hasUsers = await context.Users.AnyAsync();
+            if (!hasUsers)
+            {
+                var profileImagesFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "profile-images");
+                if (Directory.Exists(profileImagesFolder))
+                {
+                    foreach (var file in Directory.GetFiles(profileImagesFolder))
+                    {
+                        File.Delete(file);
+                    }
+                }
+            }
+
             var adminEmail = "admin@gmail.com";
 
             if (!await context.Users.AnyAsync(u => u.Email == adminEmail))

@@ -31,25 +31,64 @@ namespace LifeAlertPlus.API.Controllers
             var url = $"{espBaseUrl}/api/data/{serial}";
             var client = _httpClientFactory.CreateClient();
 
+            using var espCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            espCts.CancelAfter(TimeSpan.FromSeconds(10));
+
             try
             {
-                var response = await client.GetAsync(url, cancellationToken);
+                var response = await client.GetAsync(url, espCts.Token);
                 if (!response.IsSuccessStatusCode)
-                    return StatusCode((int)response.StatusCode, $"Failed to fetch data for serial {serial}");
+                {
+                    _logger.LogWarning("ESP returned status code {StatusCode} for serial {Serial}", (int)response.StatusCode, serial);
+                    return Ok(CreateUnavailableResponse(serial, $"ESP returned HTTP {(int)response.StatusCode}."));
+                }
 
-                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                var json = await response.Content.ReadAsStringAsync(espCts.Token);
                 var data = JsonSerializer.Deserialize<ESPDataResponseDTO>(json, _jsonOptions);
 
                 if (data == null)
-                    return BadRequest("Invalid data format received.");
+                {
+                    _logger.LogWarning("ESP returned invalid JSON payload for serial {Serial}", serial);
+                    return Ok(CreateUnavailableResponse(serial, "Invalid ESP payload."));
+                }
+
+                data.Serial = string.IsNullOrWhiteSpace(data.Serial) ? serial : data.Serial;
+                data.IsAvailable = true;
+                data.ErrorMessage = null;
 
                 return Ok(data);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogWarning("ESP device timeout for serial {Serial}", serial);
+                return Ok(CreateUnavailableResponse(serial, "ESP device timeout."));
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "ESP connection failed for serial {Serial}", serial);
+                return Ok(CreateUnavailableResponse(serial, "ESP device unreachable."));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching ESP data for serial {Serial}", serial);
-                return StatusCode(500, "Error fetching ESP data.");
+                return Ok(CreateUnavailableResponse(serial, "ESP data unavailable."));
             }
+        }
+
+        private static ESPDataResponseDTO CreateUnavailableResponse(string serial, string message)
+        {
+            return new ESPDataResponseDTO
+            {
+                Serial = serial,
+                Date = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                IsAvailable = false,
+                ErrorMessage = message,
+                Mpu6050 = new List<int>(),
+                Gyro = new List<int>(),
+                Max30100 = null,
+                Neo6m = null,
+                Hmc5883l = 0
+            };
         }
     }
 }

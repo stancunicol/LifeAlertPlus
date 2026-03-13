@@ -133,7 +133,7 @@ namespace LifeAlertPlus.Client.Pages.Login
                 ForgotPasswordMessage = message ?? "Failed to send reset email. Please try again.";
                 IsForgotPasswordSuccess = success == true;
             }
-            catch (Exception ex)
+            catch
             {
                 ForgotPasswordMessage = "An error occurred. Please try again later.";
                 IsForgotPasswordSuccess = false;

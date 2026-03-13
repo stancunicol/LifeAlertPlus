@@ -92,7 +92,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             }
 
             _monitoredPeople = await UserMonitoredService.GetMonitoredPeopleAsync(_currentUserId);
-            await RefreshEspDataAsync(_pollingCts?.Token ?? CancellationToken.None);
+            //await RefreshEspDataAsync(_pollingCts?.Token ?? CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -115,13 +115,24 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     {
         while (!token.IsCancellationRequested)
         {
-            await RefreshEspDataAsync(token);
+            try
+            {
+                await RefreshEspDataAsync(token);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch
+            {
+                // Swallow unexpected errors so the fire-and-forget never crashes Blazor.
+            }
 
             try
             {
                 await Task.Delay(TimeSpan.FromMinutes(2), token);
             }
-            catch (TaskCanceledException)
+            catch (OperationCanceledException)
             {
                 break;
             }
@@ -186,6 +197,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             "critical" => "status-critical",
             "warning" => "status-warning",
             "ok" => "status-ok",
+            "nodata" => "status-warning",
             _ => string.Empty
         };
     }
@@ -197,6 +209,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             "critical" => "Alert",
             "warning" => "Check needed",
             "ok" => "Stable",
+            "nodata" => "No ESP data",
             _ => "Unknown"
         };
     }
@@ -386,6 +399,11 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     private string GetCardStatus(MonitoredCard card)
     {
+        if (card.LastData == null || !card.LastData.IsAvailable || card.LastData.Max30100 == null || card.LastData.Max30100.Count < 2)
+        {
+            return "NoData";
+        }
+
         var pulse = card.LastData?.Max30100?.ElementAtOrDefault(0) ?? 0;
         var spo2 = card.LastData?.Max30100?.ElementAtOrDefault(1) ?? 0;
         var fallRisk = FormatFallRisk(card);

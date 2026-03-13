@@ -48,6 +48,7 @@ namespace LifeAlertPlus.API.Controllers
             }
 
             var createdPerson = await _monitoredService.AddMonitoredPersonAsync(newPerson);
+            createdPerson.IsActive = true;
             if (createdPerson == null)
             {
                 return StatusCode(500, new { Message = "Failed to add monitored person." });
@@ -61,11 +62,17 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("serial/{deviceSerialNumber}")]
         public async Task<IActionResult> GetMonitoredPersonByDeviceSerialNumber([FromRoute] string deviceSerialNumber)
         {
+            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
+                return Unauthorized(new { Message = "Invalid token." });
+
             var monitoredPerson = await _monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(deviceSerialNumber);
             if (monitoredPerson == null)
-            {
                 return NotFound(new { Message = "Monitored person not found." });
-            }
+
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            if (!owned.Any(m => m.Id == monitoredPerson.Id))
+                return Forbid();
 
             return Ok(monitoredPerson);
         }
@@ -73,11 +80,17 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("id/{id:guid}")]
         public async Task<IActionResult> GetMonitoredPersonById([FromRoute] Guid id)
         {
+            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
+                return Unauthorized(new { Message = "Invalid token." });
+
             var monitoredPerson = await _monitoredService.GetMonitoredPersonByIdAsync(id);
             if (monitoredPerson == null)
-            {
                 return NotFound(new { Message = "Monitored person not found." });
-            }
+
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            if (!owned.Any(m => m.Id == id))
+                return Forbid();
 
             return Ok(monitoredPerson);
         }

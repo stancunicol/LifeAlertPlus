@@ -66,20 +66,34 @@ namespace LifeAlertPlus.Client.Pages.Profile
         protected override async Task OnInitializedAsync()
         {
             await LoadCurrentUserAsync();
-            if (CurrentUser.Id != Guid.Empty)
-            {
-                var userFromApi = await UserService.GetUserByIdAsync(CurrentUser.Id);
-                if (userFromApi != null)
-                {
-                    CurrentUser = userFromApi;
-                    if (!string.IsNullOrEmpty(CurrentUser.ProfilePictureUrl))
-                    {
-                        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "profilePictureUrl", CurrentUser.ProfilePictureUrl);
-                    }
-                }
 
-                DaysActive = (DateTime.UtcNow - CurrentUser.CreatedAt).Days;
+            if (CurrentUser.Id == Guid.Empty)
+            {
+                await AuthenticationService.LogoutAsync();
+                Navigation.NavigateTo("/login");
+                return;
             }
+
+            var userFromApi = await UserService.GetUserByIdAsync(CurrentUser.Id);
+            if (userFromApi == null)
+            {
+                // User no longer exists in DB (e.g. after DB reset) — clear all client state
+                await AuthenticationService.LogoutAsync();
+                Navigation.NavigateTo("/login");
+                return;
+            }
+
+            CurrentUser = userFromApi;
+            if (!string.IsNullOrEmpty(CurrentUser.ProfilePictureUrl))
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "profilePictureUrl", CurrentUser.ProfilePictureUrl);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+            }
+
+            DaysActive = (DateTime.UtcNow - CurrentUser.CreatedAt).Days;
         }
 
         private async Task LoadCurrentUserAsync()
@@ -208,6 +222,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
             CloseChangePasswordModal();
             ShowPasswordChangeSuccess = true;
+            StateHasChanged();
         }
 
         private void OpenChangeEmailModal()

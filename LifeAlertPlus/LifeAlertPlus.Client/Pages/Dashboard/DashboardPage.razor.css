@@ -24,9 +24,26 @@
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(5, minmax(180px, 1fr));
+    gap: 1rem;
     margin-bottom: 2rem;
+}
+@media (max-width: 1350px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 950px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .stat-card {
@@ -56,6 +73,11 @@
     background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
 }
 
+.stat-icon.off {
+    background: #f2f2f2;
+    color: #555;
+}
+
 .stat-info {
     flex: 1;
     display: flex;
@@ -75,6 +97,10 @@
     font-weight: 600;
     color: #000;
 }
+
+    .stat-value.muted {
+        color: #777;
+    }
 
     .stat-value.critical {
         color: #dc3545;
@@ -142,6 +168,11 @@
     transition: all 0.3s ease;
 }
 
+    .person-card-simple.offline {
+        background: #f7f7f7;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
     .person-card-simple:hover {
         transform: translateY(-6px);
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
@@ -150,6 +181,10 @@
 .card-header-colored {
     padding: 2rem 1.5rem;
 }
+
+    .card-header-colored.offline {
+        background: linear-gradient(135deg, #eeeeee 0%, #d9d9d9 100%);
+    }
 
     .card-header-colored.ok {
         background: linear-gradient(135deg, #d4f4dd 0%, #b8e6c3 100%);
@@ -203,6 +238,10 @@
     background: #dc3545;
 }
 
+.card-header-colored.offline .status-dot {
+    background: #999;
+}
+
 .status-text {
     font-family: "Jua", sans-serif;
     font-size: 1rem;
@@ -219,6 +258,10 @@
 
 .card-header-colored.critical .status-text {
     color: #c82333;
+}
+
+.card-header-colored.offline .status-text {
+    color: #555;
 }
 
 .card-body-white {
@@ -248,6 +291,10 @@
     font-size: 0.95rem;
     color: #666;
     margin: 0;
+}
+
+.last-update-icon {
+    margin-right: 0.4rem;
 }
 
 .status-badge {

@@ -10,6 +10,7 @@
         public string Address { get; set; } = string.Empty;
         public long? UpdateFrequency { get; set; }
         public string DeviceSerialNumber { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
