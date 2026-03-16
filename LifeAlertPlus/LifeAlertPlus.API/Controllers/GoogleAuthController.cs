@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Mvc;
-using LifeAlertPlus.Application.IServices;
 using System.Security.Claims;
 using LifeAlertPlus.API.Services;
+using LifeAlertPlus.Application.IServices;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -16,14 +16,16 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly ILogger<GoogleAuthController> _logger;
         private readonly GetUrlService _getUrlService;
+        private readonly IRoleService _roleService;
 
-        public GoogleAuthController(IUserService userService, IJwtService jwtService, IConfiguration configuration, ILogger<GoogleAuthController> logger, GetUrlService getUrlService)
+        public GoogleAuthController(IUserService userService, IJwtService jwtService, IConfiguration configuration, ILogger<GoogleAuthController> logger, GetUrlService getUrlService, IRoleService roleService)
         {
             _userService = userService;
             _jwtService = jwtService;
             _configuration = configuration;
             _logger = logger;
             _getUrlService = getUrlService;
+            _roleService = roleService;
         }
 
         [HttpGet("google-login")]
@@ -75,7 +77,8 @@ namespace LifeAlertPlus.API.Controllers
                 return Redirect($"{_getUrlService.GetClientBaseUrl()}/login?error=GoogleUserCreateFailed");
             }
 
-            var jwt = _jwtService.GenerateToken(user);
+            var roleName = (await _roleService.GetByIdAsync(user.RoleId))?.Name ?? "User";
+            var jwt = _jwtService.GenerateToken(user, roleName);
 
             return Redirect($"{_getUrlService.GetClientBaseUrl()}{returnUrl}#token={jwt}");
         }

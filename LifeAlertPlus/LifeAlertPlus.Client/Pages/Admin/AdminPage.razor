@@ -1,0 +1,143 @@
+
+@page "/admin"
+
+<HeaderComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
+
+<div class="admin-container">
+	<div class="admin-header">
+		<div class="header-title-section">
+			<h1>Admin Center</h1>
+			<p class="admin-subtitle">Vizualizare utilizatori si persoane monitorizate</p>
+		</div>
+		<span class="tag chip-muted">Date demo</span>
+	</div>
+
+	<div class="stats-grid admin-stats">
+		<div class="stat-card">
+			<div class="stat-icon users">👥</div>
+			<div class="stat-info">
+				<span class="stat-label">Total utilizatori</span>
+				<span class="stat-value">@TotalUsers</span>
+			</div>
+		</div>
+
+		<div class="stat-card">
+			<div class="stat-icon monitored">🩺</div>
+			<div class="stat-info">
+				<span class="stat-label">Persoane monitorizate</span>
+				<span class="stat-value">@TotalMonitored</span>
+			</div>
+		</div>
+
+		<div class="stat-card">
+			<div class="stat-icon online">🟢</div>
+			<div class="stat-info">
+				<span class="stat-label">Active</span>
+				<span class="stat-value">@ActiveMonitored</span>
+			</div>
+		</div>
+
+		<div class="stat-card">
+			<div class="stat-icon alert">⚠️</div>
+			<div class="stat-info">
+				<span class="stat-label">Inactive</span>
+				<span class="stat-value critical">@InactiveMonitored</span>
+			</div>
+		</div>
+	</div>
+
+	<div class="section">
+		<div class="section-header">
+			<h2>Utilizatori si asignari</h2>
+			<span class="section-note">@ActiveUsers activi • @TotalMonitored persoane monitorizate</span>
+		</div>
+
+		<div class="users-grid">
+			@foreach (var user in AdminUsers)
+			{
+				<div class="user-card @(IsUserActive(user.User) ? "active" : "inactive")">
+					<div class="user-card-top">
+						<div class="user-avatar">@GetInitials(FullName(user.User))</div>
+						<div class="user-main">
+							<h3>@FullName(user.User)</h3>
+							<p>@user.User.Email</p>
+							<div class="role-chip">@UserRoleLabel(user.User)</div>
+						</div>
+						<span class="status-pill @(IsUserActive(user.User) ? "ok" : "muted")">@(IsUserActive(user.User) ? "Activ" : "Inactiv")</span>
+					</div>
+
+					<div class="user-meta">
+						<span>Monitorizati: @user.MonitoredPeople.Count</span>
+						<span>Creat: @FormatDate(user.User.CreatedAt)</span>
+					</div>
+
+					<div class="monitored-list">
+						@foreach (var person in user.MonitoredPeople)
+						{
+							<div class="monitored-chip @GetStatusClass(person.IsActive)">
+								<div class="chip-row">
+									<span class="chip-name">@FullName(person)</span>
+									<span class="chip-age">@GetAge(person) ani</span>
+								</div>
+								<div class="chip-row">
+									<span class="chip-device">@person.DeviceSerialNumber</span>
+									<span class="chip-status">@GetStatusText(person.IsActive)</span>
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+			}
+		</div>
+	</div>
+
+	<div class="section">
+		<div class="section-header">
+			<h2>Persoane monitorizate</h2>
+			<span class="section-note">Legaturi utilizator • dispozitiv</span>
+		</div>
+
+		<div class="table-container">
+			<table class="admin-table">
+				<thead>
+					<tr>
+						<th>Persoana</th>
+						<th>Utilizator</th>
+						<th>Dispozitiv</th>
+						<th>Status</th>
+						<th>Ultimul update</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var row in MonitoredRows)
+					{
+						<tr class="@GetRowClass(row.Online)">
+							<td>
+								<div class="person-inline">
+									<div class="mini-avatar">@GetInitials(row.PersonName)</div>
+									<div class="person-inline-info">
+										<span class="person-name">@row.PersonName</span>
+										<span class="person-age">@row.Age ani</span>
+									</div>
+								</div>
+							</td>
+							<td>
+								<div class="user-inline">
+									<span class="user-name">@row.UserName</span>
+									<span class="user-email">@row.UserEmail</span>
+								</div>
+							</td>
+							<td><span class="device-badge">@row.DeviceSerial</span></td>
+							<td>
+								<span class="status-indicator @GetStatusClass(row.Online)">
+									@GetStatusText(row.Online)
+								</span>
+							</td>
+							<td class="date-cell">@row.LastUpdate</td>
+						</tr>
+					}
+					</tbody>
+			</table>
+		</div>
+	</div>
+</div>

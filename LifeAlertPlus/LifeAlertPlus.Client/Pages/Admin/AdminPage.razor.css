@@ -1,0 +1,436 @@
+.admin-container {
+	padding: 2rem;
+	max-width: 1400px;
+	margin: 0 auto;
+}
+
+.admin-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 2rem;
+}
+
+.header-title-section h1 {
+	font-family: "Jua", sans-serif;
+	font-size: 2.2rem;
+	color: #000;
+	margin: 0 0 0.5rem 0;
+}
+
+.admin-subtitle {
+	font-family: "Jua", sans-serif;
+	font-size: 1.1rem;
+	color: #666;
+	margin: 0;
+}
+
+.tag {
+	padding: 0.6rem 1rem;
+	border-radius: 999px;
+	font-family: "Jua", sans-serif;
+	font-size: 0.95rem;
+	border: 1px solid #e0e0e0;
+}
+
+.chip-muted {
+	background: #f8f8f8;
+	color: #666;
+}
+
+.stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 1rem;
+	margin-bottom: 2rem;
+}
+
+.stat-card {
+	background: white;
+	border-radius: 15px;
+	padding: 1.5rem;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.stat-icon {
+	font-size: 2rem;
+	width: 56px;
+	height: 56px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 12px;
+	background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+}
+
+.stat-icon.alert {
+	background: rgba(220, 53, 69, 0.12);
+}
+
+.stat-info {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.stat-label {
+	font-family: "Jua", sans-serif;
+	font-size: 0.95rem;
+	color: #666;
+	margin-bottom: 0.25rem;
+}
+
+.stat-value {
+	font-family: "Jua", sans-serif;
+	font-size: 1.8rem;
+	font-weight: 600;
+	color: #000;
+}
+
+.stat-value.critical {
+	color: #dc3545;
+}
+
+.section {
+	background: white;
+	border-radius: 15px;
+	padding: 1.5rem;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	margin-bottom: 2rem;
+}
+
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+	font-family: "Jua", sans-serif;
+	font-size: 1.5rem;
+	color: #000;
+	margin: 0;
+}
+
+.section-note {
+	font-family: "Jua", sans-serif;
+	font-size: 0.95rem;
+	color: #666;
+}
+
+.users-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: 1.2rem;
+}
+
+.user-card {
+	border: 1px solid #f1f1f1;
+	border-radius: 15px;
+	padding: 1.2rem;
+	background: #fff;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	display: flex;
+	flex-direction: column;
+	gap: 0.8rem;
+}
+
+.user-card.inactive {
+	background: #fafafa;
+	border-color: #ececec;
+}
+
+.user-card-top {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+}
+
+.user-avatar {
+	width: 52px;
+	height: 52px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: "Jua", sans-serif;
+	font-weight: 700;
+	color: #000;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.user-main h3 {
+	margin: 0 0 0.2rem 0;
+	font-family: "Jua", sans-serif;
+	font-size: 1.2rem;
+	color: #000;
+}
+
+.user-main p {
+	margin: 0;
+	font-family: "Jua", sans-serif;
+	font-size: 0.95rem;
+	color: #666;
+}
+
+.role-chip {
+	display: inline-flex;
+	padding: 0.35rem 0.75rem;
+	background: rgba(232, 165, 200, 0.18);
+	border-radius: 12px;
+	font-family: "Jua", sans-serif;
+	font-size: 0.85rem;
+	color: #b35b8d;
+	margin-top: 0.3rem;
+}
+
+.status-pill {
+	margin-left: auto;
+	padding: 0.4rem 0.75rem;
+	border-radius: 999px;
+	font-family: "Jua", sans-serif;
+	font-size: 0.85rem;
+	border: 1px solid #e6e6e6;
+}
+
+.status-pill.ok {
+	background: rgba(40, 167, 69, 0.12);
+	color: #1e7e34;
+	border-color: rgba(40, 167, 69, 0.25);
+}
+
+.status-pill.muted {
+	background: #f3f3f3;
+	color: #666;
+}
+
+.user-meta {
+	display: flex;
+	justify-content: space-between;
+	font-family: "Jua", sans-serif;
+	font-size: 0.9rem;
+	color: #555;
+}
+
+.monitored-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+}
+
+.monitored-chip {
+	border: 1px solid #f0f0f0;
+	border-radius: 12px;
+	padding: 0.75rem;
+	background: #fafafa;
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+}
+
+.monitored-chip.ok {
+	border-color: rgba(40, 167, 69, 0.3);
+	background: rgba(40, 167, 69, 0.08);
+}
+
+.monitored-chip.warning {
+	border-color: rgba(255, 193, 7, 0.4);
+	background: rgba(255, 193, 7, 0.1);
+}
+
+.monitored-chip.critical {
+	border-color: rgba(220, 53, 69, 0.35);
+	background: rgba(220, 53, 69, 0.1);
+}
+
+.monitored-chip.offline {
+	border-color: #ddd;
+	background: #f5f5f5;
+}
+
+.chip-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-family: "Jua", sans-serif;
+	font-size: 0.95rem;
+	color: #000;
+}
+
+.chip-name {
+	font-weight: 600;
+}
+
+.chip-age,
+.chip-status,
+.chip-device {
+	color: #666;
+	font-size: 0.9rem;
+}
+
+.table-container {
+	overflow-x: auto;
+	border-radius: 12px;
+}
+
+.admin-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-family: "Jua", sans-serif;
+}
+
+.admin-table thead {
+	background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+}
+
+.admin-table th {
+	padding: 1rem;
+	text-align: left;
+	font-size: 0.95rem;
+	color: #000;
+	white-space: nowrap;
+}
+
+.admin-table td {
+	padding: 1rem;
+	font-size: 0.9rem;
+	color: #333;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.admin-table tr:hover {
+	background: #f9f9f9;
+}
+
+.admin-table tr.row-critical {
+	background: rgba(220, 53, 69, 0.06);
+}
+
+.admin-table tr.row-warning {
+	background: rgba(255, 193, 7, 0.08);
+}
+
+.admin-table tr.row-offline {
+	background: #f5f5f5;
+}
+
+.person-inline {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+}
+
+.mini-avatar {
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.85rem;
+	font-weight: 700;
+	color: #000;
+}
+
+.person-inline-info {
+	display: flex;
+	flex-direction: column;
+}
+
+.person-name {
+	font-weight: 600;
+	color: #000;
+}
+
+.person-age {
+	color: #666;
+	font-size: 0.9rem;
+}
+
+.user-inline {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+
+.user-name {
+	font-weight: 600;
+	color: #000;
+}
+
+.user-email {
+	color: #666;
+	font-size: 0.9rem;
+}
+
+.device-badge {
+	display: inline-block;
+	padding: 0.4rem 0.8rem;
+	background: #f4f4f4;
+	border-radius: 10px;
+	font-family: "Jua", sans-serif;
+	font-size: 0.9rem;
+}
+
+.status-indicator {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.45rem 0.9rem;
+	border-radius: 20px;
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.status-indicator.ok {
+	background: rgba(40, 167, 69, 0.15);
+	color: #28a745;
+}
+
+.status-indicator.warning {
+	background: rgba(255, 193, 7, 0.18);
+	color: #d39e00;
+}
+
+.status-indicator.critical {
+	background: rgba(220, 53, 69, 0.15);
+	color: #dc3545;
+}
+
+.status-indicator.offline {
+	background: #ededed;
+	color: #666;
+}
+
+.date-cell {
+	color: #666;
+	white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+	.admin-container {
+		padding: 1rem;
+	}
+
+	.admin-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 1rem;
+	}
+
+	.user-meta {
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+}

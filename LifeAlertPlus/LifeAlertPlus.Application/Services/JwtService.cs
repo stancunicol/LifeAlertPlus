@@ -18,7 +18,7 @@ namespace LifeAlertPlus.Application.Services
             _config = config;
         }
 
-        public string GenerateToken(User user)
+        public string GenerateToken(User user, string roleName)
         {
             var jwtKey = _config["Jwt:Key"];
             if (string.IsNullOrWhiteSpace(jwtKey))
@@ -34,6 +34,8 @@ namespace LifeAlertPlus.Application.Services
                 new Claim("firstName", user.FirstName),
                 new Claim("lastName", user.LastName),
                 new Claim("provider", user.Provider ?? "Local"),
+                new Claim(ClaimTypes.Role, roleName),
+                new Claim("role", roleName),
                 new Claim("lastChangedPasswordAt", user.LastChangedPasswordAt?.ToString("o") ?? string.Empty),
                 new Claim("profilePictureUrl", user.ProfilePictureUrl ?? string.Empty)
             };

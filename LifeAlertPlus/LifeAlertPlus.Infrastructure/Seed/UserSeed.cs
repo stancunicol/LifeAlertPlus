@@ -27,6 +27,21 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 }
             }
 
+            var roles = new List<Role>
+            {
+                new Role { Id = Guid.NewGuid(), Name = "Admin", CreatedAt = DateTime.UtcNow },
+                new Role { Id = Guid.NewGuid(), Name = "User", CreatedAt = DateTime.UtcNow }
+            };
+
+            foreach (var role in roles)
+            {
+                if (!await context.Roles.AnyAsync(r => r.Name == role.Name))
+                {
+                    context.Roles.Add(role);
+                }
+            }
+            await context.SaveChangesAsync();
+
             var adminEmail = "admin@gmail.com";
 
             if (!await context.Users.AnyAsync(u => u.Email == adminEmail))
@@ -34,9 +49,23 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 var admin = new User
                 {
                     Id = Guid.NewGuid(),
+                    FirstName = "Admin",
+                    LastName = "User",
+                    Email = adminEmail,
+                    RoleId = roles.First(r => r.Name == "Admin").Id,
+                    IsEmailConfirmed = true,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+                    Provider = "Local",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var user = new User
+                {
+                    Id = Guid.NewGuid(),
                     FirstName = "Nicol",
                     LastName = "Stancu",
-                    Email = adminEmail,
+                    Email = "stancunicol3@gmail.com",
+                    RoleId = roles.First(r => r.Name == "User").Id,
                     IsEmailConfirmed = true,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("20042005!Nicol"),
                     Provider = "Local",
@@ -44,6 +73,8 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 };
 
                 context.Users.Add(admin);
+                context.Users.Add(user);
+
                 await context.SaveChangesAsync();
             }
         }

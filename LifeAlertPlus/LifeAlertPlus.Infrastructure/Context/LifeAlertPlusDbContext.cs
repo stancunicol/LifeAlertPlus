@@ -16,6 +16,7 @@ namespace LifeAlertPlus.Infrastructure.Context
         public DbSet<DailyHistory> DailyHistories { get; set; }
         public DbSet<WeeklyHistory> WeeklyHistories { get; set; }
         public DbSet<UserMonitored> UserMonitoreds { get; set; }
+        public DbSet<Role> Roles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,7 +28,7 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<Notification>().HasKey(n => n.Id);
             modelBuilder.Entity<DailyHistory>().HasKey(d => d.Id);
             modelBuilder.Entity<WeeklyHistory>().HasKey(w => w.Id);
-
+            modelBuilder.Entity<Role>().HasKey(r => r.Id);
             modelBuilder.Entity<UserMonitored>().HasKey(um => new { um.IdUser, um.IdMonitored });
             modelBuilder.Entity<UserMonitored>()
             .HasOne(um => um.User)

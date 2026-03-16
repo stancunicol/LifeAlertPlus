@@ -36,6 +36,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IMonitoredRepository, MonitoredRepository>();
 builder.Services.AddScoped<IUserMonitoredRepository, UserMonitoredRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
@@ -43,6 +44,7 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IMonitoredService, MonitoredService>();
 builder.Services.AddScoped<IUserMonitoredService, UserMonitoredService>();
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GetUrlService>();
 

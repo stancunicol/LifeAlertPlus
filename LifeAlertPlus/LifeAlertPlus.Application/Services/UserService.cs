@@ -9,11 +9,13 @@ namespace LifeAlertPlus.Application.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IAuthenticationService _authenticationService;
+        private readonly IRoleRepository _roleRepository;
 
-        public UserService(IUserRepository userRepository, IAuthenticationService authenticationService)
+        public UserService(IUserRepository userRepository, IAuthenticationService authenticationService, IRoleRepository roleRepository)
         {
             _userRepository = userRepository;
             _authenticationService = authenticationService;
+            _roleRepository = roleRepository;
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)
@@ -56,11 +58,18 @@ namespace LifeAlertPlus.Application.Services
 
         public async Task<bool> CreateUserAsync(UserRegisterRequestDTO user)
         {
+            var userRole = await _roleRepository.GetRoleByNameAsync("User");
+            if (userRole == null)
+            {
+                throw new InvalidOperationException("Default role 'User' is missing. Seed roles before creating users.");
+            }
+
             var emailToken = GenerateEmailVerificationToken();
             
             var newUser = new User
             {
                 Id = Guid.NewGuid(),
+                RoleId = userRole.Id,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
@@ -103,6 +112,9 @@ namespace LifeAlertPlus.Application.Services
 
         public async Task<User?> FindOrCreateGoogleUserAsync(string email, string? fullName, string googleId, string? givenName, string? familyName, string? profilePictureUrl)
         {
+            var userRole = await _roleRepository.GetRoleByNameAsync("User")
+                ?? throw new InvalidOperationException("Default role 'User' is missing. Seed roles before creating users.");
+
             var user = await _userRepository.GetUserByEmailAsync(email);
             var resolvedFirstName = !string.IsNullOrWhiteSpace(givenName)
                 ? givenName.Trim()
@@ -115,13 +127,15 @@ namespace LifeAlertPlus.Application.Services
             {
                 if (user.Provider != "Google" || user.ProviderKey != googleId ||
                     user.FirstName != resolvedFirstName || user.LastName != resolvedLastName ||
-                    user.ProfilePictureUrl != profilePictureUrl)
+                    user.ProfilePictureUrl != profilePictureUrl ||
+                    user.RoleId == Guid.Empty)
                 {
                     user.Provider = "Google";
                     user.ProviderKey = googleId;
                     user.FirstName = resolvedFirstName;
                     user.LastName = resolvedLastName;
                     user.ProfilePictureUrl = profilePictureUrl;
+                    user.RoleId = userRole.Id;
                     user.UpdatedAt = DateTime.UtcNow;
                     await _userRepository.UpdateUserAsync(user);
                 }
@@ -134,6 +148,7 @@ namespace LifeAlertPlus.Application.Services
                 FirstName = resolvedFirstName,
                 LastName = resolvedLastName,
                 Email = email,
+                RoleId = userRole.Id,
                 ProfilePictureUrl = profilePictureUrl,
                 IsEmailConfirmed = true,
                 Provider = "Google",

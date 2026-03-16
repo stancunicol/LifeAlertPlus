@@ -19,8 +19,9 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthenticationController> _logger;
         private readonly GetUrlService _getUrlService;
+        private readonly IRoleService _roleService;
 
-        public AuthenticationController(IUserService userService, IConfiguration configuration, IAuthenticationService authenticationService, IJwtService jwtService, IEmailService emailService, ILogger<AuthenticationController> logger, GetUrlService getUrlService)
+        public AuthenticationController(IUserService userService, IConfiguration configuration, IAuthenticationService authenticationService, IJwtService jwtService, IEmailService emailService, ILogger<AuthenticationController> logger, GetUrlService getUrlService, IRoleService roleService)
         {
             _userService = userService;
             _configuration = configuration;
@@ -29,6 +30,7 @@ namespace LifeAlertPlus.API.Controllers
             _emailService = emailService;
             _logger = logger;
             _getUrlService = getUrlService;
+            _roleService = roleService;
         }
 
         [HttpPost("login")]
@@ -50,13 +52,18 @@ namespace LifeAlertPlus.API.Controllers
                 await _userService.UpdateUserAsync(user);
             }
 
-            var token = _jwtService.GenerateToken(user);
+            var roleName = (await _roleService.GetByIdAsync(user.RoleId))?.Name ?? "User";
+            var isAdmin = string.Equals(roleName, "Admin", StringComparison.OrdinalIgnoreCase);
+
+            var token = _jwtService.GenerateToken(user, roleName);
 
             return Ok(new UserLoginResponseDTO
             {
                 Success = true,
                 Message = "Login successful.",
-                Token = token
+                Token = token,
+                IsAdmin = isAdmin
+
             });
         }
 

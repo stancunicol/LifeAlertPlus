@@ -67,6 +67,14 @@ namespace LifeAlertPlus.Client.Pages.Login
             {
                 if(response.Success)
                 {
+                    if(response.IsAdmin)
+                    {
+                        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", response.Token);
+                        
+                        Navigation.NavigateTo("/admin");
+                        return;
+                    }
+                    
                     await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", response.Token);
                     
                     Navigation.NavigateTo("/dashboard");
