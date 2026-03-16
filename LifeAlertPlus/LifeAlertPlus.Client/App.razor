@@ -1,4 +1,8 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
+﻿@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject LifeAlertPlus.Client.Services.TokenParserService TokenParser
+
+<Router AppAssembly="@typeof(App).Assembly" OnNavigateAsync="HandleNavigationAsync">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
@@ -10,3 +14,73 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    private static readonly string[] PublicRoutes =
+    {
+        string.Empty,
+        "login",
+        "register",
+        "reset-password"
+    };
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private async Task HandleNavigationAsync(NavigationContext context)
+    {
+        // Allow Google OAuth redirect that carries the token in the fragment to reach the client so it can persist it.
+        if (context.Path.Contains("#token=", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var path = context.Path.Trim('/');
+        if (PublicRoutes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)))
+        {
+            // Navigating intentionally to login/register/reset-password should clear any stale auth data
+            // so the next login is forced to create a new session.
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+            return;
+        }
+
+        var claims = await TokenParser.GetClaimsAsync();
+        if (claims == null)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        await EnforceAuthAsync(e.Location);
+    }
+
+    private async Task EnforceAuthAsync(string uri)
+    {
+        if (uri.Contains("#token=", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var path = Navigation.ToBaseRelativePath(uri).Trim('/');
+        if (PublicRoutes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        var claims = await TokenParser.GetClaimsAsync();
+        if (claims == null)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

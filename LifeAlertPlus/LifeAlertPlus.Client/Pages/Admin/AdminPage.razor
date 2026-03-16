@@ -1,4 +1,3 @@
-
 @page "/admin"
 
 <HeaderComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
@@ -7,7 +6,7 @@
 	<div class="admin-header">
 		<div class="header-title-section">
 			<h1>Admin Center</h1>
-			<p class="admin-subtitle">Vizualizare utilizatori si persoane monitorizate</p>
+			<p class="admin-subtitle">Show all users and monitored persons</p>
 		</div>
 		<span class="tag chip-muted">Date demo</span>
 	</div>
@@ -16,7 +15,7 @@
 		<div class="stat-card">
 			<div class="stat-icon users">👥</div>
 			<div class="stat-info">
-				<span class="stat-label">Total utilizatori</span>
+				<span class="stat-label">Total users</span>
 				<span class="stat-value">@TotalUsers</span>
 			</div>
 		</div>
@@ -24,7 +23,7 @@
 		<div class="stat-card">
 			<div class="stat-icon monitored">🩺</div>
 			<div class="stat-info">
-				<span class="stat-label">Persoane monitorizate</span>
+				<span class="stat-label">Monitored persons</span>
 				<span class="stat-value">@TotalMonitored</span>
 			</div>
 		</div>
@@ -48,8 +47,8 @@
 
 	<div class="section">
 		<div class="section-header">
-			<h2>Utilizatori si asignari</h2>
-			<span class="section-note">@ActiveUsers activi • @TotalMonitored persoane monitorizate</span>
+			<h2>Users and Assignments</h2>
+			<span class="section-note">@ActiveUsers active • @TotalMonitored monitored persons</span>
 		</div>
 
 		<div class="users-grid">
@@ -63,12 +62,12 @@
 							<p>@user.User.Email</p>
 							<div class="role-chip">@UserRoleLabel(user.User)</div>
 						</div>
-						<span class="status-pill @(IsUserActive(user.User) ? "ok" : "muted")">@(IsUserActive(user.User) ? "Activ" : "Inactiv")</span>
+						<span class="status-pill @(IsUserActive(user.User) ? "ok" : "muted")">@(IsUserActive(user.User) ? "Active" : "Inactive")</span>
 					</div>
 
 					<div class="user-meta">
-						<span>Monitorizati: @user.MonitoredPeople.Count</span>
-						<span>Creat: @FormatDate(user.User.CreatedAt)</span>
+						<span>Monitored: @user.MonitoredPeople.Count</span>
+						<span>Created: @FormatDate(user.User.CreatedAt)</span>
 					</div>
 
 					<div class="monitored-list">
@@ -77,7 +76,7 @@
 							<div class="monitored-chip @GetStatusClass(person.IsActive)">
 								<div class="chip-row">
 									<span class="chip-name">@FullName(person)</span>
-									<span class="chip-age">@GetAge(person) ani</span>
+									<span class="chip-age">@GetAge(person) years</span>
 								</div>
 								<div class="chip-row">
 									<span class="chip-device">@person.DeviceSerialNumber</span>
@@ -93,19 +92,19 @@
 
 	<div class="section">
 		<div class="section-header">
-			<h2>Persoane monitorizate</h2>
-			<span class="section-note">Legaturi utilizator • dispozitiv</span>
+			<h2>Monitored Persons</h2>
+			<span class="section-note">User • Device links</span>
 		</div>
 
 		<div class="table-container">
 			<table class="admin-table">
 				<thead>
 					<tr>
-						<th>Persoana</th>
-						<th>Utilizator</th>
-						<th>Dispozitiv</th>
+						<th>Person</th>
+						<th>User</th>
+						<th>Device</th>
 						<th>Status</th>
-						<th>Ultimul update</th>
+						<th>Last Update</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -117,7 +116,7 @@
 									<div class="mini-avatar">@GetInitials(row.PersonName)</div>
 									<div class="person-inline-info">
 										<span class="person-name">@row.PersonName</span>
-										<span class="person-age">@row.Age ani</span>
+										<span class="person-age">@row.Age years</span>
 									</div>
 								</div>
 							</td>

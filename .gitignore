@@ -420,8 +420,6 @@ FodyWeavers.xsd
 
 # Database
 lifealert.db
-/LifeAlertPlusClassDiagram.vpp.bak_000f
-/LifeAlertPlusClassDiagram.vpp.bak_001d
 /appsettings.Development.json
 
 LifeAlertPlus.API/wwwroot/profile-images/
