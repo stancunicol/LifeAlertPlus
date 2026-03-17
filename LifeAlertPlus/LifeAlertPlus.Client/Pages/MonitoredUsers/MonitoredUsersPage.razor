@@ -1,0 +1,138 @@
+@page "/monitored-users"
+@using System.Linq
+@using LifeAlertPlus.Client.Components.HeaderAdmin
+@using LifeAlertPlus.Shared.DTOs.Responses.UserMonitored
+
+<HeaderAdminComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
+
+<div class="monitored-users-page">
+	<div class="admin-container">
+		<div class="admin-header">
+			<div class="header-title-section">
+				<h1>Monitored Center</h1>
+				<p class="admin-subtitle">Monitored persons and their monitors</p>
+			</div>
+			<span class="tag chip-muted">Live overview</span>
+		</div>
+
+		<div class="stats-grid admin-stats">
+			<div class="stat-card">
+				<div class="stat-icon users">👥</div>
+				<div class="stat-info">
+					<span class="stat-label">Monitors</span>
+					<span class="stat-value">@TotalMonitors</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon monitored">🩺</div>
+				<div class="stat-info">
+					<span class="stat-label">Monitored</span>
+					<span class="stat-value">@TotalMonitored</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon online">🟢</div>
+				<div class="stat-info">
+					<span class="stat-label">Active monitored</span>
+					<span class="stat-value">@ActiveMonitoredCount</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon alert">⚠️</div>
+				<div class="stat-info">
+					<span class="stat-label">Inactive monitored</span>
+					<span class="stat-value critical">@InactiveMonitoredCount</span>
+				</div>
+			</div>
+		</div>
+
+		@if (IsLoading)
+		{
+			<div class="message-card">Loading monitored users...</div>
+		}
+		else if (!string.IsNullOrEmpty(ErrorMessage))
+		{
+			<div class="message-card error">
+				<span>@ErrorMessage</span>
+				<button @onclick="LoadDataAsync">Retry</button>
+			</div>
+		}
+		else if (Users == null || !Users.Any())
+		{
+			<div class="message-card">No monitored persons found.</div>
+		}
+		else
+		{
+			<div class="section">
+				<div class="section-header">
+					<div>
+						<h2>Monitored persons</h2>
+						<span class="section-note">Device links and assigned monitors</span>
+					</div>
+					<div class="section-actions">
+						<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="Search monitored people or monitors..." />
+						<div class="filters">
+							<button class="@GetFilterClass("all")" @onclick='@(() => SetFilter("all"))'>All</button>
+							<button class="@GetFilterClass("active")" @onclick='@(() => SetFilter("active"))'>Active</button>
+							<button class="@GetFilterClass("inactive")" @onclick='@(() => SetFilter("inactive"))'>Inactive</button>
+						</div>
+					</div>
+				</div>
+
+				@if (!FilteredRows.Any())
+				{
+					<div class="message-card">No monitored persons for current filters.</div>
+				}
+				else
+				{
+					<div class="table-container">
+						<table class="admin-table">
+							<thead>
+								<tr>
+									<th>Person</th>
+									<th>Device</th>
+									<th>Monitored by</th>
+									<th>Status</th>
+									<th>Last Update</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var row in FilteredRows)
+								{
+									<tr class="@GetRowClass(row.Online)">
+										<td>
+											<div class="person-inline">
+												<div class="mini-avatar">@GetInitials(row.PersonName)</div>
+												<div class="person-inline-info">
+													<span class="person-name">@row.PersonName</span>
+												</div>
+											</div>
+										</td>
+										<td><span class="device-badge">@row.DeviceSerial</span></td>
+										<td>
+											<div class="user-inline">
+												@foreach (var monitor in row.Monitors)
+												{
+													<div class="monitor-entry">
+														<span class="user-name">@monitor.Name</span>
+														<span class="user-email">@monitor.Email</span>
+													</div>
+												}
+											</div>
+										</td>
+										<td>
+											<span class="status-indicator @GetStatusClass(row.Online)">
+												@GetStatusText(row.Online)
+											</span>
+										</td>
+										<td class="date-cell">@row.LastUpdate</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+			</div>
+		}
+	</div>
+</div>

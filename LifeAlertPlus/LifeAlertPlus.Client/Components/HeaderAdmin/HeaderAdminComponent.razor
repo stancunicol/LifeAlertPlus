@@ -1,0 +1,45 @@
+@namespace LifeAlertPlus.Client.Components.HeaderAdmin
+
+<header class="header">
+    <div class="header-container">
+        <div class="header-left">
+            <a href="/admin-dashboard" class="header-logo">LifeAlert +</a>
+            <nav class="header-nav">
+                <a href="/admin-dashboard" class="nav-link @(IsActive("/admin-dashboard") ? "active" : "")">Dashboard</a>
+                <a href="/monitored-users" class="nav-link @(IsActive("/monitored-users") ? "active" : "")">Monitored Users</a>
+                <a href="/users" class="nav-link @(IsActive("/users") ? "active" : "")">Users</a>
+                <a href="/simulations" class="nav-link @(IsActive("/simulations") ? "active" : "")">Simulations</a>
+            </nav>
+        </div>
+        
+        <div class="header-right">
+            <div class="user-profile" @onclick="ToggleProfileMenu">
+                @if (!string.IsNullOrEmpty(ProfilePictureUrl))
+                {
+                    <img src="@ProfilePictureUrl" class="user-avatar-img" />
+                }
+                else
+                {
+                    <div class="user-avatar">@GetUserInitials()</div>
+                }
+                <span class="user-name">@UserName</span>
+                <span class="dropdown-icon">▼</span>
+            </div>
+
+            @if (ShowProfileMenu)
+            {
+                <div class="profile-menu">
+                    <a href="/profile" class="profile-menu-item">My Profile</a>
+                    <a href="/settings" class="profile-menu-item">Settings</a>
+                    <div class="profile-menu-divider"></div>
+                    <a @onclick="OnLogout" class="profile-menu-item logout">Logout</a>
+                </div>
+            }
+        </div>
+    </div>
+</header>
+
+@if (ShowProfileMenu)
+{
+    <div class="menu-overlay" @onclick="CloseProfileMenu"></div>
+}

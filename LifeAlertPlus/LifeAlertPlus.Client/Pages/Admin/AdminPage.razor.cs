@@ -186,7 +186,7 @@ public partial class AdminPage : ComponentBase
 
 	protected string GetStatusText(bool online)
 	{
-		return online ? "Activ" : "Inactiv";
+		return online ? "Active" : "Inactive";
 	}
 
 	protected string GetRowClass(bool online)
@@ -211,7 +211,7 @@ public partial class AdminPage : ComponentBase
 
 	protected bool IsUserActive(User user) => user.DeletedAt == null;
 
-	protected string UserRoleLabel(User user) => user.IsEmailConfirmed ? "Confirmat" : "Neconfirmat";
+	protected string UserRoleLabel(User user) => user.IsEmailConfirmed ? "Confirmed" : "Unconfirmed";
 
 	protected string FormatDate(DateTime dateTime) => dateTime.ToLocalTime().ToString("g");
 

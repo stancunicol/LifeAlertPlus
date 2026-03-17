@@ -1,3 +1,4 @@
+using System;
 using System.Net.Http.Json;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
@@ -10,6 +11,19 @@ namespace LifeAlertPlus.Client.Services
         public UserService(HttpClient httpClient)
         {
             _httpClient = httpClient;
+        }
+
+        public async Task<IReadOnlyList<UserListItemDTO>> GetAllUsersAsync()
+        {
+            try
+            {
+                var users = await _httpClient.GetFromJsonAsync<List<UserListItemDTO>>("api/user");
+                return users ?? new List<UserListItemDTO>();
+            }
+            catch
+            {
+                return Array.Empty<UserListItemDTO>();
+            }
         }
 
         public async Task<bool> UpdateUserAsync(Guid userId, UserUpdateRequestDTO request)

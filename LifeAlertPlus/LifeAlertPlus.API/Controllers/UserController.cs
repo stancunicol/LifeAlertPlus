@@ -305,5 +305,43 @@ namespace LifeAlertPlus.API.Controllers
                 UpdatedAt = user.UpdatedAt
             });
         } 
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = await _userService.GetAllUsersAsync();
+            var response = new List<UserListItemDTO>();
+
+            foreach (var user in users)
+            {
+                if (IsAdminRole(user.Role?.Name))
+                    continue;
+
+                response.Add(new UserListItemDTO
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    ProfilePictureUrl = user.ProfilePictureUrl,
+                    IsEmailConfirmed = user.IsEmailConfirmed,
+                    Provider = user.Provider ?? "Local",
+                    Role = user.Role?.Name ?? "User",
+                    CreatedAt = user.CreatedAt,
+                    UpdatedAt = user.UpdatedAt,
+                    DeletedAt = user.DeletedAt,
+                    LastChangedPasswordAt = user.LastChangedPasswordAt
+                });
+            }
+
+            return Ok(response);
+        }
+
+        private static bool IsAdminRole(string? role)
+        {
+            return !string.IsNullOrWhiteSpace(role)
+                && role.IndexOf("Admin", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
     }
 }

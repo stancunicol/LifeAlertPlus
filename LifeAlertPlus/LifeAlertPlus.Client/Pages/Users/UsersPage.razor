@@ -1,0 +1,128 @@
+@page "/users"
+@using System.Linq
+@using LifeAlertPlus.Client.Components.HeaderAdmin
+@using LifeAlertPlus.Shared.DTOs.Responses.User
+
+<HeaderAdminComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
+
+<div class="users-page">
+	<div class="admin-container">
+		<div class="admin-header">
+			<div class="header-title-section">
+				<h1>Users Center</h1>
+				<p class="admin-subtitle">Accounts overview and status</p>
+			</div>
+			<span class="tag chip-muted">Live overview</span>
+		</div>
+
+		<div class="stats-grid admin-stats">
+			<div class="stat-card">
+				<div class="stat-icon users">👥</div>
+				<div class="stat-info">
+					<span class="stat-label">Total users</span>
+					<span class="stat-value">@TotalUsers</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon online">🟢</div>
+				<div class="stat-info">
+					<span class="stat-label">Active users</span>
+					<span class="stat-value">@ActiveUsers</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon alert">⚠️</div>
+				<div class="stat-info">
+					<span class="stat-label">Inactive users</span>
+					<span class="stat-value critical">@(TotalUsers - ActiveUsers)</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon monitored">✅</div>
+				<div class="stat-info">
+					<span class="stat-label">Email confirmed</span>
+					<span class="stat-value">@ConfirmedUsers</span>
+				</div>
+			</div>
+		</div>
+
+		@if (IsLoading)
+		{
+			<div class="message-card">Loading users...</div>
+		}
+		else if (!string.IsNullOrEmpty(ErrorMessage))
+		{
+			<div class="message-card error">
+				<span>@ErrorMessage</span>
+				<button @onclick="LoadUsersAsync">Retry</button>
+			</div>
+		}
+		else
+		{
+			<div class="section">
+				<div class="section-header">
+					<div>
+						<h2>Users</h2>
+						<span class="section-note">@ActiveUsers active • @ConfirmedUsers email confirmed</span>
+					</div>
+					<div class="section-actions">
+						<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="Search users..." />
+						<div class="filters">
+							<button class="@GetFilterClass("all")" @onclick='@(() => SetFilter("all"))'>All</button>
+							<button class="@GetFilterClass("active")" @onclick='@(() => SetFilter("active"))'>Active</button>
+							<button class="@GetFilterClass("inactive")" @onclick='@(() => SetFilter("inactive"))'>Inactive</button>
+						</div>
+					</div>
+				</div>
+
+				@if (!FilteredUsers.Any())
+				{
+					<div class="message-card">No users found for the current filter.</div>
+				}
+				else
+				{
+					<div class="table-container">
+						<table class="admin-table users-table">
+							<thead>
+								<tr>
+									<th>User</th>
+									<th>Email</th>
+									<th>Provider</th>
+									<th>Status</th>
+									<th>Email Confirmed</th>
+									<th>Created</th>
+									<th>Updated</th>
+									<th>Last Password Change</th>
+								</tr>
+							</thead>
+							<tbody>
+								@foreach (var user in FilteredUsers)
+								{
+									<tr class="@GetRowClass(user)">
+										<td>
+											<div class="person-inline">
+												<div class="mini-avatar">@GetInitials(user)</div>
+												<div class="person-inline-info">
+													<span class="person-name">@user.FirstName @user.LastName</span>
+												</div>
+											</div>
+										</td>
+										<td class="mono">@user.Email</td>
+										<td><span class="badge muted">@GetProviderLabel(user)</span></td>
+										<td>
+											<span class="status-indicator @GetStatusIndicatorClass(user)">@GetStatusLabel(user)</span>
+										</td>
+										<td><span class="badge @(user.IsEmailConfirmed ? "ok" : "warn")">@GetEmailLabel(user)</span></td>
+										<td class="mono">@FormatDate(user.CreatedAt)</td>
+										<td class="mono">@FormatDate(user.UpdatedAt)</td>
+										<td class="mono">@FormatDate(user.LastChangedPasswordAt)</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+			</div>
+		}
+	</div>
+</div>

@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using LifeAlertPlus.Domain.Entities;
 using LifeAlertPlus.Domain.IRepositories;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +22,14 @@ namespace LifeAlertPlus.Infrastructure.Repositories
             return await _context.UserMonitoreds
                 .Where(um => um.IdUser == userId)
                 .Select(um => um.Monitored)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<UserMonitored>> GetAllUserMonitoredWithDetailsAsync()
+        {
+            return await _context.UserMonitoreds
+                .Include(um => um.User)
+                .Include(um => um.Monitored)
                 .ToListAsync();
         }
 

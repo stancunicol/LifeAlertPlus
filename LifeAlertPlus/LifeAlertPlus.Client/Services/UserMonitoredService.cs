@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
 using System.Net.Http.Json;
+using System.Threading.Tasks;
 using LifeAlertPlus.Domain.Entities;
+using LifeAlertPlus.Shared.DTOs.Responses.UserMonitored;
 
 namespace LifeAlertPlus.Client.Services
 {
@@ -30,6 +34,23 @@ namespace LifeAlertPlus.Client.Services
 
             var result = await response.Content.ReadFromJsonAsync<List<Monitored>>();
             return result == null ? Array.Empty<Monitored>() : result;
+        }
+
+        public async Task<IReadOnlyList<MonitoredUserDTO>> GetAllMonitoredUsersAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/usermonitored");
+                if (!response.IsSuccessStatusCode)
+                    return Array.Empty<MonitoredUserDTO>();
+
+                var result = await response.Content.ReadFromJsonAsync<List<MonitoredUserDTO>>();
+                return result ?? new List<MonitoredUserDTO>();
+            }
+            catch
+            {
+                return Array.Empty<MonitoredUserDTO>();
+            }
         }
     }
 }
