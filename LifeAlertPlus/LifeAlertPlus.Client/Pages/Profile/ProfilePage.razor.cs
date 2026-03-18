@@ -86,11 +86,11 @@ namespace LifeAlertPlus.Client.Pages.Profile
             CurrentUser = userFromApi;
             if (!string.IsNullOrEmpty(CurrentUser.ProfilePictureUrl))
             {
-                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "profilePictureUrl", CurrentUser.ProfilePictureUrl);
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "profilePictureUrl", CurrentUser.ProfilePictureUrl);
             }
             else
             {
-                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
             }
 
             DaysActive = (DateTime.UtcNow - CurrentUser.CreatedAt).Days;
@@ -403,7 +403,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             if (!string.IsNullOrEmpty(imageUrl))
             {
                 CurrentUser.ProfilePictureUrl = imageUrl;
-                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "profilePictureUrl", imageUrl);
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "profilePictureUrl", imageUrl);
                 StateHasChanged();
             }
         }

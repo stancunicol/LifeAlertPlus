@@ -123,8 +123,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
             if (userFromApi == null)
             {
                 // User no longer exists in DB (e.g. after DB reset) — clear all client state
-                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
-                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
                 Navigation.NavigateTo("/login");
                 return;
             }
@@ -145,12 +145,12 @@ namespace LifeAlertPlus.Client.Pages.Settings
             if (!string.IsNullOrEmpty(userFromApi.ProfilePictureUrl))
             {
                 ProfilePictureUrl = userFromApi.ProfilePictureUrl;
-                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "profilePictureUrl", userFromApi.ProfilePictureUrl);
+                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "profilePictureUrl", userFromApi.ProfilePictureUrl);
             }
             else
             {
                 ProfilePictureUrl = string.Empty;
-                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
             }
         }
 

@@ -50,14 +50,14 @@ namespace LifeAlertPlus.Client.Services
         public async Task<ESPDataResponseDTO?> GetEspDataAsync(string deviceSerialNumber, CancellationToken cancellationToken = default)
         {
             var response = await _httpClient.GetAsync($"api/esp/data/{deviceSerialNumber}", cancellationToken);
-
             if (!response.IsSuccessStatusCode)
-            {
                 return null;
-            }
 
-            var data = await response.Content.ReadFromJsonAsync<ESPDataResponseDTO>(cancellationToken: cancellationToken);
-            return data;
+            var dto = await response.Content.ReadFromJsonAsync<ESPDataResponseDTO>(cancellationToken: cancellationToken);
+            if (dto != null && string.IsNullOrWhiteSpace(dto.Serial))
+                dto.Serial = deviceSerialNumber;
+
+            return dto;
         }
     }
 }

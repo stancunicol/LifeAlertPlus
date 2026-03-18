@@ -11,7 +11,8 @@ namespace LifeAlertPlus.Client.Services
         string FirstName,
         string LastName,
         string ProfilePictureUrl,
-        string Provider
+        string Provider,
+        string Role
     );
 
     public class TokenParserService
@@ -30,7 +31,7 @@ namespace LifeAlertPlus.Client.Services
         {
             try
             {
-                var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "authToken" });
+                var token = await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", new object[] { "authToken" });
 
                 if (string.IsNullOrWhiteSpace(token))
                 {
@@ -41,7 +42,7 @@ namespace LifeAlertPlus.Client.Services
                         if (!string.IsNullOrWhiteSpace(tokenFromFragment))
                         {
                             token = tokenFromFragment;
-                            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", token);
+                            await _jsRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", token);
 
                             // Remove token from URL to avoid re-processing it on every navigation.
                             _navigation.NavigateTo(currentUri.GetLeftPart(UriPartial.Path), replace: true);
@@ -59,8 +60,8 @@ namespace LifeAlertPlus.Client.Services
 
                 if (jsonToken.ValidTo != DateTime.MinValue && jsonToken.ValidTo < DateTime.UtcNow)
                 {
-                    await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
-                    await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+                    await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+                    await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
                     return null;
                 }
 
@@ -105,13 +106,18 @@ namespace LifeAlertPlus.Client.Services
                 }
 
                 var provider = jsonToken.Claims.FirstOrDefault(c => c.Type == "provider")?.Value ?? string.Empty;
+
+                var role = jsonToken.Claims
+                    .Where(c => c.Type == ClaimTypes.Role || c.Type.Equals("role", StringComparison.OrdinalIgnoreCase))
+                    .Select(c => c.Value)
+                    .FirstOrDefault() ?? string.Empty;
                 var profilePictureUrl = jsonToken.Claims.FirstOrDefault(c => c.Type == "profilePictureUrl")?.Value ?? string.Empty;
 
-                var storedPicture = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", new object[] { "profilePictureUrl" });
+                var storedPicture = await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", new object[] { "profilePictureUrl" });
                 if (string.IsNullOrEmpty(profilePictureUrl) && !string.IsNullOrEmpty(storedPicture))
                     profilePictureUrl = storedPicture;
 
-                return new TokenClaims(userId, email, firstName, lastName, profilePictureUrl, provider);
+                return new TokenClaims(userId, email, firstName, lastName, profilePictureUrl, provider, role);
             }
             catch
             {

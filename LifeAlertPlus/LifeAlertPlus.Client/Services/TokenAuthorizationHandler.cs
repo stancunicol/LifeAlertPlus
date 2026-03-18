@@ -16,7 +16,7 @@ namespace LifeAlertPlus.Client.Services
         {
             try
             {
-                var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
+                var token = await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", "authToken");
                 if (!string.IsNullOrEmpty(token))
                 {
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);

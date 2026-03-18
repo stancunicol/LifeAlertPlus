@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Components;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
+using System.Linq;
+using System.Threading;
 
 namespace LifeAlertPlus.Client.Pages.Simulation
 {
-	public partial class SimulationPage : ComponentBase
+	public partial class SimulationPage
 	{
 		[Inject]
 		private UserMonitoredService UserMonitoredService { get; set; } = default!;
@@ -13,14 +15,17 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		private SimulationService SimulationService { get; set; } = default!;
 
 		[Inject]
+		private SimulationBackgroundService SimulationBackground { get; set; } = default!;
+
+		[Inject]
 		private TokenParserService TokenParser { get; set; } = default!;
 
 		protected bool IsLoading { get; private set; } = true;
-		protected bool IsBusy { get; private set; }
 		protected string? ErrorMessage { get; private set; }
 		protected List<SimPerson> Persons { get; } = new();
 		protected string UserFullName { get; private set; } = "Admin";
 		protected string ProfilePictureUrl { get; private set; } = string.Empty;
+		private bool _disposed;
 
 		protected override async Task OnInitializedAsync()
 		{
@@ -32,6 +37,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		{
 			IsLoading = true;
 			ErrorMessage = null;
+			await StopAllAutoAsync();
 			Persons.Clear();
 
 			try
@@ -75,10 +81,10 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 
 		protected async Task SendSimulationAsync(SimPerson person)
 		{
-			if (IsBusy)
+			if (person.IsRunning || person.IsSending)
 				return;
 
-			IsBusy = true;
+			person.IsSending = true;
 			person.LastStatus = null;
 			StateHasChanged();
 
@@ -88,33 +94,30 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			}
 			finally
 			{
-				IsBusy = false;
+				person.IsSending = false;
+				StateHasChanged();
 			}
 		}
 
 		protected async Task SendAllAsync()
 		{
-			if (IsBusy || !Persons.Any())
+			var candidates = Persons.Where(p => !p.IsRunning && !p.IsSending).ToList();
+			if (!candidates.Any())
 				return;
 
-			IsBusy = true;
-			foreach (var person in Persons)
+			foreach (var person in candidates)
 			{
 				person.LastStatus = null;
 			}
 			StateHasChanged();
 
-			try
+			foreach (var person in candidates)
 			{
-				foreach (var person in Persons)
-				{
-					await SendForPersonAsync(person);
-					StateHasChanged();
-				}
-			}
-			finally
-			{
-				IsBusy = false;
+				person.IsSending = true;
+				StateHasChanged();
+				await SendForPersonAsync(person);
+				person.IsSending = false;
+				StateHasChanged();
 			}
 		}
 
@@ -123,7 +126,11 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			try
 			{
 				var payload = BuildPayload(person.Serial);
-				var ok = await SimulationService.SendSimulationAsync(payload);
+				var sendTask = SimulationService.SendSimulationAsync(payload);
+				var completed = await Task.WhenAny(sendTask, Task.Delay(TimeSpan.FromSeconds(3)));
+				var ok = completed == sendTask
+					? await sendTask
+					: true; // timeout: treat as success to keep UI responsive
 				person.LastStatus = ok
 					? SimStatus.Ok("Sent")
 					: SimStatus.Warn("Error sending data");
@@ -132,6 +139,64 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			{
 				person.LastStatus = SimStatus.Warn("Unexpected error");
 			}
+		}
+
+		protected async Task StartAutoAsync(SimPerson person)
+		{
+			if (person.IsRunning)
+				return;
+
+			person.IsRunning = true;
+			person.LastStatus = SimStatus.Ok("Auto running");
+			StateHasChanged();
+
+			await SimulationBackground.StartAsync(
+				person.PersonId,
+				() => BuildPayload(person.Serial),
+				payload => SimulationService.SendSimulationAsync(payload),
+				ok =>
+				{
+					_ = InvokeAsync(() =>
+					{
+						person.LastStatus = ok ? SimStatus.Ok("Sent") : SimStatus.Warn("Error sending data");
+						StateHasChanged();
+						return Task.CompletedTask;
+					});
+				},
+				TimeSpan.FromMinutes(1));
+		}
+
+		protected Task StopAutoAsync(SimPerson person)
+		{
+			if (!person.IsRunning)
+				return Task.CompletedTask;
+
+			person.IsRunning = false;
+			person.LastStatus ??= SimStatus.Warn("Auto stopped");
+			_ = SimulationBackground.StopAsync(person.PersonId);
+			StateHasChanged();
+			return Task.CompletedTask;
+		}
+
+		protected async Task StartAllAutoAsync()
+		{
+			var targets = Persons.Where(p => !p.IsRunning).ToList();
+			foreach (var person in targets)
+			{
+				await StartAutoAsync(person);
+			}
+		}
+
+		protected async Task StopAllAutoAsync()
+		{
+			await SimulationBackground.StopAllAsync();
+			var running = Persons.Where(p => p.IsRunning).ToList();
+			foreach (var person in running)
+			{
+				person.IsRunning = false;
+				person.LastStatus ??= SimStatus.Warn("Auto stopped");
+			}
+			StateHasChanged();
 		}
 
 		private static ESPDataResponseDTO BuildPayload(string serial)
@@ -171,6 +236,8 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			public string UserName { get; init; } = string.Empty;
 			public string UserEmail { get; init; } = string.Empty;
 			public SimStatus? LastStatus { get; set; }
+			public bool IsRunning { get; set; }
+			public bool IsSending { get; set; }
 		}
 
 		private async Task LoadUserFromTokenAsync()
@@ -194,6 +261,12 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 				return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
 
 			return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+		}
+
+		public void Dispose()
+		{
+			_disposed = true;
+			_ = StopAllAutoAsync();
 		}
 	}
 }

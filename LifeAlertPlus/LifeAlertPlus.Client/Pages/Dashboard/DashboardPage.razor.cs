@@ -44,7 +44,7 @@ public partial class DashboardPage : ComponentBase
         OfflineCount = MonitoredSamples.Count(m => !m.Online);
 
         // TokenParserService.GetClaimsAsync() already handles reading the token from the
-        // URL fragment (Google OAuth redirect), storing it in localStorage and cleaning the URL.
+        // URL fragment (Google OAuth redirect), storing it in sessionStorage and cleaning the URL.
         // Doing it here first and returning early caused OnInitializedAsync to never run
         // a second time (same component instance), so user data was never loaded.
         var claims = await TokenParser.GetClaimsAsync();
@@ -74,9 +74,9 @@ public partial class DashboardPage : ComponentBase
         if (!string.IsNullOrWhiteSpace(apiProfile))
             ProfilePictureUrl = apiProfile;
         if (!string.IsNullOrEmpty(ProfilePictureUrl))
-            await JSRuntime.InvokeVoidAsync("localStorage.setItem", "profilePictureUrl", ProfilePictureUrl);
+            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "profilePictureUrl", ProfilePictureUrl);
         else
-            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
     }
 
     private string GetInitials(string name)

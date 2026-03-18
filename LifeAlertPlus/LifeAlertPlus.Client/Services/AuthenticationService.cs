@@ -61,8 +61,8 @@ namespace LifeAlertPlus.Client.Services
         
         public async Task LogoutAsync()
         {
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
-            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+            await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+            await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
         }
     }
 }

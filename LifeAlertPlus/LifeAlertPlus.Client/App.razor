@@ -1,3 +1,4 @@
+@using LifeAlertPlus.Client.Services
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject LifeAlertPlus.Client.Services.TokenParserService TokenParser
@@ -24,6 +25,25 @@
         "reset-password"
     };
 
+    private static readonly string[] AdminRoutes =
+    {
+        "admin-dashboard",
+        "users",
+        "monitored-users",
+        "simulations"
+    };
+
+    private static readonly string[] UserRoutes =
+    {
+        "dashboard",
+        "history",
+        "notifications",
+        "monitored",
+        "selected-monitored",
+        "profile",
+        "settings"
+    };
+
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
@@ -42,8 +62,8 @@
         {
             // Navigating intentionally to login/register/reset-password should clear any stale auth data
             // so the next login is forced to create a new session.
-            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
-            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "profilePictureUrl");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
             return;
         }
 
@@ -51,7 +71,10 @@
         if (claims == null)
         {
             Navigation.NavigateTo("/login", forceLoad: true);
+            return;
         }
+
+        EnforceRoleAccess(path, claims);
     }
 
     private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -76,7 +99,40 @@
         if (claims == null)
         {
             Navigation.NavigateTo("/login", forceLoad: true);
+            return;
         }
+
+        EnforceRoleAccess(path, claims);
+    }
+
+    private void EnforceRoleAccess(string path, TokenClaims claims)
+    {
+        var normalized = path.Trim('/');
+        var isAdmin = IsAdminRole(claims.Role);
+
+        if (isAdmin && MatchesRoute(normalized, UserRoutes))
+        {
+            Navigation.NavigateTo("/admin-dashboard", forceLoad: true);
+            return;
+        }
+
+        if (!isAdmin && MatchesRoute(normalized, AdminRoutes))
+        {
+            Navigation.NavigateTo("/dashboard", forceLoad: true);
+        }
+    }
+
+    private bool IsAdminRole(string? role)
+    {
+        return !string.IsNullOrWhiteSpace(role) && role.IndexOf("admin", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private bool MatchesRoute(string path, string[] routes)
+    {
+        // Exact route match or nested path ("route/..."), avoids partial collisions like
+        // "monitored" matching "monitored-users".
+        return routes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith(r + "/", StringComparison.OrdinalIgnoreCase));
     }
 
     public void Dispose()

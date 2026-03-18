@@ -130,7 +130,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(2), token);
+                await Task.Delay(TimeSpan.FromMinutes(1), token);
             }
             catch (OperationCanceledException)
             {

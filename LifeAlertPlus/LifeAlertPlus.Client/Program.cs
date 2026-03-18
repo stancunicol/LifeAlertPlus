@@ -23,6 +23,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<MonitoredService>();
 builder.Services.AddScoped<UserMonitoredService>();
 builder.Services.AddScoped<SimulationService>();
+builder.Services.AddScoped<SimulationBackgroundService>();
 builder.Services.AddScoped<TokenParserService>();
 
 await builder.Build().RunAsync();

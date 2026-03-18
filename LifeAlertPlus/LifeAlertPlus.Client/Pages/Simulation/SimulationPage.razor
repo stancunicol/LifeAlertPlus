@@ -1,6 +1,7 @@
 @page "/simulations"
 @using LifeAlertPlus.Client.Components.HeaderAdmin
 @layout MainLayout
+@implements IDisposable
 
 <HeaderAdminComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
 
@@ -22,7 +23,7 @@
 		{
 			<div class="message-card error">
 				<span>@ErrorMessage</span>
-				<button @onclick="RefreshAsync" disabled="@IsBusy">Retry</button>
+				<button @onclick="RefreshAsync">Retry</button>
 			</div>
 		}
 		else
@@ -34,10 +35,16 @@
 						<span class="section-note">@Persons.Count devices ready for simulation</span>
 					</div>
 					<div class="section-actions">
-						<button class="primary" @onclick="SendAllAsync" disabled="@IsBusy || !Persons.Any()">
-							@(IsBusy ? "Sending..." : "Generate all")
+						<button class="primary" @onclick="SendAllAsync" disabled="@(!Persons.Any(p => !p.IsRunning && !p.IsSending))">
+							Generate all
 						</button>
-						<button class="ghost" @onclick="RefreshAsync" disabled="@IsBusy">Refresh</button>
+						<button class="secondary" @onclick="StartAllAutoAsync" disabled="@(!Persons.Any(p => !p.IsRunning))">
+							Start auto all
+						</button>
+						<button class="danger" @onclick="StopAllAutoAsync" disabled="@(!Persons.Any(p => p.IsRunning))">
+							Stop auto all
+						</button>
+						<button class="ghost" @onclick="RefreshAsync">Refresh</button>
 					</div>
 				</div>
 
@@ -60,8 +67,14 @@
 									</div>
 								</div>
 								<div class="sim-actions">
-									<button class="primary" @onclick="() => SendSimulationAsync(person)" disabled="@IsBusy">
-										@(IsBusy ? "Sending..." : "Generate and Send")
+									<button class="primary" @onclick="() => SendSimulationAsync(person)" disabled="@(person.IsRunning || person.IsSending)">
+										@(person.IsSending ? "Sending..." : "Generate once")
+									</button>
+									<button class="secondary" @onclick="() => StartAutoAsync(person)" disabled="@person.IsRunning">
+										@(person.IsRunning ? "Auto running" : "Start auto")
+									</button>
+									<button class="danger" @onclick="() => StopAutoAsync(person)" disabled="@(!person.IsRunning)">
+										Stop
 									</button>
 									@if (person.LastStatus != null)
 									{
