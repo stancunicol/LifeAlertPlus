@@ -26,7 +26,9 @@ namespace LifeAlertPlus.Infrastructure.Repositories
 
         public async Task<IEnumerable<User>> GetAllUsersAsync()
         {
-            return await _dbContext.Users.ToListAsync();
+            return await _dbContext.Users
+                .Include(u => u.Role)
+                .ToListAsync();
         }
 
         public async Task<bool> CreateUserAsync(User user)

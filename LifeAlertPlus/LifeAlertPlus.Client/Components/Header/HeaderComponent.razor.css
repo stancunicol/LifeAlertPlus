@@ -32,6 +32,12 @@
     gap: 3rem;
 }
 
+.header-logo-wrap {
+	display: flex;
+	align-items: baseline;
+	gap: 0.4rem;
+}
+
 .header-logo {
     font-family: "Jua", sans-serif;
     font-size: 28px;
@@ -45,6 +51,17 @@
         opacity: 0.8;
     }
 
+.header-version {
+    font-family: "Jua", sans-serif;
+    font-size: 0.75rem;
+    color: #000;
+    opacity: 0.75;
+    letter-spacing: 0.3px;
+    margin-bottom: 2px;
+    min-width: 48px;
+    text-align: left;
+}
+
 .header-nav {
     display: flex;
     align-items: center;
@@ -54,9 +71,14 @@
 .nav-link {
     font-family: "Jua", sans-serif;
     font-size: 1rem;
+    font-weight: 500;
     color: #000;
     text-decoration: none;
     padding: 0.5rem 1rem;
+    min-width: 110px;
+    justify-content: center;
+    align-items: center;
+    display: inline-flex;
     border-radius: 20px;
     transition: all 0.3s ease;
     position: relative;
@@ -68,7 +90,6 @@
 
     .nav-link.active {
         background: rgba(255, 255, 255, 0.3);
-        font-weight: 500;
     }
 
         .nav-link.active::after {

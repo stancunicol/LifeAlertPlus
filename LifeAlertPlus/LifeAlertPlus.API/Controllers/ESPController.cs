@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using Microsoft.AspNetCore.Authorization;
@@ -14,6 +15,9 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IConfiguration _configuration;
         private readonly ILogger<ESPController> _logger;
 
+        private static readonly ConcurrentDictionary<string, ESPDataResponseDTO> _simulatedData =
+            new(StringComparer.OrdinalIgnoreCase);
+
         private static readonly JsonSerializerOptions _jsonOptions =
             new() { PropertyNameCaseInsensitive = true };
 
@@ -27,6 +31,13 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("data/{serial}")]
         public async Task<IActionResult> GetESPData(string serial, CancellationToken cancellationToken)
         {
+            if (_simulatedData.TryGetValue(serial, out var simulated))
+            {
+                simulated.IsAvailable = true;
+                simulated.ErrorMessage = null;
+                return Ok(simulated);
+            }
+
             var espBaseUrl = _configuration["Urls:EspDeviceUrl"] ?? "http://localhost:5000";
             var url = $"{espBaseUrl}/api/data/{serial}";
             var client = _httpClientFactory.CreateClient();
@@ -73,6 +84,25 @@ namespace LifeAlertPlus.API.Controllers
                 _logger.LogError(ex, "Error fetching ESP data for serial {Serial}", serial);
                 return Ok(CreateUnavailableResponse(serial, "ESP data unavailable."));
             }
+        }
+
+        [HttpPost("simulate")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult Simulate([FromBody] ESPDataResponseDTO payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload.Serial))
+            {
+                return BadRequest("Serial is required.");
+            }
+
+            payload.Serial = payload.Serial.Trim();
+            payload.Date = payload.Date == 0 ? DateTimeOffset.UtcNow.ToUnixTimeSeconds() : payload.Date;
+            payload.IsAvailable = true;
+            payload.ErrorMessage = null;
+
+            _simulatedData[payload.Serial] = payload;
+            _logger.LogInformation("Simulated ESP data stored for serial {Serial}", payload.Serial);
+            return Ok(payload);
         }
 
         private static ESPDataResponseDTO CreateUnavailableResponse(string serial, string message)

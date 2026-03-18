@@ -16,7 +16,30 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
         [Parameter]
         public EventCallback OnLogoutClick { get; set; }
 
+        [Inject]
+        private HttpClient Http { get; set; } = default!;
+
         private bool ShowProfileMenu { get; set; } = false;
+        private string Version { get; set; } = string.Empty;
+
+        protected async override Task OnInitializedAsync()
+        {
+            try
+            {
+                var url = Navigation.BaseUri + "VERSION";
+                var v = await Http.GetStringAsync(url);
+                Version = (v ?? string.Empty).Trim();
+
+                if (string.IsNullOrEmpty(Version))
+                {
+                    Version = AppVersion.Version;
+                }
+            }
+            catch
+            {
+                Version = AppVersion.Version;
+            }
+        }
 
         private bool IsActive(string path)
         {

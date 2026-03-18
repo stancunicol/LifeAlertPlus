@@ -1,3 +1,79 @@
-@page "/simulation"
+@page "/simulations"
+@using LifeAlertPlus.Client.Components.HeaderAdmin
 @layout MainLayout
+
+<HeaderAdminComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
+
+<div class="simulations-page">
+	<div class="admin-container">
+		<div class="admin-header">
+			<div class="header-title-section">
+				<h1>Simulations</h1>
+				<p class="admin-subtitle">Send simulated data to monitored devices</p>
+			</div>
+			<span class="tag chip-muted">Tools</span>
+		</div>
+
+		@if (IsLoading)
+		{
+			<div class="message-card">Loading users and devices...</div>
+		}
+		else if (!string.IsNullOrEmpty(ErrorMessage))
+		{
+			<div class="message-card error">
+				<span>@ErrorMessage</span>
+				<button @onclick="RefreshAsync" disabled="@IsBusy">Retry</button>
+			</div>
+		}
+		else
+		{
+			<div class="section">
+				<div class="section-header">
+					<div>
+						<h2>Monitored devices</h2>
+						<span class="section-note">@Persons.Count devices ready for simulation</span>
+					</div>
+					<div class="section-actions">
+						<button class="primary" @onclick="SendAllAsync" disabled="@IsBusy || !Persons.Any()">
+							@(IsBusy ? "Sending..." : "Generate all")
+						</button>
+						<button class="ghost" @onclick="RefreshAsync" disabled="@IsBusy">Refresh</button>
+					</div>
+				</div>
+
+				@if (!Persons.Any())
+				{
+					<div class="message-card">No monitored persons found.</div>
+				}
+				else
+				{
+					<div class="sim-grid">
+						@foreach (var person in Persons)
+						{
+							<div class="sim-card">
+								<div class="sim-card-top">
+									<div class="avatar">@GetInitials(person.Name)</div>
+									<div class="sim-card-meta">
+										<h3>@person.Name</h3>
+										<p class="muted">Serial: <span class="mono">@person.Serial</span></p>
+										<p class="muted">User: @person.UserName (@person.UserEmail)</p>
+									</div>
+								</div>
+								<div class="sim-actions">
+									<button class="primary" @onclick="() => SendSimulationAsync(person)" disabled="@IsBusy">
+										@(IsBusy ? "Sending..." : "Generate and Send")
+									</button>
+									@if (person.LastStatus != null)
+									{
+										<span class="status-chip @(person.LastStatus.Success ? "ok" : "warn")">@person.LastStatus.Message</span>
+									}
+								</div>
+							</div>
+						}
+					</div>
+				}
+			</div>
+		}
+	</div>
+</div>
 

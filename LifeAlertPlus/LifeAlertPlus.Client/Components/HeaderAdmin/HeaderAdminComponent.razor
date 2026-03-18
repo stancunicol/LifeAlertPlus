@@ -1,9 +1,13 @@
 @namespace LifeAlertPlus.Client.Components.HeaderAdmin
+@using LifeAlertPlus.Client
 
 <header class="header">
     <div class="header-container">
         <div class="header-left">
-            <a href="/admin-dashboard" class="header-logo">LifeAlert +</a>
+            <div class="header-logo-wrap">
+                <a href="/admin-dashboard" class="header-logo">LifeAlert +</a>
+                <span class="header-version">v @Version</span>
+            </div>
             <nav class="header-nav">
                 <a href="/admin-dashboard" class="nav-link @(IsActive("/admin-dashboard") ? "active" : "")">Dashboard</a>
                 <a href="/monitored-users" class="nav-link @(IsActive("/monitored-users") ? "active" : "")">Monitored Users</a>
@@ -29,9 +33,6 @@
             @if (ShowProfileMenu)
             {
                 <div class="profile-menu">
-                    <a href="/profile" class="profile-menu-item">My Profile</a>
-                    <a href="/settings" class="profile-menu-item">Settings</a>
-                    <div class="profile-menu-divider"></div>
                     <a @onclick="OnLogout" class="profile-menu-item logout">Logout</a>
                 </div>
             }

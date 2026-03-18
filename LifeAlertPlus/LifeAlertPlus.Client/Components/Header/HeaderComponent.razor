@@ -1,9 +1,13 @@
 @namespace LifeAlertPlus.Client.Components.Header
+@using LifeAlertPlus.Client
 
 <header class="header">
     <div class="header-container">
         <div class="header-left">
-            <a href="/dashboard" class="header-logo">LifeAlert +</a>
+            <div class="header-logo-wrap">
+                <a href="/dashboard" class="header-logo">LifeAlert +</a>
+                <span class="header-version">v @Version</span>
+            </div>
             <nav class="header-nav">
                 <a href="/dashboard" class="nav-link @(IsActive("/dashboard") ? "active" : "")">Dashboard</a>
                 <a href="/monitored" class="nav-link @(IsActive("/monitored") ? "active" : "")">Monitored</a>
