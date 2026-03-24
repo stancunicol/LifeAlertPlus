@@ -8,7 +8,7 @@ namespace LifeAlertPlus.Client.Services
 	/// </summary>
 	public class SimulationBackgroundService
 	{
-		private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _runs = new();
+		private readonly ConcurrentDictionary<Guid, (CancellationTokenSource Cts, Task RunningTask)> _runs = new();
 
 		public Task StartAsync(
 			Guid personId,
@@ -20,17 +20,7 @@ namespace LifeAlertPlus.Client.Services
 			var delay = interval ?? TimeSpan.FromMinutes(1);
 			var cts = new CancellationTokenSource();
 
-			if (!_runs.TryAdd(personId, cts))
-			{
-				if (_runs.TryGetValue(personId, out var existing))
-				{
-					existing.Cancel();
-					existing.Dispose();
-				}
-				_runs[personId] = cts;
-			}
-
-			return Task.Run(async () =>
+			var runningTask = Task.Run(async () =>
 			{
 				while (!cts.IsCancellationRequested)
 				{
@@ -55,29 +45,67 @@ namespace LifeAlertPlus.Client.Services
 					}
 				}
 			}, CancellationToken.None);
-		}
 
-		public Task StopAsync(Guid personId)
-		{
-			if (_runs.TryRemove(personId, out var cts))
+			if (!_runs.TryAdd(personId, (cts, runningTask)))
 			{
-				cts.Cancel();
-				cts.Dispose();
+				if (_runs.TryGetValue(personId, out var existing))
+				{
+					try
+					{
+						existing.Cts.Cancel();
+					}
+					catch { }
+				}
+				_runs[personId] = (cts, runningTask);
 			}
 
-			return Task.CompletedTask;
+			return runningTask;
 		}
 
-		public Task StopAllAsync()
+		public async Task StopAsync(Guid personId)
 		{
-			foreach (var kvp in _runs)
+			if (_runs.TryRemove(personId, out var entry))
 			{
-				kvp.Value.Cancel();
-				kvp.Value.Dispose();
+				try
+				{
+					entry.Cts.Cancel();
+				}
+				catch { }
+
+				try
+				{
+					await Task.WhenAny(entry.RunningTask, Task.Delay(5000));
+				}
+				catch { }
+
+				try
+				{
+					entry.Cts.Dispose();
+				}
+				catch { }
+			}
+		}
+
+		public async Task StopAllAsync()
+		{
+			var entries = _runs.ToArray();
+			foreach (var kvp in entries)
+			{
+				try { kvp.Value.Cts.Cancel(); } catch { }
 			}
 
-			_runs.Clear();
-			return Task.CompletedTask;
+			var tasks = entries.Select(e => e.Value.RunningTask).ToArray();
+			try
+			{
+				await Task.WhenAny(Task.WhenAll(tasks), Task.Delay(5000));
+			}
+			catch { }
+
+			foreach (var kvp in entries)
+			{
+				try { kvp.Value.Cts.Dispose(); } catch { }
+				_runs.TryRemove(kvp.Key, out _);
+			}
 		}
 	}
 }

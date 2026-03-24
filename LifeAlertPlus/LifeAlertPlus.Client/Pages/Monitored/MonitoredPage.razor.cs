@@ -130,7 +130,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(1), token);
+                await Task.Delay(TimeSpan.FromSeconds(15), token);
             }
             catch (OperationCanceledException)
             {
@@ -371,7 +371,6 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     {
         var mpu = card.LastData?.Mpu6050;
         var gyro = card.LastData?.Gyro;
-        var hmc = card.LastData?.Hmc5883l;
 
         double accelScore = 0;
         if (mpu != null && mpu.Count >= 3)
@@ -387,9 +386,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
         var highAccel = accelScore > 35000; // heuristic threshold
         var highGyro = gyroScore > 4000;    // heuristic threshold
-        var hmcSpike = hmc.HasValue && Math.Abs(hmc.Value) > 500; // arbitrary spike detection
 
-        if (highAccel || highGyro || hmcSpike)
+        if (highAccel || highGyro)
         {
             return "Posibil eveniment (cădere/impact)";
         }

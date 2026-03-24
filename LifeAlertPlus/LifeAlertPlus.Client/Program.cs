@@ -25,5 +25,7 @@ builder.Services.AddScoped<UserMonitoredService>();
 builder.Services.AddScoped<SimulationService>();
 builder.Services.AddScoped<SimulationBackgroundService>();
 builder.Services.AddScoped<TokenParserService>();
+builder.Services.AddScoped<ImportService>();
+builder.Services.AddScoped<MeasurementService>();
 
 await builder.Build().RunAsync();

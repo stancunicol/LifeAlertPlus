@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using System.Linq;
-using System.Threading;
+using LifeAlertPlus.Shared.DTOs.Requests.Measurement;
 
 namespace LifeAlertPlus.Client.Pages.Simulation
 {
@@ -15,10 +15,10 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		private SimulationService SimulationService { get; set; } = default!;
 
 		[Inject]
-		private SimulationBackgroundService SimulationBackground { get; set; } = default!;
+		private TokenParserService TokenParser { get; set; } = default!;
 
 		[Inject]
-		private TokenParserService TokenParser { get; set; } = default!;
+		private MeasurementService MeasurementService { get; set; } = default!;
 
 		protected bool IsLoading { get; private set; } = true;
 		protected string? ErrorMessage { get; private set; }
@@ -31,13 +31,13 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		{
 			await LoadUserFromTokenAsync();
 			await LoadAsync();
+			await RestoreRunningSimulationsAsync();
 		}
 
 		private async Task LoadAsync()
 		{
 			IsLoading = true;
 			ErrorMessage = null;
-			await StopAllAutoAsync();
 			Persons.Clear();
 
 			try
@@ -134,6 +134,17 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 				person.LastStatus = ok
 					? SimStatus.Ok("Sent")
 					: SimStatus.Warn("Error sending data");
+
+				var request = new MeasurementRequestDTO
+				{
+					Name = "Simulated",
+					IdMonitored = person.PersonId,
+					Pulse = payload.Max30100?[0] ?? 0,
+					Temperature = payload.Temperature ?? 0,
+					Activity = "Simulated Activity",
+					IsFall = false,
+					Coordinates = null
+				};
 			}
 			catch
 			{
@@ -146,36 +157,43 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			if (person.IsRunning)
 				return;
 
-			person.IsRunning = true;
-			person.LastStatus = SimStatus.Ok("Auto running");
-			StateHasChanged();
-
-			await SimulationBackground.StartAsync(
-				person.PersonId,
-				() => BuildPayload(person.Serial),
-				payload => SimulationService.SendSimulationAsync(payload),
-				ok =>
+			try
+			{
+				var ok = await SimulationService.StartSimulationAsync(person.PersonId);
+				if (ok)
 				{
-					_ = InvokeAsync(() =>
-					{
-						person.LastStatus = ok ? SimStatus.Ok("Sent") : SimStatus.Warn("Error sending data");
-						StateHasChanged();
-						return Task.CompletedTask;
-					});
-				},
-				TimeSpan.FromMinutes(1));
+					person.IsRunning = true;
+					person.LastStatus = SimStatus.Ok("Auto running");
+				}
+				else
+				{
+					person.LastStatus = SimStatus.Warn("Failed to start");
+				}
+			}
+			catch
+			{
+				person.LastStatus = SimStatus.Warn("Error starting");
+			}
+			StateHasChanged();
 		}
 
-		protected Task StopAutoAsync(SimPerson person)
+		protected async Task StopAutoAsync(SimPerson person)
 		{
 			if (!person.IsRunning)
-				return Task.CompletedTask;
+				return;
 
-			person.IsRunning = false;
-			person.LastStatus ??= SimStatus.Warn("Auto stopped");
-			_ = SimulationBackground.StopAsync(person.PersonId);
+			try
+			{
+				var ok = await SimulationService.StopSimulationAsync(person.PersonId);
+				person.IsRunning = false;
+				person.LastStatus = ok ? SimStatus.Warn("Auto stopped") : SimStatus.Warn("Stop failed");
+			}
+			catch
+			{
+				person.IsRunning = false;
+				person.LastStatus = SimStatus.Warn("Error stopping");
+			}
 			StateHasChanged();
-			return Task.CompletedTask;
 		}
 
 		protected async Task StartAllAutoAsync()
@@ -189,12 +207,19 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 
 		protected async Task StopAllAutoAsync()
 		{
-			await SimulationBackground.StopAllAsync();
-			var running = Persons.Where(p => p.IsRunning).ToList();
-			foreach (var person in running)
+			try
 			{
-				person.IsRunning = false;
-				person.LastStatus ??= SimStatus.Warn("Auto stopped");
+				await SimulationService.StopAllSimulationsAsync();
+				var running = Persons.Where(p => p.IsRunning).ToList();
+				foreach (var person in running)
+				{
+					person.IsRunning = false;
+					person.LastStatus = SimStatus.Warn("Auto stopped");
+				}
+			}
+			catch
+			{
+				// best effort
 			}
 			StateHasChanged();
 		}
@@ -215,7 +240,6 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 				Mpu6050 = new List<int> { rnd.Next(-16000, 16001), rnd.Next(-16000, 16001), rnd.Next(-16000, 16001) },
 				Gyro = new List<int> { rnd.Next(-5000, 5001), rnd.Next(-5000, 5001), rnd.Next(-5000, 5001) },
 				Max30100 = new List<int> { pulse, spo2 },
-				Hmc5883l = rnd.Next(-800, 801),
 				Neo6m = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A",
 				Temperature = Math.Round(temp, 1),
 				Battery = Math.Round(battery, 1)
@@ -266,7 +290,41 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		public void Dispose()
 		{
 			_disposed = true;
-			_ = StopAllAutoAsync();
+		}
+
+		private async Task RestoreRunningSimulationsAsync()
+		{
+			try
+			{
+				var ids = await SimulationService.GetRunningSimulationsAsync();
+				if (!ids.Any())
+					return;
+
+				// ensure Persons are loaded
+				var attempts = 0;
+				while (!Persons.Any() && attempts < 10)
+				{
+					await Task.Delay(200);
+					attempts++;
+				}
+				if (!Persons.Any())
+					return;
+
+				foreach (var id in ids)
+				{
+					var person = Persons.FirstOrDefault(p => p.PersonId == id);
+					if (person != null)
+					{
+						person.IsRunning = true;
+						person.LastStatus = SimStatus.Ok("Auto running");
+					}
+				}
+				StateHasChanged();
+			}
+			catch
+			{
+				// ignore restore errors
+			}
 		}
 	}
 }

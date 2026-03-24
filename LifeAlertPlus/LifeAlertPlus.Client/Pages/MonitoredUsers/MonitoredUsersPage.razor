@@ -8,12 +8,45 @@
 <div class="monitored-users-page">
 	<div class="admin-container">
 		<div class="admin-header">
-			<div class="header-title-section">
-				<h1>Monitored Center</h1>
-				<p class="admin-subtitle">Monitored persons and their monitors</p>
-			</div>
-			<span class="tag chip-muted">Live overview</span>
-		</div>
+    <div class="header-title-section">
+        <h1>Monitored Center</h1>
+        <p class="admin-subtitle">Monitored persons and their monitors</p>
+    </div>
+    <div class="admin-header-actions">
+        <label for="importMonitored" class="import-button">Import JSON</label>
+        <InputFile id="importMonitored" OnChange="@(e => HandleImportAsync(e))" accept=".json" style="display:none !important;" />
+        <span class="tag chip-muted">Live overview</span>
+    </div>
+
+    @* Elimină previzualizarea și erorile duplicate din afara modalului *@
+</div>
+
+@if (ShowImportModal)
+{
+    <div class="import-modal-overlay">
+        <div class="import-modal">
+            <button class="close-btn" @onclick="CloseImportModal">&times;</button>
+            <h4>Previzualizare date importate:</h4>
+            <pre>@System.Text.Json.JsonSerializer.Serialize(ImportPreviewData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+            @if (ImportErrors != null && ImportErrors.Length > 0)
+            {
+                <div class="import-errors">
+                    <h4>Erori la import:</h4>
+                    <ul>
+                        @foreach (var err in ImportErrors)
+                        {
+                            <li>@err</li>
+                        }
+                    </ul>
+                </div>
+            }
+            else
+            {
+                <button class="confirm-btn" @onclick="ConfirmImportAsync">Adaugă datele în baza de date</button>
+            }
+        </div>
+    </div>
+}
 
 		<div class="stats-grid admin-stats">
 			<div class="stat-card">

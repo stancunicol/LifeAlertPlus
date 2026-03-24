@@ -1,8 +1,7 @@
-﻿namespace LifeAlertPlus.Domain.Entities
+namespace LifeAlertPlus.Shared.DTOs.Requests.Measurement
 {
-    public class Measurement
+    public class MeasurementRequestDTO
     {
-        public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Activity { get; set; } = string.Empty;
         public bool IsFall { get; set; }
@@ -10,8 +9,5 @@
         public double Pulse { get; set; }
         public double Temperature { get; set; }
         public string Coordinates { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; }
-        
-        public Monitored Monitored { get; set; } = null!;
     }
 }

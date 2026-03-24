@@ -3,6 +3,9 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using Microsoft.AspNetCore.Authorization;
+using LifeAlertPlus.Infrastructure.Context;
+using LifeAlertPlus.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -14,24 +17,30 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly ILogger<ESPController> _logger;
+        private readonly LifeAlertPlusDbContext _dbContext;
+        private readonly Services.SimulationManager _simulationManager;
 
-        private static readonly ConcurrentDictionary<string, ESPDataResponseDTO> _simulatedData =
-            new(StringComparer.OrdinalIgnoreCase);
+        private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-        private static readonly JsonSerializerOptions _jsonOptions =
-            new() { PropertyNameCaseInsensitive = true };
-
-        public ESPController(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<ESPController> logger)
+        public ESPController(
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration,
+            ILogger<ESPController> logger,
+            LifeAlertPlusDbContext dbContext,
+            Services.SimulationManager simulationManager)
         {
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _logger = logger;
+            _dbContext = dbContext;
+            _simulationManager = simulationManager;
         }
 
         [HttpGet("data/{serial}")]
         public async Task<IActionResult> GetESPData(string serial, CancellationToken cancellationToken)
         {
-            if (_simulatedData.TryGetValue(serial, out var simulated))
+            var simulated = _simulationManager.GetData(serial);
+            if (simulated != null)
             {
                 simulated.IsAvailable = true;
                 simulated.ErrorMessage = null;
@@ -90,7 +99,7 @@ namespace LifeAlertPlus.API.Controllers
 
         [HttpPost("simulate")]
         [Authorize(Roles = "Admin")]
-        public IActionResult Simulate([FromBody] ESPDataResponseDTO payload)
+        public async Task<IActionResult> Simulate([FromBody] ESPDataResponseDTO payload)
         {
             if (string.IsNullOrWhiteSpace(payload.Serial))
             {
@@ -102,8 +111,9 @@ namespace LifeAlertPlus.API.Controllers
             payload.IsAvailable = true;
             payload.ErrorMessage = null;
 
-            _simulatedData[payload.Serial] = payload;
+            _simulationManager.SetData(payload);
             _logger.LogInformation("Simulated ESP data stored for serial {Serial}", payload.Serial);
+
             return Ok(payload);
         }
 
@@ -118,8 +128,7 @@ namespace LifeAlertPlus.API.Controllers
                 Mpu6050 = new List<int>(),
                 Gyro = new List<int>(),
                 Max30100 = null,
-                Neo6m = null,
-                Hmc5883l = 0
+                Neo6m = null
             };
         }
     }

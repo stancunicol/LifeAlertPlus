@@ -12,7 +12,22 @@ namespace LifeAlertPlus.Infrastructure.Seed
             using var scope = services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
 
-            await context.Database.MigrateAsync();
+            // If this project contains migrations, apply them.
+            // If there are no migrations (e.g. first-time local dev), create the database instead
+            // to avoid the "pending model changes" exception when migrations are not present.
+            var allMigrations = context.Database.GetMigrations();
+            if (allMigrations != null && allMigrations.Any())
+            {
+                var pending = context.Database.GetPendingMigrations();
+                if (pending != null && pending.Any())
+                {
+                    await context.Database.MigrateAsync();
+                }
+            }
+            else
+            {
+                await context.Database.EnsureCreatedAsync();
+            }
 
             var hasUsers = await context.Users.AnyAsync();
             if (!hasUsers)

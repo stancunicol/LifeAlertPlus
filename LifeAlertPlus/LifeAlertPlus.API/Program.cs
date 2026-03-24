@@ -13,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<LifeAlertPlus.API.Services.SimulationManager>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -47,6 +48,7 @@ builder.Services.AddScoped<IUserMonitoredService, UserMonitoredService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GetUrlService>();
+builder.Services.AddScoped<IImportService, ImportService>();
 
 var connString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=lifealert.db";
 
