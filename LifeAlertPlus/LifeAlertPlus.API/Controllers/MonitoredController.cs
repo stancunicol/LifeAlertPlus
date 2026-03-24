@@ -47,16 +47,25 @@ namespace LifeAlertPlus.API.Controllers
                 return Conflict(new { Message = "A monitored person with the same device serial number already exists." });
             }
 
-            var createdPerson = await _monitoredService.AddMonitoredPersonAsync(newPerson);
-            createdPerson.IsActive = true;
-            if (createdPerson == null)
+            try
             {
-                return StatusCode(500, new { Message = "Failed to add monitored person." });
+                var createdPerson = await _monitoredService.AddMonitoredPersonAsync(newPerson);
+                if (createdPerson == null)
+                {
+                    return StatusCode(500, new { Message = "Failed to add monitored person." });
+                }
+
+                createdPerson.IsActive = true;
+                await _userMonitoredService.AddMonitoredPersonToUserAsync(callerId, createdPerson.Id);
+
+                return Ok(new { Message = "Monitored person added successfully.", MonitoredPerson = createdPerson });
             }
-
-            await _userMonitoredService.AddMonitoredPersonToUserAsync(callerId, createdPerson.Id);
-
-            return Ok(new { Message = "Monitored person added successfully.", MonitoredPerson = createdPerson });
+            catch (Exception ex)
+            {
+                // Log the error details
+                Console.WriteLine($"Error adding monitored person: {ex.Message}");
+                return StatusCode(500, new { Message = "An error occurred while adding monitored person.", Details = ex.Message });
+            }
         }
 
         [HttpGet("serial/{deviceSerialNumber}")]

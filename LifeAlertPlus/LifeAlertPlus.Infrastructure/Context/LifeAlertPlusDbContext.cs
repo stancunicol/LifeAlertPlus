@@ -43,6 +43,12 @@ namespace LifeAlertPlus.Infrastructure.Context
             .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Measurement>()
+                .HasOne(m => m.Monitored)
+                .WithMany()
+                .HasForeignKey(m => m.IdMonitored)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Measurement>()
                 .HasIndex(m => m.IdMonitored);
 
             modelBuilder.Entity<Notification>()

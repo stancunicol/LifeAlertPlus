@@ -38,6 +38,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IMonitoredRepository, MonitoredRepository>();
 builder.Services.AddScoped<IUserMonitoredRepository, UserMonitoredRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
@@ -46,6 +47,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IMonitoredService, MonitoredService>();
 builder.Services.AddScoped<IUserMonitoredService, UserMonitoredService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IMeasurementService, MeasurementService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GetUrlService>();
 builder.Services.AddScoped<IImportService, ImportService>();

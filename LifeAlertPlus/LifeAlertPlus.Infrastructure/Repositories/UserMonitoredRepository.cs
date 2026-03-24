@@ -35,6 +35,16 @@ namespace LifeAlertPlus.Infrastructure.Repositories
 
         public async Task AddMonitoredPersonToUserAsync(Guid userId, Guid monitoredPersonId)
         {
+            // Check if relationship already exists
+            var exists = await _context.UserMonitoreds
+                .AnyAsync(um => um.IdUser == userId && um.IdMonitored == monitoredPersonId);
+            
+            if (exists)
+            {
+                // Relationship already exists, skip adding
+                return;
+            }
+
             var userMonitored = new UserMonitored
             {
                 IdUser = userId,

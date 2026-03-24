@@ -94,6 +94,27 @@ namespace LifeAlertPlus.API.Services
                         
                         _logger.LogDebug("Generated simulation data for {Serial}: Pulse={Pulse}, Temp={Temp}, SpO2={SpO2}", 
                             serial, payload.Max30100?[0], payload.Temperature, payload.Max30100?[1]);
+
+                        // Save to database
+                        using var innerScope = _scopeFactory.CreateScope();
+                        var measurementService = innerScope.ServiceProvider.GetRequiredService<LifeAlertPlus.Application.IServices.IMeasurementService>();
+                        
+                        var measurement = new LifeAlertPlus.Domain.Entities.Measurement
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = "Simulated Data",
+                            Activity = "Auto-generated",
+                            IsFall = false,
+                            IdMonitored = personId,
+                            Pulse = payload.Max30100?[0] ?? 0,
+                            Temperature = payload.Temperature ?? 0,
+                            Coordinates = payload.Neo6m ?? string.Empty,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        await measurementService.AddMeasurementAsync(measurement);
+                        
+                        _logger.LogDebug("Saved measurement to database for person {PersonId}", personId);
                     }
                     catch (Exception ex)
                     {
