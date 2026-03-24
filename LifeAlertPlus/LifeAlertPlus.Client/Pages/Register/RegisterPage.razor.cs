@@ -96,6 +96,14 @@ namespace LifeAlertPlus.Client.Pages.Register
             Navigation.NavigateTo("/login");
         }
 
+        private async Task HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+        {
+            if (e.Key == "Enter")
+            {
+                await OnRegister();
+            }
+        }
+
         private (bool IsValid, string ErrorMessage) ValidatePassword(string password)
         {
             if (string.IsNullOrWhiteSpace(password))

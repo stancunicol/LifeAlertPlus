@@ -90,6 +90,14 @@ namespace LifeAlertPlus.Client.Pages.Login
             }
         }
 
+        private async Task HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+        {
+            if (e.Key == "Enter")
+            {
+                await OnLogin();
+            }
+        }
+
         private void OpenForgotPasswordModal()
         {
             ShowForgotPasswordModal = true;

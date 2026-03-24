@@ -25,7 +25,8 @@
                 <input type="@(_showPassword ? "text" : "password")"
                        class="form-input form-input-icon form-input-password"
                        placeholder="password123"
-                       @bind="Password" />
+                       @bind="Password"
+                       @onkeydown="HandleKeyDown" />
             </div>
         </div>
 
