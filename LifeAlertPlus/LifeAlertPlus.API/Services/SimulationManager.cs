@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
+using LifeAlertPlus.Shared.Helpers;
 using LifeAlertPlus.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,49 +52,52 @@ namespace LifeAlertPlus.API.Services
 
         public async Task StartSimulationAsync(Guid personId, TimeSpan? interval = null)
         {
+            // Check if already running
+            if (_runs.ContainsKey(personId))
+            {
+                _logger.LogWarning("Simulation for person {PersonId} is already running", personId);
+                return;
+            }
+
             // Resolve a scoped DbContext to read the monitored device
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
             var monitored = await db.Monitoreds.FirstOrDefaultAsync(m => m.Id == personId);
-            if (monitored == null || string.IsNullOrWhiteSpace(monitored.DeviceSerialNumber))
+            
+            if (monitored == null)
+            {
+                _logger.LogWarning("Monitored person {PersonId} not found", personId);
                 return;
+            }
 
-            var delay = interval ?? TimeSpan.FromMinutes(2);
+            if (string.IsNullOrWhiteSpace(monitored.DeviceSerialNumber))
+            {
+                _logger.LogWarning("Monitored person {PersonId} has no device serial number", personId);
+                return;
+            }
+
+            var delay = interval ?? SimulationConfig.DefaultInterval;
             var serial = monitored.DeviceSerialNumber.Trim();
             var cts = new CancellationTokenSource();
 
+            _logger.LogInformation("Starting simulation for person {PersonId} with serial {Serial}, interval {Interval}", 
+                personId, serial, delay);
+
             var task = Task.Run(async () =>
             {
-                var rnd = Random.Shared;
                 while (!cts.IsCancellationRequested)
                 {
                     try
                     {
-                        var pulse = rnd.Next(62, 101);
-                        var spo2 = rnd.Next(93, 99);
-                        var temp = 36.2 + rnd.NextDouble() * 1.2;
-                        var battery = 30 + rnd.NextDouble() * 70;
-
-                        var payload = new ESPDataResponseDTO
-                        {
-                            Serial = serial,
-                            Date = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                            IsAvailable = true,
-                            Mpu6050 = new List<int> { rnd.Next(-16000, 16001), rnd.Next(-16000, 16001), rnd.Next(-16000, 16001) },
-                            Gyro = new List<int> { rnd.Next(-5000, 5001), rnd.Next(-5000, 5001), rnd.Next(-5000, 5001) },
-                            Max30100 = new List<int> { pulse, spo2 },
-                            Neo6m = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A",
-                            Temperature = Math.Round(temp, 1),
-                            Battery = Math.Round(battery, 1),
-                            ErrorMessage = null
-                        };
-
+                        var payload = ESPDataGenerator.GeneratePayload(serial);
                         _simulatedData[serial] = payload;
-                        _logger.LogInformation("Simulation generated data for {Serial}: Pulse={Pulse}, Temp={Temp}", serial, pulse, temp);
+                        
+                        _logger.LogDebug("Generated simulation data for {Serial}: Pulse={Pulse}, Temp={Temp}, SpO2={SpO2}", 
+                            serial, payload.Max30100?[0], payload.Temperature, payload.Max30100?[1]);
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error in simulation loop for person {PersonId}", personId);
+                        _logger.LogError(ex, "Error generating simulation data for person {PersonId}", personId);
                     }
 
                     try
@@ -105,43 +109,98 @@ namespace LifeAlertPlus.API.Services
                         break;
                     }
                 }
+
+                _logger.LogInformation("Simulation loop ended for person {PersonId}", personId);
             }, CancellationToken.None);
 
-            if (!_runs.TryAdd(personId, (cts, task)))
-            {
-                if (_runs.TryGetValue(personId, out var existing))
-                {
-                    try { existing.Cts.Cancel(); } catch { }
-                }
-                _runs[personId] = (cts, task);
-            }
+            _runs.TryAdd(personId, (cts, task));
         }
 
         public async Task StopSimulationAsync(Guid personId)
         {
-            if (_runs.TryRemove(personId, out var entry))
+            if (!_runs.TryRemove(personId, out var entry))
             {
-                try { entry.Cts.Cancel(); } catch { }
-                try { await Task.WhenAny(entry.RunningTask, Task.Delay(5000)); } catch { }
-                try { entry.Cts.Dispose(); } catch { }
+                _logger.LogWarning("Attempted to stop non-running simulation for person {PersonId}", personId);
+                return;
             }
+
+            _logger.LogInformation("Stopping simulation for person {PersonId}", personId);
+            await CancelAndWaitAsync(entry, personId);
         }
 
         public async Task StopAllAsync()
         {
             var entries = _runs.ToArray();
-            foreach (var kvp in entries)
+            if (!entries.Any())
             {
-                try { kvp.Value.Cts.Cancel(); } catch { }
+                _logger.LogInformation("No running simulations to stop");
+                return;
             }
 
-            var tasks = entries.Select(e => e.Value.RunningTask).ToArray();
-            try { await Task.WhenAny(Task.WhenAll(tasks), Task.Delay(5000)); } catch { }
+            _logger.LogInformation("Stopping all {Count} running simulations", entries.Length);
 
+            // Cancel all
+            foreach (var kvp in entries)
+            {
+                try 
+                { 
+                    kvp.Value.Cts.Cancel(); 
+                    _logger.LogDebug("Cancelled simulation for person {PersonId}", kvp.Key);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error cancelling simulation for person {PersonId}", kvp.Key);
+                }
+            }
+
+            // Wait for all to complete
+            var tasks = entries.Select(e => e.Value.RunningTask).ToArray();
+            try 
+            { 
+                await Task.WhenAny(Task.WhenAll(tasks), Task.Delay(SimulationConfig.StopTimeout)); 
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error waiting for simulations to complete");
+            }
+
+            // Cleanup
             foreach (var kvp in entries)
             {
                 try { kvp.Value.Cts.Dispose(); } catch { }
                 _runs.TryRemove(kvp.Key, out _);
+            }
+
+            _logger.LogInformation("All simulations stopped");
+        }
+
+        private async Task CancelAndWaitAsync((CancellationTokenSource Cts, Task RunningTask) entry, Guid personId)
+        {
+            try 
+            { 
+                entry.Cts.Cancel(); 
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error cancelling simulation for person {PersonId}", personId);
+            }
+
+            try 
+            { 
+                await Task.WhenAny(entry.RunningTask, Task.Delay(SimulationConfig.StopTimeout)); 
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error waiting for simulation to stop for person {PersonId}", personId);
+            }
+
+            try 
+            { 
+                entry.Cts.Dispose(); 
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error disposing cancellation token for person {PersonId}", personId);
             }
         }
     }

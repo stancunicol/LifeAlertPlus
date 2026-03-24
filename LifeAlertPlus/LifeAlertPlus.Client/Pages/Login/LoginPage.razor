@@ -15,7 +15,9 @@
             <div class="input-wrapper">
                 <input type="email" class="form-input form-input-icon"
                        placeholder="user@email.com"
-                       @bind="Email" />
+                       @bind="Email"
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown" />
             </div>
         </div>
 
@@ -26,6 +28,7 @@
                        class="form-input form-input-icon form-input-password"
                        placeholder="password123"
                        @bind="Password"
+                       @bind:event="oninput"
                        @onkeydown="HandleKeyDown" />
             </div>
         </div>

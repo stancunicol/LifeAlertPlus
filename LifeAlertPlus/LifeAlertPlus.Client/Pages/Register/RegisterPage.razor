@@ -15,7 +15,9 @@
                 <div class="input-wrapper">
                     <input type="text" class="form-input form-input-icon"
                            placeholder="John"
-                           @bind="FirstName" />
+                           @bind="FirstName"
+                           @bind:event="oninput"
+                           @onkeydown="HandleKeyDown" />
                 </div>
             </div>
 
@@ -24,7 +26,9 @@
                 <div class="input-wrapper">
                     <input type="text" class="form-input form-input-icon"
                            placeholder="Doe"
-                           @bind="LastName" />
+                           @bind="LastName"
+                           @bind:event="oninput"
+                           @onkeydown="HandleKeyDown" />
                 </div>
             </div>
         </div>
@@ -34,7 +38,9 @@
             <div class="input-wrapper">
                 <input type="email" class="form-input form-input-icon"
                        placeholder="user@email.com"
-                       @bind="Email" />
+                       @bind="Email"
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown" />
             </div>
         </div>
 
@@ -44,7 +50,9 @@
                 <input type="@(_showPassword ? "text" : "password")"
                        class="form-input form-input-icon form-input-password"
                        placeholder="password123"
-                       @bind="Password" />
+                       @bind="Password"
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown" />
             </div>
         </div>
 
@@ -55,6 +63,7 @@
                        class="form-input form-input-icon form-input-password"
                        placeholder="password123"
                        @bind="ConfirmPassword"
+                       @bind:event="oninput"
                        @onkeydown="HandleKeyDown" />
             </div>
         </div>

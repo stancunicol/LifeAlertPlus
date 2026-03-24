@@ -125,16 +125,16 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		{
 			try
 			{
-				var payload = BuildPayload(person.Serial);
+				var payload = LifeAlertPlus.Shared.Helpers.ESPDataGenerator.GeneratePayload(person.Serial);
 				var sendTask = SimulationService.SendSimulationAsync(payload);
 				var completed = await Task.WhenAny(sendTask, Task.Delay(TimeSpan.FromSeconds(3)));
 				var ok = completed == sendTask
 					? await sendTask
 					: true; // timeout: treat as success to keep UI responsive
-				person.LastStatus = ok
-					? SimStatus.Ok("Sent")
-					: SimStatus.Warn("Error sending data");
 
+			if (ok)
+			{
+				// Also save to measurements database
 				var request = new MeasurementRequestDTO
 				{
 					Name = "Simulated",
@@ -143,41 +143,56 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 					Temperature = payload.Temperature ?? 0,
 					Activity = "Simulated Activity",
 					IsFall = false,
-					Coordinates = null
+					Coordinates = string.Empty
 				};
+
+				try
+				{
+					await MeasurementService.AddMeasurementAsync(request);
+					person.LastStatus = SimStatus.Ok("Sent & Saved");
+				}
+				catch
+				{
+					person.LastStatus = SimStatus.Ok("Sent (save failed)");
+				}
 			}
-			catch
+			else
 			{
-				person.LastStatus = SimStatus.Warn("Unexpected error");
+				person.LastStatus = SimStatus.Warn("Error sending data");
 			}
 		}
-
-		protected async Task StartAutoAsync(SimPerson person)
+		catch
 		{
-			if (person.IsRunning)
-				return;
-
-			try
-			{
-				var ok = await SimulationService.StartSimulationAsync(person.PersonId);
-				if (ok)
-				{
-					person.IsRunning = true;
-					person.LastStatus = SimStatus.Ok("Auto running");
-				}
-				else
-				{
-					person.LastStatus = SimStatus.Warn("Failed to start");
-				}
-			}
-			catch
-			{
-				person.LastStatus = SimStatus.Warn("Error starting");
-			}
-			StateHasChanged();
+			person.LastStatus = SimStatus.Warn("Unexpected error");
 		}
+	}
 
-		protected async Task StopAutoAsync(SimPerson person)
+	protected async Task StartAutoAsync(SimPerson person)
+	{
+		if (person.IsRunning)
+			return;
+
+		try
+		{
+			var ok = await SimulationService.StartSimulationAsync(person.PersonId);
+			if (ok)
+			{
+				person.IsRunning = true;
+				person.LastStatus = SimStatus.Ok("Auto running");
+			}
+			else
+			{
+				person.LastStatus = SimStatus.Warn("Failed to start");
+			}
+		}
+		catch
+		{
+			person.LastStatus = SimStatus.Warn("Error starting");
+		}
+		StateHasChanged();
+	}
+
+	protected async Task StopAutoAsync(SimPerson person)
 		{
 			if (!person.IsRunning)
 				return;
@@ -198,11 +213,40 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 
 		protected async Task StartAllAutoAsync()
 		{
-			var targets = Persons.Where(p => !p.IsRunning).ToList();
-			foreach (var person in targets)
+			try
 			{
-				await StartAutoAsync(person);
+				// Use the efficient server-side StartAll endpoint
+				var ok = await SimulationService.StartAllSimulationsAsync();
+				if (ok)
+				{
+					// Mark all eligible persons as running
+					var targets = Persons.Where(p => !p.IsRunning).ToList();
+					foreach (var person in targets)
+					{
+						person.IsRunning = true;
+						person.LastStatus = SimStatus.Ok("Auto running");
+					}
+				}
+				else
+				{
+					// Fallback: individual starts
+					var targets = Persons.Where(p => !p.IsRunning).ToList();
+					foreach (var person in targets)
+					{
+						await StartAutoAsync(person);
+					}
+				}
 			}
+			catch
+			{
+				// Fallback: individual starts
+				var targets = Persons.Where(p => !p.IsRunning).ToList();
+				foreach (var person in targets)
+				{
+					await StartAutoAsync(person);
+				}
+			}
+			StateHasChanged();
 		}
 
 		protected async Task StopAllAutoAsync()
@@ -222,28 +266,6 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 				// best effort
 			}
 			StateHasChanged();
-		}
-
-		private static ESPDataResponseDTO BuildPayload(string serial)
-		{
-			var rnd = Random.Shared;
-			var pulse = rnd.Next(62, 101);
-			var spo2 = rnd.Next(93, 99);
-			var temp = 36.2 + rnd.NextDouble() * 1.2; // 36.2 - 37.4
-			var battery = 30 + rnd.NextDouble() * 70; // 30-100
-
-			return new ESPDataResponseDTO
-			{
-				Serial = serial,
-				Date = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-				IsAvailable = true,
-				Mpu6050 = new List<int> { rnd.Next(-16000, 16001), rnd.Next(-16000, 16001), rnd.Next(-16000, 16001) },
-				Gyro = new List<int> { rnd.Next(-5000, 5001), rnd.Next(-5000, 5001), rnd.Next(-5000, 5001) },
-				Max30100 = new List<int> { pulse, spo2 },
-				Neo6m = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A",
-				Temperature = Math.Round(temp, 1),
-				Battery = Math.Round(battery, 1)
-			};
 		}
 
 		protected record SimStatus(bool Success, string Message)

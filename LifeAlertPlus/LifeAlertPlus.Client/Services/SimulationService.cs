@@ -7,47 +7,116 @@ namespace LifeAlertPlus.Client.Services
 	{
 		private readonly HttpClient _httpClient;
 
+		// API Endpoints
+		private const string SimulateEndpoint = "api/esp/simulate";
+		private const string StartEndpoint = "api/simulations/start";
+		private const string StopEndpoint = "api/simulations/stop";
+		private const string StopAllEndpoint = "api/simulations/stopAll";
+		private const string RunningEndpoint = "api/simulations/running";
+
 		public SimulationService(HttpClient httpClient)
 		{
 			_httpClient = httpClient;
 		}
 
+		/// <summary>
+		/// Send a single simulated payload manually (for "Generate once" feature)
+		/// </summary>
 		public async Task<bool> SendSimulationAsync(ESPDataResponseDTO payload)
 		{
-			var response = await _httpClient.PostAsJsonAsync("api/esp/simulate", payload);
-			return response.IsSuccessStatusCode;
+			try
+			{
+				var response = await _httpClient.PostAsJsonAsync(SimulateEndpoint, payload);
+				return response.IsSuccessStatusCode;
+			}
+			catch
+			{
+				return false;
+			}
 		}
 
+		/// <summary>
+		/// Start continuous simulation for a monitored person
+		/// </summary>
 		public async Task<bool> StartSimulationAsync(Guid personId)
 		{
-			var response = await _httpClient.PostAsync($"api/simulations/start/{personId}", null);
-			return response.IsSuccessStatusCode;
+			try
+			{
+				var response = await _httpClient.PostAsync($"{StartEndpoint}/{personId}", null);
+				return response.IsSuccessStatusCode;
+			}
+			catch
+			{
+				return false;
+			}
 		}
 
+		/// <summary>
+		/// Start continuous simulations for all monitored persons
+		/// </summary>
+		public async Task<bool> StartAllSimulationsAsync()
+		{
+			try
+			{
+				var response = await _httpClient.PostAsync("api/simulations/startAll", null);
+				return response.IsSuccessStatusCode;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		/// <summary>
+		/// Stop continuous simulation for a monitored person
+		/// </summary>
 		public async Task<bool> StopSimulationAsync(Guid personId)
 		{
-			var response = await _httpClient.PostAsync($"api/simulations/stop/{personId}", null);
-			return response.IsSuccessStatusCode;
+			try
+			{
+				var response = await _httpClient.PostAsync($"{StopEndpoint}/{personId}", null);
+				return response.IsSuccessStatusCode;
+			}
+			catch
+			{
+				return false;
+			}
 		}
 
+		/// <summary>
+		/// Stop all running simulations
+		/// </summary>
 		public async Task<bool> StopAllSimulationsAsync()
 		{
-			var response = await _httpClient.PostAsync("api/simulations/stopAll", null);
-			return response.IsSuccessStatusCode;
+			try
+			{
+				var response = await _httpClient.PostAsync(StopAllEndpoint, null);
+				return response.IsSuccessStatusCode;
+			}
+			catch
+			{
+				return false;
+			}
 		}
 
+		/// <summary>
+		/// Get list of currently running simulation person IDs
+		/// </summary>
 		public async Task<IEnumerable<Guid>> GetRunningSimulationsAsync()
 		{
 			try
 			{
-				var response = await _httpClient.GetAsync("api/simulations/running");
+				var response = await _httpClient.GetAsync(RunningEndpoint);
 				if (response.IsSuccessStatusCode)
 				{
 					var ids = await response.Content.ReadFromJsonAsync<IEnumerable<Guid>>();
 					return ids ?? Enumerable.Empty<Guid>();
 				}
 			}
-			catch { }
+			catch
+			{
+				// Log errors in production environment
+			}
 			return Enumerable.Empty<Guid>();
 		}
 	}

@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
+using LifeAlertPlus.Shared.DTOs.Requests.Measurement;
 
 namespace LifeAlertPlus.Client.Services
 {
@@ -12,9 +13,9 @@ namespace LifeAlertPlus.Client.Services
             _httpClient = httpClient;
         }
 
-        public async Task AddMeasurementAsync(MeasurementResponseDTO measurement)
+        public async Task AddMeasurementAsync(MeasurementRequestDTO measurement)
         {
-            var response = await _httpClient.PostAsJsonAsync("api/measurements", measurement);
+            var response = await _httpClient.PostAsJsonAsync("api/measurement", measurement);
             response.EnsureSuccessStatusCode();
         }
 
