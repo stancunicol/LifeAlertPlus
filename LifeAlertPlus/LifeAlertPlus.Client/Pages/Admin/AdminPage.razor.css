@@ -41,6 +41,35 @@
 	color: #666;
 }
 
+.loading-message,
+.error-message,
+.empty-message {
+	padding: 2rem;
+	text-align: center;
+	font-family: 'Jua', sans-serif;
+	font-size: 1.1rem;
+	border-radius: 12px;
+	margin: 2rem 0;
+}
+
+.loading-message {
+	background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+	color: #2e7d32;
+	border: 2px solid #81c784;
+}
+
+.error-message {
+	background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+	color: #c62828;
+	border: 2px solid #ef5350;
+}
+
+.empty-message {
+	background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+	color: #f57f17;
+	border: 2px solid #ffd54f;
+}
+
 .stats-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

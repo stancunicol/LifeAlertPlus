@@ -26,9 +26,6 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 		[Inject]
 		private IJSRuntime JSRuntime { get; set; } = default!;
 
-		[Inject]
-		private ImportService ImportService { get; set; } = default!;
-
 		protected List<MonitoredUserDTO> Users { get; private set; } = new();
 		protected List<MonitoredPersonRow> MonitoredRows { get; private set; } = new();
 		protected string UserFullName { get; private set; } = "Admin";
@@ -37,11 +34,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 		protected string StatusFilter { get; private set; } = "all";
 		protected bool IsLoading { get; private set; } = true;
 		protected string? ErrorMessage { get; private set; }
-		protected string? ImportMessage { get; private set; }
 		private string? _currentUserEmail;
-
-		protected object[]? ImportPreviewData { get; set; }
-		protected string[]? ImportErrors { get; set; }
 
 		protected int TotalMonitors => MonitoredRows
 			.SelectMany(r => r.Monitors)
@@ -214,66 +207,5 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			bool Online,
 			string LastUpdate,
 			IReadOnlyList<MonitorInfo> Monitors);
-
-			private bool ShowImportModal { get; set; } = false;
-
-        protected async Task HandleImportAsync(InputFileChangeEventArgs e)
-        {
-            ImportMessage = null;
-            ImportPreviewData = null;
-            ImportErrors = null;
-            ShowImportModal = false;
-            try
-            {
-                await using var stream = e.File.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-                using var reader = new StreamReader(stream);
-                var json = await reader.ReadToEndAsync();
-
-                var result = await ImportService.ImportESPDataAsync(json);
-
-                ImportPreviewData = result.Data;
-                ImportErrors = result.Errors;
-                ShowImportModal = true;
-
-                if (result.Success)
-                {
-                    ImportMessage = "Import reușit!";
-                }
-                else
-                {
-                    ImportMessage = "Import eșuat: " + (result.Errors != null ? string.Join("; ", result.Errors) : result.Message);
-                }
-            }
-            catch (Exception ex)
-            {
-                ImportMessage = $"Import failed: {ex.Message}";
-                ShowImportModal = true;
-            }
-        }
-
-        private async Task ConfirmImportAsync()
-        {
-            if (ImportPreviewData == null || ImportPreviewData.Length == 0)
-            {
-                ImportMessage = "Nu există date de importat!";
-                return;
-            }
-            var result = await ImportService.ConfirmESPDataAsync(ImportPreviewData);
-            if (result.Success)
-            {
-                ImportMessage = "Datele au fost adăugate în baza de date!";
-                ShowImportModal = false;
-                await LoadDataAsync();
-            }
-            else
-            {
-                ImportMessage = "Eroare la salvare: " + (result.Errors != null ? string.Join("; ", result.Errors) : result.Message);
-            }
-        }
-
-        private void CloseImportModal()
-        {
-            ShowImportModal = false;
-        }
 	}
 }

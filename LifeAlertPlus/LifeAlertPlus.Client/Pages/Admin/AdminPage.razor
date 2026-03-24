@@ -9,10 +9,24 @@
 			<h1>Admin Center</h1>
 			<p class="admin-subtitle">Show all users and monitored persons</p>
 		</div>
-		<span class="tag chip-muted">Date demo</span>
+		<span class="tag chip-muted">Live data</span>
 	</div>
 
-	<div class="stats-grid admin-stats">
+	@if (IsLoading)
+	{
+		<div class="loading-message">Loading data...</div>
+	}
+	else if (!string.IsNullOrEmpty(ErrorMessage))
+	{
+		<div class="error-message">@ErrorMessage</div>
+	}
+	else if (!AdminUsers.Any())
+	{
+		<div class="empty-message">No users or monitored persons found.</div>
+	}
+	else
+	{
+		<div class="stats-grid admin-stats">
 		<div class="stat-card">
 			<div class="stat-icon users">👥</div>
 			<div class="stat-info">
@@ -55,20 +69,20 @@
 		<div class="users-grid">
 			@foreach (var user in AdminUsers)
 			{
-				<div class="user-card @(IsUserActive(user.User) ? "active" : "inactive")">
+				<div class="user-card @(IsUserActive(user) ? "active" : "inactive")">
 					<div class="user-card-top">
-						<div class="user-avatar">@GetInitials(FullName(user.User))</div>
+						<div class="user-avatar">@GetInitials(FullName(user))</div>
 						<div class="user-main">
-							<h3>@FullName(user.User)</h3>
-							<p>@user.User.Email</p>
-							<div class="role-chip">@UserRoleLabel(user.User)</div>
+							<h3>@FullName(user)</h3>
+							<p>@user.Email</p>
+							<div class="role-chip">@UserRoleLabel(user)</div>
 						</div>
-						<span class="status-pill @(IsUserActive(user.User) ? "ok" : "muted")">@(IsUserActive(user.User) ? "Active" : "Inactive")</span>
+						<span class="status-pill @(IsUserActive(user) ? "ok" : "muted")">@(IsUserActive(user) ? "Active" : "Inactive")</span>
 					</div>
 
 					<div class="user-meta">
 						<span>Monitored: @user.MonitoredPeople.Count</span>
-						<span>Created: @FormatDate(user.User.CreatedAt)</span>
+						<span>Created: @FormatDate(user.CreatedAt)</span>
 					</div>
 
 					<div class="monitored-list">
@@ -77,7 +91,7 @@
 							<div class="monitored-chip @GetStatusClass(person.IsActive)">
 								<div class="chip-row">
 									<span class="chip-name">@FullName(person)</span>
-									<span class="chip-age">@GetAge(person) years</span>
+									<span class="chip-age">N/A</span>
 								</div>
 								<div class="chip-row">
 									<span class="chip-device">@person.DeviceSerialNumber</span>
@@ -140,4 +154,5 @@
 			</table>
 		</div>
 	</div>
+	}
 </div>
