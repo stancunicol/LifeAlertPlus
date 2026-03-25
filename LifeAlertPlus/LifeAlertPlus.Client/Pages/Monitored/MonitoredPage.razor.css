@@ -57,15 +57,28 @@
     padding: 1.5rem;
     margin-bottom: 2rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    display: flex;
+    gap: 3rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
 }
 
-.filter-group label {
-    font-family: "Jua", sans-serif;
-    font-size: 1rem;
-    color: #333;
-    margin-bottom: 0.8rem;
-    display: block;
+.filter-group {
+    flex: 1;
+    min-width: 300px;
 }
+
+    .filter-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .filter-group label {
+        font-family: "Jua", sans-serif;
+        font-size: 1rem;
+        color: #333;
+        margin-bottom: 0.8rem;
+        display: block;
+    }
 
 .filter-buttons {
     display: flex;
@@ -127,6 +140,28 @@
             border-color: #28a745;
         }
 
+    .filter-btn.online {
+        border-color: #d4f4dd;
+    }
+
+        .filter-btn.online:hover,
+        .filter-btn.online.active {
+            background: linear-gradient(135deg, #d4f4dd 0%, #b8e6c3 100%);
+            border-color: #28a745;
+            color: #1e7e34;
+        }
+
+    .filter-btn.offline {
+        border-color: #e0e0e0;
+    }
+
+        .filter-btn.offline:hover,
+        .filter-btn.offline.active {
+            background: linear-gradient(135deg, #ececec 0%, #dddddd 100%);
+            border-color: #6c757d;
+            color: #495057;
+        }
+
 .people-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -139,11 +174,12 @@
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transition: all 0.3s ease;
+    cursor: pointer;
 }
 
     .person-card-detailed:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        transform: translateY(-8px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
     }
 
 .card-header-colored {
@@ -205,6 +241,7 @@
     font-size: 1rem;
     color: #333;
     margin: 0;
+    line-height: 1.4;
 }
 
 .status-row {
@@ -329,45 +366,6 @@
     color: #000;
     font-weight: 500;
 }
-
-.card-actions {
-    display: flex;
-    gap: 0.8rem;
-}
-
-.action-btn {
-    flex: 1;
-    padding: 0.7rem;
-    border-radius: 25px;
-    font-family: "Jua", sans-serif;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
-}
-
-    .action-btn.primary {
-        background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-        color: #000;
-        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.3);
-    }
-
-        .action-btn.primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(232, 165, 200, 0.4);
-        }
-
-    .action-btn.secondary {
-        background: white;
-        color: #000;
-        border: 2px solid #E8A5C8;
-    }
-
-        .action-btn.secondary:hover {
-            background: rgba(232, 165, 200, 0.1);
-            transform: translateY(-2px);
-        }
 
 .empty-state {
     text-align: center;
@@ -578,10 +576,6 @@
 
     .vitals-grid {
         grid-template-columns: 1fr;
-    }
-
-    .card-actions {
-        flex-direction: column;
     }
 
     .filter-buttons {

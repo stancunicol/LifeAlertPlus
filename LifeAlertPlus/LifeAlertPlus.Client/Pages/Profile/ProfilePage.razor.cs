@@ -4,6 +4,7 @@ using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
 using LifeAlertPlus.Client.Services;
 using Microsoft.AspNetCore.Components.Forms;
+using System.Globalization;
 
 namespace LifeAlertPlus.Client.Pages.Profile
 {
@@ -24,14 +25,19 @@ namespace LifeAlertPlus.Client.Pages.Profile
         [Inject]
         private TokenParserService TokenParser { get; set; } = null!;
 
+        [Inject]
+        private UserMonitoredService UserMonitoredService { get; set; } = null!;
+
+        [Inject]
+        private MonitoredService MonitoredService { get; set; } = null!;
+
         private UserProfileDTO CurrentUser { get; set; } = new UserProfileDTO();
 
         private UserUpdateRequestDTO EditUser { get; set; } = new UserUpdateRequestDTO();
         private bool IsEditingPersonal { get; set; } = false;
 
-        private int MonitoredCount { get; set; } = 8;
-        private int AlertsCount { get; set; } = 4;
-        private int DaysActive { get; set; }
+        private int MonitoredCount { get; set; } = 0;
+        private int AlertsCount { get; set; } = 0;
 
         private NotificationPreferences Preferences { get; set; } = new NotificationPreferences
         {
@@ -93,7 +99,49 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
             }
 
-            DaysActive = (DateTime.UtcNow - CurrentUser.CreatedAt).Days;
+            // Load monitored people count
+            await LoadMonitoredDataAsync();
+        }
+
+        private async Task LoadMonitoredDataAsync()
+        {
+            try
+            {
+                // Get monitored people count
+                var monitoredPeople = await UserMonitoredService.GetMonitoredPeopleAsync(CurrentUser.Id);
+                MonitoredCount = monitoredPeople.Count;
+
+                // Count alerts (people with critical status)
+                AlertsCount = 0;
+                foreach (var person in monitoredPeople)
+                {
+                    try
+                    {
+                        var espData = await MonitoredService.GetEspDataAsync(person.DeviceSerialNumber);
+                        if (espData?.IsAvailable == true && espData.Max30100 != null && espData.Max30100.Count >= 2)
+                        {
+                            var pulse = espData.Max30100.ElementAtOrDefault(0);
+                            var spo2 = espData.Max30100.ElementAtOrDefault(1);
+
+                            // Critical conditions
+                            if (pulse > 100 || pulse < 50 || spo2 < 90)
+                            {
+                                AlertsCount++;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Skip if ESP data is unavailable
+                    }
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading monitored data: {ex.Message}");
+            }
         }
 
         private async Task LoadCurrentUserAsync()
@@ -222,7 +270,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
             CloseChangePasswordModal();
             ShowPasswordChangeSuccess = true;
-            StateHasChanged();
+            
+            // Refresh the page to update the LastChangedPasswordAt date
+            Navigation.NavigateTo("/profile", forceLoad: true);
         }
 
         private void OpenChangeEmailModal()

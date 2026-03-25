@@ -34,5 +34,15 @@ namespace LifeAlertPlus.Infrastructure.Repositories
             return await _dbContext.Measurements
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
+
+        public async Task<int> GetTodayMeasurementsCountAsync()
+        {
+            var today = DateTime.UtcNow.Date;
+            var tomorrow = today.AddDays(1);
+            
+            return await _dbContext.Measurements
+                .Where(m => m.CreatedAt >= today && m.CreatedAt < tomorrow)
+                .CountAsync();
+        }
     }
 }

@@ -21,7 +21,7 @@ namespace LifeAlertPlus.Client.Services
 
         public async Task<IEnumerable<MeasurementResponseDTO>> GetMeasurementsByMonitoredIdAsync(Guid idMonitored, int pageNumber, int pageSize)
         {
-            var response = await _httpClient.GetAsync($"api/measurements/monitored/{idMonitored}?pageNumber={pageNumber}&pageSize={pageSize}");
+            var response = await _httpClient.GetAsync($"api/measurement/monitored/{idMonitored}?pageNumber={pageNumber}&pageSize={pageSize}");
             if (response.IsSuccessStatusCode)
             {
                 var measurements = await response.Content.ReadFromJsonAsync<IEnumerable<MeasurementResponseDTO>>();
@@ -32,7 +32,7 @@ namespace LifeAlertPlus.Client.Services
 
         public async Task<MeasurementResponseDTO?> GetMeasurementByIdAsync(Guid id)
         {
-            var response = await _httpClient.GetAsync($"api/measurements/{id}");
+            var response = await _httpClient.GetAsync($"api/measurement/{id}");
             if (response.IsSuccessStatusCode)
             {
                 var measurement = await response.Content.ReadFromJsonAsync<MeasurementResponseDTO>();
@@ -40,5 +40,28 @@ namespace LifeAlertPlus.Client.Services
             }
             return null;
         }
+
+        public async Task<int> GetTodayMeasurementsCountAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/measurement/today/count");
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<TodayMeasurementsCountResponse>();
+                    return result?.Count ?? 0;
+                }
+                return 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+    }
+
+    public class TodayMeasurementsCountResponse
+    {
+        public int Count { get; set; }
     }
 }

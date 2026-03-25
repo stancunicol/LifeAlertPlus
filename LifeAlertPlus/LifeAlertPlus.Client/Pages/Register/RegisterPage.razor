@@ -68,7 +68,7 @@
             </div>
         </div>
 
-        <button class="login-button" @onclick="OnRegister">Register</button>
+        <button class="login-button" @onclick="OnRegister" disabled="@IsLoading">@(IsLoading ? "Register..." : "Register")</button>
 
         @if (!string.IsNullOrEmpty(SuccessMessage))
         {

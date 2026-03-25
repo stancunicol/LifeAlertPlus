@@ -23,6 +23,7 @@
         <div class="profile-info">
             <h1>@CurrentUser.FirstName @CurrentUser.LastName</h1>
             <p class="profile-email">@CurrentUser.Email</p>
+            <p class="profile-member-since">Member since @CurrentUser.CreatedAt.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</p>
             <div class="profile-stats-mini">
                 <div class="stat-mini">
                     <span class="stat-mini-value">@MonitoredCount</span>
@@ -31,10 +32,6 @@
                 <div class="stat-mini">
                     <span class="stat-mini-value">@AlertsCount</span>
                     <span class="stat-mini-label">Active Alerts</span>
-                </div>
-                <div class="stat-mini">
-                    <span class="stat-mini-value">@DaysActive</span>
-                    <span class="stat-mini-label">Active Days</span>
                 </div>
             </div>
         </div>
@@ -92,7 +89,7 @@
                     <div class="security-item">
                         <div class="security-info">
                             <h3>Change Password</h3>
-                            <p>Last changed: @(CurrentUser.LastChangedPasswordAt.HasValue ? CurrentUser.LastChangedPasswordAt.Value.ToString("dd MMMM yyyy") : "Never")</p>
+                            <p>Last changed: @(CurrentUser.LastChangedPasswordAt.HasValue ? CurrentUser.LastChangedPasswordAt.Value.ToString("MMMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "Never")</p>
                         </div>
                         <button class="btn-security" @onclick="OpenChangePasswordModal">Change Password</button>
                     </div>

@@ -160,6 +160,18 @@
         transform: translateY(0);
     }
 
+    .login-button:disabled {
+        background: linear-gradient(135deg, #F5D4E8 0%, #ECC4DC 100%);
+        cursor: not-allowed;
+        opacity: 0.8;
+        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.2);
+    }
+
+    .login-button:disabled:hover {
+        transform: none;
+        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.2);
+    }
+
 .google-login {
     background: #fff;
     color: #1f1f1f;
@@ -181,6 +193,20 @@
     .google-login:focus-visible {
         outline: 3px solid rgba(66, 133, 244, 0.35);
         outline-offset: 2px;
+    }
+
+    .google-login:disabled {
+        background: #f5f5f5;
+        color: #999;
+        border-color: #e0e0e0;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    .google-login:disabled:hover {
+        transform: none;
+        border-color: #e0e0e0;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
     }
 
 .error-message {

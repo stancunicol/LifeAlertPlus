@@ -7,5 +7,6 @@ namespace LifeAlertPlus.Domain.IRepositories
         Task AddMeasurementAsync(Measurement measurement);
         Task<IEnumerable<Measurement>> GetMeasurementsByMonitoredIdAsync(Guid idMonitored, int pageNumber, int pageSize);
         Task<Measurement?> GetMeasurementByIdAsync(Guid id);
+        Task<int> GetTodayMeasurementsCountAsync();
     }
 }

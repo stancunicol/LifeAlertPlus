@@ -31,6 +31,7 @@ namespace LifeAlertPlus.Client.Pages.Login
         private string ForgotPasswordEmail { get; set; } = string.Empty;
         private string ForgotPasswordMessage { get; set; } = string.Empty;
         private bool IsForgotPasswordSuccess { get; set; } = false;
+        private bool IsLoading { get; set; } = false;
 
         protected override async Task OnInitializedAsync()
         {
@@ -53,40 +54,50 @@ namespace LifeAlertPlus.Client.Pages.Login
 
         private async Task OnLogin()
         {
+            if (IsLoading) return;
+            
+            IsLoading = true;
             ErrorMessage = string.Empty;
 
-            var request = new Shared.DTOs.Requests.User.UserLoginRequestDTO
+            try
             {
-                Email = Email,
-                Password = Password
-            };
-
-            var response = await AuthenticationService.LoginAsync(request);
-            
-            if(response != null)
-            {
-                if(response.Success)
+                var request = new Shared.DTOs.Requests.User.UserLoginRequestDTO
                 {
-                    if(response.IsAdmin)
+                    Email = Email,
+                    Password = Password
+                };
+
+                var response = await AuthenticationService.LoginAsync(request);
+                
+                if(response != null)
+                {
+                    if(response.Success)
                     {
+                        if(response.IsAdmin)
+                        {
+                            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
+							
+                            Navigation.NavigateTo("/admin-dashboard");
+                            return;
+                        }
+						
                         await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
 						
-                        Navigation.NavigateTo("/admin-dashboard");
-                        return;
+                        Navigation.NavigateTo("/dashboard");
                     }
-					
-                    await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
-					
-                    Navigation.NavigateTo("/dashboard");
+                    else
+                    {
+                        ErrorMessage = response.Message ?? "Login failed.";
+                    }
                 }
                 else
                 {
-                    ErrorMessage = response.Message ?? "Login failed.";
+                    ErrorMessage = "An error occurred during login.";
                 }
             }
-            else
+            finally
             {
-                ErrorMessage = "An error occurred during login.";
+                IsLoading = false;
             }
         }
 

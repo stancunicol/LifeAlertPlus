@@ -9,5 +9,6 @@ namespace LifeAlertPlus.Shared.DTOs.Responses.Measurement
         public double Pulse { get; set; }
         public double Temperature { get; set; }
         public string Coordinates { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
     }
 }

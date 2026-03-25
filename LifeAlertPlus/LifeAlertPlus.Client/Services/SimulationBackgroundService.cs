@@ -17,7 +17,7 @@ namespace LifeAlertPlus.Client.Services
 			Action<bool>? onResult,
 			TimeSpan? interval = null)
 		{
-			var delay = interval ?? TimeSpan.FromMinutes(1);
+			var delay = interval ?? TimeSpan.FromSeconds(30);
 			var cts = new CancellationTokenSource();
 
 			var runningTask = Task.Run(async () =>

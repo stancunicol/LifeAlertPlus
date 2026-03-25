@@ -69,5 +69,12 @@ namespace LifeAlertPlus.API.Controllers
                 return NotFound(new { Message = "Measurement not found." });
             return Ok(measurement);
         }
+
+        [HttpGet("today/count")]
+        public async Task<IActionResult> GetTodayMeasurementsCount()
+        {
+            var count = await _measurementService.GetTodayMeasurementsCountAsync();
+            return Ok(new { Count = count });
+        }
     }
 }

@@ -62,50 +62,61 @@
             <div class="monitored-grid">
                 @foreach (var person in MonitoredSamples)
                 {
-                    <div class="person-card-simple @GetCardClass(person.Status, person.Online)">
+                    <div class="person-card-detailed">
                         <div class="card-header-colored @GetCardClass(person.Status, person.Online)">
-                            <h3 class="person-name">@person.Name</h3>
-                            <p class="person-age-text">@person.Age years</p>
-                            <div class="status-row">
-                                <span class="status-dot"></span>
-                                <span class="status-text">@GetStatusText(person.Status, person.Online)</span>
+                            <div class="header-top">
+                                <div class="person-avatar-big">@GetInitials(person.Name)</div>
+                                <div class="person-basic-info">
+                                    <h3 class="person-name-big">@person.Name</h3>
+                                    <div class="status-row">
+                                        <span class="status-dot"></span>
+                                        <span class="status-text">@GetStatusText(person.Status, person.Online)</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="card-body-white">
-                            <div class="vitals-inline">
-                                <span class="vital-inline">❤️ @person.HeartRate bpm</span>
-                                @if (!string.IsNullOrEmpty(person.BloodPressure) && person.BloodPressure != "N/A")
-                                {
-                                    <span class="vital-inline">🩸 @person.BloodPressure</span>
-                                }
-                                <span class="vital-inline">🌡️ @person.Temperature°C</span>
+                            <div class="vitals-grid">
+                                <div class="vital-box">
+                                    <span class="vital-icon-large">❤️</span>
+                                    <div class="vital-info">
+                                        <span class="vital-value-large">@(person.HeartRate > 0 ? person.HeartRate.ToString() : "N/A")</span>
+                                        <span class="vital-label-large">Pulse (bpm)</span>
+                                    </div>
+                                </div>
+                                <div class="vital-box">
+                                    <span class="vital-icon-large">🩸</span>
+                                    <div class="vital-info">
+                                        <span class="vital-value-large">@person.SpO2</span>
+                                        <span class="vital-label-large">SpO₂ (%)</span>
+                                    </div>
+                                </div>
+                                <div class="vital-box">
+                                    <span class="vital-icon-large">🌡️</span>
+                                    <div class="vital-info">
+                                        <span class="vital-value-large">@person.Temperature</span>
+                                        <span class="vital-label-large">Temperature (°C)</span>
+                                    </div>
+                                </div>
                             </div>
-                            <p class="last-update"><span class="last-update-icon">🕒</span>@person.LastUpdate</p>
+                            <div class="additional-info">
+                                <div class="info-item">
+                                    <span class="info-label">📍 GPS:</span>
+                                    <span class="info-value">@person.GPS</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">🧭 Fall detection:</span>
+                                    <span class="info-value">@person.FallDetection</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">⏰ Last Update:</span>
+                                    <span class="info-value">@person.LastUpdateFull</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 }
             </div>
         </div>
-
-        <!-- <div class="section alerts-section">
-            <div class="section-header">
-                <h2>Recent Alerts</h2>
-                <a href="/notifications" class="view-all-link">View All →</a>
-            </div>
-            
-            <div class="alerts-list">
-                @foreach (var alert in RecentAlerts)
-                {
-                    <div class="alert-item @alert.Type.ToLower()">
-                        <div class="alert-icon">@GetAlertIcon(alert.Type)</div>
-                        <div class="alert-content">
-                            <h4>@alert.Title</h4>
-                            <p>@alert.Description</p>
-                            <span class="alert-time">@alert.Time</span>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div> -->
     </div>
 </div>

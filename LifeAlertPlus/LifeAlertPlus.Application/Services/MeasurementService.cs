@@ -35,6 +35,7 @@ namespace LifeAlertPlus.Application.Services
                 Pulse = m.Pulse,
                 Temperature = m.Temperature,
                 Coordinates = m.Coordinates,
+                CreatedAt = m.CreatedAt
             });
         }
 
@@ -52,8 +53,14 @@ namespace LifeAlertPlus.Application.Services
                 IdMonitored = measurement.IdMonitored,
                 Pulse = measurement.Pulse,
                 Temperature = measurement.Temperature,
-                Coordinates = measurement.Coordinates
+                Coordinates = measurement.Coordinates,
+                CreatedAt = measurement.CreatedAt
             };
+        }
+
+        public async Task<int> GetTodayMeasurementsCountAsync()
+        {
+            return await _measurementRepository.GetTodayMeasurementsCountAsync();
         }
     }
 }

@@ -24,6 +24,7 @@ namespace LifeAlertPlus.Client.Pages.Register
         private string ErrorMessage { get; set; } = string.Empty;
         private string SuccessMessage { get; set; } = string.Empty;
         private bool ShowModal { get; set; } = false;
+        private bool IsLoading { get; set; } = false;
 
         protected override async Task OnInitializedAsync()
         {
@@ -46,47 +47,57 @@ namespace LifeAlertPlus.Client.Pages.Register
 
         private async Task OnRegister()
         {
+            if (IsLoading) return;
+            
+            IsLoading = true;
             ErrorMessage = string.Empty;
             SuccessMessage = string.Empty;
 
-            if(string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(LastName) ||
-               string.IsNullOrWhiteSpace(Email) ||
-               string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(ConfirmPassword))
+            try
             {
-                ErrorMessage = "All fields are required.";
-                return;
-            }
-            
-            var passwordValidation = ValidatePassword(Password);
-            if (!passwordValidation.IsValid)
-            {
-                ErrorMessage = passwordValidation.ErrorMessage;
-                return;
-            }
+                if(string.IsNullOrWhiteSpace(FirstName) || string.IsNullOrWhiteSpace(LastName) ||
+                   string.IsNullOrWhiteSpace(Email) ||
+                   string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(ConfirmPassword))
+                {
+                    ErrorMessage = "All fields are required.";
+                    return;
+                }
+                
+                var passwordValidation = ValidatePassword(Password);
+                if (!passwordValidation.IsValid)
+                {
+                    ErrorMessage = passwordValidation.ErrorMessage;
+                    return;
+                }
 
-            if (Password != ConfirmPassword)
-            {
-                ErrorMessage = "Passwords do not match.";
-                return;
+                if (Password != ConfirmPassword)
+                {
+                    ErrorMessage = "Passwords do not match.";
+                    return;
+                }
+
+                var request = new Shared.DTOs.Requests.User.UserRegisterRequestDTO
+                {
+                    FirstName = FirstName,
+                    LastName = LastName,
+                    Email = Email,
+                    Password = Password
+                };
+
+                var response = await AuthenticationService.RegisterAsync(request);
+
+                if (response != null && response.Success)
+                {
+                    ShowModal = true;
+                }
+                else
+                {
+                    ErrorMessage = response?.Message ?? "Registration failed. Please try again.";
+                }
             }
-
-            var request = new Shared.DTOs.Requests.User.UserRegisterRequestDTO
+            finally
             {
-                FirstName = FirstName,
-                LastName = LastName,
-                Email = Email,
-                Password = Password
-            };
-
-            var response = await AuthenticationService.RegisterAsync(request);
-
-            if (response != null && response.Success)
-            {
-                ShowModal = true;
-            }
-            else
-            {
-                ErrorMessage = response?.Message ?? "Registration failed. Please try again.";
+                IsLoading = false;
             }
         }
 

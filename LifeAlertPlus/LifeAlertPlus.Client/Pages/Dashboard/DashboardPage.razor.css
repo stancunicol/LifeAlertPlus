@@ -156,11 +156,11 @@
 
 .monitored-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
 }
 
-.person-card-simple {
+.person-card-detailed {
     background: white;
     border-radius: 20px;
     overflow: hidden;
@@ -168,23 +168,14 @@
     transition: all 0.3s ease;
 }
 
-    .person-card-simple.offline {
-        background: #f7f7f7;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
-
-    .person-card-simple:hover {
+    .person-card-detailed:hover {
         transform: translateY(-6px);
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     }
 
 .card-header-colored {
-    padding: 2rem 1.5rem;
+    padding: 1.5rem;
 }
-
-    .card-header-colored.offline {
-        background: linear-gradient(135deg, #eeeeee 0%, #d9d9d9 100%);
-    }
 
     .card-header-colored.ok {
         background: linear-gradient(135deg, #d4f4dd 0%, #b8e6c3 100%);
@@ -198,19 +189,54 @@
         background: linear-gradient(135deg, #ffd4cc 0%, #ffb3a6 100%);
     }
 
-.person-name {
+    .card-header-colored.offline {
+        background: linear-gradient(135deg, #ececec 0%, #dddddd 100%);
+    }
+
+.header-top {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.person-avatar-big {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: "Jua", sans-serif;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #D88BB7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.person-basic-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.person-name-big {
+    font-family: "Jua", sans-serif;
+    font-size: 1.4rem;
     font-weight: 600;
     color: #000;
     margin: 0 0 0.3rem 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.person-age-text {
+.person-details {
     font-family: "Jua", sans-serif;
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: #333;
-    margin: 0 0 1rem 0;
+    margin: 0;
+    line-height: 1.4;
 }
 
 .status-row {
@@ -239,7 +265,7 @@
 }
 
 .card-header-colored.offline .status-dot {
-    background: #999;
+    background: #6c757d;
 }
 
 .status-text {
@@ -261,7 +287,7 @@
 }
 
 .card-header-colored.offline .status-text {
-    color: #555;
+    color: #495057;
 }
 
 .card-body-white {
@@ -269,32 +295,73 @@
     background: white;
 }
 
-.vitals-inline {
-    display: flex;
-    align-items: center;
+.vitals-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
-.vital-inline {
+.vital-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.vital-icon-large {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.vital-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.vital-value-large {
     font-family: "Jua", sans-serif;
-    font-size: 1.1rem;
+    font-size: 1.3rem;
+    font-weight: 600;
     color: #000;
+    line-height: 1.2;
+}
+
+.vital-label-large {
+    font-family: "Jua", sans-serif;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.2rem;
+}
+
+.additional-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: "Jua", sans-serif;
+    font-size: 0.95rem;
+}
+
+.info-label {
+    color: #666;
     display: flex;
     align-items: center;
     gap: 0.3rem;
 }
 
-.last-update {
-    font-family: "Jua", sans-serif;
-    font-size: 0.95rem;
-    color: #666;
-    margin: 0;
-}
-
-.last-update-icon {
-    margin-right: 0.4rem;
+.info-value {
+    color: #000;
+    font-weight: 500;
+    text-align: right;
 }
 
 .status-badge {

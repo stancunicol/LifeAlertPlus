@@ -26,10 +26,14 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     [Inject]
     private TokenParserService TokenParser { get; set; } = default!;
 
+    [Inject]
+    private MeasurementService MeasurementService { get; set; } = default!;
+
     private string UserFullName = string.Empty;
     private string ProfilePictureUrl = string.Empty;
     private MonitorCreateRequestDTO newPerson = new();
     private string FilterStatus = "All";
+    private string FilterOnlineStatus = "All";
     private bool ShowAddPersonModal;
     private string ErrorMessage = string.Empty;
 
@@ -40,10 +44,38 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private bool _isLoadingMonitored = true;
     private string _dataError = string.Empty;
     private CancellationTokenSource? _pollingCts;
-    private IEnumerable<MonitoredCard> AllPeople = new List<MonitoredCard>();
+    
+    private IEnumerable<MonitoredCard> FilteredCards
+    {
+        get
+        {
+            var filtered = _monitoredCards.AsEnumerable();
+
+            // Apply status filter
+            if (FilterStatus != "All")
+            {
+                filtered = filtered.Where(c => GetCardStatus(c) == FilterStatus);
+            }
+
+            // Apply online/offline filter
+            if (FilterOnlineStatus == "Online")
+            {
+                filtered = filtered.Where(c => c.LastData?.IsAvailable == true);
+            }
+            else if (FilterOnlineStatus == "Offline")
+            {
+                filtered = filtered.Where(c => c.LastData?.IsAvailable != true);
+            }
+
+            return filtered;
+        }
+    }
+    
     private int CriticalCount => _monitoredCards.Count(c => GetCardStatus(c) == "Critical");
     private int WarningCount => _monitoredCards.Count(c => GetCardStatus(c) == "Warning");
     private int StableCount => _monitoredCards.Count(c => GetCardStatus(c) == "OK");
+    private int OnlineCount => _monitoredCards.Count(c => c.LastData?.IsAvailable == true);
+    private int OfflineCount => _monitoredCards.Count(c => c.LastData?.IsAvailable != true);
 
     protected override async Task OnInitializedAsync()
     {
@@ -130,7 +162,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(10), token);
+                await Task.Delay(TimeSpan.FromSeconds(30), token);
             }
             catch (OperationCanceledException)
             {
@@ -154,6 +186,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             token.ThrowIfCancellationRequested();
 
             ESPDataResponseDTO? latestData = null;
+            DateTime lastMeasurementTime = DateTime.MinValue;
+            
             try
             {
                 latestData = await MonitoredService.GetEspDataAsync(person.DeviceSerialNumber, token);
@@ -167,11 +201,26 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
                 // Ignore per-device failures to keep other updates flowing.
             }
 
+            // Get the last measurement for this person
+            try
+            {
+                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(person.Id, 1, 1);
+                var lastMeasurement = measurements?.FirstOrDefault();
+                if (lastMeasurement != null)
+                {
+                    lastMeasurementTime = lastMeasurement.CreatedAt;
+                }
+            }
+            catch
+            {
+                // If measurement fetch fails, continue with MinValue
+            }
+
             cards.Add(new MonitoredCard
             {
                 Person = person,
                 LastData = latestData,
-                LastUpdatedUtc = DateTime.UtcNow
+                LastUpdatedUtc = lastMeasurementTime
             });
         }
 
@@ -279,7 +328,10 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     private string FormatLastUpdate(MonitoredCard card)
     {
-        return card.LastUpdatedUtc.ToLocalTime().ToString("g");
+        if (card.LastUpdatedUtc == DateTime.MinValue)
+            return "No data";
+        
+        return card.LastUpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
     }
 
     private string FormatEspTimestamp(long value)
@@ -323,8 +375,11 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     private string GetTemperature(ESPDataResponseDTO? data)
     {
-        const double temp = 36.8;
-        return temp.ToString("F1");
+        if (data?.Temperature != null)
+        {
+            return data.Temperature.Value.ToString("F1");
+        }
+        return "N/A";
     }
 
     private string FormatGpsStatus(string? raw)

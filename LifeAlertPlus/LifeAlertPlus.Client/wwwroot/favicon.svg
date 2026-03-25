@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <clipPath id="roundedCorners">
+      <rect x="0" y="0" width="192" height="192" rx="38" ry="38"/>
+    </clipPath>
+  </defs>
+  
+  <!-- Background with rounded corners -->
+  <rect x="0" y="0" width="192" height="192" rx="38" ry="38" fill="#FFE5F5"/>
+  
+  <!-- Logo image with rounded corners -->
+  <image href="logo.png" x="0" y="0" width="192" height="192" clip-path="url(#roundedCorners)"/>
+</svg>

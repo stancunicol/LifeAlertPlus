@@ -80,6 +80,14 @@
     opacity: 0.95;
 }
 
+.profile-member-since {
+    font-size: 15px;
+    margin: 5px 0;
+    opacity: 0.85;
+    font-style: italic;
+    color: #666;
+}
+
 .profile-role {
     font-size: 16px;
     opacity: 0.9;

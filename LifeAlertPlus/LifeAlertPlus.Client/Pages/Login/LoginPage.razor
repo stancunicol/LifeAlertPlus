@@ -34,11 +34,11 @@
         </div>
 
 
-        <button class="login-button" @onclick="OnLogin">Login</button>
+        <button class="login-button" @onclick="OnLogin" disabled="@IsLoading">@(IsLoading ? "Login..." : "Login")</button>
 
         <div style="text-align:center; margin: 1px 0; color: #888; font-weight: bold;">or</div>
 
-        <button class="login-button google-login" @onclick="LoginWithGoogle">
+        <button class="login-button google-login" @onclick="LoginWithGoogle" disabled="@IsLoading">
             <img src="/google-logo.png" alt="Google" style="height:20px; margin-right:8px; vertical-align:middle;" />
             Login with Google
         </button>
