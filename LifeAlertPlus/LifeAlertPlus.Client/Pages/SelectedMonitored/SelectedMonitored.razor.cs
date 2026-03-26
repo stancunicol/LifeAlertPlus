@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
 
 namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 {
-    public partial class SelectedMonitored : ComponentBase, IDisposable
+    public partial class SelectedMonitored : ComponentBase, IAsyncDisposable
     {
         [Parameter]
         public Guid PersonId { get; set; }
@@ -21,6 +22,17 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         [Inject]
         private MeasurementService MeasurementService { get; set; } = default!;
 
+        [Inject]
+        private UserService UserService { get; set; } = default!;
+
+        [Inject]
+        private IJSRuntime JSRuntime { get; set; } = default!;
+
+        private ElementReference _hrSvgRef;
+        private ElementReference _tempSvgRef;
+        private bool _tooltipsInitialized;
+
+        private DayOfWeek _firstDayOfWeek = DayOfWeek.Monday;
         private PersonDetail? Person { get; set; }
         private bool IsLoading { get; set; } = true;
         private string? LoadError { get; set; }
@@ -29,11 +41,13 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private List<ChartDataPoint> TemperatureHistory { get; set; } = new();
         private List<(double X, double Y)> HeartRatePoints { get; set; } = new();
         private List<(double X, double Y)> TemperaturePoints { get; set; } = new();
+        private List<TooltipPoint> HrTooltipData { get; set; } = new();
+        private List<TooltipPoint> TempTooltipData { get; set; } = new();
         private List<Alert> RecentAlerts { get; set; } = new();
         private List<Measurement> RecentMeasurements { get; set; } = new();
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
-        private ChartViewMode CurrentChartView { get; set; } = ChartViewMode.Weekly;
+        private ChartViewMode CurrentChartView { get; set; } = ChartViewMode.Daily;
         private System.Threading.Timer? _refreshTimer;
         private bool _disposed = false;
 
@@ -152,8 +166,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         {
             try
             {
-                // Get measurements from last 7 days
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 1000);
+                int fetchSize = CurrentChartView == ChartViewMode.Weekly ? 10000 : 1000;
+                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, fetchSize);
                 if (measurements == null || !measurements.Any())
                 {
                     LoadEmptyChartData();
@@ -173,6 +187,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
                 HeartRatePoints = ComputePointsWithRange(HeartRateHistory, 40, 120);
                 TemperaturePoints = ComputePointsWithRange(TemperatureHistory, 35, 39);
+                HrTooltipData = ComputeTooltipData(HeartRateHistory, 40, 120);
+                TempTooltipData = ComputeTooltipData(TemperatureHistory, 35, 39);
             }
             catch
             {
@@ -221,9 +237,10 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 XFraction = g.Time.TotalHours / 24.0
             }).ToList();
 
-            // smoothing mic (nu exagerat)
-            var hrSmooth = SmoothValues(HeartRateHistory.Select(x => x.ActualValue).ToList(), 3);
-            var tSmooth  = SmoothValues(TemperatureHistory.Select(x => x.ActualValue).ToList(), 3);
+            // Smoothing — adapt window to data density so curves are readable
+            int window = Math.Max(3, HeartRateHistory.Count / 8);
+            var hrSmooth = SmoothValues(HeartRateHistory.Select(x => x.ActualValue).ToList(), window);
+            var tSmooth  = SmoothValues(TemperatureHistory.Select(x => x.ActualValue).ToList(), window);
 
             for (int i = 0; i < HeartRateHistory.Count; i++)
                 HeartRateHistory[i].ActualValue = hrSmooth[i];
@@ -261,16 +278,19 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private void LoadWeeklyChartData(List<MeasurementResponseDTO> measurements)
         {
             var today = DateTime.Now.Date;
-            // 7 fixed day slots: 6 days ago → today
-            var days = Enumerable.Range(0, 7).Select(i => today.AddDays(i - 6)).ToList();
+
+            // Find the start of the current week based on user's preferred first day
+            int diff = ((int)today.DayOfWeek - (int)_firstDayOfWeek + 7) % 7;
+            var weekStart = today.AddDays(-diff);
+            var days = Enumerable.Range(0, 7).Select(i => weekStart.AddDays(i)).ToList();
 
             var hrByDay = measurements
-                .Where(m => m.CreatedAt.ToLocalTime().Date >= days[0])
+                .Where(m => m.CreatedAt.ToLocalTime().Date >= days[0] && m.CreatedAt.ToLocalTime().Date <= days[6])
                 .GroupBy(m => m.CreatedAt.ToLocalTime().Date)
                 .ToDictionary(g => g.Key, g => g.Average(m => (double)m.Pulse));
 
             var tempByDay = measurements
-                .Where(m => m.CreatedAt.ToLocalTime().Date >= days[0])
+                .Where(m => m.CreatedAt.ToLocalTime().Date >= days[0] && m.CreatedAt.ToLocalTime().Date <= days[6])
                 .GroupBy(m => m.CreatedAt.ToLocalTime().Date)
                 .ToDictionary(g => g.Key, g => g.Average(m => m.Temperature));
 
@@ -296,9 +316,14 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             TemperatureHistory = new List<ChartDataPoint>();
             HeartRatePoints = new List<(double X, double Y)>();
             TemperaturePoints = new List<(double X, double Y)>();
+            HrTooltipData = new List<TooltipPoint>();
+            TempTooltipData = new List<TooltipPoint>();
+            _tooltipsInitialized = false;
             StateHasChanged();
             await Task.Delay(50);
             await LoadChartDataAsync();
+            StateHasChanged();
+            await InitTooltipsAsync();
         }
 
         private List<(double X, double Y)> ComputePoints(List<ChartDataPoint> data)
@@ -311,10 +336,10 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         {
             if (data == null || data.Count == 0) return new();
 
-            const double paddingLeft = 70;
+            const double paddingLeft = 90;
             const double paddingRight = 15;
             const double paddingTop = 15;
-            var usableWidth = 800 - paddingLeft - paddingRight;  // 715
+            var usableWidth = 800 - paddingLeft - paddingRight;  // 695
             var usableHeight = 145.0;  // 200 - 15 - 40
 
             double minVal, maxVal;
@@ -347,13 +372,14 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     Y: paddingTop + usableHeight * (1.0 - Math.Clamp((d.ActualValue - minVal) / range, 0.0, 1.0))
                 ))
                 .Where(p => p.HasData)
+                .OrderBy(p => p.X)
                 .Select(p => (X: p.X, Y: p.Y))
                 .ToList();
         }
 
         private List<(string Label, double X)> GetXAxisLabels()
         {
-            const double paddingLeft = 70;
+            const double paddingLeft = 90;
             const double paddingRight = 15;
             var usableWidth = 800 - paddingLeft - paddingRight;
 
@@ -377,31 +403,93 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     .ToList();
             }
         }
-        private string GenerateSmoothPath(List<(double X, double Y)> pts)
+private static string F(double v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+        private string GenerateAreaPath(List<(double X, double Y)> pts, double baseline = 160)
         {
             if (pts == null || pts.Count < 2) return "";
+            var linePath = GenerateSmoothPath(pts);
+            if (string.IsNullOrEmpty(linePath)) return "";
+            return $"{linePath} L {F(pts[pts.Count - 1].X)} {F(baseline)} L {F(pts[0].X)} {F(baseline)} Z";
+        }
 
-            var path = new System.Text.StringBuilder();
-            path.Append($"M {pts[0].X:F2} {pts[0].Y:F2}");
+        /// <summary>
+        /// Monotone cubic Hermite interpolation (Fritsch-Carlson).
+        /// Guarantees no overshooting between data points — curves never loop or twist.
+        /// </summary>
+        private string GenerateSmoothPath(List<(double X, double Y)> pts)
+        {
+            if (pts == null || pts.Count == 0) return "";
+            if (pts.Count == 1) return $"M {F(pts[0].X)} {F(pts[0].Y)}";
 
-            for (int i = 0; i < pts.Count - 1; i++)
+            int n = pts.Count;
+
+            // For exactly 2 points, just draw a line
+            if (n == 2)
+                return $"M {F(pts[0].X)} {F(pts[0].Y)} L {F(pts[1].X)} {F(pts[1].Y)}";
+
+            // 1. Compute segment deltas and slopes
+            var dx = new double[n - 1];
+            var dy = new double[n - 1];
+            var slopes = new double[n - 1];
+            for (int i = 0; i < n - 1; i++)
             {
-                var p0 = i > 0 ? pts[i - 1] : pts[i];
-                var p1 = pts[i];
-                var p2 = pts[i + 1];
-                var p3 = i < pts.Count - 2 ? pts[i + 2] : p2;
+                dx[i] = pts[i + 1].X - pts[i].X;
+                dy[i] = pts[i + 1].Y - pts[i].Y;
+                slopes[i] = dx[i] < 1e-10 ? 0 : dy[i] / dx[i];
+            }
 
-                double cp1x = p1.X + (p2.X - p0.X) / 6;
-                double cp1y = p1.Y + (p2.Y - p0.Y) / 6;
+            // 2. Compute initial tangents
+            var m = new double[n];
+            m[0] = slopes[0];
+            m[n - 1] = slopes[n - 2];
+            for (int i = 1; i < n - 1; i++)
+            {
+                if (slopes[i - 1] * slopes[i] <= 0)
+                    m[i] = 0; // local extremum — flat tangent
+                else
+                    m[i] = (slopes[i - 1] + slopes[i]) / 2.0;
+            }
 
-                double cp2x = p2.X - (p3.X - p1.X) / 6;
-                double cp2y = p2.Y - (p3.Y - p1.Y) / 6;
+            // 3. Fritsch-Carlson monotonicity correction
+            for (int i = 0; i < n - 1; i++)
+            {
+                if (Math.Abs(slopes[i]) < 1e-10)
+                {
+                    m[i] = 0;
+                    m[i + 1] = 0;
+                }
+                else
+                {
+                    double alpha = m[i] / slopes[i];
+                    double beta = m[i + 1] / slopes[i];
+                    double mag = alpha * alpha + beta * beta;
+                    if (mag > 9)
+                    {
+                        double tau = 3.0 / Math.Sqrt(mag);
+                        m[i] = tau * alpha * slopes[i];
+                        m[i + 1] = tau * beta * slopes[i];
+                    }
+                }
+            }
 
-                path.Append($" C {cp1x:F2} {cp1y:F2}, {cp2x:F2} {cp2y:F2}, {p2.X:F2} {p2.Y:F2}");
+            // 4. Build SVG path with cubic bezier segments
+            var path = new System.Text.StringBuilder();
+            path.Append($"M {F(pts[0].X)} {F(pts[0].Y)}");
+
+            for (int i = 0; i < n - 1; i++)
+            {
+                double seg = dx[i] / 3.0;
+                double cp1x = pts[i].X + seg;
+                double cp1y = pts[i].Y + m[i] * seg;
+                double cp2x = pts[i + 1].X - seg;
+                double cp2y = pts[i + 1].Y - m[i + 1] * seg;
+
+                path.Append($" C {F(cp1x)} {F(cp1y)}, {F(cp2x)} {F(cp2y)}, {F(pts[i + 1].X)} {F(pts[i + 1].Y)}");
             }
 
             return path.ToString();
-}
+        }
 
         private void LoadEmptyChartData()
         {
@@ -409,6 +497,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             TemperatureHistory = new List<ChartDataPoint>();
             HeartRatePoints = new List<(double X, double Y)>();
             TemperaturePoints = new List<(double X, double Y)>();
+            HrTooltipData = new List<TooltipPoint>();
+            TempTooltipData = new List<TooltipPoint>();
         }
 
         private async Task LoadRecentAlertsAsync()
@@ -529,6 +619,21 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             };
         }
 
+        private static DayOfWeek ParseFirstDayOfWeek(string? value)
+        {
+            return (value?.ToLowerInvariant()) switch
+            {
+                "monday" => DayOfWeek.Monday,
+                "tuesday" => DayOfWeek.Tuesday,
+                "wednesday" => DayOfWeek.Wednesday,
+                "thursday" => DayOfWeek.Thursday,
+                "friday" => DayOfWeek.Friday,
+                "saturday" => DayOfWeek.Saturday,
+                "sunday" => DayOfWeek.Sunday,
+                _ => DayOfWeek.Monday
+            };
+        }
+
         protected override async Task OnInitializedAsync()
         {
             var claims = await TokenParserService.GetClaimsAsync();
@@ -536,6 +641,12 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             {
                 UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
                 ProfilePictureUrl = claims.ProfilePictureUrl;
+
+                var userProfile = await UserService.GetUserByIdAsync(claims.UserId);
+                if (userProfile != null)
+                {
+                    _firstDayOfWeek = ParseFirstDayOfWeek(userProfile.FirstDayOfTheWeek);
+                }
             }
             else
             {
@@ -560,18 +671,11 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 await InvokeAsync(async () =>
                 {
                     await LoadPersonDataAsync();
-
-                    HeartRateHistory = new List<ChartDataPoint>();
-                    TemperatureHistory = new List<ChartDataPoint>();
-                    HeartRatePoints = new List<(double X, double Y)>();
-                    TemperaturePoints = new List<(double X, double Y)>();
-                    StateHasChanged();
-                    await Task.Delay(50);
-
                     await LoadChartDataAsync();
                     await LoadRecentAlertsAsync();
                     await LoadRecentMeasurementsAsync();
                     StateHasChanged();
+                    await InitTooltipsAsync();
                 });
             }
             catch
@@ -580,10 +684,51 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
-        public void Dispose()
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender || !_tooltipsInitialized)
+            {
+                await InitTooltipsAsync();
+            }
+        }
+
+        private async Task InitTooltipsAsync()
+        {
+            try
+            {
+                var prefix = CurrentChartView == ChartViewMode.Weekly ? "Media: " : "";
+                int hrDecimals = CurrentChartView == ChartViewMode.Weekly ? 1 : 0;
+
+                if (HrTooltipData.Count > 0)
+                {
+                    var hrData = HrTooltipData.Select(p => new { x = p.X, y = p.Y, value = p.Value, label = p.Label }).ToArray();
+                    await JSRuntime.InvokeVoidAsync("chartTooltip.init", _hrSvgRef, "hr", hrData, "#D88BB7", "bpm", hrDecimals, prefix);
+                }
+
+                if (TempTooltipData.Count > 0)
+                {
+                    var tempData = TempTooltipData.Select(p => new { x = p.X, y = p.Y, value = p.Value, label = p.Label }).ToArray();
+                    await JSRuntime.InvokeVoidAsync("chartTooltip.init", _tempSvgRef, "temp", tempData, "#FF9A6C", "°C", 1, prefix);
+                }
+
+                _tooltipsInitialized = HrTooltipData.Count > 0 || TempTooltipData.Count > 0;
+            }
+            catch
+            {
+                // JS interop may fail during prerender
+            }
+        }
+
+        public async ValueTask DisposeAsync()
         {
             _disposed = true;
             _refreshTimer?.Dispose();
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("chartTooltip.dispose", "hr");
+                await JSRuntime.InvokeVoidAsync("chartTooltip.dispose", "temp");
+            }
+            catch { }
         }
 
         private string GetVitalStatus(int value, int min, int max)
@@ -689,6 +834,53 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             public double ActualValue { get; set; }
             public bool HasData { get; set; } = true;
             public double XFraction { get; set; } = -1; // -1 = index-based; 0.0-1.0 = explicit
+        }
+
+        public record TooltipPoint(double X, double Y, double Value, string Label, double HitX, double HitWidth);
+
+        private List<TooltipPoint> ComputeTooltipData(
+            List<ChartDataPoint> data, double fixedMin, double fixedMax)
+        {
+            if (data == null || data.Count == 0) return new();
+
+            const double paddingLeft = 90;
+            const double paddingRight = 15;
+            const double paddingTop = 15;
+            var usableWidth = 800 - paddingLeft - paddingRight;
+            var usableHeight = 145.0;
+
+            double minVal = fixedMin;
+            double maxVal = fixedMax;
+            var range = maxVal - minVal;
+            if (range < 0.001) range = 10;
+
+            int n = data.Count;
+            var points = data
+                .Select((d, i) => new
+                {
+                    d.HasData,
+                    d.ActualValue,
+                    d.Day,
+                    X = paddingLeft + (d.XFraction >= 0
+                        ? d.XFraction * usableWidth
+                        : (n <= 1 ? usableWidth / 2.0 : (double)i / (n - 1) * usableWidth)),
+                    Y = paddingTop + usableHeight * (1.0 - Math.Clamp((d.ActualValue - minVal) / range, 0.0, 1.0))
+                })
+                .Where(p => p.HasData)
+                .OrderBy(p => p.X)
+                .ToList();
+
+            if (points.Count == 0) return new();
+
+            var result = new List<TooltipPoint>();
+            for (int i = 0; i < points.Count; i++)
+            {
+                var p = points[i];
+                double left = i == 0 ? paddingLeft : (points[i - 1].X + p.X) / 2.0;
+                double right = i == points.Count - 1 ? 785 : (p.X + points[i + 1].X) / 2.0;
+                result.Add(new TooltipPoint(p.X, p.Y, p.ActualValue, p.Day, left, right - left));
+            }
+            return result;
         }
 
         public class Alert
