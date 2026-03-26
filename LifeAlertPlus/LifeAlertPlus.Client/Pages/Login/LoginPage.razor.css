@@ -6,8 +6,8 @@
     width: min(900px, 86vw);
     height: min(620px, 82vh);
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: row;
+    align-items: stretch;
     background: linear-gradient(90deg, rgba(255,235,245,1) 0%, rgba(255,235,245,1) 45%, rgba(255,235,245,0.8) 50%, rgba(255,235,245,0.5) 55%, rgba(255,235,245,0.5) 100%);
     box-shadow: 0 18px 40px rgba(0,0,0,0.16);
     border-radius: 50px;
@@ -16,12 +16,9 @@
 }
 
 .login-left {
-    position: absolute;
-    left: 2rem;
-    top: 2rem;
-    bottom: 2rem;
-    transform: none;
+    position: relative;
     width: 46%;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -51,6 +48,7 @@
     text-align: left;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: visible;
     text-overflow: ellipsis;
@@ -65,20 +63,18 @@
     color: rgba(0, 0, 0, 0.5);
     font-family: "Jua", sans-serif;
     margin: 0;
-    transform: none;
     opacity: 0.8;
 }
 
 .login-right {
-    position: absolute;
-    right: 50%;
-    top: 50%;
-    transform: translate(120%, -50%);
     width: 38%;
+    flex-shrink: 0;
+    margin-left: auto;
     display: flex;
     flex-direction: column;
     gap: 1.8rem;
     align-items: center;
+    justify-content: center;
 }
 
 .form-group {
@@ -367,48 +363,107 @@ a.form-link:visited {
     color: green;
 }
 
-@media (max-width: 600px) {
+/* ── Tablet (641px – 860px) ─────────────────────────────────────────────── */
+@media (min-width: 641px) and (max-width: 860px) {
     .login-rect {
-        position: fixed;
         width: 92vw;
         height: auto;
-        padding: 2rem 1rem;
-        flex-direction: column;
-    }
-
-    .login-left {
-        position: relative;
-        width: 100%;
-        left: 0;
-        transform: none;
-        min-height: 0;
-        padding-bottom: 0;
-        margin-bottom: 2rem;
+        min-height: 480px;
+        padding: 2.5rem 2rem;
     }
 
     .login-logo {
-        position: relative;
-        transform: none;
+        font-size: 50px;
     }
 
     .login-description {
-        transform: none;
-        margin-top: 1rem;
+        font-size: 1.9rem;
+    }
+
+    .login-right {
+        gap: 1.4rem;
+    }
+}
+
+/* ── Mobile (≤ 640px): single-column stacked layout ─────────────────────── */
+@media (max-width: 640px) {
+    .login-rect {
+        width: 94vw;
+        height: auto;
+        max-height: 92dvh;
+        overflow-y: auto;
+        padding: 2rem 1.5rem;
+        flex-direction: column;
+        align-items: stretch;
+        border-radius: 28px;
+    }
+
+    .login-left {
+        width: 100%;
+        align-items: center;
+        text-align: center;
+        padding-bottom: 1.5rem;
+        gap: 0.4rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     }
 
     .login-version {
         position: relative;
         left: auto;
         bottom: auto;
-        margin-top: 0.6rem;
-        transform: none;
+        margin-top: 0.2rem;
+    }
+
+    .login-logo {
+        font-size: 44px;
+    }
+
+    .login-description {
+        font-size: 1.45rem;
+        text-align: center;
+        -webkit-line-clamp: unset;
+        line-clamp: unset;
     }
 
     .login-right {
-        position: relative;
         width: 100%;
-        right: 0;
-        transform: none;
+        padding-top: 1.5rem;
+        gap: 1.2rem;
+    }
+
+    .form-input {
+        font-size: 1rem;
+        padding: 0.9rem 1.2rem;
+    }
+
+    .form-input-icon {
+        padding-left: 1.2rem;
+    }
+
+    .form-input-password {
+        padding-right: 1.2rem;
+    }
+
+    .login-button {
+        font-size: 1rem;
+        padding: 0.9rem;
+    }
+
+    .modal-content {
+        padding: 1.5rem 1.2rem;
+        border-radius: 16px;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    .modal-button,
+    .modal-button-secondary {
+        width: 100%;
+        text-align: center;
+        padding: 0.8rem 1rem;
     }
 }
 
