@@ -29,6 +29,7 @@
         public int? MaxHeartRate { get; set; }
         public double? MinTemperature { get; set; }
         public double? MaxTemperature { get; set; }
+        public int? UpdateFrequency { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }

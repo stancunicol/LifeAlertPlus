@@ -66,6 +66,7 @@ namespace LifeAlertPlus.API.Controllers
             user.MaxHeartRate = updatedUser.MaxHeartRate ?? user.MaxHeartRate;
             user.MinTemperature = updatedUser.MinTemperature ?? user.MinTemperature;
             user.MaxTemperature = updatedUser.MaxTemperature ?? user.MaxTemperature;
+            user.UpdateFrequency = updatedUser.UpdateFrequency ?? user.UpdateFrequency;
             user.UpdatedAt = DateTime.UtcNow;
 
             var result = await _userService.UpdateUserAsync(user);
@@ -255,7 +256,7 @@ namespace LifeAlertPlus.API.Controllers
                 Email = user.Email,
                 ProfilePictureUrl = user.ProfilePictureUrl,
                 IsEmailConfirmed = user.IsEmailConfirmed,
-                Provider = user.Provider,
+                Provider = string.IsNullOrEmpty(user.Provider) ? "Local" : user.Provider,
                 FirstDayOfTheWeek = user.FirstDayOfTheWeek,
                 Language = user.Language ?? "en",
                 ThemeColor = user.ThemeColor ?? "pink",
@@ -264,6 +265,7 @@ namespace LifeAlertPlus.API.Controllers
                 MaxHeartRate = user.MaxHeartRate ?? 0,
                 MinTemperature = (float)(user.MinTemperature ?? 0),
                 MaxTemperature = (float)(user.MaxTemperature ?? 0),
+                UpdateFrequency = user.UpdateFrequency ?? 30,
                 LastChangedPasswordAt = user.LastChangedPasswordAt,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -291,7 +293,7 @@ namespace LifeAlertPlus.API.Controllers
                 Email = user.Email,
                 ProfilePictureUrl = user.ProfilePictureUrl,
                 IsEmailConfirmed = user.IsEmailConfirmed,
-                Provider = user.Provider,
+                Provider = string.IsNullOrEmpty(user.Provider) ? "Local" : user.Provider,
                 FirstDayOfTheWeek = user.FirstDayOfTheWeek,
                 Language = user.Language ?? "en",
                 ThemeColor = user.ThemeColor ?? "pink",
@@ -300,6 +302,7 @@ namespace LifeAlertPlus.API.Controllers
                 MaxHeartRate = user.MaxHeartRate ?? 0,
                 MinTemperature = (float)(user.MinTemperature ?? 0),
                 MaxTemperature = (float)(user.MaxTemperature ?? 0),
+                UpdateFrequency = user.UpdateFrequency ?? 30,
                 LastChangedPasswordAt = user.LastChangedPasswordAt,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt

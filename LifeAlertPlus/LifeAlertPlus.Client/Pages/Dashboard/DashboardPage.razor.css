@@ -168,6 +168,10 @@
     transition: all 0.3s ease;
 }
 
+    .person-card-detailed.clickable {
+        cursor: pointer;
+    }
+
     .person-card-detailed:hover {
         transform: translateY(-6px);
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
@@ -310,6 +314,19 @@
     background: #f9f9f9;
     border-radius: 12px;
     text-align: center;
+}
+
+.vital-box.no-data {
+    background: #f0f0f0;
+    opacity: 0.55;
+}
+
+.vital-box.no-data .vital-icon-large {
+    filter: grayscale(1);
+}
+
+.vital-box.no-data .vital-value-large {
+    color: #bbb;
 }
 
 .vital-icon-large {

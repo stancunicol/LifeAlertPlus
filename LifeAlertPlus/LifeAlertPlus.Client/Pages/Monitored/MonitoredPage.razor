@@ -110,21 +110,21 @@
 
                         <div class="card-body-white">
                             <div class="vitals-grid">
-                                <div class="vital-box">
+                                <div class="vital-box @(GetPulse(card.LastData) == "N/A" ? "no-data" : "")">
                                     <span class="vital-icon-large">❤️</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@GetPulse(card.LastData)</span>
                                         <span class="vital-label-large">Pulse (bpm)</span>
                                     </div>
                                 </div>
-                                <div class="vital-box">
+                                <div class="vital-box @(GetOxygen(card.LastData) == "N/A" ? "no-data" : "")">
                                     <span class="vital-icon-large">🩸</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@GetOxygen(card.LastData)</span>
                                         <span class="vital-label-large">SpO₂ (%)</span>
                                     </div>
                                 </div>
-                                <div class="vital-box">
+                                <div class="vital-box @(GetTemperature(card.LastData) == "N/A" ? "no-data" : "")">
                                     <span class="vital-icon-large">🌡️</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@GetTemperature(card.LastData)</span>

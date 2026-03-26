@@ -194,6 +194,26 @@
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
 }
 
+.stat-card-large.no-data {
+    background: #f5f5f5;
+    opacity: 0.7;
+}
+
+.stat-card-large.no-data .stat-icon-huge {
+    filter: grayscale(1);
+    opacity: 0.4;
+}
+
+.no-data-value {
+    color: #bbb !important;
+    font-size: 28px !important;
+}
+
+.no-data-status {
+    color: #bbb !important;
+    font-style: italic;
+}
+
 .stat-icon-huge {
     font-size: 48px;
 }
@@ -645,4 +665,196 @@
         padding: 0 10px;
         gap: 10px;
     }
+}
+
+/* ── Edit Profile Modal ─────────────────────────────────── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 480px;
+    max-width: 92vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    animation: slideUp 0.25s ease;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px 16px;
+    border-bottom: 2px solid #FFE8F5;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-family: 'Jua', sans-serif;
+    font-size: 20px;
+    color: #333;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #999;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px 28px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-family: 'Jua', sans-serif;
+    font-size: 13px;
+    color: #777;
+}
+
+.form-group input,
+.form-group select {
+    padding: 10px 14px;
+    border: 2px solid #e8e8e8;
+    border-radius: 10px;
+    font-family: 'Jua', sans-serif;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #D88BB7;
+}
+
+.form-group-separator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 0;
+}
+
+.form-group-separator span {
+    font-family: 'Jua', sans-serif;
+    font-size: 12px;
+    color: #bbb;
+    white-space: nowrap;
+}
+
+.form-group-separator::before,
+.form-group-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #efe8f5;
+}
+
+.form-group-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.edit-error {
+    background: #ffebee;
+    color: #c62828;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: 'Jua', sans-serif;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 28px 24px;
+    border-top: 2px solid #FFE8F5;
+}
+
+.btn-cancel {
+    padding: 10px 22px;
+    border: 2px solid #e0e0e0;
+    background: white;
+    border-radius: 10px;
+    font-family: 'Jua', sans-serif;
+    font-size: 14px;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+    border-color: #ccc;
+    background: #fafafa;
+}
+
+.btn-save {
+    padding: 10px 28px;
+    border: none;
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    border-radius: 10px;
+    font-family: 'Jua', sans-serif;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(216, 139, 183, 0.3);
+}
+
+.btn-save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(216, 139, 183, 0.4);
+}
+
+.btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }

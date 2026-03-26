@@ -30,12 +30,20 @@
     display: flex;
     align-items: center;
     gap: 3rem;
+    min-width: 0;
 }
 
 .header-logo-wrap {
 	display: flex;
-	align-items: baseline;
-	gap: 0.4rem;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.header-logo-img {
+	height: 32px;
+	width: 32px;
+	object-fit: contain;
+	border-radius: 8px;
 }
 
 .header-logo {
@@ -106,6 +114,7 @@
 
 .header-right {
     position: relative;
+    flex-shrink: 0;
 }
 
 .user-profile {

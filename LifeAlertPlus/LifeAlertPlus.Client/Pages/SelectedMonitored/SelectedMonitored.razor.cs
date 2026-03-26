@@ -3,6 +3,8 @@ using Microsoft.JSInterop;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
 
+using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
+
 namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 {
     public partial class SelectedMonitored : ComponentBase, IAsyncDisposable
@@ -51,6 +53,29 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private System.Threading.Timer? _refreshTimer;
         private bool _disposed = false;
 
+        // User global vital range fallbacks
+        private int _userMinHr = 60;
+        private int _userMaxHr = 100;
+        private double _userMinTemp = 36.0;
+        private double _userMaxTemp = 37.5;
+        private int _userUpdateFrequency = 30;
+
+        // Edit modal state
+        private bool _showEditModal;
+        private bool _isSaving;
+        private string? _editError;
+        private string _editFirstName = "";
+        private string _editLastName = "";
+        private string _editGender = "";
+        private DateTime? _editBirthdate;
+        private string _editAddress = "";
+        private string _editDeviceSerial = "";
+        private int? _editMinHr;
+        private int? _editMaxHr;
+        private double? _editMinTemp;
+        private double? _editMaxTemp;
+        private int? _editUpdateFrequency;
+
         private enum ChartViewMode
         {
             Daily,
@@ -93,12 +118,17 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     temperature = espData.Temperature ?? 0;
                     gps = espData.Neo6m ?? "No data";
 
-                    // Determine status
-                    if (heartRate > 100 || heartRate < 50 || spO2 < 90 || temperature > 37.5 || temperature < 36.0)
+                    // Determine status using per-person ranges (fallback to user defaults)
+                    int effectiveMinHr = monitored.MinHeartRate ?? _userMinHr;
+                    int effectiveMaxHr = monitored.MaxHeartRate ?? _userMaxHr;
+                    double effectiveMinTemp = monitored.MinTemperature ?? _userMinTemp;
+                    double effectiveMaxTemp = monitored.MaxTemperature ?? _userMaxTemp;
+
+                    if (heartRate > effectiveMaxHr || heartRate < effectiveMinHr - 10 || spO2 < 90 || temperature > effectiveMaxTemp + 0.5 || temperature < effectiveMinTemp - 0.5)
                     {
                         status = "Critical";
                     }
-                    else if (heartRate > 90 || heartRate < 60 || spO2 < 95 || temperature > 37.0 || temperature < 36.5)
+                    else if (heartRate > effectiveMaxHr - 10 || heartRate < effectiveMinHr || spO2 < 95 || temperature > effectiveMaxTemp || temperature < effectiveMinTemp)
                     {
                         status = "Warning";
                     }
@@ -128,7 +158,12 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     Status = status,
                     LastUpdate = lastUpdate,
                     Location = string.IsNullOrWhiteSpace(monitored.Address) ? "N/A" : monitored.Address,
-                    DeviceSerial = monitored.DeviceSerialNumber
+                    DeviceSerial = monitored.DeviceSerialNumber,
+                    MinHeartRate = monitored.MinHeartRate ?? _userMinHr,
+                    MaxHeartRate = monitored.MaxHeartRate ?? _userMaxHr,
+                    MinTemperature = monitored.MinTemperature ?? _userMinTemp,
+                    MaxTemperature = monitored.MaxTemperature ?? _userMaxTemp,
+                    UpdateFrequency = monitored.UpdateFrequency ?? _userUpdateFrequency
                 };
 
                 IsLoading = false;
@@ -563,7 +598,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         {
             try
             {
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 10);
+                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 4);
                 if (measurements == null || !measurements.Any())
                 {
                     RecentMeasurements = new List<Measurement>();
@@ -645,7 +680,17 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 var userProfile = await UserService.GetUserByIdAsync(claims.UserId);
                 if (userProfile != null)
                 {
+                    var apiName = $"{userProfile.FirstName} {userProfile.LastName}".Trim();
+                    if (!string.IsNullOrWhiteSpace(apiName))
+                        UserFullName = apiName;
+                    if (!string.IsNullOrWhiteSpace(userProfile.ProfilePictureUrl))
+                        ProfilePictureUrl = userProfile.ProfilePictureUrl;
                     _firstDayOfWeek = ParseFirstDayOfWeek(userProfile.FirstDayOfTheWeek);
+                    if (userProfile.MinHeartRate > 0) _userMinHr = userProfile.MinHeartRate;
+                    if (userProfile.MaxHeartRate > 0) _userMaxHr = userProfile.MaxHeartRate;
+                    if (userProfile.MinTemperature > 0) _userMinTemp = userProfile.MinTemperature;
+                    if (userProfile.MaxTemperature > 0) _userMaxTemp = userProfile.MaxTemperature;
+                    if (userProfile.UpdateFrequency > 0) _userUpdateFrequency = userProfile.UpdateFrequency;
                 }
             }
             else
@@ -658,8 +703,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             await LoadRecentAlertsAsync();
             await LoadRecentMeasurementsAsync();
 
-            // Start auto-refresh timer (30 seconds)
-            _refreshTimer = new System.Threading.Timer(async _ => await RefreshDataAsync(), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+            // Start auto-refresh timer (uses user-configured update frequency)
+            _refreshTimer = new System.Threading.Timer(async _ => await RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
         }
 
         private async Task RefreshDataAsync()
@@ -747,18 +792,18 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return "Normal";
         }
 
-        private string GetTempStatus(double temp)
+        private string GetTempStatus(double temp, double min, double max)
         {
-            if (temp < 36.0 || temp > 37.5)
+            if (temp < min || temp > max)
                 return "warning";
             return "normal";
         }
 
-        private string GetTempStatusText(double temp)
+        private string GetTempStatusText(double temp, double min, double max)
         {
-            if (temp < 36.0)
+            if (temp < min)
                 return "Below normal";
-            if (temp > 37.5)
+            if (temp > max)
                 return "Above normal";
             return "Normal";
         }
@@ -811,6 +856,88 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             NavigationManager.NavigateTo("/monitored");
         }
 
+        private async void OpenEditModal()
+        {
+            _editError = null;
+            var monitored = await MonitoredService.GetMonitoredPersonByIdAsync(PersonId);
+            if (monitored != null)
+            {
+                _editFirstName = monitored.FirstName;
+                _editLastName = monitored.LastName;
+                _editGender = monitored.Gender;
+                _editBirthdate = monitored.Birthdate;
+                _editAddress = monitored.Address;
+                _editDeviceSerial = monitored.DeviceSerialNumber;
+                _editMinHr = monitored.MinHeartRate;
+                _editMaxHr = monitored.MaxHeartRate;
+                _editMinTemp = monitored.MinTemperature;
+                _editMaxTemp = monitored.MaxTemperature;
+                _editUpdateFrequency = monitored.UpdateFrequency;
+            }
+            _showEditModal = true;
+            StateHasChanged();
+        }
+
+        private void CloseEditModal()
+        {
+            _showEditModal = false;
+            _editError = null;
+        }
+
+        private async Task SaveEditAsync()
+        {
+            _editError = null;
+            if (string.IsNullOrWhiteSpace(_editFirstName) || string.IsNullOrWhiteSpace(_editLastName))
+            {
+                _editError = "First name and last name are required.";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(_editDeviceSerial))
+            {
+                _editError = "Device serial number is required.";
+                return;
+            }
+
+            _isSaving = true;
+            try
+            {
+                var dto = new MonitorUpdateRequestDTO
+                {
+                    FirstName = _editFirstName.Trim(),
+                    LastName = _editLastName.Trim(),
+                    Gender = _editGender,
+                    Birthdate = _editBirthdate,
+                    Address = _editAddress?.Trim() ?? "",
+                    DeviceSerialNumber = _editDeviceSerial.Trim(),
+                    MinHeartRate = _editMinHr,
+                    MaxHeartRate = _editMaxHr,
+                    MinTemperature = _editMinTemp,
+                    MaxTemperature = _editMaxTemp,
+                    UpdateFrequency = _editUpdateFrequency
+                };
+
+                var success = await MonitoredService.UpdateMonitoredPersonAsync(PersonId, dto);
+                if (success)
+                {
+                    _showEditModal = false;
+                    await LoadPersonDataAsync();
+                    StateHasChanged();
+                }
+                else
+                {
+                    _editError = "Failed to update. The device serial number may already be in use.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _editError = $"Error: {ex.Message}";
+            }
+            finally
+            {
+                _isSaving = false;
+            }
+        }
+
         public class PersonDetail
         {
             public Guid Id { get; set; }
@@ -825,6 +952,11 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             public string LastUpdate { get; set; } = string.Empty;
             public string Location { get; set; } = string.Empty;
             public string DeviceSerial { get; set; } = string.Empty;
+            public int MinHeartRate { get; set; } = 60;
+            public int MaxHeartRate { get; set; } = 100;
+            public double MinTemperature { get; set; } = 36.0;
+            public double MaxTemperature { get; set; } = 37.5;
+            public int UpdateFrequency { get; set; } = 30;
         }
 
         public class ChartDataPoint

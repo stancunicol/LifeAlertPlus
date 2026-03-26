@@ -59,5 +59,11 @@ namespace LifeAlertPlus.Client.Services
 
             return dto;
         }
+
+        public async Task<bool> UpdateMonitoredPersonAsync(Guid id, MonitorUpdateRequestDTO dto)
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/monitored/update/{id}", dto);
+            return response.IsSuccessStatusCode;
+        }
     }
 }

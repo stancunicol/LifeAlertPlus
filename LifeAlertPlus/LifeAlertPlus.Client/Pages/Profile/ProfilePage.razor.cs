@@ -90,6 +90,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             }
 
             CurrentUser = userFromApi;
+            if (string.IsNullOrEmpty(CurrentUser.Provider))
+                CurrentUser.Provider = "Local";
             if (!string.IsNullOrEmpty(CurrentUser.ProfilePictureUrl))
             {
                 await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "profilePictureUrl", CurrentUser.ProfilePictureUrl);

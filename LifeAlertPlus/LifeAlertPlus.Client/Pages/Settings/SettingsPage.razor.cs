@@ -49,6 +49,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             AutoSave = true,
             AutoBackup = true,
             HistoryRetention = "365",
+            UpdateFrequency = 30,
 
             Language = "ro",
             DateFormat = "dd/MM/yyyy",
@@ -72,7 +73,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 MinHeartRate = Settings.HeartRateMin,
                 MaxHeartRate = Settings.HeartRateMax,
                 MinTemperature = (float)Settings.TemperatureMin,
-                MaxTemperature = (float)Settings.TemperatureMax
+                MaxTemperature = (float)Settings.TemperatureMax,
+                UpdateFrequency = Settings.UpdateFrequency
             };
 
             var request = await UserService.UpdateUserAsync(UserId, settings);
@@ -141,6 +143,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Settings.HeartRateMax = userFromApi.MaxHeartRate;
             Settings.TemperatureMin = userFromApi.MinTemperature;
             Settings.TemperatureMax = userFromApi.MaxTemperature;
+            if (userFromApi.UpdateFrequency > 0)
+                Settings.UpdateFrequency = userFromApi.UpdateFrequency;
 
             if (!string.IsNullOrEmpty(userFromApi.ProfilePictureUrl))
             {
@@ -194,6 +198,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 AutoSave = true,
                 AutoBackup = true,
                 HistoryRetention = "365",
+                UpdateFrequency = 30,
                 Language = "ro",
                 DateFormat = "dd/MM/yyyy",
                 TimeFormat = "24h"
@@ -231,6 +236,9 @@ namespace LifeAlertPlus.Client.Pages.Settings
             public bool AutoSave { get; set; }
             public bool AutoBackup { get; set; }
             public string HistoryRetention { get; set; } = string.Empty;
+
+            // Update frequency (seconds)
+            public int UpdateFrequency { get; set; } = 30;
 
             // System
             public string Language { get; set; } = string.Empty;

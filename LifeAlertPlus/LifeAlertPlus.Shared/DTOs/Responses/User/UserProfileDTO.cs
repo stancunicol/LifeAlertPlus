@@ -17,6 +17,7 @@ namespace LifeAlertPlus.Shared.DTOs.Responses.User
         public int MaxHeartRate { get; set; }
         public float MinTemperature { get; set; }
         public float MaxTemperature { get; set; }
+        public int UpdateFrequency { get; set; } = 30;
         public DateTime? LastChangedPasswordAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

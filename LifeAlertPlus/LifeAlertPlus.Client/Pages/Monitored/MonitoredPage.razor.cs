@@ -107,6 +107,16 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         _currentUserId = claims.UserId;
         UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
         ProfilePictureUrl = claims.ProfilePictureUrl;
+
+        var userProfile = await UserService.GetUserByIdAsync(claims.UserId);
+        if (userProfile != null)
+        {
+            var apiName = $"{userProfile.FirstName} {userProfile.LastName}".Trim();
+            if (!string.IsNullOrWhiteSpace(apiName))
+                UserFullName = apiName;
+            if (!string.IsNullOrWhiteSpace(userProfile.ProfilePictureUrl))
+                ProfilePictureUrl = userProfile.ProfilePictureUrl;
+        }
     }
 
     private async Task LoadMonitoredPeopleAsync()

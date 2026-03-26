@@ -103,5 +103,45 @@ namespace LifeAlertPlus.API.Controllers
 
             return Ok(monitoredPerson);
         }
+
+        [HttpPut("update/{id:guid}")]
+        public async Task<IActionResult> UpdateMonitoredPerson([FromRoute] Guid id, [FromBody] MonitorUpdateRequestDTO dto)
+        {
+            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
+                return Unauthorized(new { Message = "Invalid token." });
+
+            var existing = await _monitoredService.GetMonitoredPersonByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { Message = "Monitored person not found." });
+
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            if (!owned.Any(m => m.Id == id))
+                return Forbid();
+
+            if (dto.DeviceSerialNumber != existing.DeviceSerialNumber)
+            {
+                var conflict = await _monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(dto.DeviceSerialNumber);
+                if (conflict != null && conflict.Id != id)
+                    return Conflict(new { Message = "A monitored person with this device serial number already exists." });
+            }
+
+            existing.FirstName = dto.FirstName;
+            existing.LastName = dto.LastName;
+            existing.Birthdate = dto.Birthdate;
+            existing.Gender = dto.Gender;
+            existing.Address = dto.Address;
+            existing.DeviceSerialNumber = dto.DeviceSerialNumber;
+            existing.MinHeartRate = dto.MinHeartRate;
+            existing.MaxHeartRate = dto.MaxHeartRate;
+            existing.MinTemperature = dto.MinTemperature;
+            existing.MaxTemperature = dto.MaxTemperature;
+            existing.UpdateFrequency = dto.UpdateFrequency;
+            existing.UpdatedAt = DateTime.UtcNow;
+
+            await _monitoredService.UpdateMonitoredPersonAsync(existing);
+
+            return Ok(new { Message = "Monitored person updated successfully.", MonitoredPerson = existing });
+        }
     }
 }

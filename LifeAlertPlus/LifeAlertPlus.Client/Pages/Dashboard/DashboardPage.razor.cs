@@ -237,6 +237,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                 var spO2 = spO2Value > 0 ? $"{spO2Value}%" : "N/A";
 
                 return new MonitoredSample(
+                    person.Id,
                     $"{person.FirstName} {person.LastName}",
                     status,
                     heartRate,
@@ -352,6 +353,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     }
 
     protected record MonitoredSample(
+        Guid Id,
         string Name,
         string Status,
         int HeartRate,
@@ -362,6 +364,11 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         string GPS,
         string FallDetection,
         bool Online);
+
+    private void NavigateToMonitored(Guid personId)
+    {
+        Navigation.NavigateTo($"/monitored/{personId}");
+    }
 
     private sealed class MonitoredCardData
     {

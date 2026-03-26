@@ -5,13 +5,13 @@
     <div class="header-container">
         <div class="header-left">
             <div class="header-logo-wrap">
+                <img src="logo_rounded.png" class="header-logo-img" alt="LifeAlert+" />
                 <a href="/dashboard" class="header-logo">LifeAlert +</a>
                 <span class="header-version">v @Version</span>
             </div>
             <nav class="header-nav">
                 <a href="/dashboard" class="nav-link @(IsActive("/dashboard") ? "active" : "")">Dashboard</a>
                 <a href="/monitored" class="nav-link @(IsActive("/monitored") ? "active" : "")">Monitored</a>
-                <a href="/history" class="nav-link @(IsActive("/history") ? "active" : "")">History</a>
                 <a href="/notifications" class="nav-link @(IsActive("/notifications") ? "active" : "")">Notifications</a>
             </nav>
         </div>

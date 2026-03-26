@@ -317,6 +317,19 @@
     text-align: center;
 }
 
+.vital-box.no-data {
+    background: #f0f0f0;
+    opacity: 0.55;
+}
+
+.vital-box.no-data .vital-icon-large {
+    filter: grayscale(1);
+}
+
+.vital-box.no-data .vital-value-large {
+    color: #bbb;
+}
+
 .vital-icon-large {
     font-size: 2rem;
     margin-bottom: 0.5rem;

@@ -110,6 +110,20 @@
             <div class="section-content">
                 <div class="setting-item">
                     <div class="setting-info">
+                        <h3>Data Update Frequency</h3>
+                        <p>How often vital signs data is refreshed (in seconds)</p>
+                    </div>
+                    <select @bind="Settings.UpdateFrequency" class="select-input">
+                        <option value="10">Every 10 seconds</option>
+                        <option value="15">Every 15 seconds</option>
+                        <option value="30">Every 30 seconds</option>
+                        <option value="60">Every 1 minute</option>
+                        <option value="120">Every 2 minutes</option>
+                        <option value="300">Every 5 minutes</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
                         <h3>History Retention Duration</h3>
                         <p>How long to keep old data</p>
                     </div>

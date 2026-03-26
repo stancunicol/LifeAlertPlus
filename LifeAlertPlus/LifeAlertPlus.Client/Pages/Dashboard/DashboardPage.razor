@@ -62,7 +62,7 @@
             <div class="monitored-grid">
                 @foreach (var person in MonitoredSamples)
                 {
-                    <div class="person-card-detailed">
+                    <div class="person-card-detailed clickable" @onclick="() => NavigateToMonitored(person.Id)">
                         <div class="card-header-colored @GetCardClass(person.Status, person.Online)">
                             <div class="header-top">
                                 <div class="person-avatar-big">@GetInitials(person.Name)</div>
@@ -77,21 +77,21 @@
                         </div>
                         <div class="card-body-white">
                             <div class="vitals-grid">
-                                <div class="vital-box">
+                                <div class="vital-box @(person.HeartRate <= 0 ? "no-data" : "")">
                                     <span class="vital-icon-large">❤️</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@(person.HeartRate > 0 ? person.HeartRate.ToString() : "N/A")</span>
                                         <span class="vital-label-large">Pulse (bpm)</span>
                                     </div>
                                 </div>
-                                <div class="vital-box">
+                                <div class="vital-box @(person.SpO2 == "N/A" ? "no-data" : "")">
                                     <span class="vital-icon-large">🩸</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@person.SpO2</span>
                                         <span class="vital-label-large">SpO₂ (%)</span>
                                     </div>
                                 </div>
-                                <div class="vital-box">
+                                <div class="vital-box @(person.Temperature == "N/A" ? "no-data" : "")">
                                     <span class="vital-icon-large">🌡️</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@person.Temperature</span>
