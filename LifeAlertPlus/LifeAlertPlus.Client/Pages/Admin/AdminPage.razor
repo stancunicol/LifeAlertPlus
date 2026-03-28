@@ -26,7 +26,9 @@
 	}
 	else
 	{
-		<div class="stats-grid admin-stats">
+		<!-- notifications panel moved below the status cards -->
+
+		<div class="stats-grid admin-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
 		<div class="stat-card">
 			<div class="stat-icon users">👥</div>
 			<div class="stat-info">
@@ -46,113 +48,60 @@
 		<div class="stat-card">
 			<div class="stat-icon online">🟢</div>
 			<div class="stat-info">
-				<span class="stat-label">Active</span>
-				<span class="stat-value">@ActiveMonitored</span>
+				<span class="stat-label">Online</span>
+				<span class="stat-value">@OnlineMonitored</span>
+			</div>
+		</div>
+
+		<div class="stat-card">
+			<div class="stat-icon offline">🔴</div>
+			<div class="stat-info">
+				<span class="stat-label">Offline</span>
+				<span class="stat-value critical">@OfflineMonitored</span>
 			</div>
 		</div>
 
 		<div class="stat-card">
 			<div class="stat-icon alert">⚠️</div>
 			<div class="stat-info">
-				<span class="stat-label">Inactive</span>
-				<span class="stat-value critical">@InactiveMonitored</span>
+				<span class="stat-label">Alerts</span>
+				<span class="stat-value">@AlertsCount</span>
+			</div>
+		</div>
+
+		<div class="stat-card">
+			<div class="stat-icon measures">📊</div>
+			<div class="stat-info">
+				<span class="stat-label">Today Measurements</span>
+				<span class="stat-value">@MeasurementsTodayCount</span>
 			</div>
 		</div>
 	</div>
 
-	<div class="section">
-		<div class="section-header">
-			<h2>Users and Assignments</h2>
-			<span class="section-note">@ActiveUsers active • @TotalMonitored monitored persons</span>
+	<div class="notifications-panel">
+		<div class="notifications-header">
+			<h2>Notifications</h2>
+			<span class="notif-summary">@AlertsCount alerts • @Notifications.Count notifications</span>
 		</div>
-
-		<div class="users-grid">
-			@foreach (var user in AdminUsers)
-			{
-				<div class="user-card @(IsUserActive(user) ? "active" : "inactive")">
-					<div class="user-card-top">
-						<div class="user-avatar">@GetInitials(FullName(user))</div>
-						<div class="user-main">
-							<h3>@FullName(user)</h3>
-							<p>@user.Email</p>
-							<div class="role-chip">@UserRoleLabel(user)</div>
+		@if (!Notifications.Any())
+		{
+			<div class="no-notifs">No notifications</div>
+		}
+		else
+		{
+			<ul class="notifications-list">
+				@foreach (var n in Notifications)
+				{
+					<li class="notif-item @n.Level">
+						<div class="notif-main">
+							<strong>@n.Title</strong>
+							<div class="notif-message">@n.Message</div>
 						</div>
-						<span class="status-pill @(IsUserActive(user) ? "ok" : "muted")">@(IsUserActive(user) ? "Active" : "Inactive")</span>
-					</div>
-
-					<div class="user-meta">
-						<span>Monitored: @user.MonitoredPeople.Count</span>
-						<span>Created: @FormatDate(user.CreatedAt)</span>
-					</div>
-
-					<div class="monitored-list">
-						@foreach (var person in user.MonitoredPeople)
-						{
-							<div class="monitored-chip @GetStatusClass(person.IsActive)">
-								<div class="chip-row">
-									<span class="chip-name">@FullName(person)</span>
-									<span class="chip-age">N/A</span>
-								</div>
-								<div class="chip-row">
-									<span class="chip-device">@person.DeviceSerialNumber</span>
-									<span class="chip-status">@GetStatusText(person.IsActive)</span>
-								</div>
-							</div>
-						}
-					</div>
-				</div>
-			}
-		</div>
-	</div>
-
-	<div class="section">
-		<div class="section-header">
-			<h2>Monitored Persons</h2>
-			<span class="section-note">User • Device links</span>
-		</div>
-
-		<div class="table-container">
-			<table class="admin-table">
-				<thead>
-					<tr>
-						<th>Person</th>
-						<th>User</th>
-						<th>Device</th>
-						<th>Status</th>
-						<th>Last Update</th>
-					</tr>
-				</thead>
-				<tbody>
-					@foreach (var row in MonitoredRows)
-					{
-						<tr class="@GetRowClass(row.Online)">
-							<td>
-								<div class="person-inline">
-									<div class="mini-avatar">@GetInitials(row.PersonName)</div>
-									<div class="person-inline-info">
-										<span class="person-name">@row.PersonName</span>
-										<span class="person-age">@row.Age years</span>
-									</div>
-								</div>
-							</td>
-							<td>
-								<div class="user-inline">
-									<span class="user-name">@row.UserName</span>
-									<span class="user-email">@row.UserEmail</span>
-								</div>
-							</td>
-							<td><span class="device-badge">@row.DeviceSerial</span></td>
-							<td>
-								<span class="status-indicator @GetStatusClass(row.Online)">
-									@GetStatusText(row.Online)
-								</span>
-							</td>
-							<td class="date-cell">@row.LastUpdate</td>
-						</tr>
-					}
-					</tbody>
-			</table>
-		</div>
+						<div class="notif-time">@((n.Time.HasValue) ? FormatDate(n.Time.Value) : "")</div>
+					</li>
+				}
+			</ul>
+		}
 	</div>
 	}
 </div>

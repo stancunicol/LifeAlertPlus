@@ -58,9 +58,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private bool ShowEmailChangeSuccess { get; set; } = false;
         private bool ShowPasswordChangeSuccess { get; set; } = false;
 
-        private bool ShowDeactivateConfirmModalBool { get; set; } = false;
-        private bool ShowDeactivateInfoModal { get; set; } = false;
-
         private bool ShowDeleteConfirmModalBool { get; set; } = false;
         private bool ShowDeleteInfoModal { get; set; } = false;
 
@@ -378,38 +375,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
             {
                 return false;
             }
-        }
-
-        private async Task DeactivateAccount()
-        {
-            ShowDeactivateInfoModal = false;
-            var result = await UserService.DeactivateUserAsync(CurrentUser.Id);
-            if (result)
-            {
-                await AuthenticationService.LogoutAsync();
-                Navigation.NavigateTo("/login");
-            }
-        }
-
-        private void ShowDeactivateConfirmModal()
-        {
-            ShowDeactivateConfirmModalBool = true;
-        }
-
-        private void CloseDeactivateConfirmModal()
-        {
-            ShowDeactivateConfirmModalBool = false;
-        }
-
-        private void ConfirmDeactivateAccount()
-        {
-            ShowDeactivateConfirmModalBool = false;
-            ShowDeactivateInfoModal = true;
-        }
-
-        private void CloseDeactivateInfoModal()
-        {
-            ShowDeactivateInfoModal = false;
         }
 
         private async Task DeleteAccount()

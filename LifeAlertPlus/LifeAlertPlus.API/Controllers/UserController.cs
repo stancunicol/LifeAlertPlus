@@ -8,7 +8,7 @@ using System.Security.Claims;
 namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
-    //[Authorize]
+    [Authorize]
     [Route("api/[controller]")]
     public class UserController : ControllerBase
     {
@@ -239,7 +239,11 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUserById(Guid id)
         {
-            if (!CallerOwns(id))
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value
+                ?? User.FindFirst("role")?.Value
+                ?? string.Empty;
+
+            if (!CallerOwns(id) && !IsAdminRole(roleClaim))
                 return Forbid();
 
             var user = await _userService.GetUserByIdAsync(id);

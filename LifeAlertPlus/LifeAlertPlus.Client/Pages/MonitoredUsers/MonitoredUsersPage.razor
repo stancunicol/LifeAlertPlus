@@ -1,5 +1,6 @@
 @page "/monitored-users"
 @using System.Linq
+@using Microsoft.AspNetCore.Components.Web
 @using LifeAlertPlus.Client.Components.HeaderAdmin
 @using LifeAlertPlus.Shared.DTOs.Responses.UserMonitored
 
@@ -17,36 +18,36 @@
     </div>
 </div>
 
-		<div class="stats-grid admin-stats">
-			<div class="stat-card">
-				<div class="stat-icon users">👥</div>
-				<div class="stat-info">
-					<span class="stat-label">Monitors</span>
-					<span class="stat-value">@TotalMonitors</span>
+			<div class="stats-grid admin-stats">
+				<div class="stat-card">
+					<div class="stat-icon monitored">🩺</div>
+					<div class="stat-info">
+						<span class="stat-label">Monitored</span>
+						<span class="stat-value">@TotalMonitored</span>
+					</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-icon online">🟢</div>
+					<div class="stat-info">
+						<span class="stat-label">Online</span>
+						<span class="stat-value">@OnlineMonitoredCount</span>
+					</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-icon offline">🔴</div>
+					<div class="stat-info">
+						<span class="stat-label">Offline</span>
+						<span class="stat-value critical">@OfflineMonitoredCount</span>
+					</div>
+				</div>
+				<div class="stat-card">
+					<div class="stat-icon alert">⚠️</div>
+					<div class="stat-info">
+						<span class="stat-label">Alerts</span>
+						<span class="stat-value">@AlertsCount</span>
+					</div>
 				</div>
 			</div>
-			<div class="stat-card">
-				<div class="stat-icon monitored">🩺</div>
-				<div class="stat-info">
-					<span class="stat-label">Monitored</span>
-					<span class="stat-value">@TotalMonitored</span>
-				</div>
-			</div>
-			<div class="stat-card">
-				<div class="stat-icon online">🟢</div>
-				<div class="stat-info">
-					<span class="stat-label">Active monitored</span>
-					<span class="stat-value">@ActiveMonitoredCount</span>
-				</div>
-			</div>
-			<div class="stat-card">
-				<div class="stat-icon alert">⚠️</div>
-				<div class="stat-info">
-					<span class="stat-label">Inactive monitored</span>
-					<span class="stat-value critical">@InactiveMonitoredCount</span>
-				</div>
-			</div>
-		</div>
 
 		@if (IsLoading)
 		{
@@ -75,8 +76,9 @@
 						<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="Search monitored people or monitors..." />
 						<div class="filters">
 							<button class="@GetFilterClass("all")" @onclick='@(() => SetFilter("all"))'>All</button>
-							<button class="@GetFilterClass("active")" @onclick='@(() => SetFilter("active"))'>Active</button>
-							<button class="@GetFilterClass("inactive")" @onclick='@(() => SetFilter("inactive"))'>Inactive</button>
+							<button class="@GetFilterClass("online")" @onclick='@(() => SetFilter("online"))'>Online</button>
+							<button class="@GetFilterClass("offline")" @onclick='@(() => SetFilter("offline"))'>Offline</button>
+							<button class="@GetFilterClass("alerts")" @onclick='@(() => SetFilter("alerts"))'>Alerts</button>
 						</div>
 					</div>
 				</div>
@@ -96,6 +98,7 @@
 									<th>Monitored by</th>
 									<th>Status</th>
 									<th>Last Update</th>
+									<th>Actions</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -126,8 +129,15 @@
 											<span class="status-indicator @GetStatusClass(row.Online)">
 												@GetStatusText(row.Online)
 											</span>
+											@if (row.HasAlert)
+											{
+												<span class="alert-badge">⚠️</span>
+											}
 										</td>
 										<td class="date-cell">@row.LastUpdate</td>
+										<td class="actions-cell">
+											<button class="btn-details" @onclick='@(() => NavigateToSelected(row.PersonId))'>Details</button>
+										</td>
 									</tr>
 								}
 							</tbody>

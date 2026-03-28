@@ -87,12 +87,11 @@
 								<tr>
 									<th>User</th>
 									<th>Email</th>
+									<th>Monitored</th>
 									<th>Provider</th>
 									<th>Status</th>
 									<th>Email Confirmed</th>
-									<th>Created</th>
-									<th>Updated</th>
-									<th>Last Password Change</th>
+									<th>Actions</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -108,14 +107,21 @@
 											</div>
 										</td>
 										<td class="mono">@user.Email</td>
+										<td class="mono">@(MonitoredCounts.TryGetValue(user.Id, out var c) ? c : 0)</td>
 										<td><span class="badge muted">@GetProviderLabel(user)</span></td>
 										<td>
 											<span class="status-indicator @GetStatusIndicatorClass(user)">@GetStatusLabel(user)</span>
 										</td>
 										<td><span class="badge @(user.IsEmailConfirmed ? "ok" : "warn")">@GetEmailLabel(user)</span></td>
-										<td class="mono">@FormatDate(user.CreatedAt)</td>
-										<td class="mono">@FormatDate(user.UpdatedAt)</td>
-										<td class="mono">@FormatDate(user.LastChangedPasswordAt)</td>
+										<td class="actions-cell">
+											<div class="actions-center">
+												<button class="btn-details" @onclick:stopPropagation @onclick="() => ViewUser(user)">Details</button>
+											</div>
+											<div class="actions-row">
+												<button class="action-btn" @onclick:stopPropagation @onclick="() => ToggleActive(user)">@(user.DeletedAt == null ? "Deactivate" : "Activate")</button>
+												<button class="action-btn danger" @onclick:stopPropagation @onclick="() => ConfirmDelete(user)">Delete</button>
+											</div>
+										</td>
 									</tr>
 								}
 							</tbody>

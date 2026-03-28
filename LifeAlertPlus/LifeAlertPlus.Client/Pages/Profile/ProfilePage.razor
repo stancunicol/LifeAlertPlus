@@ -170,13 +170,6 @@
             <div class="section-content">
                 <div class="danger-item">
                     <div class="danger-info">
-                        <h3>Deactivate Account</h3>
-                        <p>Your account will be temporarily suspended</p>
-                    </div>
-                    <button class="btn-danger" @onclick="ShowDeactivateConfirmModal">Deactivate</button>
-                </div>
-                <div class="danger-item">
-                    <div class="danger-info">
                         <h3>Delete Account</h3>
                         <p>Permanent action, all data will be deleted</p>
                     </div>
@@ -292,41 +285,6 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-modal-confirm" @onclick="ClosePasswordChangeSuccessModal">OK</button>
-            </div>
-        </div>
-    </div>
-}
-
-@if (ShowDeactivateConfirmModalBool)
-{
-    <div class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚠️ Are you sure?</h3>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to deactivate your account?</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-modal-cancel" @onclick="CloseDeactivateConfirmModal">Cancel</button>
-                <button class="btn-modal-confirm" @onclick="ConfirmDeactivateAccount">Yes</button>
-            </div>
-        </div>
-    </div>
-}
-
-@if (ShowDeactivateInfoModal)
-{
-    <div class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Account Deactivated</h3>
-            </div>
-            <div class="modal-body">
-                <p>Your account has been deactivated. It will be reactivated automatically the next time you log in.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-modal-confirm" @onclick="DeactivateAccount">OK</button>
             </div>
         </div>
     </div>

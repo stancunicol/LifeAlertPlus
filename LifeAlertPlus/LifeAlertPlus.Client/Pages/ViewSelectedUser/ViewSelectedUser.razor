@@ -1,0 +1,133 @@
+@page "/view-selected-user/{UserId:guid}"
+@using LifeAlertPlus.Shared.DTOs.Responses.User
+@using LifeAlertPlus.Domain.Entities
+@using LifeAlertPlus.Client.Components.HeaderAdmin
+@layout MainLayout
+
+<HeaderAdminComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
+
+<div class="view-user-page">
+    @if (IsLoading)
+    {
+        <div class="message-card">Loading user...</div>
+    }
+    else if (LoadError != null)
+    {
+        <div class="message-card error">@LoadError</div>
+    }
+    else if (User == null)
+    {
+        <div class="message-card">User not found.</div>
+    }
+    else
+    {
+        <div class="back-navigation">
+            <button class="btn-back" @onclick="GoBack">← Back to Users</button>
+        </div>
+
+        <div class="user-header">
+            <div class="avatar-large">@GetInitials()</div>
+            <div class="user-info">
+                <h1>@User.FirstName @User.LastName</h1>
+                <p class="muted">@User.Email</p>
+                <div class="badges">
+                    <span class="badge">@((string.IsNullOrWhiteSpace(User.Provider)) ? "Local" : User.Provider)</span>
+                    <span class="badge">@((User.IsEmailConfirmed) ? "Email confirmed" : "Email not confirmed")</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Monitored People (@(Monitored?.Count() ?? 0))</h3>
+            @if (Monitored == null || !Monitored.Any())
+            {
+                <div class="message-card small">No monitored people.</div>
+            }
+            else
+            {
+                <ul class="monitored-list">
+                    @foreach (var m in Monitored)
+                    {
+                        <li>
+                            <div class="monitored-left">
+                                <div class="monitored-name">@m.FirstName @m.LastName</div>
+                                <div class="muted">@m.DeviceSerialNumber</div>
+                            </div>
+                            <button class="btn-view" @onclick="() => ViewMonitored(m.Id)">Details</button>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</div>
+
+@inject LifeAlertPlus.Client.Services.UserService UserService
+@inject LifeAlertPlus.Client.Services.UserMonitoredService UserMonitoredService
+@inject LifeAlertPlus.Client.Services.TokenParserService TokenParser
+@inject NavigationManager NavigationManager
+
+@code {
+    [Parameter]
+    public Guid UserId { get; set; }
+
+    private UserProfileDTO? User;
+    private IEnumerable<Monitored>? Monitored;
+    private bool IsLoading = true;
+    private string? LoadError;
+    private string UserFullName = "";
+    private string ProfilePictureUrl = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserFromTokenAsync();
+        await LoadDataAsync();
+    }
+
+    private async Task LoadUserFromTokenAsync()
+    {
+        var claims = await TokenParser.GetClaimsAsync();
+        if (claims == null) return;
+        UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
+        ProfilePictureUrl = claims.ProfilePictureUrl ?? string.Empty;
+    }
+
+    private async Task LoadDataAsync()
+    {
+        IsLoading = true;
+        LoadError = null;
+        try
+        {
+            User = await UserService.GetUserByIdAsync(UserId);
+            Monitored = await UserMonitoredService.GetMonitoredPeopleAsync(UserId);
+        }
+        catch (Exception ex)
+        {
+            LoadError = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/users");
+    }
+
+    private string GetInitials()
+    {
+        if (User == null) return "US";
+        var name = $"{User.FirstName} {User.LastName}".Trim();
+        if (string.IsNullOrWhiteSpace(name)) return "US";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2) return $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant();
+        return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
+    }
+
+    private void ViewMonitored(Guid id)
+    {
+        NavigationManager.NavigateTo($"/view-selected-monitored/{id}");
+    }
+}

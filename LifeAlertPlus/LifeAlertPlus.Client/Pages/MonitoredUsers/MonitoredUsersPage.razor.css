@@ -412,6 +412,11 @@
 	white-space: nowrap;
 }
 
+.admin-table th:last-child {
+	text-align: center;
+	vertical-align: middle;
+}
+
 .admin-table td {
 	padding: 1rem;
 	font-size: 0.9rem;
@@ -419,8 +424,62 @@
 	border-bottom: 1px solid #f0f0f0;
 }
 
-.admin-table tr:hover {
+.admin-table thead tr {
+	background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+}
+
+.admin-table tbody tr {
+	background: #ffffff;
+	transition: background .12s ease;
+}
+
+.admin-table tbody tr:hover {
 	background: #f9f9f9;
+}
+
+/* Make text color match Users page on hover */
+.admin-table tbody tr:hover td,
+.admin-table tbody tr:hover .person-name,
+.admin-table tbody tr:hover .user-name,
+.admin-table tbody tr:hover .device-badge {
+	color: var(--ink);
+}
+
+.actions-cell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	white-space: nowrap;
+	gap: 8px;
+	padding: 0;
+}
+
+.admin-table td.actions-cell {
+	vertical-align: middle;
+}
+
+.btn-details {
+	background: linear-gradient(90deg,#D88BB7,#F6B3D9);
+	color: #000;
+	border: none;
+	padding: 8px 12px;
+	border-radius: 8px;
+	font-family: "Jua", sans-serif;
+	font-weight: 700;
+	cursor: pointer;
+	box-shadow: 0 8px 18px rgba(216,139,183,0.12);
+	transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+}
+
+.btn-details:hover {
+	transform: translateY(-2px);
+	opacity: 0.98;
+	box-shadow: 0 12px 28px rgba(216,139,183,0.18);
+}
+
+.btn-details:focus {
+	outline: 3px solid rgba(216,139,183,0.18);
+	outline-offset: 2px;
 }
 
 .admin-table tr.row-critical {
@@ -432,7 +491,7 @@
 }
 
 .admin-table tr.row-offline {
-	background: #f5f5f5;
+	background: #ffffff;
 }
 
 .person-inline {

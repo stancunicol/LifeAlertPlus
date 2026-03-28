@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LifeAlertPlus.Client.Services;
+using Microsoft.JSInterop;
+using System.Threading;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
 using Microsoft.AspNetCore.Components;
 
@@ -14,7 +16,16 @@ namespace LifeAlertPlus.Client.Pages.Users
 		private UserService UserService { get; set; } = default!;
 
 		[Inject]
+		private NavigationManager NavigationManager { get; set; } = default!;
+
+		[Inject]
 		private TokenParserService TokenParser { get; set; } = default!;
+
+		[Inject]
+		private UserMonitoredService UserMonitoredService { get; set; } = default!;
+
+		[Inject]
+		private IJSRuntime JSRuntime { get; set; } = default!;
 
 		protected List<UserListItemDTO> Users { get; private set; } = new();
 		protected string UserFullName { get; private set; } = "Admin";
@@ -27,6 +38,8 @@ namespace LifeAlertPlus.Client.Pages.Users
 		protected int TotalUsers => Users.Count;
 		protected int ActiveUsers => Users.Count(u => u.DeletedAt == null);
 		protected int ConfirmedUsers => Users.Count(u => u.IsEmailConfirmed);
+
+		protected Dictionary<Guid, int> MonitoredCounts { get; private set; } = new();
 
 		protected IEnumerable<UserListItemDTO> FilteredUsers => Users
 			.Where(u => !IsAdminRole(u.Role))
@@ -62,6 +75,9 @@ namespace LifeAlertPlus.Client.Pages.Users
 				Users = users
 					.Where(u => !IsAdminRole(u.Role))
 					.ToList();
+
+				// Load monitored counts for each user (limited concurrency)
+				await RefreshMonitoredCountsAsync();
 			}
 			catch
 			{
@@ -70,6 +86,83 @@ namespace LifeAlertPlus.Client.Pages.Users
 			finally
 			{
 				IsLoading = false;
+			}
+		}
+
+		protected async Task RefreshMonitoredCountsAsync()
+		{
+			// Use admin-level aggregated endpoint to get monitored counts for all users in one call
+			try
+			{
+				var all = await UserMonitoredService.GetAllMonitoredUsersAsync();
+				var dict = new Dictionary<Guid, int>();
+				foreach (var mu in all)
+				{
+					dict[mu.UserId] = mu.MonitoredPeople?.Count ?? 0;
+				}
+				MonitoredCounts = dict;
+			}
+			catch
+			{
+				MonitoredCounts = new Dictionary<Guid, int>();
+			}
+		}
+
+		protected async Task ToggleActive(UserListItemDTO user)
+		{
+			if (user.DeletedAt == null)
+				await DeactivateUser(user);
+			else
+				await ActivateUser(user);
+		}
+
+		protected async Task DeactivateUser(UserListItemDTO user)
+		{
+			var ok = await JSRuntime.InvokeAsync<bool>("confirm", $"Deactivate user {user.Email}? This will disable the account.");
+			if (!ok) return;
+
+			var success = await UserService.DeactivateUserAsync(user.Id);
+			if (success)
+			{
+				user.DeletedAt = DateTime.UtcNow;
+			}
+			else
+			{
+				ErrorMessage = "Failed to deactivate user.";
+			}
+		}
+
+		protected async Task ActivateUser(UserListItemDTO user)
+		{
+			var success = await UserService.ActivateUserAsync(user.Id);
+			if (success)
+			{
+				user.DeletedAt = null;
+			}
+			else
+			{
+				ErrorMessage = "Failed to activate user.";
+			}
+		}
+
+		protected async Task ConfirmDelete(UserListItemDTO user)
+		{
+			var ok = await JSRuntime.InvokeAsync<bool>("confirm", $"Delete user {user.Email}? This cannot be undone.");
+			if (!ok) return;
+			await DeleteUser(user);
+		}
+
+		protected async Task DeleteUser(UserListItemDTO user)
+		{
+			var success = await UserService.DeleteUserAsync(user.Id);
+			if (success)
+			{
+				Users.Remove(user);
+				MonitoredCounts.Remove(user.Id);
+			}
+			else
+			{
+				ErrorMessage = "Failed to delete user.";
 			}
 		}
 
@@ -161,6 +254,11 @@ namespace LifeAlertPlus.Client.Pages.Users
 		protected string FormatDate(DateTime value)
 		{
 			return FormatDate((DateTime?)value);
+		}
+
+		protected void ViewUser(UserListItemDTO user)
+		{
+			NavigationManager.NavigateTo($"/view-selected-user/{user.Id}");
 		}
 	}
 }

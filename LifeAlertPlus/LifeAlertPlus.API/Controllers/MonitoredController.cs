@@ -68,6 +68,7 @@ namespace LifeAlertPlus.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpGet("serial/{deviceSerialNumber}")]
         public async Task<IActionResult> GetMonitoredPersonByDeviceSerialNumber([FromRoute] string deviceSerialNumber)
         {
@@ -80,6 +81,7 @@ namespace LifeAlertPlus.API.Controllers
                 return NotFound(new { Message = "Monitored person not found." });
 
             var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
             if (!owned.Any(m => m.Id == monitoredPerson.Id))
                 return Forbid();
 
@@ -98,7 +100,8 @@ namespace LifeAlertPlus.API.Controllers
                 return NotFound(new { Message = "Monitored person not found." });
 
             var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
-            if (!owned.Any(m => m.Id == id))
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
+            if (!owned.Any(m => m.Id == id) && !IsAdminRole(roleClaim))
                 return Forbid();
 
             return Ok(monitoredPerson);
@@ -116,7 +119,8 @@ namespace LifeAlertPlus.API.Controllers
                 return NotFound(new { Message = "Monitored person not found." });
 
             var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
-            if (!owned.Any(m => m.Id == id))
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
+            if (!owned.Any(m => m.Id == id) && !IsAdminRole(roleClaim))
                 return Forbid();
 
             if (dto.DeviceSerialNumber != existing.DeviceSerialNumber)
@@ -142,6 +146,11 @@ namespace LifeAlertPlus.API.Controllers
             await _monitoredService.UpdateMonitoredPersonAsync(existing);
 
             return Ok(new { Message = "Monitored person updated successfully.", MonitoredPerson = existing });
+        }
+
+        private static bool IsAdminRole(string? role)
+        {
+            return !string.IsNullOrWhiteSpace(role) && role.IndexOf("admin", StringComparison.OrdinalIgnoreCase) >= 0;
         }
     }
 }

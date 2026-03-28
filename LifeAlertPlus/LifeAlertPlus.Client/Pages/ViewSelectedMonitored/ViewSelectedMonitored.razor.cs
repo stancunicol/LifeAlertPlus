@@ -2,12 +2,11 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
-
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 
-namespace LifeAlertPlus.Client.Pages.SelectedMonitored
+namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 {
-    public partial class SelectedMonitored : ComponentBase, IAsyncDisposable
+    public partial class ViewSelectedMonitored : ComponentBase, IAsyncDisposable
     {
         [Parameter]
         public Guid PersonId { get; set; }
@@ -59,24 +58,6 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private double _userMinTemp = 36.0;
         private double _userMaxTemp = 37.5;
         private int _userUpdateFrequency = 30;
-
-        // Edit modal state
-        private bool _showEditModal;
-        // control whether edit button is shown (can be toggled via query param)
-        private bool _showEditButton = true;
-        private bool _isSaving;
-        private string? _editError;
-        private string _editFirstName = "";
-        private string _editLastName = "";
-        private string _editGender = "";
-        private DateTime? _editBirthdate;
-        private string _editAddress = "";
-        private string _editDeviceSerial = "";
-        private int? _editMinHr;
-        private int? _editMaxHr;
-        private double? _editMinTemp;
-        private double? _editMaxTemp;
-        private int? _editUpdateFrequency;
 
         private enum ChartViewMode
         {
@@ -194,11 +175,6 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             return age;
         }
 
-        private List<ChartDataPoint> HeartRateHistoryFiltered =>
-            HeartRateHistory.Where(d => d.HasData).ToList();
-        private List<ChartDataPoint> TemperatureHistoryFiltered =>
-            TemperatureHistory.Where(d => d.HasData).ToList();
-
         private async Task LoadChartDataAsync()
         {
             try
@@ -264,32 +240,6 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 XFraction = m.CreatedAt.ToLocalTime().TimeOfDay.TotalHours / 24.0
             }).ToList();
         }
-
-        private static List<T> SampleEvenly<T>(List<T> source, int count)
-        {
-            var result = new List<T>(count);
-            double step = (double)(source.Count - 1) / (count - 1);
-            for (int i = 0; i < count; i++)
-                result.Add(source[(int)Math.Round(i * step)]);
-            return result;
-        }
-
-        private static List<double> SmoothValues(List<double> values, int window)
-        {
-            var result = new List<double>(values.Count);
-            int half = window / 2;
-            for (int i = 0; i < values.Count; i++)
-            {
-                int from = Math.Max(0, i - half);
-                int to   = Math.Min(values.Count - 1, i + half);
-                double sum = 0;
-                for (int j = from; j <= to; j++) sum += values[j];
-                result.Add(sum / (to - from + 1));
-            }
-            return result;
-        }
-
-        private bool ShowDataPoints => false; // points hidden — line only
 
         private void LoadWeeklyChartData(List<MeasurementResponseDTO> measurements)
         {
@@ -425,7 +375,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     .ToList();
             }
         }
-private static string F(double v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+
+        private static string F(double v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
 
         private string GenerateAreaPath(List<(double X, double Y)> pts, double baseline = 160)
         {
@@ -444,26 +395,18 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return $"{linePath} L {F(pts[pts.Count - 1].X)} {F(baseline)} L {F(pts[0].X)} {F(baseline)} Z";
         }
 
-        /// <summary>
-        /// Monotone cubic Hermite interpolation (Fritsch-Carlson).
-        /// Guarantees no overshooting between data points — curves never loop or twist.
-        /// </summary>
         private string GenerateSmoothPath(List<(double X, double Y)> pts)
         {
             if (pts == null || pts.Count == 0) return "";
             if (pts.Count == 1)
             {
-                // Draw a very short segment so a visible stroke appears for a single point
                 return $"M {F(pts[0].X)} {F(pts[0].Y)} L {F(pts[0].X + 1.0)} {F(pts[0].Y)}";
             }
 
             int n = pts.Count;
-
-            // For exactly 2 points, just draw a line
             if (n == 2)
                 return $"M {F(pts[0].X)} {F(pts[0].Y)} L {F(pts[1].X)} {F(pts[1].Y)}";
 
-            // 1. Compute segment deltas and slopes
             var dx = new double[n - 1];
             var dy = new double[n - 1];
             var slopes = new double[n - 1];
@@ -474,18 +417,17 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 slopes[i] = dx[i] < 1e-10 ? 0 : dy[i] / dx[i];
             }
 
-            // 2. Compute initial tangents
             var m = new double[n];
             m[0] = slopes[0];
             m[n - 1] = slopes[n - 2];
             for (int i = 1; i < n - 1; i++)
             {
                 if (slopes[i - 1] * slopes[i] <= 0)
-                    m[i] = 0; // local extremum — flat tangent
+                    m[i] = 0;
                 else
                     m[i] = (slopes[i - 1] + slopes[i]) / 2.0;
             }
-            // 3. Fritsch-Carlson monotonicity correction
+
             for (int i = 0; i < n - 1; i++)
             {
                 if (Math.Abs(slopes[i]) < 1e-10)
@@ -507,7 +449,6 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 }
             }
 
-            // 4. Build SVG path with cubic bezier segments
             var path = new System.Text.StringBuilder();
             path.Append($"M {F(pts[0].X)} {F(pts[0].Y)}");
 
@@ -517,9 +458,11 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 double cp1x = pts[i].X + seg;
                 double cp1y = pts[i].Y + m[i] * seg;
                 double cp2x = pts[i + 1].X - seg;
-                double cp2y = pts[i + 1].Y - m[i + 1] * seg;
+                double cp2y = pts[i + 1].Y + m[i + 1] * -seg + 0; // keep similar math
 
-                path.Append($" C {F(cp1x)} {F(cp1y)}, {F(cp2x)} {F(cp2y)}, {F(pts[i + 1].X)} {F(pts[i + 1].Y)}");
+                double cp2y_fixed = pts[i + 1].Y - m[i + 1] * seg;
+
+                path.Append($" C {F(cp1x)} {F(cp1y)}, {F(cp2x)} {F(cp2y_fixed)}, {F(pts[i + 1].X)} {F(pts[i + 1].Y)}");
             }
 
             return path.ToString();
@@ -535,25 +478,21 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             TempTooltipData = new List<TooltipPoint>();
         }
 
-        // Spread close X positions so plotted circles don't visually overlap
         private static List<(double X, double Y)> SpreadCloseXs(List<(double X, double Y)> pts, double minX, double maxX, double spacing = 6.0)
         {
             if (pts == null || pts.Count <= 1) return pts;
 
-            // pts expected sorted by X
             var result = pts.Select(p => (X: p.X, Y: p.Y)).ToList();
             int i = 0;
             while (i < result.Count)
             {
                 int j = i + 1;
-                // group points that are closer than spacing
                 while (j < result.Count && (result[j].X - result[j - 1].X) <= spacing)
                     j++;
 
                 int groupSize = j - i;
                 if (groupSize > 1)
                 {
-                    // center of group
                     double center = 0;
                     for (int k = i; k < j; k++) center += result[k].X;
                     center /= groupSize;
@@ -563,7 +502,6 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     for (int k = 0; k < groupSize; k++)
                         newXs[k] = center + startOffset + k * spacing;
 
-                    // ensure within bounds
                     double leftMost = newXs[0];
                     double rightMost = newXs[groupSize - 1];
                     if (leftMost < minX)
@@ -602,7 +540,6 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
                 foreach (var m in measurements.Take(10))
                 {
-                    // Check for critical conditions
                     if (m.Pulse > 100 || m.Pulse < 50)
                     {
                         alerts.Add(new Alert
@@ -705,37 +642,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             };
         }
 
-        private static DayOfWeek ParseFirstDayOfWeek(string? value)
-        {
-            return (value?.ToLowerInvariant()) switch
-            {
-                "monday" => DayOfWeek.Monday,
-                "tuesday" => DayOfWeek.Tuesday,
-                "wednesday" => DayOfWeek.Wednesday,
-                "thursday" => DayOfWeek.Thursday,
-                "friday" => DayOfWeek.Friday,
-                "saturday" => DayOfWeek.Saturday,
-                "sunday" => DayOfWeek.Sunday,
-                _ => DayOfWeek.Monday
-            };
-        }
-
         protected override async Task OnInitializedAsync()
         {
-            // Read query parameter to decide whether the Edit button should be displayed
-            try
-            {
-                var uri = new Uri(NavigationManager.Uri);
-                var qs = ParseQueryString(uri.Query);
-                if (qs.TryGetValue("showEdit", out var sval))
-                {
-                    if (bool.TryParse(sval, out var parsed))
-                        _showEditButton = parsed;
-                    else
-                        _showEditButton = !string.Equals(sval, "false", StringComparison.OrdinalIgnoreCase);
-                }
-            }
-            catch { /* ignore parsing errors and keep default true */ }
             var claims = await TokenParserService.GetClaimsAsync();
             if (claims != null)
             {
@@ -768,7 +676,6 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             await LoadRecentAlertsAsync();
             await LoadRecentMeasurementsAsync();
 
-            // Start auto-refresh timer (uses user-configured update frequency)
             _refreshTimer = new System.Threading.Timer(async _ => await RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
         }
 
@@ -790,7 +697,6 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
             catch
             {
-                // Ignore errors during auto-refresh
             }
         }
 
@@ -825,7 +731,6 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
             catch
             {
-                // JS interop may fail during prerender
             }
         }
 
@@ -905,126 +810,19 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return "Signal available";
         }
 
-        // Simple query-string parser to avoid extra package dependencies
-        private static System.Collections.Generic.Dictionary<string, string> ParseQueryString(string query)
+        private static DayOfWeek ParseFirstDayOfWeek(string? value)
         {
-            var dict = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
-            if (string.IsNullOrEmpty(query)) return dict;
-            if (query.StartsWith("?")) query = query.Substring(1);
-            var parts = query.Split('&', System.StringSplitOptions.RemoveEmptyEntries);
-            foreach (var part in parts)
+            return (value?.ToLowerInvariant()) switch
             {
-                var kv = part.Split('=', 2);
-                try
-                {
-                    var key = Uri.UnescapeDataString(kv[0]);
-                    var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : string.Empty;
-                    dict[key] = value;
-                }
-                catch
-                {
-                    // ignore malformed segments
-                }
-            }
-            return dict;
-        }
-
-        private string GetAlertIcon(string severity)
-        {
-            return severity.ToLower() switch
-            {
-                "critical" => "⚠️",
-                "warning" => "🔔",
-                "info" => "ℹ️",
-                _ => "🔔"
+                "monday" => DayOfWeek.Monday,
+                "tuesday" => DayOfWeek.Tuesday,
+                "wednesday" => DayOfWeek.Wednesday,
+                "thursday" => DayOfWeek.Thursday,
+                "friday" => DayOfWeek.Friday,
+                "saturday" => DayOfWeek.Saturday,
+                "sunday" => DayOfWeek.Sunday,
+                _ => DayOfWeek.Monday
             };
-        }
-
-        private void GoBack()
-        {
-            NavigationManager.NavigateTo("/monitored");
-        }
-
-        private async void OpenEditModal()
-        {
-            _editError = null;
-            var monitored = await MonitoredService.GetMonitoredPersonByIdAsync(PersonId);
-            if (monitored != null)
-            {
-                _editFirstName = monitored.FirstName;
-                _editLastName = monitored.LastName;
-                _editGender = monitored.Gender;
-                _editBirthdate = monitored.Birthdate;
-                _editAddress = monitored.Address;
-                _editDeviceSerial = monitored.DeviceSerialNumber;
-                _editMinHr = monitored.MinHeartRate;
-                _editMaxHr = monitored.MaxHeartRate;
-                _editMinTemp = monitored.MinTemperature;
-                _editMaxTemp = monitored.MaxTemperature;
-                _editUpdateFrequency = monitored.UpdateFrequency;
-            }
-            _showEditModal = true;
-            StateHasChanged();
-        }
-
-        private void CloseEditModal()
-        {
-            _showEditModal = false;
-            _editError = null;
-        }
-
-        private async Task SaveEditAsync()
-        {
-            _editError = null;
-            if (string.IsNullOrWhiteSpace(_editFirstName) || string.IsNullOrWhiteSpace(_editLastName))
-            {
-                _editError = "First name and last name are required.";
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(_editDeviceSerial))
-            {
-                _editError = "Device serial number is required.";
-                return;
-            }
-
-            _isSaving = true;
-            try
-            {
-                var dto = new MonitorUpdateRequestDTO
-                {
-                    FirstName = _editFirstName.Trim(),
-                    LastName = _editLastName.Trim(),
-                    Gender = _editGender,
-                    Birthdate = _editBirthdate,
-                    Address = _editAddress?.Trim() ?? "",
-                    DeviceSerialNumber = _editDeviceSerial.Trim(),
-                    MinHeartRate = _editMinHr,
-                    MaxHeartRate = _editMaxHr,
-                    MinTemperature = _editMinTemp,
-                    MaxTemperature = _editMaxTemp,
-                    UpdateFrequency = _editUpdateFrequency
-                };
-
-                var success = await MonitoredService.UpdateMonitoredPersonAsync(PersonId, dto);
-                if (success)
-                {
-                    _showEditModal = false;
-                    await LoadPersonDataAsync();
-                    StateHasChanged();
-                }
-                else
-                {
-                    _editError = "Failed to update. The device serial number may already be in use.";
-                }
-            }
-            catch (Exception ex)
-            {
-                _editError = $"Error: {ex.Message}";
-            }
-            finally
-            {
-                _isSaving = false;
-            }
         }
 
         public class PersonDetail
@@ -1054,7 +852,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             public int Value { get; set; }
             public double ActualValue { get; set; }
             public bool HasData { get; set; } = true;
-            public double XFraction { get; set; } = -1; // -1 = index-based; 0.0-1.0 = explicit
+            public double XFraction { get; set; } = -1;
         }
 
         public record TooltipPoint(double X, double Y, double Value, string Label, double HitX, double HitWidth);
@@ -1109,6 +907,22 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
 
             return result;
+        }
+
+        private string GetAlertIcon(string severity)
+        {
+            return severity.ToLower() switch
+            {
+                "critical" => "⚠️",
+                "warning" => "🔔",
+                "info" => "ℹ️",
+                _ => "🔔"
+            };
+        }
+
+        private void GoBack()
+        {
+            NavigationManager.NavigateTo("/monitored-users");
         }
 
         public class Alert

@@ -456,6 +456,50 @@
 	white-space: nowrap;
 }
 
+/* Admin notifications */
+.notifications-panel {
+    margin: 18px 0 24px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    color: #222;
+    border: 1px solid rgba(0,0,0,0.04);
+}
+.notifications-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.notif-summary {
+    color: #666;
+    font-size: 0.95rem;
+}
+.notifications-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.notif-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fbfbff;
+    border: 1px solid #f0f0f5;
+}
+.notif-item.critical { background: #fff5f5; border-color: #ffd6d6; }
+.notif-item.warning { background: #fffaf0; border-color: #fff0c8; }
+.notif-item.info { background: #f3f7ff; border-color: #d6e4ff; }
+.notif-main { max-width: 78%; }
+.notif-message { color: #555; font-size: 0.95rem; margin-top: 4px; }
+.notif-time { color: #888; font-size: 0.85rem; margin-left: 12px; white-space: nowrap; }
+.no-notifs { color: #666; padding: 12px; }
+
+/* Small responsive tweak to stack stats and notifications on narrow screens */
+@media (max-width: 800px) {
+    .stats-grid.admin-stats { grid-template-columns: repeat(2, 1fr) !important; }
+    .notifications-panel { order: 2; }
+}
+
 @media (max-width: 900px) {
 	.admin-container {
 		padding: 1rem;

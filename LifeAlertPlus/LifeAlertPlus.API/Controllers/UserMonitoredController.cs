@@ -32,17 +32,20 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("{userId}/monitored")]
         public async Task<IActionResult> GetMonitoredPeopleByUserId(Guid userId)
         {
-            if (!CallerOwns(userId))
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
+            if (!CallerOwns(userId) && !IsAdminRole(roleClaim))
                 return Forbid();
 
             var monitoredPeople = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(userId);
             return Ok(monitoredPeople);
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost("{userId}/monitored/{monitoredPersonId}")]
         public async Task<IActionResult> AddMonitoredPersonToUser(Guid userId, Guid monitoredPersonId)
         {
-            if (!CallerOwns(userId))
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
+            if (!CallerOwns(userId) && !IsAdminRole(roleClaim))
                 return Forbid();
 
             await _userMonitoredService.AddMonitoredPersonToUserAsync(userId, monitoredPersonId);

@@ -29,6 +29,7 @@
     {
         "admin-dashboard",
         "users",
+        "view-selected-user",
         "monitored-users",
         "simulations"
     };
@@ -112,8 +113,18 @@
 
         if (isAdmin && MatchesRoute(normalized, UserRoutes))
         {
-            Navigation.NavigateTo("/admin-dashboard", forceLoad: true);
-            return;
+            // Allow admins to view monitored pages (read-only) — they should not be forcibly redirected
+            // to the admin dashboard when opening a monitored person's view.
+            if (normalized.StartsWith("monitored", StringComparison.OrdinalIgnoreCase)
+                || normalized.StartsWith("selected-monitored", StringComparison.OrdinalIgnoreCase))
+            {
+                // allow access to these user routes for admins
+            }
+            else
+            {
+                Navigation.NavigateTo("/admin-dashboard", forceLoad: true);
+                return;
+            }
         }
 
         if (!isAdmin && MatchesRoute(normalized, AdminRoutes))

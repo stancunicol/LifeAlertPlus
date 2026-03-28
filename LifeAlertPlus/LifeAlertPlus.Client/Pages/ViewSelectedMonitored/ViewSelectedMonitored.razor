@@ -1,10 +1,9 @@
-@page "/monitored/{PersonId:guid}"
-@using LifeAlertPlus.Client.Components.Header
+@page "/view-selected-monitored/{PersonId:guid}"
+@using LifeAlertPlus.Client.Components.HeaderAdmin
+@using LifeAlertPlus.Domain.Entities
 @layout MainLayout
 
-@using LifeAlertPlus.Domain.Entities
-
-<HeaderComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl"/>
+<HeaderAdminComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
 
 <div class="selected-monitored-container">
     @if (Person != null)
@@ -62,12 +61,6 @@
                         <span class="contact-text">Device: @Person.DeviceSerial</span>
                     </div>
                 </div>
-                @if (_showEditButton)
-                {
-                    <div class="action-buttons">
-                        <button class="btn-action-main" @onclick="OpenEditModal">⚙️ Edit Profile</button>
-                    </div>
-                }
             </div>
         </div>
 
@@ -225,7 +218,7 @@
                                 <g>@((MarkupString)"<text x=\"58\" y=\"164\" class=\"chart-y-label\">35°</text>")</g>
                                 @if (TemperaturePoints.Count >= 1)
                                 {
-                                    <path d="@GenerateAreaPath(TemperaturePoints)" class="chart-area" fill="url(#tempGradient)" />
+                                    <path d="@GenerateAreaPath(TemperaturePoints)" class="chart-area temp-area" fill="url(#tempGradient)" />
                                     <path d="@GenerateSmoothPath(TemperaturePoints)" class="chart-line temp-line" />
                                     @foreach (var pt in TemperaturePoints)
                                     {
@@ -289,106 +282,10 @@
     }
     else if (IsLoading)
     {
-        <div class="loading-state">
-            <div class="spinner"></div>
-            <p>Loading...</p>
-        </div>
+        <div class="message-card">Loading...</div>
     }
     else
     {
-        <div class="loading-state">
-            <p>@(LoadError ?? "Monitored person not found.")</p>
-            <button class="btn-back" @onclick="GoBack">
-                <span class="back-icon">←</span> Go Back to Monitored List
-            </button>
-        </div>
+        <div class="message-card error">@LoadError</div>
     }
 </div>
-
-@if (_showEditModal)
-{
-    <div class="modal-overlay" @onclick="CloseEditModal">
-        <div class="modal-content" @onclick:stopPropagation="true">
-            <div class="modal-header">
-                <h2>✏️ Edit Profile</h2>
-                <button class="modal-close" @onclick="CloseEditModal">✕</button>
-            </div>
-            <div class="modal-body">
-                @if (!string.IsNullOrEmpty(_editError))
-                {
-                    <div class="edit-error">@_editError</div>
-                }
-                <div class="form-group">
-                    <label>First Name</label>
-                    <input type="text" @bind="_editFirstName" placeholder="First Name" />
-                </div>
-                <div class="form-group">
-                    <label>Last Name</label>
-                    <input type="text" @bind="_editLastName" placeholder="Last Name" />
-                </div>
-                <div class="form-group">
-                    <label>Gender</label>
-                    <select @bind="_editGender">
-                        <option value="">Select...</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Birthdate</label>
-                    <input type="date" @bind="_editBirthdate" />
-                </div>
-                <div class="form-group">
-                    <label>Address</label>
-                    <input type="text" @bind="_editAddress" placeholder="Address" />
-                </div>
-                <div class="form-group">
-                    <label>Device Serial Number</label>
-                    <input type="text" @bind="_editDeviceSerial" placeholder="Device Serial Number" />
-                </div>
-                <div class="form-group-separator">
-                    <span>Custom Vital Ranges (leave blank to use your account defaults)</span>
-                </div>
-                <div class="form-group form-group-inline">
-                    <div>
-                        <label>Min Heart Rate (bpm)</label>
-                        <input type="number" @bind="_editMinHr" placeholder="@_userMinHr" min="20" max="300" />
-                    </div>
-                    <div>
-                        <label>Max Heart Rate (bpm)</label>
-                        <input type="number" @bind="_editMaxHr" placeholder="@_userMaxHr" min="20" max="300" />
-                    </div>
-                </div>
-                <div class="form-group form-group-inline">
-                    <div>
-                        <label>Min Temperature (°C)</label>
-                        <input type="number" step="0.1" @bind="_editMinTemp" placeholder="@_userMinTemp" min="30" max="45" />
-                    </div>
-                    <div>
-                        <label>Max Temperature (°C)</label>
-                        <input type="number" step="0.1" @bind="_editMaxTemp" placeholder="@_userMaxTemp" min="30" max="45" />
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Update Frequency (leave blank to use account default: @_userUpdateFrequency s)</label>
-                    <select @bind="_editUpdateFrequency">
-                        <option value="">Use account default (@_userUpdateFrequency s)</option>
-                        <option value="10">Every 10 seconds</option>
-                        <option value="15">Every 15 seconds</option>
-                        <option value="30">Every 30 seconds</option>
-                        <option value="60">Every 1 minute</option>
-                        <option value="120">Every 2 minutes</option>
-                        <option value="300">Every 5 minutes</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" @onclick="CloseEditModal">Cancel</button>
-                <button class="btn-save" @onclick="SaveEditAsync" disabled="@_isSaving">
-                    @(_isSaving ? "Saving..." : "💾 Save")
-                </button>
-            </div>
-        </div>
-    </div>
-}

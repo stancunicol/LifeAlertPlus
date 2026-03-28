@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Shared.DTOs.Responses.UserMonitored;
+using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using System.Text.Json;
 using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components;
 
 namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 {
@@ -21,10 +25,16 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 		private MonitoredService MonitoredService { get; set; } = default!;
 
 		[Inject]
+		private MeasurementService MeasurementService { get; set; } = default!;
+
+		[Inject]
 		private TokenParserService TokenParser { get; set; } = default!;
 
 		[Inject]
 		private IJSRuntime JSRuntime { get; set; } = default!;
+
+		[Inject]
+		private NavigationManager NavigationManager { get; set; } = default!;
 
 		protected List<MonitoredUserDTO> Users { get; private set; } = new();
 		protected List<MonitoredPersonRow> MonitoredRows { get; private set; } = new();
@@ -42,8 +52,9 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.Count();
 		protected int TotalMonitored => MonitoredRows.Count;
-		protected int ActiveMonitoredCount => MonitoredRows.Count(r => r.Online);
-		protected int InactiveMonitoredCount => MonitoredRows.Count(r => !r.Online);
+		protected int OnlineMonitoredCount => MonitoredRows.Count(r => r.Online);
+		protected int OfflineMonitoredCount => MonitoredRows.Count(r => !r.Online);
+		protected int AlertsCount { get; set; }
 
 		protected IEnumerable<MonitoredPersonRow> FilteredRows => MonitoredRows
 			.Where(r => MatchesSearch(r, SearchText))
@@ -79,6 +90,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 					.Where(u => !IsAdminRole(u.Role))
 					.ToList();
 				MonitoredRows = BuildMonitoredRows(Users);
+				await PopulateOnlineAndAlertsAsync();
 			}
 			catch
 			{
@@ -133,7 +145,8 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 					person.DeviceSerialNumber,
 					person.IsActive && person.DeletedAt == null,
 					FormatDate(person.UpdatedAt ?? person.CreatedAt),
-					monitors));
+					monitors,
+					false));
 			}
 
 			return rows;
@@ -154,8 +167,9 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 		{
 			return filter switch
 			{
-				"active" => row.Online,
-				"inactive" => !row.Online,
+				"online" => row.Online,
+				"offline" => !row.Online,
+				"alerts" => row.HasAlert,
 				_ => true
 			};
 		}
@@ -172,7 +186,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 
 		protected string GetStatusText(bool online)
 		{
-			return online ? "Active" : "Inactive";
+			return online ? "Online" : "Offline";
 		}
 
 		private static bool IsAdminRole(string? role)
@@ -186,6 +200,19 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 		protected string GetRowClass(bool online)
 		{
 			return online ? string.Empty : "row-offline";
+		}
+
+		protected void NavigateToSelected(Guid personId)
+		{
+			NavigationManager.NavigateTo($"/view-selected-monitored/{personId}");
+		}
+
+		protected void OnRowKeyDown(KeyboardEventArgs e, Guid personId)
+		{
+			if (e.Key == "Enter" || e.Key == " ")
+			{
+				NavigateToSelected(personId);
+			}
 		}
 
 		protected string FullName(MonitoredUserDTO user)
@@ -206,6 +233,68 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			string DeviceSerial,
 			bool Online,
 			string LastUpdate,
-			IReadOnlyList<MonitorInfo> Monitors);
+			IReadOnlyList<MonitorInfo> Monitors,
+			bool HasAlert);
+
+		private async Task PopulateOnlineAndAlertsAsync()
+		{
+			var semaphore = new SemaphoreSlim(10);
+			var tasks = new List<Task>();
+			foreach (var row in MonitoredRows.ToList())
+			{
+				await semaphore.WaitAsync();
+				var personId = row.PersonId;
+				var device = row.DeviceSerial;
+				tasks.Add(Task.Run(async () =>
+				{
+					try
+					{
+						bool online = false;
+						bool hasAlert = false;
+						try
+						{
+							var esp = await MonitoredService.GetEspDataAsync(device);
+							online = esp?.IsAvailable == true;
+						}
+						catch { online = false; }
+
+						MeasurementResponseDTO? last = null;
+						try
+						{
+							var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(personId, 1, 1);
+							last = measurements.FirstOrDefault();
+							if (last != null)
+							{
+								if (last.Pulse > 100 || last.Pulse < 50 || last.Temperature > 37.5 || last.IsFall)
+									hasAlert = true;
+							}
+						}
+						catch { /* ignore measurement errors */ }
+
+						lock (MonitoredRows)
+						{
+							var idx = MonitoredRows.FindIndex(r => r.PersonId == personId);
+							if (idx >= 0)
+							{
+								var current = MonitoredRows[idx];
+								var lastUpdate = current.LastUpdate;
+								if (last != null)
+								{
+									lastUpdate = FormatDate(last.CreatedAt);
+								}
+								MonitoredRows[idx] = current with { Online = online, HasAlert = hasAlert, LastUpdate = lastUpdate };
+							}
+						}
+					}
+					finally
+					{
+						semaphore.Release();
+					}
+				}));
+			}
+
+			await Task.WhenAll(tasks);
+			AlertsCount = MonitoredRows.Count(r => r.HasAlert);
+		}
 	}
 }
