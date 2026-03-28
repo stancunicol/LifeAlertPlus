@@ -224,6 +224,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 TemperaturePoints = ComputePointsWithRange(TemperatureHistory, 35, 39);
                 HrTooltipData = ComputeTooltipData(HeartRateHistory, 40, 120);
                 TempTooltipData = ComputeTooltipData(TemperatureHistory, 35, 39);
+
+                // Ensure UI updates immediately after data is loaded so points appear
+                await InvokeAsync(StateHasChanged);
             }
             catch
             {
@@ -235,6 +238,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         {
             var today = DateTime.Now.Date;
 
+            // For daily view we want to show every measurement of the day (no aggregation by buckets).
             var todayMs = measurements
                 .Where(m => m.CreatedAt.ToLocalTime().Date == today)
                 .OrderBy(m => m.CreatedAt)
@@ -242,46 +246,21 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
             if (!todayMs.Any()) { LoadEmptyChartData(); return; }
 
-            // Grupare pe interval de 5 minute
-            var grouped = todayMs
-                .GroupBy(m => new {
-                    Hour = m.CreatedAt.ToLocalTime().Hour,
-                    Bucket = m.CreatedAt.ToLocalTime().Minute / 5
-                })
-                .Select(g => new {
-                    Time = new TimeSpan(g.Key.Hour, g.Key.Bucket * 5, 0),
-                    Pulse = g.Average(x => x.Pulse),
-                    Temp = g.Average(x => x.Temperature)
-                })
-                .OrderBy(x => x.Time)
-                .ToList();
-
-            HeartRateHistory = grouped.Select(g => new ChartDataPoint
+            HeartRateHistory = todayMs.Select(m => new ChartDataPoint
             {
-                Day = g.Time.ToString(@"hh\:mm"),
-                ActualValue = g.Pulse,
+                Day = m.CreatedAt.ToLocalTime().ToString("HH:mm"),
+                ActualValue = m.Pulse,
                 HasData = true,
-                XFraction = g.Time.TotalHours / 24.0
+                XFraction = m.CreatedAt.ToLocalTime().TimeOfDay.TotalHours / 24.0
             }).ToList();
 
-            TemperatureHistory = grouped.Select(g => new ChartDataPoint
+            TemperatureHistory = todayMs.Select(m => new ChartDataPoint
             {
-                Day = g.Time.ToString(@"hh\:mm"),
-                ActualValue = g.Temp,
+                Day = m.CreatedAt.ToLocalTime().ToString("HH:mm"),
+                ActualValue = m.Temperature,
                 HasData = true,
-                XFraction = g.Time.TotalHours / 24.0
+                XFraction = m.CreatedAt.ToLocalTime().TimeOfDay.TotalHours / 24.0
             }).ToList();
-
-            // Smoothing — adapt window to data density so curves are readable
-            int window = Math.Max(3, HeartRateHistory.Count / 8);
-            var hrSmooth = SmoothValues(HeartRateHistory.Select(x => x.ActualValue).ToList(), window);
-            var tSmooth  = SmoothValues(TemperatureHistory.Select(x => x.ActualValue).ToList(), window);
-
-            for (int i = 0; i < HeartRateHistory.Count; i++)
-                HeartRateHistory[i].ActualValue = hrSmooth[i];
-
-            for (int i = 0; i < TemperatureHistory.Count; i++)
-                TemperatureHistory[i].ActualValue = tSmooth[i];
         }
 
         private static List<T> SampleEvenly<T>(List<T> source, int count)
@@ -398,7 +377,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             if (range < 0.001) range = 10;
 
             int n = data.Count;
-            return data
+            var pts = data
                 .Select((d, i) => (
                     HasData: d.HasData,
                     X: paddingLeft + (d.XFraction >= 0
@@ -410,6 +389,12 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 .OrderBy(p => p.X)
                 .Select(p => (X: p.X, Y: p.Y))
                 .ToList();
+
+            // Spread points that are very close on X so circles don't overlap
+            var minX = paddingLeft;
+            var maxX = paddingLeft + usableWidth;
+            double spacing = CurrentChartView == ChartViewMode.Daily ? 12.0 : 8.0;
+            return SpreadCloseXs(pts, minX, maxX, spacing);
         }
 
         private List<(string Label, double X)> GetXAxisLabels()
@@ -442,7 +427,16 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
         private string GenerateAreaPath(List<(double X, double Y)> pts, double baseline = 160)
         {
-            if (pts == null || pts.Count < 2) return "";
+            if (pts == null || pts.Count == 0) return "";
+            if (pts.Count == 1)
+            {
+                // Small filled rectangle under the single point so the area is visible
+                var x1 = pts[0].X;
+                var y1 = pts[0].Y;
+                var x2 = x1 + 1.0; // tiny width
+                return $"M {F(x1)} {F(y1)} L {F(x2)} {F(y1)} L {F(x2)} {F(baseline)} L {F(x1)} {F(baseline)} Z";
+            }
+
             var linePath = GenerateSmoothPath(pts);
             if (string.IsNullOrEmpty(linePath)) return "";
             return $"{linePath} L {F(pts[pts.Count - 1].X)} {F(baseline)} L {F(pts[0].X)} {F(baseline)} Z";
@@ -455,7 +449,11 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         private string GenerateSmoothPath(List<(double X, double Y)> pts)
         {
             if (pts == null || pts.Count == 0) return "";
-            if (pts.Count == 1) return $"M {F(pts[0].X)} {F(pts[0].Y)}";
+            if (pts.Count == 1)
+            {
+                // Draw a very short segment so a visible stroke appears for a single point
+                return $"M {F(pts[0].X)} {F(pts[0].Y)} L {F(pts[0].X + 1.0)} {F(pts[0].Y)}";
+            }
 
             int n = pts.Count;
 
@@ -485,7 +483,6 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 else
                     m[i] = (slopes[i - 1] + slopes[i]) / 2.0;
             }
-
             // 3. Fritsch-Carlson monotonicity correction
             for (int i = 0; i < n - 1; i++)
             {
@@ -534,6 +531,58 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             TemperaturePoints = new List<(double X, double Y)>();
             HrTooltipData = new List<TooltipPoint>();
             TempTooltipData = new List<TooltipPoint>();
+        }
+
+        // Spread close X positions so plotted circles don't visually overlap
+        private static List<(double X, double Y)> SpreadCloseXs(List<(double X, double Y)> pts, double minX, double maxX, double spacing = 6.0)
+        {
+            if (pts == null || pts.Count <= 1) return pts;
+
+            // pts expected sorted by X
+            var result = pts.Select(p => (X: p.X, Y: p.Y)).ToList();
+            int i = 0;
+            while (i < result.Count)
+            {
+                int j = i + 1;
+                // group points that are closer than spacing
+                while (j < result.Count && (result[j].X - result[j - 1].X) <= spacing)
+                    j++;
+
+                int groupSize = j - i;
+                if (groupSize > 1)
+                {
+                    // center of group
+                    double center = 0;
+                    for (int k = i; k < j; k++) center += result[k].X;
+                    center /= groupSize;
+
+                    double startOffset = -((groupSize - 1) / 2.0) * spacing;
+                    var newXs = new double[groupSize];
+                    for (int k = 0; k < groupSize; k++)
+                        newXs[k] = center + startOffset + k * spacing;
+
+                    // ensure within bounds
+                    double leftMost = newXs[0];
+                    double rightMost = newXs[groupSize - 1];
+                    if (leftMost < minX)
+                    {
+                        double shift = minX - leftMost;
+                        for (int k = 0; k < groupSize; k++) newXs[k] += shift;
+                    }
+                    if (rightMost > maxX)
+                    {
+                        double shift = maxX - rightMost;
+                        for (int k = 0; k < groupSize; k++) newXs[k] += shift;
+                    }
+
+                    for (int k = 0; k < groupSize; k++)
+                        result[i + k] = (newXs[k], result[i + k].Y);
+                }
+
+                i = j;
+            }
+
+            return result;
         }
 
         private async Task LoadRecentAlertsAsync()
@@ -988,19 +1037,24 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
             int n = data.Count;
             var points = data
-                .Select((d, i) => new
-                {
-                    d.HasData,
-                    d.ActualValue,
-                    d.Day,
-                    X = paddingLeft + (d.XFraction >= 0
+                .Select((d, i) => (
+                    HasData: d.HasData,
+                    Value: d.ActualValue,
+                    Day: d.Day,
+                    X: paddingLeft + (d.XFraction >= 0
                         ? d.XFraction * usableWidth
                         : (n <= 1 ? usableWidth / 2.0 : (double)i / (n - 1) * usableWidth)),
-                    Y = paddingTop + usableHeight * (1.0 - Math.Clamp((d.ActualValue - minVal) / range, 0.0, 1.0))
-                })
+                    Y: paddingTop + usableHeight * (1.0 - Math.Clamp((d.ActualValue - minVal) / range, 0.0, 1.0))
+                ))
                 .Where(p => p.HasData)
                 .OrderBy(p => p.X)
                 .ToList();
+
+            // Adjust X positions to avoid overlapping tooltip targets / dots
+            var minX = paddingLeft;
+            var maxX = paddingLeft + usableWidth;
+            double spacing = CurrentChartView == ChartViewMode.Daily ? 12.0 : 8.0;
+            var adjustedXY = SpreadCloseXs(points.Select(p => (p.X, p.Y)).ToList(), minX, maxX, spacing);
 
             if (points.Count == 0) return new();
 
@@ -1008,10 +1062,12 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             for (int i = 0; i < points.Count; i++)
             {
                 var p = points[i];
-                double left = i == 0 ? paddingLeft : (points[i - 1].X + p.X) / 2.0;
-                double right = i == points.Count - 1 ? 785 : (p.X + points[i + 1].X) / 2.0;
-                result.Add(new TooltipPoint(p.X, p.Y, p.ActualValue, p.Day, left, right - left));
+                var adj = adjustedXY[i];
+                double left = i == 0 ? paddingLeft : (adjustedXY[i - 1].X + adj.X) / 2.0;
+                double right = i == points.Count - 1 ? paddingLeft + usableWidth : (adj.X + adjustedXY[i + 1].X) / 2.0;
+                result.Add(new TooltipPoint(adj.X, adj.Y, p.Value, p.Day, left, right - left));
             }
+
             return result;
         }
 
