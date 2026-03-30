@@ -143,3 +143,42 @@ body {
     margin-left: 15px;
     font-weight: bold;
 }
+
+/* Mobile header spacing + responsive modals */
+@media (max-width: 768px) {
+    /* ensure a small visual gap under the fixed header on mobile */
+    main {
+        padding-top: 73px; /* keeps content clear of fixed header + small gap */
+    }
+
+    /* Make modals adapt to viewport height/width on small screens */
+    .modal-overlay {
+        align-items: flex-start;
+        padding-top: 18px; /* so modal sits below header/edge */
+        overflow-y: auto;
+    }
+
+    .modal-content,
+    .modal-content-large {
+        width: min(90vw, 440px) !important;
+        max-width: 90vw !important;
+        margin: 0.4rem auto !important;
+        padding: 1rem 1rem !important;
+        border-radius: 14px !important;
+        max-height: calc(100vh - 120px) !important;
+        overflow-y: auto !important;
+        box-sizing: border-box !important;
+    }
+}
+
+@media (max-width: 420px) {
+    main { padding-top: 68px; }
+
+    .modal-content,
+    .modal-content-large {
+        width: 94vw !important;
+        padding: 0.8rem !important;
+        border-radius: 12px !important;
+        max-height: calc(100vh - 110px) !important;
+    }
+}

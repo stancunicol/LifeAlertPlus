@@ -27,6 +27,34 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		protected string ProfilePictureUrl { get; private set; } = string.Empty;
 		private bool _disposed;
 
+		protected string SearchQuery { get; set; } = string.Empty;
+		protected string StatusFilter { get; set; } = "all";
+
+		protected IEnumerable<SimPerson> FilteredPersons => Persons.Where(p =>
+		{
+			if (StatusFilter == "running" && !p.IsRunning) return false;
+			if (StatusFilter == "idle" && p.IsRunning) return false;
+
+			if (!string.IsNullOrWhiteSpace(SearchQuery))
+			{
+				var q = SearchQuery.Trim();
+				return p.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
+					|| p.Serial.Contains(q, StringComparison.OrdinalIgnoreCase)
+					|| p.UserName.Contains(q, StringComparison.OrdinalIgnoreCase)
+					|| p.UserEmail.Contains(q, StringComparison.OrdinalIgnoreCase);
+			}
+
+			return true;
+		});
+
+		protected int RunningCount => Persons.Count(p => p.IsRunning);
+		protected int IdleCount => Persons.Count(p => !p.IsRunning);
+
+		protected void SetStatusFilter(string filter)
+		{
+			StatusFilter = filter;
+		}
+
 		protected override async Task OnInitializedAsync()
 		{
 			await LoadUserFromTokenAsync();

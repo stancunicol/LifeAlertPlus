@@ -9,6 +9,31 @@ namespace LifeAlertPlus.Infrastructure.Context
         {
             if (string.IsNullOrWhiteSpace(connectionString)) throw new ArgumentException("Connection string is required", nameof(connectionString));
 
+            // When running locally, resolve DB path to the Infrastructure project folder.
+            // On Azure/production, if a relative filename like "lifealert.db" is given
+            // and the Infrastructure folder doesn't exist, place it in the app's content root.
+            if (connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
+            {
+                var dbFileName = connectionString.Replace("Data Source=", "", StringComparison.OrdinalIgnoreCase).Trim();
+                if (!Path.IsPathRooted(dbFileName) && !dbFileName.Contains(Path.DirectorySeparatorChar) && !dbFileName.Contains('/'))
+                {
+                    // Try Infrastructure folder first (local dev)
+                    var infraDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "LifeAlertPlus.Infrastructure"));
+                    if (!Directory.Exists(infraDir))
+                        infraDir = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "LifeAlertPlus.Infrastructure"));
+
+                    if (Directory.Exists(infraDir))
+                    {
+                        connectionString = $"Data Source={Path.Combine(infraDir, dbFileName)}";
+                    }
+                    else
+                    {
+                        // Production / Azure: use current directory
+                        connectionString = $"Data Source={Path.Combine(Directory.GetCurrentDirectory(), dbFileName)}";
+                    }
+                }
+            }
+
             services.AddDbContext<LifeAlertPlusDbContext>(options =>
                 options.UseSqlite(connectionString));
 

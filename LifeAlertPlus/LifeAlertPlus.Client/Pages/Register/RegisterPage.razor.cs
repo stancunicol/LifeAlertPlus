@@ -26,23 +26,10 @@ namespace LifeAlertPlus.Client.Pages.Register
         private bool ShowModal { get; set; } = false;
         private bool IsLoading { get; set; } = false;
 
-        protected override async Task OnInitializedAsync()
+        protected override Task OnInitializedAsync()
         {
-            try
-            {
-                var url = Navigation.BaseUri + "VERSION";
-                var v = await Http.GetStringAsync(url);
-                Version = (v ?? string.Empty).Trim();
-
-                if (string.IsNullOrEmpty(Version))
-                {
-                    Version = AppVersion.Version;
-                }
-            }
-            catch
-            {
-                Version = AppVersion.Version;
-            }
+            Version = AppVersion.Version;
+            return Task.CompletedTask;
         }
 
         private async Task OnRegister()

@@ -4,6 +4,11 @@
 <header class="header">
     <div class="header-container">
         <div class="header-left">
+            <button class="mobile-menu-btn" @onclick="ToggleMobileMenu">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
             <div class="header-logo-wrap">
                 <img src="logo_rounded.png" class="header-logo-img" alt="LifeAlert+" />
                 <a href="/admin-dashboard" class="header-logo">LifeAlert +</a>
@@ -44,4 +49,21 @@
 @if (ShowProfileMenu)
 {
     <div class="menu-overlay" @onclick="CloseProfileMenu"></div>
+}
+
+@if (ShowMobileMenu)
+{
+    <div class="mobile-nav-overlay" @onclick="CloseMobileMenu"></div>
+    <nav class="mobile-nav">
+        <div class="mobile-nav-header">
+            <span class="mobile-nav-title">Menu</span>
+            <button class="mobile-nav-close" @onclick="CloseMobileMenu">✕</button>
+        </div>
+        <a href="/admin-dashboard" class="mobile-nav-link @(IsActive("/admin-dashboard") ? "active" : "")" @onclick="CloseMobileMenu">Dashboard</a>
+        <a href="/monitored-users" class="mobile-nav-link @(IsActive("/monitored-users") ? "active" : "")" @onclick="CloseMobileMenu">Monitoreds</a>
+        <a href="/users" class="mobile-nav-link @(IsActive("/users") ? "active" : "")" @onclick="CloseMobileMenu">Users</a>
+        <a href="/simulations" class="mobile-nav-link @(IsActive("/simulations") ? "active" : "")" @onclick="CloseMobileMenu">Simulations</a>
+        <div class="mobile-nav-divider"></div>
+        <a class="mobile-nav-link logout" @onclick="OnLogout">Logout</a>
+    </nav>
 }

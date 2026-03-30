@@ -598,6 +598,43 @@
     .filter-btn {
         width: 100%;
     }
+
+    .filters-section {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .filter-group {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .header-title-section h1 {
+        font-size: 1.6rem;
+    }
+
+    .monitored-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .info-item {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .modal-content-large {
+        width: 95vw;
+        padding: 1.5rem;
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+        margin: 0.4rem auto;
+        border-radius: 12px;
+    }
+
+    .modal-overlay {
+        align-items: flex-start;
+        padding-top: 18px;
+    }
 }
 
 ::deep .form-control,

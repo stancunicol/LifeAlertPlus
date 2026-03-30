@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Offline - LifeAlert+</title>
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <main style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;">
+    <h1>LifeAlert+</h1>
+    <p>You are offline. Some features may be unavailable.</p>
+    <p>Version: <span id="app-version">unknown</span></p>
+  </main>
+  <script>
+    (function() {
+      const meta = document.querySelector('meta[name="application-version"]');
+      if (meta) document.getElementById('app-version').textContent = meta.content || 'unknown';
+    })();
+  </script>
+</body>
+</html>

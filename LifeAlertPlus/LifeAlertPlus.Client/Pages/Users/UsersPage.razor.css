@@ -578,17 +578,59 @@
     color: #666;
 }
 
+@media (max-width: 900px) {
+    .users-page {
+        padding: 20px 16px 40px;
+    }
+
+    .admin-container {
+        padding: 1rem;
+    }
+
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .section-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .search {
+        flex: 1 1 100%;
+    }
+}
+
 @media (max-width: 640px) {
-    .users-page { padding: 100px 16px 40px; }
+    .users-page { padding: 12px 16px 40px; }
 
     .page-header { flex-direction: column; align-items: flex-start; }
 
     .toolbar { flex-direction: column; align-items: stretch; }
 
-    .filters { width: 100%; }
+    .filters { width: 100%; flex-wrap: wrap; }
 
     .filters .filter-btn { flex: 1; }
     .actions-cell { flex-direction: column; gap: 8px; padding-top: 6px; align-items: center; }
     .actions-row { justify-content: center; }
     .btn-details { margin-top: 2px; }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header-title-section h1 {
+        font-size: 1.6rem;
+    }
+
+    .admin-subtitle {
+        font-size: 0.95rem;
+    }
 }

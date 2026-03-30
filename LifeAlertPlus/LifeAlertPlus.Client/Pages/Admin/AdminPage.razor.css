@@ -516,3 +516,34 @@
 		gap: 0.2rem;
 	}
 }
+
+@media (max-width: 600px) {
+	.stats-grid.admin-stats {
+		grid-template-columns: 1fr !important;
+	}
+
+	.header-title-section h1 {
+		font-size: 1.6rem;
+	}
+
+	.admin-subtitle {
+		font-size: 0.95rem;
+	}
+
+	.notifications-panel {
+		padding: 14px;
+	}
+
+	.notif-item {
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.notif-main {
+		max-width: 100%;
+	}
+
+	.notif-time {
+		margin-left: 0;
+	}
+}

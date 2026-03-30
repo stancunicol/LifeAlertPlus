@@ -20,25 +20,13 @@ namespace LifeAlertPlus.Client.Components.Header
         private HttpClient Http { get; set; } = default!;
 
         private bool ShowProfileMenu { get; set; } = false;
+        private bool ShowMobileMenu { get; set; } = false;
         private string Version { get; set; } = string.Empty;
-
-        protected async override Task OnInitializedAsync()
+        protected override Task OnInitializedAsync()
         {
-            try
-            {
-                var url = Navigation.BaseUri + "VERSION";
-                var v = await Http.GetStringAsync(url);
-                Version = (v ?? string.Empty).Trim();
-
-                if (string.IsNullOrEmpty(Version))
-                {
-                    Version = AppVersion.Version;
-                }
-            }
-            catch
-            {
-                Version = AppVersion.Version;
-            }
+            // Use embedded VERSION when available; avoids relying on static file serving.
+            Version = AppVersion.Version;
+            return Task.CompletedTask;
         }
 
         private bool IsActive(string path)
@@ -70,6 +58,16 @@ namespace LifeAlertPlus.Client.Components.Header
         private void CloseProfileMenu()
         {
             ShowProfileMenu = false;
+        }
+
+        private void ToggleMobileMenu()
+        {
+            ShowMobileMenu = !ShowMobileMenu;
+        }
+
+        private void CloseMobileMenu()
+        {
+            ShowMobileMenu = false;
         }
 
         private async Task OnLogout()

@@ -48,14 +48,37 @@
 					</div>
 				</div>
 
+				<div class="sim-toolbar">
+					<div class="sim-search-wrap">
+						<span class="sim-search-icon">🔍</span>
+						<input type="text" class="sim-search" placeholder="Search by name, serial, user..."
+							   @bind="SearchQuery" @bind:event="oninput" />
+					</div>
+					<div class="sim-filters">
+						<button class="sim-filter-btn @(StatusFilter == "all" ? "active" : "")" @onclick='() => SetStatusFilter("all")'>
+							All (@Persons.Count)
+						</button>
+						<button class="sim-filter-btn running @(StatusFilter == "running" ? "active" : "")" @onclick='() => SetStatusFilter("running")'>
+							🟢 Running (@RunningCount)
+						</button>
+						<button class="sim-filter-btn idle @(StatusFilter == "idle" ? "active" : "")" @onclick='() => SetStatusFilter("idle")'>
+							⚪ Idle (@IdleCount)
+						</button>
+					</div>
+				</div>
+
 				@if (!Persons.Any())
 				{
 					<div class="message-card">No monitored persons found.</div>
 				}
+				else if (!FilteredPersons.Any())
+				{
+					<div class="message-card">No devices match your search or filter.</div>
+				}
 				else
 				{
 					<div class="sim-grid">
-						@foreach (var person in Persons)
+						@foreach (var person in FilteredPersons)
 						{
 							<div class="sim-card">
 								<div class="sim-card-top">

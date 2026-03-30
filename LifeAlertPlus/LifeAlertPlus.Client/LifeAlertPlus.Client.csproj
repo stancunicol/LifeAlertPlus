@@ -21,4 +21,8 @@
 		<Copy SourceFiles="../../VERSION" DestinationFiles="wwwroot/VERSION" OverWriteReadOnlyFiles="true" />
 	</Target>
 
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot/VERSION" />
+  </ItemGroup>
+
 </Project>

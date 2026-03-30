@@ -2,6 +2,7 @@
     max-width: 1600px;
     margin: 0 auto;
     padding: 25px;
+    padding-top: 32px;
 }
 
 .back-navigation {
@@ -9,6 +10,7 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
+    margin-top: 8px;
 }
 
 .top-actions {
@@ -674,6 +676,57 @@
         padding: 0 10px;
         gap: 10px;
     }
+
+    .selected-monitored-container {
+        padding: 12px;
+    }
+
+    .back-navigation {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .btn-back {
+        width: 100%;
+        justify-content: center;
+        font-size: 14px;
+        padding: 10px 14px;
+    }
+
+    .top-actions {
+        width: 100%;
+    }
+
+    .btn-action-main {
+        width: 100%;
+    }
+
+    .person-name-main {
+        font-size: 24px;
+    }
+
+    .person-avatar-huge {
+        width: 80px;
+        height: 80px;
+        font-size: 28px;
+    }
+
+    .stat-card-large {
+        padding: 20px;
+    }
+
+    .stat-value-huge {
+        font-size: 28px;
+    }
+
+    .stat-icon-huge {
+        font-size: 36px;
+    }
+
+    .section-card {
+        padding: 20px;
+    }
 }
 
 /* ── Edit Profile Modal ─────────────────────────────────── */
@@ -845,6 +898,29 @@
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: 0 2px 8px rgba(216, 139, 183, 0.3);
+}
+
+@media (max-width: 768px) {
+    .modal-overlay {
+        align-items: flex-start;
+        padding-top: 18px;
+    }
+
+    .modal-content {
+        width: 95vw;
+        max-width: 95vw;
+        margin: 0.4rem auto;
+        padding: 1rem;
+        border-radius: 12px;
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+        box-sizing: border-box;
+    }
+
+    .modal-body {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
 }
 
 .btn-save:hover {

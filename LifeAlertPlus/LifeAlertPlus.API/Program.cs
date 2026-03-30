@@ -27,7 +27,9 @@ builder.Services.AddCors(options =>
                   "https://localhost:5254",
                   "http://localhost:8081",
                   "https://localhost:8081",
-                  "https://localhost:8444")
+                  "https://localhost:8444",
+                  "https://client-lifealertplusiot-gqf3crdrenfgd9bw.germanywestcentral-01.azurewebsites.net",
+                  "https://client-lifealertplusiot-dxgkd5emgacba2h6.germanywestcentral-01.azurewebsites.net")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -57,13 +59,13 @@ var connString = builder.Configuration.GetConnectionString("Default") ?? "Data S
 builder.Services.AddLifeAlertPlusDbContext(connString);
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtSettings["Key"];
+if (string.IsNullOrEmpty(jwtKey))
+    throw new InvalidOperationException("Jwt:Key is not configured. Set it in Azure App Settings as Jwt__Key.");
 
 builder.Services
     .AddAuthentication(options =>
     {
-        // API requests are authenticated via JWT Bearer.
-        // DefaultSignInScheme stays as Cookies so Google OAuth callback
-        // can temporarily store the Google identity in a cookie.
         options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
         options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
         options.DefaultSignInScheme = "Cookies";
@@ -79,9 +81,8 @@ builder.Services
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
-        // Return 401 JSON instead of redirecting to Google OAuth on auth failure.
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
             OnChallenge = context =>
@@ -96,8 +97,8 @@ builder.Services
     .AddGoogle(googleOptions =>
     {
         var googleAuthNSection = builder.Configuration.GetSection("Authentication:Google");
-        googleOptions.ClientId = googleAuthNSection["ClientId"]!;
-        googleOptions.ClientSecret = googleAuthNSection["ClientSecret"]!;
+        googleOptions.ClientId = googleAuthNSection["ClientId"] ?? "";
+        googleOptions.ClientSecret = googleAuthNSection["ClientSecret"] ?? "";
         googleOptions.CallbackPath = "/signin-google";
         googleOptions.Scope.Add("profile");
     });
@@ -106,11 +107,8 @@ var app = builder.Build();
 
 await UserSeed.SeedAsync(app.Services);
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 

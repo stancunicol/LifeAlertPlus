@@ -178,6 +178,97 @@ button.primary:disabled {
 	gap: 1.2rem;
 }
 
+.sim-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+	flex-wrap: wrap;
+}
+
+.sim-search-wrap {
+	position: relative;
+	flex: 1;
+	min-width: 220px;
+}
+
+.sim-search-icon {
+	position: absolute;
+	left: 14px;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: 1rem;
+	pointer-events: none;
+}
+
+.sim-search {
+	width: 100%;
+	padding: 0.75rem 1rem 0.75rem 2.6rem;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	font-family: "Jua", sans-serif;
+	font-size: 0.95rem;
+	color: var(--ink);
+	background: var(--surface);
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.sim-search:focus {
+	outline: none;
+	border-color: var(--pink-main);
+	box-shadow: 0 2px 12px rgba(232, 165, 200, 0.2);
+}
+
+.sim-search::placeholder {
+	color: #999;
+}
+
+.sim-filters {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.sim-filter-btn {
+	padding: 0.55rem 1rem;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	font-family: "Jua", sans-serif;
+	font-size: 0.9rem;
+	color: var(--muted);
+	background: var(--surface);
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.sim-filter-btn:hover {
+	border-color: var(--pink-main);
+	color: var(--ink);
+}
+
+.sim-filter-btn.active {
+	background: linear-gradient(135deg, var(--pink-main), var(--pink-deep));
+	color: #000;
+	border-color: transparent;
+	box-shadow: 0 3px 10px rgba(216, 139, 183, 0.3);
+}
+
+.sim-filter-btn.running.active {
+	background: rgba(40, 167, 69, 0.15);
+	color: #1e7e34;
+	border-color: rgba(40, 167, 69, 0.35);
+	box-shadow: none;
+}
+
+.sim-filter-btn.idle.active {
+	background: rgba(108, 117, 125, 0.12);
+	color: #495057;
+	border-color: rgba(108, 117, 125, 0.35);
+	box-shadow: none;
+}
+
 .sim-card {
 	border: 1px solid #f1f1f1;
 	border-radius: 15px;
@@ -274,12 +365,77 @@ button.primary:disabled {
 	border-color: rgba(255, 193, 7, 0.45);
 }
 
+@media (max-width: 900px) {
+	.admin-container {
+		padding: 1rem;
+	}
+
+	.admin-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 1rem;
+	}
+
+	.section-header {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.section-actions {
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	.sim-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.sim-search-wrap {
+		min-width: unset;
+	}
+}
+
 @media (max-width: 700px) {
 	.simulations-page {
-		padding: 100px 16px 40px;
+		padding: 12px 16px 40px;
 	}
 
 	.sim-card-top {
 		align-items: flex-start;
+	}
+
+	.sim-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.sim-actions {
+		flex-direction: column;
+	}
+
+	.sim-actions button {
+		width: 100%;
+	}
+
+	.header-title-section h1 {
+		font-size: 1.6rem;
+	}
+
+	.section-actions {
+		flex-direction: column;
+		width: 100%;
+	}
+
+	.section-actions button {
+		width: 100%;
+	}
+
+	.sim-filters {
+		width: 100%;
+	}
+
+	.sim-filter-btn {
+		flex: 1;
+		text-align: center;
 	}
 }

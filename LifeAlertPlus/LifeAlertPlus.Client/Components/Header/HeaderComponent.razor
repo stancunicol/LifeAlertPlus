@@ -4,6 +4,11 @@
 <header class="header">
     <div class="header-container">
         <div class="header-left">
+            <button class="mobile-menu-btn" @onclick="ToggleMobileMenu">
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+                <span class="hamburger-line"></span>
+            </button>
             <div class="header-logo-wrap">
                 <img src="logo_rounded.png" class="header-logo-img" alt="LifeAlert+" />
                 <a href="/dashboard" class="header-logo">LifeAlert +</a>
@@ -46,4 +51,18 @@
 @if (ShowProfileMenu)
 {
     <div class="menu-overlay" @onclick="CloseProfileMenu"></div>
+}
+
+@if (ShowMobileMenu)
+{
+    <div class="mobile-nav-overlay" @onclick="CloseMobileMenu"></div>
+    <nav class="mobile-nav">
+        <div class="mobile-nav-header">
+            <span class="mobile-nav-title">Menu</span>
+            <button class="mobile-nav-close" @onclick="CloseMobileMenu">✕</button>
+        </div>
+        <a href="/dashboard" class="mobile-nav-link @(IsActive("/dashboard") ? "active" : "")" @onclick="CloseMobileMenu">Dashboard</a>
+        <a href="/monitored" class="mobile-nav-link @(IsActive("/monitored") ? "active" : "")" @onclick="CloseMobileMenu">Monitored</a>
+        <a href="/notifications" class="mobile-nav-link @(IsActive("/notifications") ? "active" : "")" @onclick="CloseMobileMenu">Notifications</a>
+    </nav>
 }
