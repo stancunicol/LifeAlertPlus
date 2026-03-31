@@ -41,6 +41,9 @@
                     <a href="/profile" class="profile-menu-item">My Profile</a>
                     <a href="/settings" class="profile-menu-item">Settings</a>
                     <div class="profile-menu-divider"></div>
+                    <a href="/about" class="profile-menu-item">About Us</a>
+                    <a href="/support" class="profile-menu-item">Support</a>
+                    <div class="profile-menu-divider"></div>
                     <a @onclick="OnLogout" class="profile-menu-item logout">Logout</a>
                 </div>
             }
@@ -64,5 +67,8 @@
         <a href="/dashboard" class="mobile-nav-link @(IsActive("/dashboard") ? "active" : "")" @onclick="CloseMobileMenu">Dashboard</a>
         <a href="/monitored" class="mobile-nav-link @(IsActive("/monitored") ? "active" : "")" @onclick="CloseMobileMenu">Monitored</a>
         <a href="/notifications" class="mobile-nav-link @(IsActive("/notifications") ? "active" : "")" @onclick="CloseMobileMenu">Notifications</a>
+        <div class="mobile-nav-divider"></div>
+        <a href="/about" class="mobile-nav-link" @onclick="CloseMobileMenu">About Us</a>
+        <a href="/support" class="mobile-nav-link" @onclick="CloseMobileMenu">Support</a>
     </nav>
 }

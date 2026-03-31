@@ -1,0 +1,211 @@
+.about-page {
+    /* full viewport page with no reserved header space */
+    min-height: 100vh;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+    margin: 0;
+    background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%);
+}
+
+.about-container {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 2rem;
+    animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.about-header {
+    text-align: center;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+}
+
+.about-logo {
+    font-family: "Jua", sans-serif;
+    font-size: 48px;
+    font-weight: 550;
+    color: #000;
+}
+
+.about-tagline {
+    font-family: "Jua", sans-serif;
+    font-size: 1.2rem;
+    color: #555;
+    margin-top: 0.3rem;
+}
+
+.about-content {
+    font-family: "Jua", sans-serif;
+    color: #333;
+    line-height: 1.7;
+}
+
+.about-content p {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.section-title {
+    font-family: "Jua", sans-serif;
+    font-size: 1.8rem;
+    color: #000;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.subsection-title {
+    font-family: "Jua", sans-serif;
+    font-size: 1.25rem;
+    color: #000;
+    margin-top: 1.5rem;
+    margin-bottom: 0.6rem;
+    padding-left: 0.5rem;
+    border-left: 4px solid #E8A5C8;
+}
+
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.6rem 0 1rem 0;
+}
+
+.feature-list li {
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    padding: 0.45rem 0 0.45rem 1.5rem;
+    position: relative;
+    color: #333;
+}
+
+.feature-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+}
+
+.disclaimer-box {
+    margin-top: 2rem;
+    padding: 1.2rem 1.5rem;
+    background: rgba(255, 200, 200, 0.15);
+    border-radius: 16px;
+    border-left: 4px solid #e8a5a5;
+}
+
+.disclaimer-box .subsection-title {
+    border-left: none;
+    padding-left: 0;
+    color: #b44;
+    margin-top: 0;
+}
+
+.disclaimer-box p {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 0;
+}
+
+.about-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.back-link {
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+    color: #000;
+    text-decoration: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+}
+
+.back-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+}
+
+/* ── Tablet ──────────────────────────────────────────────── */
+@media (max-width: 860px) {
+    .about-container {
+        padding: 2rem 1.5rem;
+    }
+
+    .about-logo {
+        font-size: 40px;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .about-page {
+        padding: 1rem 1rem 2rem;
+        align-items: flex-start;
+    }
+
+    .about-container {
+        width: 100%;
+        border-radius: 20px;
+        padding: 1.5rem 1.2rem;
+    }
+
+    .about-logo {
+        font-size: 34px;
+    }
+
+    .about-tagline {
+        font-size: 1rem;
+    }
+
+    .section-title {
+        font-size: 1.3rem;
+    }
+
+    .subsection-title {
+        font-size: 1.1rem;
+    }
+
+    .about-content p,
+    .feature-list li {
+        font-size: 0.95rem;
+    }
+
+    .about-footer {
+        flex-direction: column;
+        gap: 0.8rem;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .back-link {
+        display: block;
+        text-align: center;
+    }
+}
