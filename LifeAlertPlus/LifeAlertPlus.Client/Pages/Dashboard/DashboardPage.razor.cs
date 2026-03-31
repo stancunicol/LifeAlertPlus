@@ -32,9 +32,10 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
 
     protected string UserFullName { get; set; } = "";
     protected string ProfilePictureUrl { get; set; } = "";
-    protected int TotalMonitored { get; set; } = 12;
-    protected int ActiveAlerts { get; set; } = 3;
-    protected int StableCount { get; set; } = 5;
+    // Start with zeros to avoid showing placeholder/demo values that then reset.
+    protected int TotalMonitored { get; set; } = 0;
+    protected int ActiveAlerts { get; set; } = 0;
+    protected int StableCount { get; set; } = 0;
     protected int TodayMeasurements { get; set; } = 0;
     protected int OfflineCount { get; set; } = 0;
 

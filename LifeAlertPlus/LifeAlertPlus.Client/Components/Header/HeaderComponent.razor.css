@@ -414,4 +414,14 @@
         font-size: 0.65rem;
         opacity: 0.9;
     }
+    /* On mobile we only want the side (mobile) menu; hide profile/avatar/profile menu */
+    .user-profile {
+        display: none !important;
+    }
+    .profile-menu {
+        display: none !important;
+    }
+    .menu-overlay {
+        display: none !important;
+    }
 }

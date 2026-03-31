@@ -422,4 +422,5 @@ FodyWeavers.xsd
 lifealert.db
 /appsettings.Development.json
 
+LifeAlertPlus.Client/wwwroot/profile-images/
 LifeAlertPlus.API/wwwroot/profile-images/
