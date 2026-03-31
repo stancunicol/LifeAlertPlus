@@ -25,6 +25,7 @@ builder.Services.AddScoped<UserMonitoredService>();
 builder.Services.AddScoped<SimulationService>();
 builder.Services.AddScoped<SimulationBackgroundService>();
 builder.Services.AddScoped<TokenParserService>();
+builder.Services.AddScoped<ProfilePictureService>();
 builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<MeasurementService>();
 

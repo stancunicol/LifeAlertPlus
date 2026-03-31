@@ -20,6 +20,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private IJSRuntime JSRuntime { get; set; } = null!;
 
         [Inject]
+        private ProfilePictureService ProfilePictureService { get; set; } = null!;
+
+        [Inject]
         private NavigationManager Navigation { get; set; } = null!;
 
         [Inject]
@@ -92,10 +95,12 @@ namespace LifeAlertPlus.Client.Pages.Profile
             if (!string.IsNullOrEmpty(CurrentUser.ProfilePictureUrl))
             {
                 await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "profilePictureUrl", CurrentUser.ProfilePictureUrl);
+                ProfilePictureService.SetUrl(CurrentUser.ProfilePictureUrl);
             }
             else
             {
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
+                ProfilePictureService.SetUrl(null);
             }
 
             // Load monitored people count
@@ -421,7 +426,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             {
                 CurrentUser.ProfilePictureUrl = imageUrl;
                 await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "profilePictureUrl", imageUrl);
-                StateHasChanged();
+                ProfilePictureService.SetUrl(imageUrl);
+                await InvokeAsync(StateHasChanged);
             }
         }
 

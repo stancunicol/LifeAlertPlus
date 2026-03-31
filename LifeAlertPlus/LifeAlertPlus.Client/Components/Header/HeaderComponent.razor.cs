@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Components;
+using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Components.Header
 {
-    public partial class HeaderComponent : ComponentBase
+    public partial class HeaderComponent : ComponentBase, IDisposable
     {
         [Inject]
         private NavigationManager Navigation { get; set; } = default!;
@@ -19,6 +20,9 @@ namespace LifeAlertPlus.Client.Components.Header
         [Inject]
         private HttpClient Http { get; set; } = default!;
 
+        [Inject]
+        private ProfilePictureService ProfilePictureService { get; set; } = default!;
+
         private bool ShowProfileMenu { get; set; } = false;
         private bool ShowMobileMenu { get; set; } = false;
         private string Version { get; set; } = string.Empty;
@@ -26,7 +30,25 @@ namespace LifeAlertPlus.Client.Components.Header
         {
             // Use embedded VERSION when available; avoids relying on static file serving.
             Version = AppVersion.Version;
+            if (ProfilePictureService != null)
+            {
+                ProfilePictureService.OnChange += HandleProfilePictureChanged;
+                if (!string.IsNullOrEmpty(ProfilePictureService.Url))
+                    ProfilePictureUrl = ProfilePictureService.Url;
+            }
             return Task.CompletedTask;
+        }
+
+        private async void HandleProfilePictureChanged(string? url)
+        {
+            ProfilePictureUrl = url;
+            await InvokeAsync(StateHasChanged);
+        }
+
+        public void Dispose()
+        {
+            if (ProfilePictureService != null)
+                ProfilePictureService.OnChange -= HandleProfilePictureChanged;
         }
 
         private bool IsActive(string path)

@@ -2,6 +2,7 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject LifeAlertPlus.Client.Services.TokenParserService TokenParser
+@inject LifeAlertPlus.Client.Services.ProfilePictureService ProfilePictureService
 
 <Router AppAssembly="@typeof(App).Assembly" OnNavigateAsync="HandleNavigationAsync">
     <Found Context="routeData">
@@ -67,6 +68,7 @@
             // so the next login is forced to create a new session.
             await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
             await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
+            ProfilePictureService.SetUrl(null);
             return;
         }
 
@@ -76,6 +78,9 @@
             Navigation.NavigateTo("/login", forceLoad: true);
             return;
         }
+
+        // Seed profile picture service so shared components update without a full reload
+        ProfilePictureService.SetUrl(claims.ProfilePictureUrl);
 
         EnforceRoleAccess(path, claims);
     }
