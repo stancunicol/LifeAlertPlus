@@ -1,36 +1,33 @@
 name: Deploy Client to Azure
 
 on:
-push:
-branches: [ main ]
-paths:
-- 'LifeAlertPlus/**'
-workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'LifeAlertPlus/**'
+  workflow_dispatch:
 
 jobs:
-build-and-deploy:
-runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-```
-steps:
-  - name: Checkout code
-    uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
 
-  - name: Setup .NET
-    uses: actions/setup-dotnet@v3
-    with:
-      dotnet-version: '8.0.x'
+      - name: Restore solution
+        run: dotnet restore LifeAlertPlus/LifeAlertPlus.sln
 
-  - name: Restore solution
-    run: dotnet restore LifeAlertPlus/LifeAlertPlus.sln
+      - name: Publish client
+        run: dotnet publish LifeAlertPlus/LifeAlertPlus.Client/LifeAlertPlus.Client.csproj -c Release -o publish
 
-  - name: Publish client
-    run: dotnet publish LifeAlertPlus/LifeAlertPlus.Client/LifeAlertPlus.Client.csproj -c Release -o publish
-
-  - name: Deploy to Azure Web App (Client)
-    uses: azure/webapps-deploy@v2
-    with:
-      app-name: ${{ secrets.AZURE_NAME_CLIENT }}
-      publish-profile: ${{ secrets.AZURE_CLIENT_PUBLISH_PROFILE }}
-      package: ./publish
-```
+      - name: Deploy to Azure Web App (Client)
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.AZURE_NAME_CLIENT }}
+          publish-profile: ${{ secrets.AZURE_CLIENT_PUBLISH_PROFILE }}
+          package: ./publish
