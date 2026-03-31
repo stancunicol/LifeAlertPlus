@@ -1,39 +1,36 @@
 name: Deploy API to Azure
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'LifeAlertPlus/**'
-  workflow_dispatch:
+push:
+branches: [ main ]
+paths:
+- 'LifeAlertPlus/**'
+workflow_dispatch:
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+build-and-deploy:
+runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+```
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '8.0.x'
+  - name: Setup .NET
+    uses: actions/setup-dotnet@v3
+    with:
+      dotnet-version: '8.0.x'
 
-      - name: Restore solution
-        run: dotnet restore LifeAlertPlus/LifeAlertPlus.sln
+  - name: Restore solution
+    run: dotnet restore LifeAlertPlus/LifeAlertPlus.sln
 
-      - name: Publish API
-        run: dotnet publish LifeAlertPlus/LifeAlertPlus.API/LifeAlertPlus.API.csproj -c Release -o LifeAlertPlus/LifeAlertPlus.API/publish
+  - name: Publish API
+    run: dotnet publish LifeAlertPlus/LifeAlertPlus.API/LifeAlertPlus.API.csproj -c Release -o publish
 
-      - name: Zip API publish
-        run: |
-          cd LifeAlertPlus/LifeAlertPlus.API
-          zip -r publish-api.zip publish
-
-      - name: Deploy to Azure Web App (API)
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ secrets.AZURE_NAME_API }}
-          publish-profile: ${{ secrets.AZURE_API_PUBLISH_PROFILE }}
-          package: LifeAlertPlus/LifeAlertPlus.API/publish-api.zip
+  - name: Deploy to Azure Web App (API)
+    uses: azure/webapps-deploy@v2
+    with:
+      app-name: ${{ secrets.AZURE_NAME_API }}
+      publish-profile: ${{ secrets.AZURE_API_PUBLISH_PROFILE }}
+      package: ./publish
+```
