@@ -156,7 +156,7 @@ namespace LifeAlertPlus.Client.Pages.Login
 
         private void LoginWithGoogle()
         {
-            var apiBaseUrl = (Configuration["ApiBaseUrl"] ?? "http://localhost:5176").TrimEnd('/');
+            var apiBaseUrl = (Configuration["ApiBaseUrl"] ?? Navigation.BaseUri).TrimEnd('/');
             var clientBaseUrl = Navigation.BaseUri.TrimEnd('/');
             var clientDashboardUrl = $"{clientBaseUrl}/dashboard";
             var googleAuthUrl = $"{apiBaseUrl}/api/auth/google-login?returnUrl={Uri.EscapeDataString(clientDashboardUrl)}";
