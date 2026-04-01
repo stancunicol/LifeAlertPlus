@@ -32,19 +32,19 @@
     padding: 0.9rem 1.8rem;
     border: none;
     border-radius: 30px;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-    color: #000;
+    background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
+    color: var(--accent-contrast);
     font-family: "Jua", sans-serif;
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
     .mark-all-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
     }
 
 .btn-icon {
@@ -77,7 +77,7 @@
     }
 
     .stat-mini-card.critical {
-        border-left-color: #dc3545;
+        border-left-color: var(--danger-color);
         background: linear-gradient(to right, rgba(220, 53, 69, 0.05), white);
     }
 
@@ -92,8 +92,8 @@
     }
 
     .stat-mini-card.unread {
-        border-left-color: #E8A5C8;
-        background: linear-gradient(to right, rgba(232, 165, 200, 0.05), white);
+        border-left-color: var(--accent);
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.04), white);
     }
 
 .stat-number {
@@ -131,14 +131,14 @@
 }
 
     .tab-btn:hover {
-        border-color: #D88BB7;
-        background: rgba(232, 165, 200, 0.1);
+        border-color: var(--accent);
+        background: rgba(0, 0, 0, 0.04);
     }
 
     .tab-btn.active {
-        background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-        border-color: #D88BB7;
-        color: #000;
+        background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
+        border-color: var(--accent);
+        color: var(--text-color);
         font-weight: 500;
     }
 
@@ -173,13 +173,13 @@
         }
 
     .tab-btn.unread {
-        border-color: #E8A5C8;
+        border-color: var(--accent-start);
     }
 
         .tab-btn.unread:hover,
         .tab-btn.unread.active {
-            background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-            border-color: #D88BB7;
+            background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
+            border-color: var(--accent);
         }
 
 .notifications-feed {
@@ -206,8 +206,8 @@
     }
 
     .notification-card.unread {
-        background: linear-gradient(to right, rgba(232, 165, 200, 0.08), white);
-        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.2);
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.04), white);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     }
 
     .notification-card.read {
@@ -215,7 +215,7 @@
     }
 
     .notification-card.critical {
-        border-left-color: #dc3545;
+        border-left-color: var(--danger-color);
     }
 
         .notification-card.critical.unread {
@@ -281,7 +281,7 @@
 }
 
 .unread-badge {
-    color: #E8A5C8;
+    color: var(--accent);
     font-size: 1.5rem;
     line-height: 1;
 }
@@ -336,8 +336,8 @@
 }
 
     .action-icon-btn:hover {
-        background: #E8A5C8;
-        color: white;
+        background: var(--accent-start);
+        color: var(--accent-contrast);
         transform: scale(1.1);
     }
 

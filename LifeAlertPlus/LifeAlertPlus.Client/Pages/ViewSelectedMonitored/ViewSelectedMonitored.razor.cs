@@ -718,7 +718,10 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 if (HrTooltipData.Count > 0)
                 {
                     var hrData = HrTooltipData.Select(p => new { x = p.X, y = p.Y, value = p.Value, label = p.Label }).ToArray();
-                    await JSRuntime.InvokeVoidAsync("chartTooltip.init", _hrSvgRef, "hr", hrData, "#D88BB7", "bpm", hrDecimals, prefix);
+                    // get computed accent color from CSS and pass it to the chart tooltip initializer
+                    string accentColor = string.Empty;
+                    try { accentColor = (await JSRuntime.InvokeAsync<string>("theme.getAccentColor")) ?? string.Empty; } catch { }
+                    await JSRuntime.InvokeVoidAsync("chartTooltip.init", _hrSvgRef, "hr", hrData, accentColor, "bpm", hrDecimals, prefix);
                 }
 
                 if (TempTooltipData.Count > 0)
