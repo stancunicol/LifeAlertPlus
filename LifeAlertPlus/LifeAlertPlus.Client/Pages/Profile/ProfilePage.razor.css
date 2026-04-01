@@ -486,6 +486,44 @@ input:checked + .slider:before {
     box-shadow: 0 0 0 3px rgba(232, 165, 200, 0.2);
 }
 
+/* Password field toggle */
+.password-field {
+    position: relative;
+}
+
+.password-field .input-modal {
+    padding-right: 48px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #666;
+    padding: 4px;
+    z-index: 2;
+}
+
+.password-toggle:focus {
+    outline: none;
+}
+
+@media (max-width: 600px) {
+    .password-toggle {
+        font-size: 20px;
+        right: 10px;
+    }
+
+    .password-field .input-modal {
+        padding-right: 56px;
+    }
+}
+
 .error-message {
     background: #ffebee;
     color: #c62828;

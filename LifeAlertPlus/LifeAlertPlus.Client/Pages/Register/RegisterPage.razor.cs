@@ -102,6 +102,11 @@ namespace LifeAlertPlus.Client.Pages.Register
             }
         }
 
+        private void ToggleShowPassword()
+        {
+            _showPassword = !_showPassword;
+        }
+
         private (bool IsValid, string ErrorMessage) ValidatePassword(string password)
         {
             if (string.IsNullOrWhiteSpace(password))

@@ -53,6 +53,11 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private bool ShowChangePasswordModal { get; set; } = false;
         private UserChangePasswordRequestDTO PasswordChange { get; set; } = new UserChangePasswordRequestDTO();
         private string PasswordError { get; set; } = string.Empty;
+        // Password visibility toggles (for mobile/desktop)
+        private string CurrentPasswordFieldType { get; set; } = "password";
+        private string NewPasswordFieldType { get; set; } = "password";
+        private string ConfirmPasswordFieldType { get; set; } = "password";
+        private string EmailCurrentPasswordFieldType { get; set; } = "password";
 
         private bool ShowChangeEmailModal { get; set; } = false;
         private UserChangeEmailRequestDTO EmailChange { get; set; } = new UserChangeEmailRequestDTO();
@@ -219,6 +224,26 @@ namespace LifeAlertPlus.Client.Pages.Profile
             ShowChangePasswordModal = true;
             PasswordChange = new UserChangePasswordRequestDTO();
             PasswordError = string.Empty;
+        }
+
+        private void ToggleCurrentPasswordVisibility()
+        {
+            CurrentPasswordFieldType = CurrentPasswordFieldType == "password" ? "text" : "password";
+        }
+
+        private void ToggleNewPasswordVisibility()
+        {
+            NewPasswordFieldType = NewPasswordFieldType == "password" ? "text" : "password";
+        }
+
+        private void ToggleConfirmPasswordVisibility()
+        {
+            ConfirmPasswordFieldType = ConfirmPasswordFieldType == "password" ? "text" : "password";
+        }
+
+        private void ToggleEmailCurrentPasswordVisibility()
+        {
+            EmailCurrentPasswordFieldType = EmailCurrentPasswordFieldType == "password" ? "text" : "password";
         }
 
         private void CloseChangePasswordModal()

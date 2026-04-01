@@ -48,24 +48,30 @@
         <div class="form-group">
             <label class="form-label">Password</label>
             <div class="input-wrapper">
-                <input type="@(_showPassword ? "text" : "password")"
-                       class="form-input form-input-icon form-input-password"
-                       placeholder="password123"
-                       @bind="Password"
-                       @bind:event="oninput"
-                       @onkeydown="HandleKeyDown" />
+                <div class="password-field">
+                    <input type="@(_showPassword ? "text" : "password")"
+                           class="form-input form-input-icon form-input-password"
+                           placeholder="password123"
+                           @bind="Password"
+                           @bind:event="oninput"
+                           @onkeydown="HandleKeyDown" />
+                    <button type="button" class="password-toggle" @onclick="ToggleShowPassword" aria-label="Toggle password visibility">👁</button>
+                </div>
             </div>
         </div>
 
         <div class="form-group">
             <label class="form-label">Confirm Password</label>
             <div class="input-wrapper">
-                <input type="@(_showPassword ? "text" : "password")"
-                       class="form-input form-input-icon form-input-password"
-                       placeholder="password123"
-                       @bind="ConfirmPassword"
-                       @bind:event="oninput"
-                       @onkeydown="HandleKeyDown" />
+                <div class="password-field">
+                    <input type="@(_showPassword ? "text" : "password")"
+                           class="form-input form-input-icon form-input-password"
+                           placeholder="password123"
+                           @bind="ConfirmPassword"
+                           @bind:event="oninput"
+                           @onkeydown="HandleKeyDown" />
+                    <button type="button" class="password-toggle" @onclick="ToggleShowPassword" aria-label="Toggle confirm password visibility">👁</button>
+                </div>
             </div>
         </div>
 

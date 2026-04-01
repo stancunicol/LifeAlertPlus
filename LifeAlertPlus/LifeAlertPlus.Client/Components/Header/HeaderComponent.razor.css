@@ -362,7 +362,7 @@
 .mobile-nav-divider {
     height: 1px;
     background: rgba(0, 0, 0, 0.1);
-    margin: 0.5rem 1rem;
+    margin: 0.75rem 1rem;
 }
 
 @media (max-width: 768px) {

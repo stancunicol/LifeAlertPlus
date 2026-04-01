@@ -151,6 +151,45 @@
     padding-right: 3.2rem;
 }
 
+/* Password toggle */
+.password-field {
+    position: relative;
+    width: 100%;
+}
+
+.password-field .form-input {
+    padding-right: 56px;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #666;
+    padding: 4px;
+    z-index: 2;
+}
+
+.password-toggle:focus {
+    outline: none;
+}
+
+@media (max-width: 640px) {
+    .password-field .form-input {
+        padding-right: 64px;
+    }
+
+    .password-toggle {
+        font-size: 20px;
+        right: 10px;
+    }
+}
+
 .login-button {
     width: 100%;
     padding: 0.85rem;

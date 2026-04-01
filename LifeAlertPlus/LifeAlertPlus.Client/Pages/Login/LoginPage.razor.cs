@@ -96,6 +96,11 @@ namespace LifeAlertPlus.Client.Pages.Login
             }
         }
 
+        private void ToggleShowPassword()
+        {
+            _showPassword = !_showPassword;
+        }
+
         private void OpenForgotPasswordModal()
         {
             ShowForgotPasswordModal = true;
