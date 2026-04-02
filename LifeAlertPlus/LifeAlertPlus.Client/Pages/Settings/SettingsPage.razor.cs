@@ -25,7 +25,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
         private AppSettings Settings { get; set; } = new AppSettings
         {
             Theme = "pink",
-            AccentColor = string.Empty,
+            AccentColor = "#E8A5C8",
             FontSize = "medium",
             EnableAnimations = true,
             FirstDayOfWeek = "monday",
@@ -156,12 +156,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 ProfilePictureUrl = string.Empty;
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
             }
-
-            // Apply the user's theme immediately on load (if set)
-            if (!string.IsNullOrEmpty(Settings.Theme))
-            {
-                await JSRuntime.InvokeVoidAsync("theme.applyTheme", Settings.Theme);
-            }
         }
 
         private void ResetThresholds()
@@ -178,12 +172,12 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Settings.TemperatureMax = 37.5;
         }
 
-        private async Task ResetAllSettings()
+        private void ResetAllSettings()
         {
             Settings = new AppSettings
             {
                 Theme = "pink",
-                AccentColor = string.Empty,
+                AccentColor = "#E8A5C8",
                 FontSize = "medium",
                 EnableAnimations = true,
                 FirstDayOfWeek = "monday",
@@ -209,17 +203,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 DateFormat = "dd/MM/yyyy",
                 TimeFormat = "24h"
             };
-
-            // Apply default theme immediately
-            await JSRuntime.InvokeVoidAsync("theme.applyTheme", Settings.Theme);
-        }
-
-        private async Task OnThemeChanged(ChangeEventArgs e)
-        {
-            var theme = e?.Value?.ToString() ?? Settings.Theme;
-            if (string.IsNullOrEmpty(theme)) return;
-            Settings.Theme = theme;
-            await JSRuntime.InvokeVoidAsync("theme.applyTheme", theme);
         }
 
         private class AppSettings

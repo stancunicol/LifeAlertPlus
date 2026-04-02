@@ -812,8 +812,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 if (HrTooltipData.Count > 0)
                 {
                     var hrData = HrTooltipData.Select(p => new { x = p.X, y = p.Y, value = p.Value, label = p.Label }).ToArray();
-                    var accent = await JSRuntime.InvokeAsync<string>("theme.getAccentColor");
-                    await JSRuntime.InvokeVoidAsync("chartTooltip.init", _hrSvgRef, "hr", hrData, accent, "bpm", hrDecimals, prefix);
+                    await JSRuntime.InvokeVoidAsync("chartTooltip.init", _hrSvgRef, "hr", hrData, "#D88BB7", "bpm", hrDecimals, prefix);
                 }
 
                 if (TempTooltipData.Count > 0)

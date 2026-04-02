@@ -10,7 +10,7 @@
 
 body {
     font-family: "Jua", sans-serif;
-    background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+    background: linear-gradient(135deg, #FFD6EA 0%, #FFC4E1 100%);
     min-height: 100vh;
     overflow-y: auto;
 }
@@ -42,7 +42,7 @@ body {
 }
 
 .loading-title {
-    color: var(--accent);
+    color: #ff69b4;
     font-size: 2rem;
     margin-bottom: 32px;
     font-weight: 600;
@@ -59,7 +59,7 @@ body {
 .loading-dots span {
     width: 12px;
     height: 12px;
-    background: var(--accent);
+    background: #ff69b4;
     border-radius: 50%;
     animation: bounce 1.4s infinite ease-in-out;
 }

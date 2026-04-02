@@ -11,7 +11,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     padding: 0;
@@ -46,11 +46,11 @@
 	border-radius: 8px;
 }
 
-    .header-logo {
+.header-logo {
     font-family: "Jua", sans-serif;
     font-size: 28px;
     font-weight: 550;
-    color: var(--text-color);
+    color: #000;
     text-decoration: none;
     transition: opacity 0.3s ease;
 }
@@ -62,7 +62,7 @@
 .header-version {
     font-family: "Jua", sans-serif;
     font-size: 0.75rem;
-    color: var(--text-color);
+    color: #000;
     opacity: 0.75;
     letter-spacing: 0.3px;
     margin-bottom: 2px;
@@ -80,7 +80,7 @@
     font-family: "Jua", sans-serif;
     font-size: 1rem;
     font-weight: 500;
-    color: var(--text-color);
+    color: #000;
     text-decoration: none;
     padding: 0.5rem 1rem;
     min-width: 110px;
@@ -108,7 +108,7 @@
             transform: translateX(-50%);
             width: 30px;
             height: 3px;
-            background: var(--accent-contrast);
+            background: #000;
             border-radius: 2px;
         }
 
@@ -143,20 +143,20 @@
     font-family: "Jua", sans-serif;
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--accent);
+    color: #D88BB7;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .user-name {
     font-family: "Jua", sans-serif;
     font-size: 1rem;
-    color: var(--text-color);
+    color: #000;
     font-weight: 500;
 }
 
 .dropdown-icon {
     font-size: 0.7rem;
-    color: var(--text-color);
+    color: #000;
     transition: transform 0.3s ease;
 }
 
@@ -200,32 +200,32 @@
 }
 
     .profile-menu-item:hover {
-        background: rgba(0, 0, 0, 0.04);
-        color: var(--text-color);
+        background: rgba(232, 165, 200, 0.1);
+        color: #000;
     }
 
-    .profile-menu-item {
-        display: block;
-        padding: 0.8rem 1.2rem;
-        font-family: "Jua", sans-serif;
-        font-size: 0.95rem;
-        color: var(--text-color);
-        text-decoration: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
+    .profile-menu-item.logout {
+        color: #dc3545;
     }
-        .profile-menu-item:hover {
-            background: rgba(0, 0, 0, 0.04);
-            color: var(--text-color);
+
+        .profile-menu-item.logout:hover {
+            background: rgba(220, 53, 69, 0.1);
         }
 
-        .profile-menu-item.logout {
-            color: var(--danger-color);
-        }
+.profile-menu-divider {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 0.3rem 0;
+}
 
-            .profile-menu-item.logout:hover {
-                background: rgba(0, 0, 0, 0.04);
-            }
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999;
+}
 
 .mobile-menu-btn {
     display: none;
@@ -297,7 +297,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 1.2rem 1.5rem;
-    background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
 }
 
 .mobile-nav-title {
@@ -331,7 +331,7 @@
     padding: 1rem 1.5rem;
     font-family: "Jua", sans-serif;
     font-size: 1rem;
-    color: var(--text-color);
+    color: #333;
     text-decoration: none;
     transition: all 0.2s ease;
     border-left: 3px solid transparent;
@@ -339,24 +339,24 @@
 }
 
 .mobile-nav-link:hover {
-    background: rgba(0, 0, 0, 0.04);
-    border-left-color: var(--accent);
+    background: rgba(232, 165, 200, 0.1);
+    border-left-color: #D88BB7;
 }
 
 .mobile-nav-link.active {
-    background: rgba(0, 0, 0, 0.06);
-    border-left-color: var(--accent);
-    color: var(--text-color);
+    background: rgba(232, 165, 200, 0.15);
+    border-left-color: #D88BB7;
+    color: #000;
     font-weight: 600;
 }
 
 .mobile-nav-link.logout {
-    color: var(--danger-color);
+    color: #dc3545;
 }
 
 .mobile-nav-link.logout:hover {
-    background: rgba(0, 0, 0, 0.04);
-    border-left-color: var(--danger-color);
+    background: rgba(220, 53, 69, 0.1);
+    border-left-color: #dc3545;
 }
 
 .mobile-nav-divider {

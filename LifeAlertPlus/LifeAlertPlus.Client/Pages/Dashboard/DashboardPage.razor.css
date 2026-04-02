@@ -70,7 +70,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 12px;
-    background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
 }
 
 .stat-icon.off {
@@ -103,7 +103,7 @@
     }
 
     .stat-value.critical {
-        color: var(--danger-color);
+        color: #dc3545;
     }
 
     .stat-value.ok {
@@ -145,7 +145,7 @@
 .view-all-link {
     font-family: "Jua", sans-serif;
     font-size: 0.95rem;
-    color: var(--accent);
+    color: #D88BB7;
     text-decoration: none;
     transition: opacity 0.3s ease;
 }
@@ -214,7 +214,7 @@
     font-family: "Jua", sans-serif;
     font-size: 1.3rem;
     font-weight: 600;
-    color: var(--accent);
+    color: #D88BB7;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
 }
@@ -265,7 +265,7 @@
 }
 
 .card-header-colored.critical .status-dot {
-    background: var(--danger-color);
+    background: #dc3545;
 }
 
 .card-header-colored.offline .status-dot {
@@ -391,7 +391,7 @@
 
     .status-badge.critical {
         background: rgba(220, 53, 69, 0.15);
-        color: var(--danger-color);
+        color: #dc3545;
     }
 
     .status-badge.warning {
@@ -425,7 +425,7 @@
     }
 
     .alert-item.critical {
-        border-left-color: var(--danger-color);
+        border-left-color: #dc3545;
         background: rgba(220, 53, 69, 0.05);
     }
 

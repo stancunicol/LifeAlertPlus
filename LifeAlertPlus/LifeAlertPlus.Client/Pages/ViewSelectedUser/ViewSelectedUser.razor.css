@@ -22,8 +22,8 @@
     font-size: 28px;
     color: #ffffff;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg,#D88BB7,#F6B3D9);
+    box-shadow: 0 6px 18px rgba(216,139,183,0.16);
     font-family: 'Jua', sans-serif;
 }
 .user-info h1 { margin: 0; font-family: 'Jua', sans-serif; font-size: 1.6rem; color: #222; }
@@ -43,12 +43,12 @@
 .monitored-list { list-style: none; padding: 0; margin: 12px 0 0 0; }
 .monitored-list li { padding: 12px 0; display:flex; justify-content:space-between; gap:12px; border-bottom: 1px solid #f0f0f0; align-items:center; }
 .monitored-list li a { color: #2a2a2a; text-decoration: none; font-weight:600; font-family: 'Jua', sans-serif; }
-.monitored-list li a:hover { color: var(--accent); text-decoration: underline; }
+.monitored-list li a:hover { color: #D88BB7; text-decoration: underline; }
 .monitored-left { display:flex; flex-direction:column; gap:4px; }
 .monitored-name { font-weight:700; font-family: 'Jua', sans-serif; color:#222; }
 .btn-view {
-    background: linear-gradient(90deg, var(--accent-start), var(--accent-end));
-    color: var(--accent-contrast);
+    background: linear-gradient(90deg,#D88BB7,#F6B3D9);
+    color: #fff;
     border: none;
     padding: 8px 12px;
     border-radius: 8px;
@@ -59,13 +59,13 @@
 }
 .btn-view:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 6px 18px rgba(216,139,183,0.18);
     opacity: 0.98;
 }
 .back-navigation { margin-bottom: 18px; }
 .btn-back {
     background: #fff;
-    color: var(--accent);
+    color: #D88BB7;
     border: 1px solid #F0E3EA;
     padding: 10px 14px;
     border-radius: 10px;
@@ -77,7 +77,7 @@
 .btn-back:hover {
     background: #FFF0F7;
     transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 6px 18px rgba(216,139,183,0.12);
 }
 .message-card { padding: 12px 16px; border-radius: 8px; background: #fbfbfc; color: #333; font-family: 'Jua', sans-serif; }
 .message-card.error { background: #fff6f8; color: #a33; }

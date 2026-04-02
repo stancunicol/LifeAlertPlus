@@ -175,20 +175,20 @@
     padding: 0.85rem;
     border: none;
     border-radius: 30px;
-    background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
-    color: var(--accent-contrast);
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    color: #000;
     font-family: "Jua", sans-serif;
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
     margin-top: 0.3rem;
 }
 
     .login-button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
+        box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
     }
 
     .login-button:active {
@@ -196,15 +196,15 @@
     }
 
     .login-button:disabled {
-        background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
+        background: linear-gradient(135deg, #F5D4E8 0%, #ECC4DC 100%);
         cursor: not-allowed;
-        opacity: 0.6;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        opacity: 0.8;
+        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.2);
     }
 
     .login-button:disabled:hover {
         transform: none;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.2);
     }
 
 .google-login {
@@ -348,20 +348,20 @@ a.form-link:visited {
     padding: 0.75rem 2rem;
     border: none;
     border-radius: 30px;
-    background: linear-gradient(135deg, var(--accent-start) 0%, var(--accent-end) 100%);
-    color: var(--accent-contrast);
+    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    color: #000;
     font-family: "Jua", sans-serif;
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
     min-width: 120px;
 }
 
     .modal-button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
+        box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
     }
 
     .modal-button:active {
@@ -370,10 +370,10 @@ a.form-link:visited {
 
 .modal-button-secondary {
     padding: 0.75rem 2rem;
-    border: 2px solid var(--accent-start);
+    border: 2px solid #E8A5C8;
     border-radius: 30px;
     background: white;
-    color: var(--text-color);
+    color: #000;
     font-family: "Jua", sans-serif;
     font-size: 1.05rem;
     font-weight: 500;
@@ -383,7 +383,7 @@ a.form-link:visited {
 }
 
     .modal-button-secondary:hover {
-        background: rgba(0, 0, 0, 0.04);
+        background: rgba(232, 165, 200, 0.1);
         transform: translateY(-2px);
     }
 
