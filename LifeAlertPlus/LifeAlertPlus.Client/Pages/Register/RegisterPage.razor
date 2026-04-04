@@ -3,16 +3,16 @@
 
 <div class="login-rect">
     <div class="login-left">
-        <div class="login-logo">LifeAlert +</div>
-        <div class="login-description">Because every heartbeat matters</div>
+        <div class="login-logo">@T("login.title")</div>
+        <div class="login-description">@T("login.tagline")</div>
         <p class="login-version">v @Version</p>
     </div>
 
     <div class="login-right">
-        <h2 class="page-title">Register</h2>
+        <h2 class="page-title">@T("register.title")</h2>
         <div class="form-row">
             <div class="form-group form-group-half">
-                <label class="form-label">First Name</label>
+                <label class="form-label">@T("register.firstName")</label>
                 <div class="input-wrapper">
                     <input type="text" class="form-input form-input-icon"
                            placeholder="John"
@@ -23,7 +23,7 @@
             </div>
 
             <div class="form-group form-group-half">
-                <label class="form-label">Last Name</label>
+                <label class="form-label">@T("register.lastName")</label>
                 <div class="input-wrapper">
                     <input type="text" class="form-input form-input-icon"
                            placeholder="Doe"
@@ -35,7 +35,7 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Email</label>
+            <label class="form-label">@T("register.email")</label>
             <div class="input-wrapper">
                 <input type="email" class="form-input form-input-icon"
                        placeholder="user@email.com"
@@ -46,7 +46,7 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Password</label>
+            <label class="form-label">@T("register.password")</label>
             <div class="input-wrapper">
                 <div class="password-field">
                     <input type="@(_showPassword ? "text" : "password")"
@@ -61,7 +61,7 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label">Confirm Password</label>
+            <label class="form-label">@T("register.confirmPassword")</label>
             <div class="input-wrapper">
                 <div class="password-field">
                     <input type="@(_showPassword ? "text" : "password")"
@@ -75,7 +75,7 @@
             </div>
         </div>
 
-        <button class="login-button" @onclick="OnRegister" disabled="@IsLoading">@(IsLoading ? "Register..." : "Register")</button>
+        <button class="login-button" @onclick="OnRegister" disabled="@IsLoading">@(IsLoading ? T("register.loading") : T("register.title"))</button>
 
         @if (!string.IsNullOrEmpty(SuccessMessage))
         {
@@ -92,7 +92,7 @@
         }
 
         <div class="form-links">
-            <a class="form-link" href="/login">Already have an account? Login</a>
+            <a class="form-link" href="/login">@T("register.hasAccount")</a>
         </div>
     </div>
 </div>
@@ -102,13 +102,13 @@
     <div class="modal-overlay" @onclick="CloseModal">
         <div class="modal-content" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h3>Registration Successful</h3>
+                <h3>@T("register.success")</h3>
             </div>
             <div class="modal-body">
-                <p>An email has been sent for verification.</p>
+                <p>@T("register.emailSent")</p>
             </div>
             <div class="modal-footer">
-                <button class="modal-button" @onclick="CloseModal">OK</button>
+                <button class="modal-button" @onclick="CloseModal">@T("register.ok")</button>
             </div>
         </div>
     </div>

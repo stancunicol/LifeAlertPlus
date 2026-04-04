@@ -25,6 +25,11 @@ public partial class AdminPage : ComponentBase
 	[Inject]
 	private MeasurementService MeasurementService { get; set; } = default!;
 
+	[Inject]
+	private LanguageService Lang { get; set; } = default!;
+
+	private string T(string key) => Lang.T(key);
+
 	protected string UserFullName { get; set; } = "Admin";
 	protected string ProfilePictureUrl { get; set; } = string.Empty;
 

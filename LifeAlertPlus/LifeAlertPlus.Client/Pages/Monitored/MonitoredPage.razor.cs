@@ -29,6 +29,11 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     [Inject]
     private MeasurementService MeasurementService { get; set; } = default!;
 
+    [Inject]
+    private LanguageService Lang { get; set; } = default!;
+
+    private string T(string key) => Lang.T(key);
+
     private string UserFullName = string.Empty;
     private string ProfilePictureUrl = string.Empty;
     private MonitorCreateRequestDTO newPerson = new();
@@ -79,6 +84,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        Lang.OnLanguageChanged += HandleLanguageChanged;
         await LoadUserFromTokenAsync();
 
         if (_currentUserId == Guid.Empty)
@@ -511,8 +517,30 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         NavigationManager.NavigateTo($"/monitored/{personId}");
     }
 
+    protected async Task RequestLocation(Guid personId)
+    {
+        // navigate to the monitored detail (map or detail view)
+        ViewDetails(personId);
+        await Task.CompletedTask;
+    }
+
+    protected async Task CallPerson(Guid personId)
+    {
+        var card = _monitoredCards.FirstOrDefault(c => c.Person.Id == personId);
+        var name = card?.Person != null ? $"{card.Person.FirstName} {card.Person.LastName}" : "Person";
+        await JSRuntime.InvokeVoidAsync("alert", $"Call requested for {name}. Phone number not available.");
+    }
+
+    protected async Task TextPerson(Guid personId)
+    {
+        var card = _monitoredCards.FirstOrDefault(c => c.Person.Id == personId);
+        var name = card?.Person != null ? $"{card.Person.FirstName} {card.Person.LastName}" : "Person";
+        await JSRuntime.InvokeVoidAsync("alert", $"Text requested for {name}. Phone number not available.");
+    }
+
     public ValueTask DisposeAsync()
     {
+        Lang.OnLanguageChanged -= HandleLanguageChanged;
         if (_pollingCts != null)
         {
             _pollingCts.Cancel();
@@ -520,6 +548,11 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         }
 
         return ValueTask.CompletedTask;
+    }
+
+    private async void HandleLanguageChanged()
+    {
+        await InvokeAsync(StateHasChanged);
     }
 
     private sealed class MonitoredCard

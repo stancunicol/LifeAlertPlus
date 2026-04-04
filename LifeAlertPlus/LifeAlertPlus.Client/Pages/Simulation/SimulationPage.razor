@@ -9,21 +9,21 @@
 	<div class="admin-container">
 		<div class="admin-header">
 			<div class="header-title-section">
-				<h1>Simulations</h1>
-				<p class="admin-subtitle">Send simulated data to monitored devices</p>
+				<h1>@T("sim.title")</h1>
+				<p class="admin-subtitle">@T("sim.subtitle")</p>
 			</div>
-			<span class="tag chip-muted">Tools</span>
+			<span class="tag chip-muted">@T("sim.tools")</span>
 		</div>
 
 		@if (IsLoading)
 		{
-			<div class="message-card">Loading users and devices...</div>
+			<div class="message-card">@T("sim.loading")</div>
 		}
 		else if (!string.IsNullOrEmpty(ErrorMessage))
 		{
 			<div class="message-card error">
 				<span>@ErrorMessage</span>
-				<button @onclick="RefreshAsync">Retry</button>
+				<button @onclick="RefreshAsync">@T("sim.retry")</button>
 			</div>
 		}
 		else
@@ -31,49 +31,49 @@
 			<div class="section">
 				<div class="section-header">
 					<div>
-						<h2>Monitored devices</h2>
-						<span class="section-note">@Persons.Count devices ready for simulation</span>
+						<h2>@T("sim.devicesTitle")</h2>
+						<span class="section-note">@Persons.Count @T("sim.devicesReady")</span>
 					</div>
 					<div class="section-actions">
 						<button class="primary" @onclick="SendAllAsync" disabled="@(!Persons.Any(p => !p.IsRunning && !p.IsSending))">
-							Generate all
+							@T("sim.generateAll")
 						</button>
 						<button class="secondary" @onclick="StartAllAutoAsync" disabled="@(!Persons.Any(p => !p.IsRunning))">
-							Start auto all
+							@T("sim.startAutoAll")
 						</button>
 						<button class="danger" @onclick="StopAllAutoAsync" disabled="@(!Persons.Any(p => p.IsRunning))">
-							Stop auto all
+							@T("sim.stopAutoAll")
 						</button>
-						<button class="ghost" @onclick="RefreshAsync">Refresh</button>
+						<button class="ghost" @onclick="RefreshAsync">@T("sim.refresh")</button>
 					</div>
 				</div>
 
 				<div class="sim-toolbar">
 					<div class="sim-search-wrap">
 						<span class="sim-search-icon">🔍</span>
-						<input type="text" class="sim-search" placeholder="Search by name, serial, user..."
+						<input type="text" class="sim-search" placeholder="@T("sim.searchPh")"
 							   @bind="SearchQuery" @bind:event="oninput" />
 					</div>
 					<div class="sim-filters">
 						<button class="sim-filter-btn @(StatusFilter == "all" ? "active" : "")" @onclick='() => SetStatusFilter("all")'>
-							All (@Persons.Count)
+							@T("sim.all") (@Persons.Count)
 						</button>
 						<button class="sim-filter-btn running @(StatusFilter == "running" ? "active" : "")" @onclick='() => SetStatusFilter("running")'>
-							🟢 Running (@RunningCount)
+							🟢 @T("sim.running") (@RunningCount)
 						</button>
 						<button class="sim-filter-btn idle @(StatusFilter == "idle" ? "active" : "")" @onclick='() => SetStatusFilter("idle")'>
-							⚪ Idle (@IdleCount)
+							⚪ @T("sim.idle") (@IdleCount)
 						</button>
 					</div>
 				</div>
 
 				@if (!Persons.Any())
 				{
-					<div class="message-card">No monitored persons found.</div>
+					<div class="message-card">@T("sim.noPersons")</div>
 				}
 				else if (!FilteredPersons.Any())
 				{
-					<div class="message-card">No devices match your search or filter.</div>
+					<div class="message-card">@T("sim.noMatch")</div>
 				}
 				else
 				{
@@ -85,19 +85,19 @@
 									<div class="avatar">@GetInitials(person.Name)</div>
 									<div class="sim-card-meta">
 										<h3>@person.Name</h3>
-										<p class="muted">Serial: <span class="mono">@person.Serial</span></p>
-										<p class="muted">User: @person.UserName (@person.UserEmail)</p>
+									<p class="muted">@T("sim.serial") <span class="mono">@person.Serial</span></p>
+									<p class="muted">@T("sim.user") @person.UserName (@person.UserEmail)</p>
 									</div>
 								</div>
 								<div class="sim-actions">
 									<button class="primary" @onclick="() => SendSimulationAsync(person)" disabled="@(person.IsRunning || person.IsSending)">
-										@(person.IsSending ? "Sending..." : "Generate once")
+										@(person.IsSending ? T("sim.sending") : T("sim.generateOnce"))
 									</button>
 									<button class="secondary" @onclick="() => StartAutoAsync(person)" disabled="@person.IsRunning">
-										@(person.IsRunning ? "Auto running" : "Start auto")
+										@(person.IsRunning ? T("sim.autoRunning") : T("sim.startAuto"))
 									</button>
 									<button class="danger" @onclick="() => StopAutoAsync(person)" disabled="@(!person.IsRunning)">
-										Stop
+										@T("sim.stop")
 									</button>
 									@if (person.LastStatus != null)
 									{

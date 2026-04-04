@@ -1,88 +1,122 @@
 @page "/support"
-@layout EmptyLayout
+@using LifeAlertPlus.Client.Components.Header
+@layout MainLayout
+
+<HeaderComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl"/>
 
 <div class="support-page">
     <div class="support-container">
-        <div class="support-header">
-            <div class="support-logo">LifeAlert +</div>
-            <p class="support-tagline">We're here to help</p>
-        </div>
+        <h2 class="section-title">@T("support.title")</h2>
+        <p style="font-size:18px;color:#fff;opacity:0.95;margin:0;font-family:'Jua',sans-serif;">@T("support.intro")</p>
+    </div>
 
-        <div class="support-content">
-            <h2 class="section-title">Support</h2>
-            <p>We are here to help you ensure that your LifeAlertPlus system works reliably and efficiently.</p>
-
-            <h3 class="subsection-title">Contact Us</h3>
-            <p>If you experience any issues with the application or the IoT device, please contact our support team:</p>
-            <p class="contact-email">Email: <a href="mailto:support@lifealertplusiot.com">support&#64;lifealertplusiot.com</a></p>
-            <p>We aim to respond to all inquiries as soon as possible.</p>
-
-            <div class="section-divider"></div>
-
-            <h3 class="subsection-title">Before Contacting Support</h3>
-            <p>To resolve common issues quickly, please check the following:</p>
-            <ul class="check-list">
-                <li>Make sure the device is properly charged</li>
-                <li>Restart the device</li>
-                <li>Verify that the device has an active internet connection</li>
-                <li>Ensure the application is up to date</li>
-            </ul>
-
-            <div class="section-divider"></div>
-
-            <h3 class="subsection-title">Common Issues</h3>
-
-            <div class="issue-card">
-                <h4>Device not sending data</h4>
-                <ul class="check-list">
-                    <li>Check battery level</li>
-                    <li>Restart the device</li>
-                </ul>
+    <div class="support-content">
+        <div class="contact-card">
+                <div class="contact-icon">📧</div>
+                <div class="contact-body">
+                    <h3>@T("support.contactTitle")</h3>
+                    <p>@T("support.contactText")</p>
+                    <a href="mailto:support@lifealertplusiot.com" class="email-link">support&#64;lifealertplusiot.com</a>
+                    <p class="contact-note">@T("support.contactNote")</p>
+                </div>
             </div>
 
-            <div class="issue-card">
-                <h4>Application not loading data</h4>
-                <ul class="check-list">
-                    <li>Refresh the page</li>
-                    <li>Check internet connection</li>
-                </ul>
+            <div class="checklist-section">
+                <h3 class="subsection-title">📋 @T("support.beforeTitle")</h3>
+                <p>@T("support.beforeText")</p>
+                <div class="checklist-grid">
+                    <div class="checklist-item">
+                        <span class="check-icon">🔋</span>
+                        <span>@T("support.checkCharged")</span>
+                    </div>
+                    <div class="checklist-item">
+                        <span class="check-icon">🔄</span>
+                        <span>@T("support.checkRestart")</span>
+                    </div>
+                    <div class="checklist-item">
+                        <span class="check-icon">📶</span>
+                        <span>@T("support.checkInternet")</span>
+                    </div>
+                    <div class="checklist-item">
+                        <span class="check-icon">⬆️</span>
+                        <span>@T("support.checkUpdate")</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="issue-card">
-                <h4>Login or authentication issues</h4>
-                <ul class="check-list">
-                    <li>Reset your password</li>
-                    <li>Ensure your email is verified</li>
-                </ul>
+            <div class="issues-section">
+                <h3 class="subsection-title">🔧 @T("support.commonTitle")</h3>
+                <div class="issues-grid">
+                    <div class="issue-card">
+                        <div class="issue-header">
+                            <span class="issue-icon">📡</span>
+                            <h4>@T("support.issueNoData")</h4>
+                        </div>
+                        <ul class="issue-steps">
+                            <li>@T("support.issueBattery")</li>
+                            <li>@T("support.issueRestart")</li>
+                        </ul>
+                    </div>
+
+                    <div class="issue-card">
+                        <div class="issue-header">
+                            <span class="issue-icon">🖥️</span>
+                            <h4>@T("support.issueNotLoading")</h4>
+                        </div>
+                        <ul class="issue-steps">
+                            <li>@T("support.issueRefresh")</li>
+                            <li>@T("support.issueConnection")</li>
+                        </ul>
+                    </div>
+
+                    <div class="issue-card">
+                        <div class="issue-header">
+                            <span class="issue-icon">🔐</span>
+                            <h4>@T("support.issueLogin")</h4>
+                        </div>
+                        <ul class="issue-steps">
+                            <li>@T("support.issueResetPw")</li>
+                            <li>@T("support.issueVerifyEmail")</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
-            <div class="section-divider"></div>
+            <div class="technical-section">
+                <h3 class="subsection-title">🛠️ @T("support.techTitle")</h3>
+                <p>@T("support.techText")</p>
+                <div class="tech-items">
+                    <div class="tech-item">
+                        <span class="tech-num">1</span>
+                        <span>@T("support.techDesc")</span>
+                    </div>
+                    <div class="tech-item">
+                        <span class="tech-num">2</span>
+                        <span>@T("support.techSteps")</span>
+                    </div>
+                    <div class="tech-item">
+                        <span class="tech-num">3</span>
+                        <span>@T("support.techScreenshots")</span>
+                    </div>
+                </div>
+                <a href="mailto:support@lifealertplusiot.com" class="email-link">support&#64;lifealertplusiot.com</a>
+            </div>
 
-            <h3 class="subsection-title">Technical Support</h3>
-            <p>For technical inquiries or system-related issues, please include:</p>
-            <ul class="check-list">
-                <li>A description of the problem</li>
-                <li>Steps to reproduce the issue</li>
-                <li>Screenshots (if available)</li>
-            </ul>
-            <p class="contact-email">Email: <a href="mailto:support@lifealertplusiot.com">support&#64;lifealertplusiot.com</a></p>
-
-            <div class="section-divider"></div>
-
-            <h3 class="subsection-title">Automated Emails</h3>
-            <p>Please note that system-generated messages (account verification, password reset, notifications) are sent from:</p>
-            <p class="contact-email"><a href="mailto:noreply@lifealertplusiot.com">noreply&#64;lifealertplusiot.com</a></p>
-            <p>This address is not monitored for incoming messages.</p>
+            <div class="automated-section">
+                <h3 class="subsection-title">📬 @T("support.autoTitle")</h3>
+                <p>@T("support.autoText")</p>
+                <div class="noreply-badge">
+                    <span>noreply&#64;lifealertplusiot.com</span>
+                </div>
+                <p class="small-note">@T("support.autoNote")</p>
+            </div>
 
             <div class="notice-box">
-                <h3 class="subsection-title">Service Notice</h3>
-                <p>LifeAlertPlus is designed to assist monitoring and alerting but does not guarantee prevention of incidents. Always rely on emergency services in critical situations.</p>
+                <div class="notice-icon">⚠️</div>
+                <div>
+                    <h3 class="notice-title">@T("support.noticeTitle")</h3>
+                    <p>@T("support.noticeText")</p>
+                </div>
             </div>
-        </div>
-
-        <div class="support-footer">
-            <a class="back-link" href="/dashboard">← Back to Dashboard</a>
-            <a class="back-link" href="/about">About Us</a>
-        </div>
     </div>
 </div>

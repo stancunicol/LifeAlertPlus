@@ -15,10 +15,10 @@
                 <span class="header-version">v @Version</span>
             </div>
             <nav class="header-nav">
-                <a href="/admin-dashboard" class="nav-link @(IsActive("/admin-dashboard") ? "active" : "")">Dashboard</a>
-                <a href="/monitored-users" class="nav-link @(IsActive("/monitored-users") ? "active" : "")">Monitoreds</a>
-                <a href="/users" class="nav-link @(IsActive("/users") ? "active" : "")">Users</a>
-                <a href="/simulations" class="nav-link @(IsActive("/simulations") ? "active" : "")">Simulations</a>
+                <a href="/admin-dashboard" class="nav-link @(IsActive("/admin-dashboard") ? "active" : "")">@T("adminNav.dashboard")</a>
+                <a href="/monitored-users" class="nav-link @(IsActive("/monitored-users") ? "active" : "")">@T("adminNav.monitoreds")</a>
+                <a href="/users" class="nav-link @(IsActive("/users") ? "active" : "")">@T("adminNav.users")</a>
+                <a href="/simulations" class="nav-link @(IsActive("/simulations") ? "active" : "")">@T("adminNav.simulations")</a>
             </nav>
         </div>
         
@@ -39,7 +39,7 @@
             @if (ShowProfileMenu)
             {
                 <div class="profile-menu">
-                    <a @onclick="OnLogout" class="profile-menu-item logout">Logout</a>
+                    <a @onclick="OnLogout" class="profile-menu-item logout">@T("adminNav.logout")</a>
                 </div>
             }
         </div>
@@ -56,17 +56,17 @@
     <div class="mobile-nav-overlay" @onclick="CloseMobileMenu"></div>
     <nav class="mobile-nav">
         <div class="mobile-nav-header">
-            <span class="mobile-nav-title">Menu</span>
+            <span class="mobile-nav-title">@T("adminNav.menu")</span>
             <button class="mobile-nav-close" @onclick="CloseMobileMenu">✕</button>
         </div>
-        <a href="/admin-dashboard" class="mobile-nav-link @(IsActive("/admin-dashboard") ? "active" : "")" @onclick="CloseMobileMenu">Dashboard</a>
-        <a href="/monitored-users" class="mobile-nav-link @(IsActive("/monitored-users") ? "active" : "")" @onclick="CloseMobileMenu">Monitoreds</a>
-        <a href="/users" class="mobile-nav-link @(IsActive("/users") ? "active" : "")" @onclick="CloseMobileMenu">Users</a>
-        <a href="/simulations" class="mobile-nav-link @(IsActive("/simulations") ? "active" : "")" @onclick="CloseMobileMenu">Simulations</a>
+        <a href="/admin-dashboard" class="mobile-nav-link @(IsActive("/admin-dashboard") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.dashboard")</a>
+        <a href="/monitored-users" class="mobile-nav-link @(IsActive("/monitored-users") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.monitoreds")</a>
+        <a href="/users" class="mobile-nav-link @(IsActive("/users") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.users")</a>
+        <a href="/simulations" class="mobile-nav-link @(IsActive("/simulations") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.simulations")</a>
         <div class="mobile-nav-divider"></div>
-        <a href="/profile" class="mobile-nav-link @(IsActive("/profile") ? "active" : "")" @onclick="CloseMobileMenu">My Profile</a>
-        <a href="/settings" class="mobile-nav-link @(IsActive("/settings") ? "active" : "")" @onclick="CloseMobileMenu">Settings</a>
+        <a href="/profile" class="mobile-nav-link @(IsActive("/profile") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.profile")</a>
+        <a href="/settings" class="mobile-nav-link @(IsActive("/settings") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.settings")</a>
         <div class="mobile-nav-divider"></div>
-        <a class="mobile-nav-link logout" @onclick="OnLogout">Logout</a>
+        <a class="mobile-nav-link logout" @onclick="OnLogout">@T("adminNav.logout")</a>
     </nav>
 }

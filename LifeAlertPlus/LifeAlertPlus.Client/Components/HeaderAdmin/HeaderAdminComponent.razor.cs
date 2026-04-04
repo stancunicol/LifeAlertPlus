@@ -23,6 +23,11 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
         [Inject]
         private ProfilePictureService ProfilePictureService { get; set; } = default!;
 
+        [Inject]
+        private LanguageService Lang { get; set; } = default!;
+
+        private string T(string key) => Lang.T(key);
+
         private bool ShowProfileMenu { get; set; } = false;
         private bool ShowMobileMenu { get; set; } = false;
         private string Version { get; set; } = string.Empty;

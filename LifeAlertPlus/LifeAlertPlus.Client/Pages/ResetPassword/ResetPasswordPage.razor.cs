@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using System.Net.Http.Json;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
+using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Pages.ResetPassword
 {
@@ -11,6 +12,11 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
 
         [Inject]
         private NavigationManager Navigation { get; set; } = default!;
+
+        [Inject]
+        private LanguageService Lang { get; set; } = default!;
+
+        private string T(string key) => Lang.TEnglish(key);
 
         private string Password { get; set; } = string.Empty;
         private string ConfirmPassword { get; set; } = string.Empty;
@@ -28,7 +34,7 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
 
             if (string.IsNullOrEmpty(ResetToken))
             {
-                ErrorMessage = "Invalid reset link. Please request a new password reset.";
+                ErrorMessage = T("reset.error.invalidLink");
             }
 
             try
@@ -62,7 +68,7 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
 
             if (Password != ConfirmPassword)
             {
-                ErrorMessage = "Passwords do not match.";
+                ErrorMessage = T("reset.error.passwordMismatch");
                 return;
             }
 
@@ -79,7 +85,7 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
 
                 if (response.IsSuccessStatusCode)
                 {
-                    SuccessMessage = "Password reset successful! Redirecting to login...";
+                    SuccessMessage = T("reset.error.success");
                     await Task.Delay(2000);
                     Navigation.NavigateTo("/login");
                 }
@@ -87,13 +93,13 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
                 {
                     var error = await response.Content.ReadAsStringAsync();
                     ErrorMessage = error.Contains("expired") 
-                        ? "Reset link has expired. Please request a new password reset." 
-                        : "Failed to reset password. Please try again.";
+                        ? T("reset.error.expired") 
+                        : T("reset.error.failed");
                 }
             }
             catch (Exception ex)
             {
-                ErrorMessage = "An error occurred. Please try again later.";
+                ErrorMessage = T("reset.error.generic");
                 Console.WriteLine($"Reset password error: {ex.Message}");
             }
         }
@@ -102,33 +108,33 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
         {
             if (string.IsNullOrWhiteSpace(password))
             {
-                return (false, "Password is required.");
+                return (false, T("password.required"));
             }
 
             if (password.Length < 8)
             {
-                return (false, "Password must be at least 8 characters long.");
+                return (false, T("password.minLength"));
             }
 
             if (!password.Any(char.IsLower))
             {
-                return (false, "Password must contain at least one lowercase letter.");
+                return (false, T("password.lowercase"));
             }
 
             if (!password.Any(char.IsUpper))
             {
-                return (false, "Password must contain at least one uppercase letter.");
+                return (false, T("password.uppercase"));
             }
 
             if (!password.Any(char.IsDigit))
             {
-                return (false, "Password must contain at least one number.");
+                return (false, T("password.number"));
             }
 
             var specialCharacters = "!#$%^&*-_./\\";
             if (!password.Any(c => specialCharacters.Contains(c)))
             {
-                return (false, "Password must contain at least one special character (!#$%^&*-_./\\).");
+                return (false, T("password.special"));
             }
 
             return (true, string.Empty);

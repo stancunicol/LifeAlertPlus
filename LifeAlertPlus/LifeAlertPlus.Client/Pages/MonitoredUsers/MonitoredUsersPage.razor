@@ -10,11 +10,11 @@
 	<div class="admin-container">
 		<div class="admin-header">
     <div class="header-title-section">
-        <h1>Monitored Center</h1>
-        <p class="admin-subtitle">Monitored persons and their monitors</p>
+        <h1>@T("monUsers.title")</h1>
+        <p class="admin-subtitle">@T("monUsers.subtitle")</p>
     </div>
     <div class="admin-header-actions">
-        <span class="tag chip-muted">Live overview</span>
+        <span class="tag chip-muted">@T("monUsers.liveOverview")</span>
     </div>
 </div>
 
@@ -22,28 +22,28 @@
 				<div class="stat-card">
 					<div class="stat-icon monitored">🩺</div>
 					<div class="stat-info">
-						<span class="stat-label">Monitored</span>
+						<span class="stat-label">@T("monUsers.monitored")</span>
 						<span class="stat-value">@TotalMonitored</span>
 					</div>
 				</div>
 				<div class="stat-card">
 					<div class="stat-icon online">🟢</div>
 					<div class="stat-info">
-						<span class="stat-label">Online</span>
+						<span class="stat-label">@T("monUsers.online")</span>
 						<span class="stat-value">@OnlineMonitoredCount</span>
 					</div>
 				</div>
 				<div class="stat-card">
 					<div class="stat-icon offline">🔴</div>
 					<div class="stat-info">
-						<span class="stat-label">Offline</span>
+						<span class="stat-label">@T("monUsers.offline")</span>
 						<span class="stat-value critical">@OfflineMonitoredCount</span>
 					</div>
 				</div>
 				<div class="stat-card">
 					<div class="stat-icon alert">⚠️</div>
 					<div class="stat-info">
-						<span class="stat-label">Alerts</span>
+						<span class="stat-label">@T("monUsers.alerts")</span>
 						<span class="stat-value">@AlertsCount</span>
 					</div>
 				</div>
@@ -51,41 +51,41 @@
 
 		@if (IsLoading)
 		{
-			<div class="message-card">Loading monitored users...</div>
+			<div class="message-card">@T("monUsers.loading")</div>
 		}
 		else if (!string.IsNullOrEmpty(ErrorMessage))
 		{
 			<div class="message-card error">
 				<span>@ErrorMessage</span>
-				<button @onclick="LoadDataAsync">Retry</button>
+				<button @onclick="LoadDataAsync">@T("monUsers.retry")</button>
 			</div>
 		}
 		else if (Users == null || !Users.Any())
 		{
-			<div class="message-card">No monitored persons found.</div>
+			<div class="message-card">@T("monUsers.noPersons")</div>
 		}
 		else
 		{
 			<div class="section">
 				<div class="section-header">
 					<div>
-						<h2>Monitored persons</h2>
-						<span class="section-note">Device links and assigned monitors</span>
+						<h2>@T("monUsers.personsTitle")</h2>
+						<span class="section-note">@T("monUsers.personsSubtitle")</span>
 					</div>
 					<div class="section-actions">
-						<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="Search monitored people or monitors..." />
+						<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="@T("monUsers.searchPh")" />
 						<div class="filters">
-							<button class="@GetFilterClass("all")" @onclick='@(() => SetFilter("all"))'>All</button>
-							<button class="@GetFilterClass("online")" @onclick='@(() => SetFilter("online"))'>Online</button>
-							<button class="@GetFilterClass("offline")" @onclick='@(() => SetFilter("offline"))'>Offline</button>
-							<button class="@GetFilterClass("alerts")" @onclick='@(() => SetFilter("alerts"))'>Alerts</button>
+							<button class="@GetFilterClass("all")" @onclick='@(() => SetFilter("all"))'>@T("monUsers.all")</button>
+							<button class="@GetFilterClass("online")" @onclick='@(() => SetFilter("online"))'>@T("monUsers.online")</button>
+							<button class="@GetFilterClass("offline")" @onclick='@(() => SetFilter("offline"))'>@T("monUsers.offline")</button>
+							<button class="@GetFilterClass("alerts")" @onclick='@(() => SetFilter("alerts"))'>@T("monUsers.alerts")</button>
 						</div>
 					</div>
 				</div>
 
 				@if (!FilteredRows.Any())
 				{
-					<div class="message-card">No monitored persons for current filters.</div>
+					<div class="message-card">@T("monUsers.noFilter")</div>
 				}
 				else
 				{
@@ -93,12 +93,12 @@
 						<table class="admin-table">
 							<thead>
 								<tr>
-									<th>Person</th>
-									<th>Device</th>
-									<th>Monitored by</th>
-									<th>Status</th>
-									<th>Last Update</th>
-									<th>Actions</th>
+									<th>@T("monUsers.thPerson")</th>
+									<th>@T("monUsers.thDevice")</th>
+									<th>@T("monUsers.thMonitoredBy")</th>
+									<th>@T("monUsers.thStatus")</th>
+									<th>@T("monUsers.thLastUpdate")</th>
+									<th>@T("monUsers.thActions")</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -136,7 +136,7 @@
 										</td>
 										<td class="date-cell">@row.LastUpdate</td>
 										<td class="actions-cell">
-											<button class="btn-details" @onclick='@(() => NavigateToSelected(row.PersonId))'>Details</button>
+											<button class="btn-details" @onclick='@(() => NavigateToSelected(row.PersonId))'>@T("monUsers.details")</button>
 										</td>
 									</tr>
 								}

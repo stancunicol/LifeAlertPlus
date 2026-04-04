@@ -10,10 +10,10 @@
     {
         <div class="back-navigation">
             <button class="btn-back" @onclick="GoBack">
-                <span class="back-icon">←</span> Go Back to Monitored List
+                <span class="back-icon">←</span> @T("selected.goBack")
             </button>
             <div class="top-actions">
-                <button class="btn-action-main">📤 Export</button>
+                <button class="btn-action-main">📤 @T("selected.export")</button>
             </div>
         </div>
 
@@ -25,7 +25,7 @@
                     <p class="person-meta">
                         @if (Person.Age > 0)
                         {
-                            <span>@Person.Age years</span>
+                            <span>@Person.Age @T("selected.years")</span>
                             @if (!string.IsNullOrEmpty(Person.Relationship))
                             {
                                 <span> • @Person.Relationship</span>
@@ -37,7 +37,7 @@
                         }
                         else
                         {
-                            <span>No age/gender info</span>
+                            <span>@T("selected.noAgeGender")</span>
                         }
                     </p>
                     <div class="status-badge @Person.Status.ToLower()">
@@ -54,11 +54,11 @@
                     </div>
                     <div class="contact-item">
                         <span class="contact-icon">⏰</span>
-                        <span class="contact-text">Last Update: @Person.LastUpdate</span>
+                        <span class="contact-text">@T("selected.lastUpdate") @Person.LastUpdate</span>
                     </div>
                     <div class="contact-item">
                         <span class="contact-icon">🆔</span>
-                        <span class="contact-text">Device: @Person.DeviceSerial</span>
+                        <span class="contact-text">@T("selected.device") @Person.DeviceSerial</span>
                     </div>
                 </div>
             </div>
@@ -68,7 +68,7 @@
             <div class="stat-card-large heart-rate @(Person.HeartRate <= 0 ? "no-data" : "")">
                 <div class="stat-icon-huge">❤️</div>
                 <div class="stat-content">
-                    <h3>Heart Rate</h3>
+                    <h3>@T("selected.heartRate")</h3>
                     @if (Person.HeartRate > 0)
                     {
                         <div class="stat-value-huge">@Person.HeartRate <span class="stat-unit">bpm</span></div>
@@ -76,15 +76,15 @@
                     }
                     else
                     {
-                        <div class="stat-value-huge no-data-value">No recent measurements.</div>
-                        <p class="stat-status no-data-status">No data available</p>
+                        <div class="stat-value-huge no-data-value">@T("selected.noRecentMeasurements")</div>
+                        <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
                 </div>
             </div>
             <div class="stat-card-large blood-oxygen @(Person.SpO2 <= 0 ? "no-data" : "")">
                 <div class="stat-icon-huge">🩸</div>
                 <div class="stat-content">
-                    <h3>Blood Oxygen (SpO₂)</h3>
+                    <h3>@T("selected.bloodOxygen")</h3>
                     @if (Person.SpO2 > 0)
                     {
                         <div class="stat-value-huge">@Person.SpO2 <span class="stat-unit">%</span></div>
@@ -92,15 +92,15 @@
                     }
                     else
                     {
-                        <div class="stat-value-huge no-data-value">No recent measurements.</div>
-                        <p class="stat-status no-data-status">No data available</p>
+                        <div class="stat-value-huge no-data-value">@T("selected.noRecentMeasurements")</div>
+                        <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
                 </div>
             </div>
             <div class="stat-card-large temperature @(Person.Temperature <= 0 ? "no-data" : "")">
                 <div class="stat-icon-huge">🌡️</div>
                 <div class="stat-content">
-                    <h3>Temperature</h3>
+                    <h3>@T("selected.temperature")</h3>
                     @if (Person.Temperature > 0)
                     {
                         <div class="stat-value-huge">@Person.Temperature <span class="stat-unit">°C</span></div>
@@ -108,19 +108,19 @@
                     }
                     else
                     {
-                        <div class="stat-value-huge no-data-value">No recent measurements.</div>
-                        <p class="stat-status no-data-status">No data available</p>
+                        <div class="stat-value-huge no-data-value">@T("selected.noRecentMeasurements")</div>
+                        <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
                 </div>
             </div>
             <div class="stat-card-large gps @(GetGPSStatus(Person.GPS) == "disabled" ? "no-data" : "")">
                 <div class="stat-icon-huge">📍</div>
                 <div class="stat-content">
-                    <h3>GPS Location</h3>
+                    <h3>@T("selected.gpsLocation")</h3>
                     <div class="stat-value-gps">@Person.GPS</div>
                     @if (GetGPSStatus(Person.GPS) == "disabled")
                     {
-                        <p class="stat-status no-data-status">No data available</p>
+                        <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
                     else
                     {
@@ -134,12 +134,12 @@
             <div class="chart-section">
                 <div class="section-card">
                     <div class="section-header">
-                        <h2>📊 Vital Signs Evolution</h2>
+                        <h2>📊 @T("selected.vitalSigns")</h2>
                         <div class="chart-view-toggle">
                             <button class="btn-chart-view @(CurrentChartView == ChartViewMode.Daily ? "active" : "")"
-                                    @onclick="() => SwitchChartView(ChartViewMode.Daily)">Daily</button>
+                                    @onclick="() => SwitchChartView(ChartViewMode.Daily)">@T("selected.daily")</button>
                             <button class="btn-chart-view @(CurrentChartView == ChartViewMode.Weekly ? "active" : "")"
-                                    @onclick="() => SwitchChartView(ChartViewMode.Weekly)">Weekly</button>
+                                    @onclick="() => SwitchChartView(ChartViewMode.Weekly)">@T("selected.weekly")</button>
                         </div>
                     </div>
 
@@ -148,7 +148,7 @@
                         <div class="chart-item">
                             <div class="chart-item-title">
                                 <span class="chart-color-dot hr"></span>
-                                Heart Rate
+                                @T("selected.heartRate")
                                 <span class="chart-unit-badge">bpm</span>
                             </div>
                             <svg @ref="_hrSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
@@ -194,7 +194,7 @@
                         <div class="chart-item">
                             <div class="chart-item-title">
                                 <span class="chart-color-dot temp"></span>
-                                Temperature
+                                @T("selected.temperature")
                                 <span class="chart-unit-badge">°C</span>
                             </div>
                             <svg @ref="_tempSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
@@ -242,7 +242,7 @@
             <div class="sidebar-section">
                 <div class="section-card">
                     <div class="section-header">
-                        <h2>🔔 Recent Alerts</h2>
+                        <h2>🔔 @T("selected.recentAlerts")</h2>
                     </div>
                     <div class="alerts-list">
                         @foreach (var alert in RecentAlerts)
@@ -261,7 +261,7 @@
 
                 <div class="section-card">
                     <div class="section-header">
-                        <h2>📋 Recent Measurements</h2>
+                        <h2>📋 @T("selected.recentMeasurements")</h2>
                     </div>
                     <div class="measurements-list">
                         @foreach (var measurement in RecentMeasurements)
@@ -282,7 +282,7 @@
     }
     else if (IsLoading)
     {
-        <div class="message-card">Loading...</div>
+        <div class="message-card">@T("selected.loading")</div>
     }
     else
     {

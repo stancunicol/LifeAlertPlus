@@ -23,9 +23,14 @@ namespace LifeAlertPlus.Client.Components.Header
         [Inject]
         private ProfilePictureService ProfilePictureService { get; set; } = default!;
 
+        [Inject]
+        private LanguageService Lang { get; set; } = default!;
+
         private bool ShowProfileMenu { get; set; } = false;
         private bool ShowMobileMenu { get; set; } = false;
         private string Version { get; set; } = string.Empty;
+        private string T(string key) => Lang.T(key);
+
         protected override Task OnInitializedAsync()
         {
             // Use embedded VERSION when available; avoids relying on static file serving.
@@ -36,7 +41,13 @@ namespace LifeAlertPlus.Client.Components.Header
                 if (!string.IsNullOrEmpty(ProfilePictureService.Url))
                     ProfilePictureUrl = ProfilePictureService.Url;
             }
+            Lang.OnLanguageChanged += HandleLanguageChanged;
             return Task.CompletedTask;
+        }
+
+        private async void HandleLanguageChanged()
+        {
+            await InvokeAsync(StateHasChanged);
         }
 
         private async void HandleProfilePictureChanged(string? url)
@@ -49,6 +60,7 @@ namespace LifeAlertPlus.Client.Components.Header
         {
             if (ProfilePictureService != null)
                 ProfilePictureService.OnChange -= HandleProfilePictureChanged;
+            Lang.OnLanguageChanged -= HandleLanguageChanged;
         }
 
         private bool IsActive(string path)

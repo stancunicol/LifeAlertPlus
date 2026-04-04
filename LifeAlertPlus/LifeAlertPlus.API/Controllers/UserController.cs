@@ -60,7 +60,6 @@ namespace LifeAlertPlus.API.Controllers
             user.LastName = updatedUser.LastName ?? user.LastName;
             user.FirstDayOfTheWeek = updatedUser.FirstDayOfTheWeek ?? user.FirstDayOfTheWeek;
             user.Language = updatedUser.Language ?? user.Language;
-            user.ThemeColor = updatedUser.ThemeColor ?? user.ThemeColor;
             user.FontSize = updatedUser.FontSize ?? user.FontSize;
             user.MinHeartRate = updatedUser.MinHeartRate ?? user.MinHeartRate;
             user.MaxHeartRate = updatedUser.MaxHeartRate ?? user.MaxHeartRate;
@@ -263,7 +262,6 @@ namespace LifeAlertPlus.API.Controllers
                 Provider = string.IsNullOrEmpty(user.Provider) ? "Local" : user.Provider,
                 FirstDayOfTheWeek = user.FirstDayOfTheWeek,
                 Language = user.Language ?? "en",
-                ThemeColor = user.ThemeColor ?? "pink",
                 FontSize = user.FontSize ?? "medium",
                 MinHeartRate = user.MinHeartRate ?? 0,
                 MaxHeartRate = user.MaxHeartRate ?? 0,
@@ -300,7 +298,6 @@ namespace LifeAlertPlus.API.Controllers
                 Provider = string.IsNullOrEmpty(user.Provider) ? "Local" : user.Provider,
                 FirstDayOfTheWeek = user.FirstDayOfTheWeek,
                 Language = user.Language ?? "en",
-                ThemeColor = user.ThemeColor ?? "pink",
                 FontSize = user.FontSize ?? "medium",
                 MinHeartRate = user.MinHeartRate ?? 0,
                 MaxHeartRate = user.MaxHeartRate ?? 0,

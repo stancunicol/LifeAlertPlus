@@ -56,6 +56,14 @@
             } catch (e) { return null; }
         };
 
+        // language persistence helpers
+        window.getLanguage = function () {
+            try { return localStorage.getItem('appLang'); } catch (e) { return null; }
+        };
+        window.setLanguage = function (lang) {
+            try { localStorage.setItem('appLang', lang); } catch (e) { }
+        };
+
         // register service worker (if supported)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {

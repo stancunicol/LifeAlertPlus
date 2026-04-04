@@ -6,15 +6,15 @@
 <div class="admin-container">
 	<div class="admin-header">
 		<div class="header-title-section">
-			<h1>Admin Center</h1>
-			<p class="admin-subtitle">Show all users and monitored persons</p>
+			<h1>@T("admin.title")</h1>
+			<p class="admin-subtitle">@T("admin.subtitle")</p>
 		</div>
-		<span class="tag chip-muted">Live data</span>
+		<span class="tag chip-muted">@T("admin.liveData")</span>
 	</div>
 
 	@if (IsLoading)
 	{
-		<div class="loading-message">Loading data...</div>
+		<div class="loading-message">@T("admin.loadingData")</div>
 	}
 	else if (!string.IsNullOrEmpty(ErrorMessage))
 	{
@@ -22,7 +22,7 @@
 	}
 	else if (!AdminUsers.Any())
 	{
-		<div class="empty-message">No users or monitored persons found.</div>
+		<div class="empty-message">@T("admin.noData")</div>
 	}
 	else
 	{
@@ -32,7 +32,7 @@
 		<div class="stat-card">
 			<div class="stat-icon users">👥</div>
 			<div class="stat-info">
-				<span class="stat-label">Total users</span>
+				<span class="stat-label">@T("admin.totalUsers")</span>
 				<span class="stat-value">@TotalUsers</span>
 			</div>
 		</div>
@@ -40,7 +40,7 @@
 		<div class="stat-card">
 			<div class="stat-icon monitored">🩺</div>
 			<div class="stat-info">
-				<span class="stat-label">Monitored persons</span>
+				<span class="stat-label">@T("admin.monitoredPersons")</span>
 				<span class="stat-value">@TotalMonitored</span>
 			</div>
 		</div>
@@ -48,7 +48,7 @@
 		<div class="stat-card">
 			<div class="stat-icon online">🟢</div>
 			<div class="stat-info">
-				<span class="stat-label">Online</span>
+				<span class="stat-label">@T("admin.online")</span>
 				<span class="stat-value">@OnlineMonitored</span>
 			</div>
 		</div>
@@ -56,7 +56,7 @@
 		<div class="stat-card">
 			<div class="stat-icon offline">🔴</div>
 			<div class="stat-info">
-				<span class="stat-label">Offline</span>
+				<span class="stat-label">@T("admin.offline")</span>
 				<span class="stat-value critical">@OfflineMonitored</span>
 			</div>
 		</div>
@@ -64,7 +64,7 @@
 		<div class="stat-card">
 			<div class="stat-icon alert">⚠️</div>
 			<div class="stat-info">
-				<span class="stat-label">Alerts</span>
+				<span class="stat-label">@T("admin.alerts")</span>
 				<span class="stat-value">@AlertsCount</span>
 			</div>
 		</div>
@@ -72,7 +72,7 @@
 		<div class="stat-card">
 			<div class="stat-icon measures">📊</div>
 			<div class="stat-info">
-				<span class="stat-label">Today Measurements</span>
+				<span class="stat-label">@T("admin.todayMeasurements")</span>
 				<span class="stat-value">@MeasurementsTodayCount</span>
 			</div>
 		</div>
@@ -80,12 +80,12 @@
 
 	<div class="notifications-panel">
 		<div class="notifications-header">
-			<h2>Notifications</h2>
+			<h2>@T("admin.notifications")</h2>
 			<span class="notif-summary">@AlertsCount alerts • @Notifications.Count notifications</span>
 		</div>
 		@if (!Notifications.Any())
 		{
-			<div class="no-notifs">No notifications</div>
+			<div class="no-notifs">@T("admin.noNotifications")</div>
 		}
 		else
 		{

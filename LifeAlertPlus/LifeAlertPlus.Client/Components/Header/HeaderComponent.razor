@@ -15,9 +15,9 @@
                 <span class="header-version">v @Version</span>
             </div>
             <nav class="header-nav">
-                <a href="/dashboard" class="nav-link @(IsActive("/dashboard") ? "active" : "")">Dashboard</a>
-                <a href="/monitored" class="nav-link @(IsActive("/monitored") ? "active" : "")">Monitored</a>
-                <a href="/notifications" class="nav-link @(IsActive("/notifications") ? "active" : "")">Notifications</a>
+                <a href="/dashboard" class="nav-link @(IsActive("/dashboard") ? "active" : "")">@T("nav.dashboard")</a>
+                <a href="/monitored" class="nav-link @(IsActive("/monitored") ? "active" : "")">@T("nav.monitored")</a>
+                <a href="/notifications" class="nav-link @(IsActive("/notifications") ? "active" : "")">@T("nav.notifications")</a>
             </nav>
         </div>
         
@@ -38,13 +38,13 @@
             @if (ShowProfileMenu)
             {
                 <div class="profile-menu">
-                    <a href="/profile" class="profile-menu-item">My Profile</a>
-                    <a href="/settings" class="profile-menu-item">Settings</a>
+                    <a href="/profile" class="profile-menu-item">@T("nav.profile")</a>
+                    <a href="/settings" class="profile-menu-item">@T("nav.settings")</a>
                     <div class="profile-menu-divider"></div>
-                    <a href="/about" class="profile-menu-item">About Us</a>
-                    <a href="/support" class="profile-menu-item">Support</a>
+                    <a href="/about" class="profile-menu-item">@T("nav.aboutUs")</a>
+                    <a href="/support" class="profile-menu-item">@T("nav.support")</a>
                     <div class="profile-menu-divider"></div>
-                    <a @onclick="OnLogout" class="profile-menu-item logout">Logout</a>
+                    <a @onclick="OnLogout" class="profile-menu-item logout">@T("nav.logout")</a>
                 </div>
             }
         </div>
@@ -61,17 +61,17 @@
     <div class="mobile-nav-overlay" @onclick="CloseMobileMenu"></div>
     <nav class="mobile-nav">
         <div class="mobile-nav-header">
-            <span class="mobile-nav-title">Menu</span>
+            <span class="mobile-nav-title">@T("nav.menu")</span>
             <button class="mobile-nav-close" @onclick="CloseMobileMenu">✕</button>
         </div>
-        <a href="/dashboard" class="mobile-nav-link @(IsActive("/dashboard") ? "active" : "")" @onclick="CloseMobileMenu">Dashboard</a>
-        <a href="/monitored" class="mobile-nav-link @(IsActive("/monitored") ? "active" : "")" @onclick="CloseMobileMenu">Monitored</a>
-        <a href="/notifications" class="mobile-nav-link @(IsActive("/notifications") ? "active" : "")" @onclick="CloseMobileMenu">Notifications</a>
+        <a href="/dashboard" class="mobile-nav-link @(IsActive("/dashboard") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.dashboard")</a>
+        <a href="/monitored" class="mobile-nav-link @(IsActive("/monitored") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.monitored")</a>
+        <a href="/notifications" class="mobile-nav-link @(IsActive("/notifications") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.notifications")</a>
         <div class="mobile-nav-divider"></div>
-        <a href="/profile" class="mobile-nav-link @(IsActive("/profile") ? "active" : "")" @onclick="CloseMobileMenu">My Profile</a>
-        <a href="/settings" class="mobile-nav-link @(IsActive("/settings") ? "active" : "")" @onclick="CloseMobileMenu">Settings</a>
+        <a href="/profile" class="mobile-nav-link @(IsActive("/profile") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.profile")</a>
+        <a href="/settings" class="mobile-nav-link @(IsActive("/settings") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.settings")</a>
         <div class="mobile-nav-divider"></div>
-        <a href="/about" class="mobile-nav-link" @onclick="CloseMobileMenu">About Us</a>
-        <a href="/support" class="mobile-nav-link" @onclick="CloseMobileMenu">Support</a>
+        <a href="/about" class="mobile-nav-link" @onclick="CloseMobileMenu">@T("nav.aboutUs")</a>
+        <a href="/support" class="mobile-nav-link" @onclick="CloseMobileMenu">@T("nav.support")</a>
     </nav>
 }

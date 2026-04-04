@@ -9,7 +9,7 @@
 <div class="view-user-page">
     @if (IsLoading)
     {
-        <div class="message-card">Loading user...</div>
+        <div class="message-card">@T("viewUser.loading")</div>
     }
     else if (LoadError != null)
     {
@@ -17,12 +17,12 @@
     }
     else if (User == null)
     {
-        <div class="message-card">User not found.</div>
+        <div class="message-card">@T("viewUser.notFound")</div>
     }
     else
     {
         <div class="back-navigation">
-            <button class="btn-back" @onclick="GoBack">← Back to Users</button>
+            <button class="btn-back" @onclick="GoBack">@T("viewUser.back")</button>
         </div>
 
         <div class="user-header">
@@ -32,16 +32,16 @@
                 <p class="muted">@User.Email</p>
                 <div class="badges">
                     <span class="badge">@((string.IsNullOrWhiteSpace(User.Provider)) ? "Local" : User.Provider)</span>
-                    <span class="badge">@((User.IsEmailConfirmed) ? "Email confirmed" : "Email not confirmed")</span>
+                    <span class="badge">@((User.IsEmailConfirmed) ? T("viewUser.emailConfirmed") : T("viewUser.emailNotConfirmed"))</span>
                 </div>
             </div>
         </div>
 
         <div class="section">
-            <h3>Monitored People (@(Monitored?.Count() ?? 0))</h3>
+            <h3>@T("viewUser.monitoredPeople") (@(Monitored?.Count() ?? 0))</h3>
             @if (Monitored == null || !Monitored.Any())
             {
-                <div class="message-card small">No monitored people.</div>
+                <div class="message-card small">@T("viewUser.noMonitored")</div>
             }
             else
             {
@@ -53,7 +53,7 @@
                                 <div class="monitored-name">@m.FirstName @m.LastName</div>
                                 <div class="muted">@m.DeviceSerialNumber</div>
                             </div>
-                            <button class="btn-view" @onclick="() => ViewMonitored(m.Id)">Details</button>
+                            <button class="btn-view" @onclick="() => ViewMonitored(m.Id)">@T("viewUser.details")</button>
                         </li>
                     }
                 </ul>

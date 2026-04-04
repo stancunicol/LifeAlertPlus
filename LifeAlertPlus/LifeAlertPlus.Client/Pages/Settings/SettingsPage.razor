@@ -9,54 +9,39 @@
 
 <div class="settings-container">
     <div class="settings-header">
-        <h1>⚙️ Settings</h1>
-        <p>Personalize your application according to your preferences</p>
+        <h1>@T("settings.title")</h1>
+        <p>@T("settings.subtitle")</p>
     </div>
 
     <div class="settings-content">
         <div class="settings-section">
             <div class="section-header">
-                <h2>🎨 Appearance</h2>
+                <h2>@T("settings.appearance")</h2>
             </div>
             <div class="section-content">
                 <div class="setting-item">
                     <div class="setting-info">
-                        <h3>Theme</h3>
-                        <p>Choose between light and dark themes</p>
-                    </div>
-                    <select @bind="Settings.Theme" class="select-input">
-                        <option value="pink">Verde deschis</option>
-                        <option value="yellow">Green</option>
-                        <option value="green">Yellow</option>
-                        <option value="lilac">Lilac</option>
-                        <option value="blue">Blue</option>
-                        <option value="dark">Dark</option>
-                        <option value="light">Light</option>
-                    </select>
-                </div>
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <h3>First Day of the Week</h3>
+                        <h3>@T("settings.firstDay")</h3>
                     </div>
                     <select @bind="Settings.FirstDayOfWeek" class="select-input">
-                        <option value="monday">Monday</option>
-                        <option value="tuesday">Tuesday</option>
-                        <option value="wednesday">Wednesday</option>
-                        <option value="thursday">Thursday</option>
-                        <option value="friday">Friday</option>
-                        <option value="saturday">Saturday</option>
-                        <option value="sunday">Sunday</option>
+                        <option value="monday">@T("settings.monday")</option>
+                        <option value="tuesday">@T("settings.tuesday")</option>
+                        <option value="wednesday">@T("settings.wednesday")</option>
+                        <option value="thursday">@T("settings.thursday")</option>
+                        <option value="friday">@T("settings.friday")</option>
+                        <option value="saturday">@T("settings.saturday")</option>
+                        <option value="sunday">@T("settings.sunday")</option>
                     </select>
                 </div>
                 <div class="setting-item">
                     <div class="setting-info">
-                        <h3>Font Size</h3>
-                        <p>Adjust the text size in the application</p>
+                        <h3>@T("settings.fontSize")</h3>
+                        <p>@T("settings.fontSizeDesc")</p>
                     </div>
                     <select @bind="Settings.FontSize" class="select-input">
-                        <option value="small">Small</option>
-                        <option value="medium">Medium</option>
-                        <option value="large">Large</option>
+                        <option value="small">@T("settings.small")</option>
+                        <option value="medium">@T("settings.medium")</option>
+                        <option value="large">@T("settings.large")</option>
                     </select>
                 </div>
             </div>
@@ -64,19 +49,19 @@
 
         <div class="settings-section">
             <div class="section-header">
-                <h2>🚨 Alert Thresholds</h2>
+                <h2>@T("settings.alertThresholds")</h2>
             </div>
             <div class="section-content">
                 <div class="alert-threshold-group">
-                    <h3>❤️ Heart Rate</h3>
+                    <h3>@T("settings.heartRate")</h3>
                     <div class="threshold-inputs">
                         <div class="threshold-input-group">
-                            <label>Heart Rate Min</label>
+                            <label>@T("settings.heartRateMin")</label>
                             <input type="number" @bind="Settings.HeartRateMin" class="number-input" min="40" max="150" />
                             <span class="unit">bpm</span>
                         </div>
                         <div class="threshold-input-group">
-                            <label>Heart Rate Max</label>
+                            <label>@T("settings.heartRateMax")</label>
                             <input type="number" @bind="Settings.HeartRateMax" class="number-input" min="40" max="150" />
                             <span class="unit">bpm</span>
                         </div>
@@ -84,55 +69,55 @@
                 </div>
 
                 <div class="alert-threshold-group">
-                    <h3>🌡️ Temperature</h3>
+                    <h3>@T("settings.temperatureSection")</h3>
                     <div class="threshold-inputs">
                         <div class="threshold-input-group">
-                            <label>Temperature Min</label>
+                            <label>@T("settings.tempMin")</label>
                             <input type="number" @bind="Settings.TemperatureMin" class="number-input" min="35" max="42" step="0.1" />
                             <span class="unit">°C</span>
                         </div>
                         <div class="threshold-input-group">
-                            <label>Temperature Max</label>
+                            <label>@T("settings.tempMax")</label>
                             <input type="number" @bind="Settings.TemperatureMax" class="number-input" min="35" max="42" step="0.1" />
                             <span class="unit">°C</span>
                         </div>
                     </div>
                 </div>
 
-                <button class="btn-reset-thresholds" @onclick="ResetThresholds">🔄 Reset to default values</button>
+                <button class="btn-reset-thresholds" @onclick="ResetThresholds">@T("settings.resetDefaults")</button>
             </div>
         </div>
 
         <div class="settings-section">
             <div class="section-header">
-                <h2>💾 Data Management</h2>
+                <h2>@T("settings.dataManagement")</h2>
             </div>
             <div class="section-content">
                 <div class="setting-item">
                     <div class="setting-info">
-                        <h3>Data Update Frequency</h3>
-                        <p>How often vital signs data is refreshed (in seconds)</p>
+                        <h3>@T("settings.updateFrequency")</h3>
+                        <p>@T("settings.updateFrequencyDesc")</p>
                     </div>
                     <select @bind="Settings.UpdateFrequency" class="select-input">
-                        <option value="10">Every 10 seconds</option>
-                        <option value="15">Every 15 seconds</option>
-                        <option value="30">Every 30 seconds</option>
-                        <option value="60">Every 1 minute</option>
-                        <option value="120">Every 2 minutes</option>
-                        <option value="300">Every 5 minutes</option>
+                        <option value="10">@T("settings.every10s")</option>
+                        <option value="15">@T("settings.every15s")</option>
+                        <option value="30">@T("settings.every30s")</option>
+                        <option value="60">@T("settings.every1m")</option>
+                        <option value="120">@T("settings.every2m")</option>
+                        <option value="300">@T("settings.every5m")</option>
                     </select>
                 </div>
                 <div class="setting-item">
                     <div class="setting-info">
-                        <h3>History Retention Duration</h3>
-                        <p>How long to keep old data</p>
+                        <h3>@T("settings.historyRetention")</h3>
+                        <p>@T("settings.historyRetentionDesc")</p>
                     </div>
                     <select @bind="Settings.HistoryRetention" class="select-input">
-                        <option value="30">30 days</option>
-                        <option value="90">90 days</option>
-                        <option value="180">6 months</option>
-                        <option value="365">1 year</option>
-                        <option value="0">Unlimited</option>
+                        <option value="30">@T("settings.30days")</option>
+                        <option value="90">@T("settings.90days")</option>
+                        <option value="180">@T("settings.6months")</option>
+                        <option value="365">@T("settings.1year")</option>
+                        <option value="0">@T("settings.unlimited")</option>
                     </select>
                 </div>
             </div>
@@ -140,13 +125,13 @@
 
         <div class="settings-section">
             <div class="section-header">
-                <h2>🔧 System</h2>
+                <h2>@T("settings.system")</h2>
             </div>
             <div class="section-content">
                 <div class="setting-item">
                     <div class="setting-info">
-                        <h3>Language</h3>
-                        <p>Select the application language</p>
+                        <h3>@T("settings.language")</h3>
+                        <p>@T("settings.languageDesc")</p>
                     </div>
                     <select @bind="Settings.Language" class="select-input">
                         <option value="ro">Română</option>
@@ -154,17 +139,17 @@
                     </select>
                 </div>
                 <div class="system-info">
-                    <h3>📊 System Information</h3>
+                    <h3>@T("settings.systemInfo")</h3>
                     <div class="info-row">
-                        <span>Application Version:</span>
+                        <span>@T("settings.appVersion")</span>
                         <span class="info-value">@Version</span>
                     </div>
                     <div class="info-row">
-                        <span>Last Update:</span>
+                        <span>@T("settings.lastUpdate")</span>
                         <span class="info-value">24 November 2025</span>
                     </div>
                     <div class="info-row">
-                        <span>Used Space:</span>
+                        <span>@T("settings.usedSpace")</span>
                         <span class="info-value">47.2 MB</span>
                     </div>
                 </div>
@@ -173,14 +158,14 @@
     </div>
 
     <div class="settings-footer">
-        <button class="btn-save-settings" @onclick="SaveSettings">💾 Save All Settings</button>
-        <button class="btn-reset-settings" @onclick="ResetAllSettings">🔄 Reset All</button>
+        <button class="btn-save-settings" @onclick="SaveSettings">@T("settings.saveAll")</button>
+        <button class="btn-reset-settings" @onclick="ResetAllSettings">@T("settings.resetAll")</button>
     </div>
 </div>
 
 @if (ShowSaveConfirmation)
 {
     <div class="toast-notification">
-        ✅ Settings have been saved successfully!
+        @T("settings.saved")
     </div>
 }

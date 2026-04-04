@@ -29,6 +29,11 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private TokenParserService TokenParser { get; set; } = null!;
 
         [Inject]
+        private LanguageService Lang { get; set; } = null!;
+
+        private string T(string key) => Lang.T(key);
+
+        [Inject]
         private UserMonitoredService UserMonitoredService { get; set; } = null!;
 
         [Inject]

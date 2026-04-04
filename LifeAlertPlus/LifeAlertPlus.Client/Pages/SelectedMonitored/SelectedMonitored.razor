@@ -11,10 +11,10 @@
     {
         <div class="back-navigation">
             <button class="btn-back" @onclick="GoBack">
-                <span class="back-icon">←</span> Go Back to Monitored List
+                <span class="back-icon">←</span> @T("selected.goBack")
             </button>
             <div class="top-actions">
-                <button class="btn-action-main">📤 Export</button>
+                <button class="btn-action-main">📤 @T("selected.export")</button>
             </div>
         </div>
 
@@ -26,7 +26,7 @@
                     <p class="person-meta">
                         @if (Person.Age > 0)
                         {
-                            <span>@Person.Age years</span>
+                            <span>@Person.Age @T("selected.years")</span>
                             @if (!string.IsNullOrEmpty(Person.Relationship))
                             {
                                 <span> • @Person.Relationship</span>
@@ -38,7 +38,7 @@
                         }
                         else
                         {
-                            <span>No age/gender info</span>
+                            <span>@T("selected.noAgeGender")</span>
                         }
                     </p>
                     <div class="status-badge @Person.Status.ToLower()">
@@ -55,17 +55,17 @@
                     </div>
                     <div class="contact-item">
                         <span class="contact-icon">⏰</span>
-                        <span class="contact-text">Last Update: @Person.LastUpdate</span>
+                        <span class="contact-text">@T("selected.lastUpdate") @Person.LastUpdate</span>
                     </div>
                     <div class="contact-item">
                         <span class="contact-icon">🆔</span>
-                        <span class="contact-text">Device: @Person.DeviceSerial</span>
+                        <span class="contact-text">@T("selected.device") @Person.DeviceSerial</span>
                     </div>
                 </div>
                 @if (_showEditButton)
                 {
                     <div class="action-buttons">
-                        <button class="btn-action-main" @onclick="OpenEditModal">⚙️ Edit Profile</button>
+                        <button class="btn-action-main" @onclick="OpenEditModal">⚙️ @T("selected.editProfile")</button>
                     </div>
                 }
             </div>
@@ -75,7 +75,7 @@
             <div class="stat-card-large heart-rate @(Person.HeartRate <= 0 ? "no-data" : "")">
                 <div class="stat-icon-huge">❤️</div>
                 <div class="stat-content">
-                    <h3>Heart Rate</h3>
+                    <h3>@T("selected.heartRate")</h3>
                     @if (Person.HeartRate > 0)
                     {
                         <div class="stat-value-huge">@Person.HeartRate <span class="stat-unit">bpm</span></div>
@@ -83,15 +83,15 @@
                     }
                     else
                     {
-                        <div class="stat-value-huge no-data-value">No recent measurements.</div>
-                        <p class="stat-status no-data-status">No data available</p>
+                        <div class="stat-value-huge no-data-value">@T("selected.noRecentMeasurements")</div>
+                        <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
                 </div>
             </div>
             <div class="stat-card-large blood-oxygen @(Person.SpO2 <= 0 ? "no-data" : "")">
                 <div class="stat-icon-huge">🩸</div>
                 <div class="stat-content">
-                    <h3>Blood Oxygen (SpO₂)</h3>
+                    <h3>@T("selected.bloodOxygen")</h3>
                     @if (Person.SpO2 > 0)
                     {
                         <div class="stat-value-huge">@Person.SpO2 <span class="stat-unit">%</span></div>
@@ -99,15 +99,15 @@
                     }
                     else
                     {
-                        <div class="stat-value-huge no-data-value">No recent measurements.</div>
-                        <p class="stat-status no-data-status">No data available</p>
+                        <div class="stat-value-huge no-data-value">@T("selected.noRecentMeasurements")</div>
+                        <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
                 </div>
             </div>
             <div class="stat-card-large temperature @(Person.Temperature <= 0 ? "no-data" : "")">
                 <div class="stat-icon-huge">🌡️</div>
                 <div class="stat-content">
-                    <h3>Temperature</h3>
+                    <h3>@T("selected.temperature")</h3>
                     @if (Person.Temperature > 0)
                     {
                         <div class="stat-value-huge">@Person.Temperature <span class="stat-unit">°C</span></div>
@@ -115,19 +115,19 @@
                     }
                     else
                     {
-                        <div class="stat-value-huge no-data-value">No recent measurements.</div>
-                        <p class="stat-status no-data-status">No data available</p>
+                        <div class="stat-value-huge no-data-value">@T("selected.noRecentMeasurements")</div>
+                        <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
                 </div>
             </div>
             <div class="stat-card-large gps @(GetGPSStatus(Person.GPS) == "disabled" ? "no-data" : "")">
                 <div class="stat-icon-huge">📍</div>
                 <div class="stat-content">
-                    <h3>GPS Location</h3>
+                    <h3>@T("selected.gpsLocation")</h3>
                     <div class="stat-value-gps">@Person.GPS</div>
                     @if (GetGPSStatus(Person.GPS) == "disabled")
                     {
-                        <p class="stat-status no-data-status">No data available</p>
+                        <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
                     else
                     {
@@ -141,12 +141,12 @@
             <div class="chart-section">
                 <div class="section-card">
                     <div class="section-header">
-                        <h2>📊 Vital Signs Evolution</h2>
+                        <h2>📊 @T("selected.vitalSigns")</h2>
                         <div class="chart-view-toggle">
                             <button class="btn-chart-view @(CurrentChartView == ChartViewMode.Daily ? "active" : "")"
-                                    @onclick="() => SwitchChartView(ChartViewMode.Daily)">Daily</button>
+                                    @onclick="() => SwitchChartView(ChartViewMode.Daily)">@T("selected.daily")</button>
                             <button class="btn-chart-view @(CurrentChartView == ChartViewMode.Weekly ? "active" : "")"
-                                    @onclick="() => SwitchChartView(ChartViewMode.Weekly)">Weekly</button>
+                                    @onclick="() => SwitchChartView(ChartViewMode.Weekly)">@T("selected.weekly")</button>
                         </div>
                     </div>
 
@@ -155,7 +155,7 @@
                         <div class="chart-item">
                             <div class="chart-item-title">
                                 <span class="chart-color-dot hr"></span>
-                                Heart Rate
+                                @T("selected.heartRate")
                                 <span class="chart-unit-badge">bpm</span>
                             </div>
                             <svg @ref="_hrSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
@@ -201,7 +201,7 @@
                         <div class="chart-item">
                             <div class="chart-item-title">
                                 <span class="chart-color-dot temp"></span>
-                                Temperature
+                                @T("selected.temperature")
                                 <span class="chart-unit-badge">°C</span>
                             </div>
                             <svg @ref="_tempSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
@@ -249,7 +249,7 @@
             <div class="sidebar-section">
                 <div class="section-card">
                     <div class="section-header">
-                        <h2>🔔 Recent Alerts</h2>
+                        <h2>🔔 @T("selected.recentAlerts")</h2>
                     </div>
                     <div class="alerts-list">
                         @foreach (var alert in RecentAlerts)
@@ -268,7 +268,7 @@
 
                 <div class="section-card">
                     <div class="section-header">
-                        <h2>📋 Recent Measurements</h2>
+                        <h2>📋 @T("selected.recentMeasurements")</h2>
                     </div>
                     <div class="measurements-list">
                         @foreach (var measurement in RecentMeasurements)
@@ -291,15 +291,15 @@
     {
         <div class="loading-state">
             <div class="spinner"></div>
-            <p>Loading...</p>
+            <p>@T("selected.loading")</p>
         </div>
     }
     else
     {
         <div class="loading-state">
-            <p>@(LoadError ?? "Monitored person not found.")</p>
+            <p>@(LoadError ?? T("selected.notFound"))</p>
             <button class="btn-back" @onclick="GoBack">
-                <span class="back-icon">←</span> Go Back to Monitored List
+                <span class="back-icon">←</span> @T("selected.goBack")
             </button>
         </div>
     }
@@ -310,7 +310,7 @@
     <div class="modal-overlay" @onclick="CloseEditModal">
         <div class="modal-content" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h2>✏️ Edit Profile</h2>
+                <h2>✏️ @T("selected.editProfile")</h2>
                 <button class="modal-close" @onclick="CloseEditModal">✕</button>
             </div>
             <div class="modal-body">
@@ -319,74 +319,74 @@
                     <div class="edit-error">@_editError</div>
                 }
                 <div class="form-group">
-                    <label>First Name</label>
-                    <input type="text" @bind="_editFirstName" placeholder="First Name" />
+                    <label>@T("selected.firstName")</label>
+                    <input type="text" @bind="_editFirstName" placeholder="@T("selected.firstName")" />
                 </div>
                 <div class="form-group">
-                    <label>Last Name</label>
-                    <input type="text" @bind="_editLastName" placeholder="Last Name" />
+                    <label>@T("selected.lastName")</label>
+                    <input type="text" @bind="_editLastName" placeholder="@T("selected.lastName")" />
                 </div>
                 <div class="form-group">
-                    <label>Gender</label>
+                    <label>@T("selected.gender")</label>
                     <select @bind="_editGender">
-                        <option value="">Select...</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="">@T("selected.select")</option>
+                        <option value="Male">@T("selected.male")</option>
+                        <option value="Female">@T("selected.female")</option>
+                        <option value="Other">@T("selected.other")</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Birthdate</label>
+                    <label>@T("selected.birthdate")</label>
                     <input type="date" @bind="_editBirthdate" />
                 </div>
                 <div class="form-group">
-                    <label>Address</label>
-                    <input type="text" @bind="_editAddress" placeholder="Address" />
+                    <label>@T("selected.address")</label>
+                    <input type="text" @bind="_editAddress" placeholder="@T("selected.address")" />
                 </div>
                 <div class="form-group">
-                    <label>Device Serial Number</label>
-                    <input type="text" @bind="_editDeviceSerial" placeholder="Device Serial Number" />
+                    <label>@T("selected.deviceSerial")</label>
+                    <input type="text" @bind="_editDeviceSerial" placeholder="@T("selected.deviceSerial")" />
                 </div>
                 <div class="form-group-separator">
-                    <span>Custom Vital Ranges (leave blank to use your account defaults)</span>
+                    <span>@T("selected.customRanges")</span>
                 </div>
                 <div class="form-group form-group-inline">
                     <div>
-                        <label>Min Heart Rate (bpm)</label>
+                        <label>@T("selected.minHr")</label>
                         <input type="number" @bind="_editMinHr" placeholder="@_userMinHr" min="20" max="300" />
                     </div>
                     <div>
-                        <label>Max Heart Rate (bpm)</label>
+                        <label>@T("selected.maxHr")</label>
                         <input type="number" @bind="_editMaxHr" placeholder="@_userMaxHr" min="20" max="300" />
                     </div>
                 </div>
                 <div class="form-group form-group-inline">
                     <div>
-                        <label>Min Temperature (°C)</label>
+                        <label>@T("selected.minTemp")</label>
                         <input type="number" step="0.1" @bind="_editMinTemp" placeholder="@_userMinTemp" min="30" max="45" />
                     </div>
                     <div>
-                        <label>Max Temperature (°C)</label>
+                        <label>@T("selected.maxTemp")</label>
                         <input type="number" step="0.1" @bind="_editMaxTemp" placeholder="@_userMaxTemp" min="30" max="45" />
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Update Frequency (leave blank to use account default: @_userUpdateFrequency s)</label>
+                    <label>@string.Format(T("selected.updateFrequency"), _userUpdateFrequency)</label>
                     <select @bind="_editUpdateFrequency">
-                        <option value="">Use account default (@_userUpdateFrequency s)</option>
-                        <option value="10">Every 10 seconds</option>
-                        <option value="15">Every 15 seconds</option>
-                        <option value="30">Every 30 seconds</option>
-                        <option value="60">Every 1 minute</option>
-                        <option value="120">Every 2 minutes</option>
-                        <option value="300">Every 5 minutes</option>
+                        <option value="">@string.Format(T("selected.useDefault"), _userUpdateFrequency)</option>
+                        <option value="10">@T("settings.every10s")</option>
+                        <option value="15">@T("settings.every15s")</option>
+                        <option value="30">@T("settings.every30s")</option>
+                        <option value="60">@T("settings.every1m")</option>
+                        <option value="120">@T("settings.every2m")</option>
+                        <option value="300">@T("settings.every5m")</option>
                     </select>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-cancel" @onclick="CloseEditModal">Cancel</button>
+                <button class="btn-cancel" @onclick="CloseEditModal">@T("common.cancel")</button>
                 <button class="btn-save" @onclick="SaveEditAsync" disabled="@_isSaving">
-                    @(_isSaving ? "Saving..." : "💾 Save")
+                    @(_isSaving ? T("selected.saving") : "💾 " + T("common.save"))
                 </button>
             </div>
         </div>

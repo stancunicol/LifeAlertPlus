@@ -30,6 +30,11 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     [Inject]
     private MeasurementService MeasurementService { get; set; } = default!;
 
+    [Inject]
+    private LanguageService Lang { get; set; } = default!;
+
+    private string T(string key) => Lang.T(key);
+
     protected string UserFullName { get; set; } = "";
     protected string ProfilePictureUrl { get; set; } = "";
     // Start with zeros to avoid showing placeholder/demo values that then reset.
@@ -58,6 +63,8 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
 
         _currentUserId = claims.UserId;
 
+        Lang.OnLanguageChanged += HandleLanguageChanged;
+
         // Start with claims (token) so we always have something to show even if DB fields are empty.
         UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
         ProfilePictureUrl = claims.ProfilePictureUrl ?? string.Empty;
@@ -73,6 +80,12 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         var apiFullName = $"{userFromApi.FirstName} {userFromApi.LastName}".Trim();
         if (!string.IsNullOrWhiteSpace(apiFullName))
             UserFullName = apiFullName;
+
+        if (!string.IsNullOrEmpty(userFromApi.Language))
+        {
+            Lang.SetLanguage(userFromApi.Language);
+            await JSRuntime.InvokeVoidAsync("setLanguage", userFromApi.Language);
+        }
 
         var apiProfile = userFromApi.ProfilePictureUrl ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(apiProfile))
@@ -129,11 +142,17 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        Lang.OnLanguageChanged -= HandleLanguageChanged;
         if (_pollingCts != null)
         {
             _pollingCts.Cancel();
             _pollingCts.Dispose();
         }
+    }
+
+    private async void HandleLanguageChanged()
+    {
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadTodayMeasurementsCountAsync()
@@ -369,6 +388,27 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     private void NavigateToMonitored(Guid personId)
     {
         Navigation.NavigateTo($"/monitored/{personId}");
+    }
+
+    protected async Task RequestLocation(Guid personId)
+    {
+        // Reuse existing navigation to open the monitored detail/map
+        NavigateToMonitored(personId);
+        await Task.CompletedTask;
+    }
+
+    protected async Task CallPerson(Guid personId)
+    {
+        var sample = MonitoredSamples.FirstOrDefault(m => m.Id == personId);
+        var name = sample?.Name ?? "Person";
+        await JSRuntime.InvokeVoidAsync("alert", $"Call requested for {name}. Phone number not available.");
+    }
+
+    protected async Task TextPerson(Guid personId)
+    {
+        var sample = MonitoredSamples.FirstOrDefault(m => m.Id == personId);
+        var name = sample?.Name ?? "Person";
+        await JSRuntime.InvokeVoidAsync("alert", $"Text requested for {name}. Phone number not available.");
     }
 
     private sealed class MonitoredCardData

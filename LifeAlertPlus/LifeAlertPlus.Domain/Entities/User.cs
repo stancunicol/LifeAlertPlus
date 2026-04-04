@@ -23,7 +23,6 @@
         public string? PendingEmail { get; set; }
         public string? FirstDayOfTheWeek { get; set; }
         public string? Language { get; set; }
-        public string? ThemeColor { get; set; }
         public string? FontSize { get; set; }
         public int? MinHeartRate { get; set; }
         public int? MaxHeartRate { get; set; }

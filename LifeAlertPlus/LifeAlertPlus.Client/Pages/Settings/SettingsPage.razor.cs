@@ -22,9 +22,11 @@ namespace LifeAlertPlus.Client.Pages.Settings
         [Inject]
         private TokenParserService TokenParser { get; set; } = default!;
 
+        [Inject]
+        private LanguageService Lang { get; set; } = default!;
+
         private AppSettings Settings { get; set; } = new AppSettings
         {
-            Theme = "pink",
             AccentColor = "#A5D6A7",
             FontSize = "medium",
             EnableAnimations = true,
@@ -62,13 +64,18 @@ namespace LifeAlertPlus.Client.Pages.Settings
         private string Version = "";
         private Guid UserId;
 
+        private string T(string key) => Lang.T(key);
+
         private async Task SaveSettings()
         {
+            // Sync language to LanguageService before saving
+            Lang.SetLanguage(Settings.Language);
+            await JSRuntime.InvokeVoidAsync("setLanguage", Settings.Language);
+
             var settings = new UserUpdateRequestDTO
             {
                 FirstDayOfTheWeek = Settings.FirstDayOfWeek,
                 Language = Settings.Language,
-                ThemeColor = Settings.Theme,
                 FontSize = Settings.FontSize,
                 MinHeartRate = Settings.HeartRateMin,
                 MaxHeartRate = Settings.HeartRateMax,
@@ -134,9 +141,12 @@ namespace LifeAlertPlus.Client.Pages.Settings
             if (!string.IsNullOrEmpty(userFromApi.FirstDayOfTheWeek))
                 Settings.FirstDayOfWeek = userFromApi.FirstDayOfTheWeek;
             if (!string.IsNullOrEmpty(userFromApi.Language))
+            {
                 Settings.Language = userFromApi.Language;
+                Lang.SetLanguage(userFromApi.Language);
+                await JSRuntime.InvokeVoidAsync("setLanguage", userFromApi.Language);
+            }
             if (!string.IsNullOrEmpty(userFromApi.ThemeColor))
-                Settings.Theme = userFromApi.ThemeColor;
             if (!string.IsNullOrEmpty(userFromApi.FontSize))
                 Settings.FontSize = userFromApi.FontSize;
             Settings.HeartRateMin = userFromApi.MinHeartRate;
@@ -176,7 +186,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
         {
             Settings = new AppSettings
             {
-                Theme = "pink",
                 AccentColor = "#A5D6A7",
                 FontSize = "medium",
                 EnableAnimations = true,
@@ -208,7 +217,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
         private class AppSettings
         {
             // Appearance
-            public string Theme { get; set; } = string.Empty;
             public string AccentColor { get; set; } = string.Empty;
             public string FontSize { get; set; } = string.Empty;
             public bool EnableAnimations { get; set; }

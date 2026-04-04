@@ -29,6 +29,11 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         [Inject]
         private IJSRuntime JSRuntime { get; set; } = default!;
 
+        [Inject]
+        private LanguageService Lang { get; set; } = default!;
+
+        private string T(string key) => Lang.T(key);
+
         private ElementReference _hrSvgRef;
         private ElementReference _tempSvgRef;
         private bool _tooltipsInitialized;

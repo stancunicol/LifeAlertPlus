@@ -27,6 +27,11 @@ namespace LifeAlertPlus.Client.Pages.Users
 		[Inject]
 		private IJSRuntime JSRuntime { get; set; } = default!;
 
+		[Inject]
+		private LanguageService Lang { get; set; } = default!;
+
+		private string T(string key) => Lang.T(key);
+
 		protected List<UserListItemDTO> Users { get; private set; } = new();
 		protected string UserFullName { get; private set; } = "Admin";
 		protected string ProfilePictureUrl { get; private set; } = string.Empty;

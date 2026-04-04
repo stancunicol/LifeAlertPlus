@@ -9,38 +9,38 @@
 	<div class="admin-container">
 		<div class="admin-header">
 			<div class="header-title-section">
-				<h1>Users Center</h1>
-				<p class="admin-subtitle">Accounts overview and status</p>
+				<h1>@T("users.title")</h1>
+				<p class="admin-subtitle">@T("users.subtitle")</p>
 			</div>
-			<span class="tag chip-muted">Live overview</span>
+			<span class="tag chip-muted">@T("users.liveOverview")</span>
 		</div>
 
 		<div class="stats-grid admin-stats">
 			<div class="stat-card">
 				<div class="stat-icon users">👥</div>
 				<div class="stat-info">
-					<span class="stat-label">Total users</span>
+					<span class="stat-label">@T("users.totalUsers")</span>
 					<span class="stat-value">@TotalUsers</span>
 				</div>
 			</div>
 			<div class="stat-card">
 				<div class="stat-icon online">🟢</div>
 				<div class="stat-info">
-					<span class="stat-label">Active users</span>
+					<span class="stat-label">@T("users.activeUsers")</span>
 					<span class="stat-value">@ActiveUsers</span>
 				</div>
 			</div>
 			<div class="stat-card">
 				<div class="stat-icon alert">⚠️</div>
 				<div class="stat-info">
-					<span class="stat-label">Inactive users</span>
+					<span class="stat-label">@T("users.inactiveUsers")</span>
 					<span class="stat-value critical">@(TotalUsers - ActiveUsers)</span>
 				</div>
 			</div>
 			<div class="stat-card">
 				<div class="stat-icon monitored">✅</div>
 				<div class="stat-info">
-					<span class="stat-label">Email confirmed</span>
+					<span class="stat-label">@T("users.emailConfirmed")</span>
 					<span class="stat-value">@ConfirmedUsers</span>
 				</div>
 			</div>
@@ -48,13 +48,13 @@
 
 		@if (IsLoading)
 		{
-			<div class="message-card">Loading users...</div>
+			<div class="message-card">@T("users.loading")</div>
 		}
 		else if (!string.IsNullOrEmpty(ErrorMessage))
 		{
 			<div class="message-card error">
 				<span>@ErrorMessage</span>
-				<button @onclick="LoadUsersAsync">Retry</button>
+				<button @onclick="LoadUsersAsync">@T("users.retry")</button>
 			</div>
 		}
 		else
@@ -62,22 +62,22 @@
 			<div class="section">
 				<div class="section-header">
 					<div>
-						<h2>Users</h2>
+						<h2>@T("users.usersTitle")</h2>
 						<span class="section-note">@ActiveUsers active • @ConfirmedUsers email confirmed</span>
 					</div>
 					<div class="section-actions">
-						<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="Search users..." />
+						<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="@T("users.searchPh")" />
 						<div class="filters">
-							<button class="@GetFilterClass("all")" @onclick='@(() => SetFilter("all"))'>All</button>
-							<button class="@GetFilterClass("active")" @onclick='@(() => SetFilter("active"))'>Active</button>
-							<button class="@GetFilterClass("inactive")" @onclick='@(() => SetFilter("inactive"))'>Inactive</button>
+							<button class="@GetFilterClass("all")" @onclick='@(() => SetFilter("all"))'>@T("users.all")</button>
+							<button class="@GetFilterClass("active")" @onclick='@(() => SetFilter("active"))'>@T("users.active")</button>
+							<button class="@GetFilterClass("inactive")" @onclick='@(() => SetFilter("inactive"))'>@T("users.inactive")</button>
 						</div>
 					</div>
 				</div>
 
 				@if (!FilteredUsers.Any())
 				{
-					<div class="message-card">No users found for the current filter.</div>
+					<div class="message-card">@T("users.noUsersFound")</div>
 				}
 				else
 				{
@@ -85,13 +85,13 @@
 						<table class="admin-table users-table">
 							<thead>
 								<tr>
-									<th>User</th>
-									<th>Email</th>
-									<th>Monitored</th>
-									<th>Provider</th>
-									<th>Status</th>
-									<th>Email Confirmed</th>
-									<th>Actions</th>
+									<th>@T("users.thUser")</th>
+									<th>@T("users.thEmail")</th>
+									<th>@T("users.thMonitored")</th>
+									<th>@T("users.thProvider")</th>
+									<th>@T("users.thStatus")</th>
+									<th>@T("users.thEmailConfirmed")</th>
+									<th>@T("users.thActions")</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -115,11 +115,11 @@
 										<td><span class="badge @(user.IsEmailConfirmed ? "ok" : "warn")">@GetEmailLabel(user)</span></td>
 										<td class="actions-cell">
 											<div class="actions-center">
-												<button class="btn-details" @onclick:stopPropagation @onclick="() => ViewUser(user)">Details</button>
+												<button class="btn-details" @onclick:stopPropagation @onclick="() => ViewUser(user)">@T("users.details")</button>
 											</div>
 											<div class="actions-row">
-												<button class="action-btn" @onclick:stopPropagation @onclick="() => ToggleActive(user)">@(user.DeletedAt == null ? "Deactivate" : "Activate")</button>
-												<button class="action-btn danger" @onclick:stopPropagation @onclick="() => ConfirmDelete(user)">Delete</button>
+											<button class="action-btn" @onclick:stopPropagation @onclick="() => ToggleActive(user)">@(user.DeletedAt == null ? T("users.deactivate") : T("users.activate"))</button>
+											<button class="action-btn danger" @onclick:stopPropagation @onclick="() => ConfirmDelete(user)">@T("users.delete")</button>
 											</div>
 										</td>
 									</tr>

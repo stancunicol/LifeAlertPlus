@@ -21,6 +21,11 @@ namespace LifeAlertPlus.Client.Pages.Login
 
         [Inject]
         private IConfiguration Configuration { get; set; } = default!;
+
+        [Inject]
+        private LanguageService Lang { get; set; } = default!;
+
+        private string T(string key) => Lang.TEnglish(key);
         
         private string Email { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
@@ -74,12 +79,12 @@ namespace LifeAlertPlus.Client.Pages.Login
                     }
                     else
                     {
-                        ErrorMessage = response.Message ?? "Login failed.";
+                        ErrorMessage = response.Message ?? T("login.error.failed");
                     }
                 }
                 else
                 {
-                    ErrorMessage = "An error occurred during login.";
+                    ErrorMessage = T("login.error.generic");
                 }
             }
             finally
@@ -120,14 +125,14 @@ namespace LifeAlertPlus.Client.Pages.Login
 
             if (string.IsNullOrWhiteSpace(ForgotPasswordEmail))
             {
-                ForgotPasswordMessage = "Please enter your email address.";
+                ForgotPasswordMessage = T("login.error.enterEmail");
                 IsForgotPasswordSuccess = false;
                 return;
             }
 
             if (!ForgotPasswordEmail.Contains("@"))
             {
-                ForgotPasswordMessage = "Please enter a valid email address.";
+                ForgotPasswordMessage = T("login.error.validEmail");
                 IsForgotPasswordSuccess = false;
                 return;
             }
@@ -149,12 +154,12 @@ namespace LifeAlertPlus.Client.Pages.Login
                 }
                 catch { message = content; }
 
-                ForgotPasswordMessage = message ?? "Failed to send reset email. Please try again.";
+                ForgotPasswordMessage = message ?? T("login.error.resetFailed");
                 IsForgotPasswordSuccess = success == true;
             }
             catch
             {
-                ForgotPasswordMessage = "An error occurred. Please try again later.";
+                ForgotPasswordMessage = T("login.error.resetGeneric");
                 IsForgotPasswordSuccess = false;
             }
         }

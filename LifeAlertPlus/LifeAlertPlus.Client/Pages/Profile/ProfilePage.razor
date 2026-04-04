@@ -18,20 +18,20 @@
                 }
             </div>
             <InputFile id="profileImageInput" style="display:none" OnChange="OnProfileImageSelected" />
-            <button class="btn-change-photo" @onclick="TriggerProfileImageInput">📸 Change Picture</button>
+            <button class="btn-change-photo" @onclick="TriggerProfileImageInput">📸 @T("profile.changePicture")</button>
         </div>
         <div class="profile-info">
             <h1>@CurrentUser.FirstName @CurrentUser.LastName</h1>
             <p class="profile-email">@CurrentUser.Email</p>
-            <p class="profile-member-since">Member since @CurrentUser.CreatedAt.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</p>
+            <p class="profile-member-since">@string.Format(T("profile.memberSince"), CurrentUser.CreatedAt.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture))</p>
             <div class="profile-stats-mini">
                 <div class="stat-mini">
                     <span class="stat-mini-value">@MonitoredCount</span>
-                    <span class="stat-mini-label">Monitored</span>
+                    <span class="stat-mini-label">@T("profile.monitored")</span>
                 </div>
                 <div class="stat-mini">
                     <span class="stat-mini-value">@AlertsCount</span>
-                    <span class="stat-mini-label">Active Alerts</span>
+                    <span class="stat-mini-label">@T("profile.activeAlerts")</span>
                 </div>
             </div>
         </div>
@@ -40,23 +40,23 @@
     <div class="profile-content">
         <div class="profile-section">
             <div class="section-header">
-                <h2>📋 Personal information</h2>
+                <h2>@T("profile.personalInfo")</h2>
                 @if (!IsEditingPersonal)
                 {
-                    <button class="btn-edit" @onclick="EnableEditPersonal">✏️ Edit</button>
+                    <button class="btn-edit" @onclick="EnableEditPersonal">@T("profile.edit")</button>
                 }
                 else
                 {
                     <div class="edit-actions">
-                        <button class="btn-save" @onclick="SavePersonalInfo">💾 Save</button>
-                        <button class="btn-cancel" @onclick="CancelEditPersonal">✖️ Cancel</button>
+                        <button class="btn-save" @onclick="SavePersonalInfo">@T("profile.save")</button>
+                        <button class="btn-cancel" @onclick="CancelEditPersonal">@T("profile.cancel")</button>
                     </div>
                 }
             </div>
             <div class="section-content">
                 <div class="info-grid">
                     <div class="info-item">
-                        <label>First Name</label>
+                        <label>@T("profile.firstName")</label>
                         @if (!IsEditingPersonal)
                         {
                             <p>@CurrentUser.FirstName</p>
@@ -65,7 +65,7 @@
                         {
                             <input type="text" @bind="EditUser.FirstName" class="input-edit" />
                         }
-                        <label>Last Name</label>
+                        <label>@T("profile.lastName")</label>
                         @if (!IsEditingPersonal)
                         {
                             <p>@CurrentUser.LastName</p>
@@ -81,35 +81,35 @@
 
         <div class="profile-section">
             <div class="section-header">
-                <h2>🔒 Security</h2>
+                <h2>@T("profile.security")</h2>
             </div>
             <div class="section-content">
                 @if (CurrentUser.Provider == "Local")
                 {
                     <div class="security-item">
                         <div class="security-info">
-                            <h3>Change Password</h3>
-                            <p>Last changed: @(CurrentUser.LastChangedPasswordAt.HasValue ? CurrentUser.LastChangedPasswordAt.Value.ToString("MMMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture) : "Never")</p>
+                            <h3>@T("profile.changePassword")</h3>
+                            <p>@T("profile.lastChanged") @(CurrentUser.LastChangedPasswordAt.HasValue ? CurrentUser.LastChangedPasswordAt.Value.ToString("MMMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture) : T("profile.never"))</p>
                         </div>
-                        <button class="btn-security" @onclick="OpenChangePasswordModal">Change Password</button>
+                        <button class="btn-security" @onclick="OpenChangePasswordModal">@T("profile.changePasswordBtn")</button>
                     </div>
                     <div class="security-item">
                         <div class="security-info">
-                            <h3>Change Email</h3>
-                            <p>Update your email address</p>
+                            <h3>@T("profile.changeEmailTitle")</h3>
+                            <p>@T("profile.updateEmailDesc")</p>
                         </div>
-                        <button class="btn-security" @onclick="OpenChangeEmailModal">Change Email</button>
+                        <button class="btn-security" @onclick="OpenChangeEmailModal">@T("profile.changeEmailBtn")</button>
                     </div>
                 }
                 else
                 {
                     <div class="security-info">
-                        <h3>Password Managed Externally</h3>
-                        <p>Your password is managed through @CurrentUser.Provider</p>
+                        <h3>@T("profile.passwordManaged")</h3>
+                        <p>@T("profile.passwordManagedText") @CurrentUser.Provider</p>
                     </div>
                     <div class="security-info">
-                        <h3>Email Managed Externally</h3>
-                        <p>Your email is managed through @CurrentUser.Provider</p>
+                        <h3>@T("profile.emailManaged")</h3>
+                        <p>@T("profile.emailManagedText") @CurrentUser.Provider</p>
                     </div>
                 }
             </div>
@@ -117,13 +117,13 @@
 
         <div class="profile-section">
             <div class="section-header">
-                <h2>🔔 Notification Preferences</h2>
+                <h2>🔔 @T("profile.notifPrefs")</h2>
             </div>
             <div class="section-content">
                 <div class="preference-item">
                     <div class="preference-info">
-                        <h3>Email Notifications</h3>
-                        <p>Receive important alerts via email</p>
+                        <h3>@T("profile.emailNotif")</h3>
+                        <p>@T("profile.emailNotifDesc")</p>
                     </div>
                     <label class="switch">
                         <input type="checkbox" @bind="Preferences.EmailNotifications" />
@@ -132,8 +132,8 @@
                 </div>
                 <div class="preference-item">
                     <div class="preference-info">
-                        <h3>Push Notifications</h3>
-                        <p>Real-time alerts in your browser</p>
+                        <h3>@T("profile.pushNotif")</h3>
+                        <p>@T("profile.pushNotifDesc")</p>
                     </div>
                     <label class="switch">
                         <input type="checkbox" @bind="Preferences.PushNotifications" />
@@ -142,8 +142,8 @@
                 </div>
                 <div class="preference-item">
                     <div class="preference-info">
-                        <h3>Critical Alerts</h3>
-                        <p>Priority notifications for emergency situations</p>
+                        <h3>@T("profile.criticalAlerts")</h3>
+                        <p>@T("profile.criticalAlertsDesc")</p>
                     </div>
                     <label class="switch">
                         <input type="checkbox" @bind="Preferences.CriticalAlerts" />
@@ -152,8 +152,8 @@
                 </div>
                 <div class="preference-item">
                     <div class="preference-info">
-                        <h3>Daily Summary</h3>
-                        <p>Receive a daily activity report</p>
+                        <h3>@T("profile.dailySummary")</h3>
+                        <p>@T("profile.dailySummaryDesc")</p>
                     </div>
                     <label class="switch">
                         <input type="checkbox" @bind="Preferences.DailySummary" />
@@ -165,15 +165,15 @@
 
         <div class="profile-section danger-section">
             <div class="section-header">
-                <h2>⚠️ Danger Zone</h2>
+                <h2>⚠️ @T("profile.dangerZone")</h2>
             </div>
             <div class="section-content">
                 <div class="danger-item">
                     <div class="danger-info">
-                        <h3>Delete Account</h3>
-                        <p>Permanent action, all data will be deleted</p>
+                        <h3>@T("profile.deleteAccount")</h3>
+                        <p>@T("profile.deleteAccountDesc")</p>
                     </div>
-                    <button class="btn-danger" @onclick="ShowDeleteConfirmModal">Delete Permanently</button>
+                    <button class="btn-danger" @onclick="ShowDeleteConfirmModal">@T("profile.deletePermanently")</button>
                 </div>
             </div>
         </div>
@@ -185,28 +185,28 @@
     <div class="modal-overlay" @onclick="CloseChangePasswordModal">
         <div class="modal-content" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h2>🔒 Change Password</h2>
+                <h2>🔒 @T("profile.changePasswordBtn")</h2>
                 <button class="modal-close" @onclick="CloseChangePasswordModal">✖️</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Current Password</label>
+                    <label>@T("profile.currentPassword")</label>
                     <div class="password-field">
-                        <input type="@CurrentPasswordFieldType" @bind="PasswordChange.CurrentPassword" placeholder="Enter current password" class="input-modal" />
+                        <input type="@CurrentPasswordFieldType" @bind="PasswordChange.CurrentPassword" placeholder="@T("profile.currentPasswordPh")" class="input-modal" />
                         <button type="button" class="password-toggle" @onclick="ToggleCurrentPasswordVisibility" aria-label="Toggle current password visibility">👁</button>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>New Password</label>
+                    <label>@T("profile.newPassword")</label>
                     <div class="password-field">
-                        <input type="@NewPasswordFieldType" @bind="PasswordChange.NewPassword" placeholder="At least 8 characters" class="input-modal" />
+                        <input type="@NewPasswordFieldType" @bind="PasswordChange.NewPassword" placeholder="@T("profile.newPasswordPh")" class="input-modal" />
                         <button type="button" class="password-toggle" @onclick="ToggleNewPasswordVisibility" aria-label="Toggle new password visibility">👁</button>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Confirm New Password</label>
+                    <label>@T("profile.confirmNewPassword")</label>
                     <div class="password-field">
-                        <input type="@ConfirmPasswordFieldType" @bind="PasswordChange.ConfirmPassword" placeholder="Re-enter new password" class="input-modal" />
+                        <input type="@ConfirmPasswordFieldType" @bind="PasswordChange.ConfirmPassword" placeholder="@T("profile.confirmNewPasswordPh")" class="input-modal" />
                         <button type="button" class="password-toggle" @onclick="ToggleConfirmPasswordVisibility" aria-label="Toggle confirm password visibility">👁</button>
                     </div>
                 </div>
@@ -216,8 +216,8 @@
                 }
             </div>
             <div class="modal-footer">
-                <button class="btn-modal-cancel" @onclick="CloseChangePasswordModal">Cancel</button>
-                <button class="btn-modal-confirm" @onclick="ChangePassword">Change Password</button>
+                <button class="btn-modal-cancel" @onclick="CloseChangePasswordModal">@T("common.cancel")</button>
+                <button class="btn-modal-confirm" @onclick="ChangePassword">@T("profile.changePasswordBtn")</button>
             </div>
         </div>
     </div>
@@ -228,22 +228,22 @@
     <div class="modal-overlay" @onclick="CloseChangeEmailModal">
         <div class="modal-content" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h2>📧 Change Email</h2>
+                <h2>📧 @T("profile.changeEmailTitle")</h2>
                 <button class="modal-close" @onclick="CloseChangeEmailModal">✖️</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>New Email</label>
-                    <input type="email" @bind="EmailChange.NewEmail" placeholder="Enter new email address" class="input-modal" />
+                    <label>@T("profile.newEmail")</label>
+                    <input type="email" @bind="EmailChange.NewEmail" placeholder="@T("profile.newEmailPh")" class="input-modal" />
                 </div>
                 <div class="form-group">
-                    <label>Confirm New Email</label>
-                    <input type="email" @bind="EmailChange.ConfirmEmail" placeholder="Re-enter new email address" class="input-modal" />
+                    <label>@T("profile.confirmNewEmail")</label>
+                    <input type="email" @bind="EmailChange.ConfirmEmail" placeholder="@T("profile.confirmNewEmailPh")" class="input-modal" />
                 </div>
                 <div class="form-group">
-                    <label>Current Password</label>
+                    <label>@T("profile.currentPassword")</label>
                     <div class="password-field">
-                        <input type="@EmailCurrentPasswordFieldType" @bind="EmailChange.CurrentPassword" placeholder="Enter your password to confirm" class="input-modal" />
+                        <input type="@EmailCurrentPasswordFieldType" @bind="EmailChange.CurrentPassword" placeholder="@T("profile.passwordToConfirmPh")" class="input-modal" />
                         <button type="button" class="password-toggle" @onclick="ToggleEmailCurrentPasswordVisibility" aria-label="Toggle current password visibility">👁</button>
                     </div>
                 </div>
@@ -253,8 +253,8 @@
                 }
             </div>
             <div class="modal-footer">
-                <button class="btn-modal-cancel" @onclick="CloseChangeEmailModal">Cancel</button>
-                <button class="btn-modal-confirm" @onclick="ChangeEmail">Change Email</button>
+                <button class="btn-modal-cancel" @onclick="CloseChangeEmailModal">@T("common.cancel")</button>
+                <button class="btn-modal-confirm" @onclick="ChangeEmail">@T("profile.changeEmailBtn")</button>
             </div>
         </div>
     </div>
@@ -265,18 +265,18 @@
     <div class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>✅ Email Changed Successfully</h3>
+                <h3>✅ @T("profile.emailChangedSuccess")</h3>
             </div>
             <div class="modal-body">
                 <div class="success-content">
-                    <p><strong>Your email address change request has been submitted successfully!</strong></p>
-                    <p>📧 A confirmation email has been sent to your new email address. Please check your inbox and click the verification link to complete the process.</p>
-                    <p>🔒 For security, we've also sent a notification to your current email address. If this wasn't you, you can cancel this request from that email.</p>
-                    <p><strong>Note:</strong> For security reasons, you will be logged out automatically. Please log in again with your new email address after verification.</p>
+                    <p><strong>@T("profile.emailChangedText1")</strong></p>
+                    <p>📧 @T("profile.emailChangedText2")</p>
+                    <p>🔒 @T("profile.emailChangedText3")</p>
+                    <p><strong>Note:</strong> @T("profile.emailChangedNote")</p>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-modal-confirm" @onclick="CloseEmailChangeSuccessModal">OK, Log me out</button>
+                <button class="btn-modal-confirm" @onclick="CloseEmailChangeSuccessModal">@T("profile.okLogout")</button>
             </div>
         </div>
     </div>
@@ -287,16 +287,16 @@
     <div class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>✅ Password Changed Successfully</h3>
+                <h3>✅ @T("profile.passwordChangedSuccess")</h3>
             </div>
             <div class="modal-body">
                 <div class="success-content">
-                    <p><strong>Your password has been changed successfully!</strong></p>
-                    <p>🔒 Please use your new password the next time you log in.</p>
+                    <p><strong>@T("profile.passwordChangedText1")</strong></p>
+                    <p>🔒 @T("profile.passwordChangedText2")</p>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn-modal-confirm" @onclick="ClosePasswordChangeSuccessModal">OK</button>
+                <button class="btn-modal-confirm" @onclick="ClosePasswordChangeSuccessModal">@T("profile.ok")</button>
             </div>
         </div>
     </div>
@@ -307,17 +307,17 @@
     <div class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>⚠️ Are you sure?</h3>
+                <h3>⚠️ @T("profile.areYouSure")</h3>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete your account permanently?</p>
-                <p> This action cannot be undone.</p>
-                <p>Please make sure to back up any important data before proceeding.</p>
-                <p>All your data will be permanently removed from our system.</p>
+                <p>@T("profile.deleteConfirm1")</p>
+                <p>@T("profile.deleteConfirm2")</p>
+                <p>@T("profile.deleteConfirm3")</p>
+                <p>@T("profile.deleteConfirm4")</p>
             </div>
             <div class="modal-footer">
-                <button class="btn-modal-cancel" @onclick="CloseDeleteConfirmModal">Cancel</button>
-                <button class="btn-modal-confirm" @onclick="ConfirmDeleteAccount">Yes</button>
+                <button class="btn-modal-cancel" @onclick="CloseDeleteConfirmModal">@T("common.cancel")</button>
+                <button class="btn-modal-confirm" @onclick="ConfirmDeleteAccount">@T("profile.yes")</button>
             </div>
         </div>
     </div>
@@ -328,13 +328,13 @@
     <div class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Account Deleted</h3>
+                <h3>@T("profile.accountDeleted")</h3>
             </div>
             <div class="modal-body">
-                <p>Your account has been deleted permanently. Thank you for using our service.</p>
+                <p>@T("profile.accountDeletedText")</p>
             </div>
             <div class="modal-footer">
-                <button class="btn-modal-confirm" @onclick="DeleteAccount">OK</button>
+                <button class="btn-modal-confirm" @onclick="DeleteAccount">@T("profile.ok")</button>
             </div>
         </div>
     </div>

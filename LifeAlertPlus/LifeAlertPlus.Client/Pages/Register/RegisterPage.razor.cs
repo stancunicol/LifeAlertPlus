@@ -14,6 +14,11 @@ namespace LifeAlertPlus.Client.Pages.Register
         [Inject]
         private AuthenticationService AuthenticationService { get; set; } = default!;
 
+        [Inject]
+        private LanguageService Lang { get; set; } = default!;
+
+        private string T(string key) => Lang.TEnglish(key);
+
         private string FirstName { get; set; } = string.Empty;
         private string LastName { get; set; } = string.Empty;
         private string Email { get; set; } = string.Empty;
@@ -46,7 +51,7 @@ namespace LifeAlertPlus.Client.Pages.Register
                    string.IsNullOrWhiteSpace(Email) ||
                    string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(ConfirmPassword))
                 {
-                    ErrorMessage = "All fields are required.";
+                    ErrorMessage = T("register.error.allRequired");
                     return;
                 }
                 
@@ -59,7 +64,7 @@ namespace LifeAlertPlus.Client.Pages.Register
 
                 if (Password != ConfirmPassword)
                 {
-                    ErrorMessage = "Passwords do not match.";
+                    ErrorMessage = T("register.error.passwordMismatch");
                     return;
                 }
 
@@ -79,7 +84,7 @@ namespace LifeAlertPlus.Client.Pages.Register
                 }
                 else
                 {
-                    ErrorMessage = response?.Message ?? "Registration failed. Please try again.";
+                    ErrorMessage = response?.Message ?? T("register.error.failed");
                 }
             }
             finally
@@ -111,32 +116,32 @@ namespace LifeAlertPlus.Client.Pages.Register
         {
             if (string.IsNullOrWhiteSpace(password))
             {
-                return (false, "Password is required.");
+                return (false, T("password.required"));
             }
 
             if (password.Length < 8)
             {
-                return (false, "Password must be at least 8 characters long.");
+                return (false, T("password.minLength"));
             }
 
             if (!password.Any(char.IsLower))
             {
-                return (false, "Password must contain at least one lowercase letter.");
+                return (false, T("password.lowercase"));
             }
 
             if (!password.Any(char.IsUpper))
             {
-                return (false, "Password must contain at least one uppercase letter.");
+                return (false, T("password.uppercase"));
             }
 
             if (!password.Any(char.IsDigit))
             {
-                return (false, "Password must contain at least one number.");
+                return (false, T("password.number"));
             }
 
             if(!password.Any(ch => !char.IsLetterOrDigit(ch)))
             {
-                return (false, "Password must contain at least one special character.");
+                return (false, T("password.special"));
             }
 
             return (true, string.Empty);

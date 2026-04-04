@@ -12,6 +12,11 @@ public partial class NotificationsPage : ComponentBase
         [Inject]
         private UserService UserService { get; set; } = default!;
 
+        [Inject]
+        private LanguageService Lang { get; set; } = default!;
+
+        private string T(string key) => Lang.T(key);
+
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
         private string ActiveFilter = "All";

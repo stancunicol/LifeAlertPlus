@@ -20,6 +20,11 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		[Inject]
 		private MeasurementService MeasurementService { get; set; } = default!;
 
+		[Inject]
+		private LanguageService Lang { get; set; } = default!;
+
+		private string T(string key) => Lang.T(key);
+
 		protected bool IsLoading { get; private set; } = true;
 		protected string? ErrorMessage { get; private set; }
 		protected List<SimPerson> Persons { get; } = new();

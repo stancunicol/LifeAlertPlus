@@ -8,45 +8,45 @@
 <div class="monitored-container">
     <div class="monitored-header">
         <div class="header-title-section">
-            <h1>Monitored People</h1>
-            <p class="monitored-subtitle">Manage and view all people you're monitoring</p>
+            <h1>@T("monitored.title")</h1>
+            <p class="monitored-subtitle">@T("monitored.subtitle")</p>
         </div>
         <button class="add-person-btn" @onclick="OpenAddPersonModal">
             <span class="btn-icon">➕</span>
-            Add New Person
+            @T("monitored.addPerson")
         </button>
     </div>
 
     <div class="filters-section">
         <div class="filter-group">
-            <label>Status Filter:</label>
+            <label>@T("monitored.statusFilter")</label>
             <div class="filter-buttons">
                 <button class="filter-btn @(FilterStatus == "All" ? "active" : "")" @onclick='() => FilterStatus = "All"'>
-                    All (@_monitoredCards.Count)
+                    @T("monitored.all") (@_monitoredCards.Count)
                 </button>
                 <button class="filter-btn critical @(FilterStatus == "Critical" ? "active" : "")" @onclick='() => FilterStatus = "Critical"'>
-                    Alert (@CriticalCount)
+                    @T("monitored.alert") (@CriticalCount)
                 </button>
                 <button class="filter-btn warning @(FilterStatus == "Warning" ? "active" : "")" @onclick='() => FilterStatus = "Warning"'>
-                    Check Needed (@WarningCount)
+                    @T("monitored.checkNeeded") (@WarningCount)
                 </button>
                 <button class="filter-btn ok @(FilterStatus == "OK" ? "active" : "")" @onclick='() => FilterStatus = "OK"'>
-                    Stable (@StableCount)
+                    @T("monitored.stable") (@StableCount)
                 </button>
             </div>
         </div>
 
         <div class="filter-group">
-            <label>Connection Filter:</label>
+            <label>@T("monitored.connectionFilter")</label>
             <div class="filter-buttons">
                 <button class="filter-btn @(FilterOnlineStatus == "All" ? "active" : "")" @onclick='() => FilterOnlineStatus = "All"'>
-                    All (@_monitoredCards.Count)
+                    @T("monitored.all") (@_monitoredCards.Count)
                 </button>
                 <button class="filter-btn online @(FilterOnlineStatus == "Online" ? "active" : "")" @onclick='() => FilterOnlineStatus = "Online"'>
-                    Online (@OnlineCount)
+                    @T("monitored.online") (@OnlineCount)
                 </button>
                 <button class="filter-btn offline @(FilterOnlineStatus == "Offline" ? "active" : "")" @onclick='() => FilterOnlineStatus = "Offline"'>
-                    Offline (@OfflineCount)
+                    @T("monitored.offline") (@OfflineCount)
                 </button>
             </div>
         </div>
@@ -57,7 +57,7 @@
         {
             <div class="loading-state">
                 <div class="spinner"></div>
-                <p>Loading monitored people...</p>
+                <p>@T("monitored.loading")</p>
             </div>
         }
         else if (!string.IsNullOrEmpty(_dataError))
@@ -70,16 +70,16 @@
         {
             <div class="empty-state">
                 <div class="empty-icon">🔍</div>
-                <h3>No monitored people</h3>
-                <p>Add a person to start receiving ESP data.</p>
+                <h3>@T("monitored.noMonitored")</h3>
+                <p>@T("monitored.addToStart")</p>
             </div>
         }
         else if (!FilteredCards.Any())
         {
             <div class="empty-state">
                 <div class="empty-icon">🔍</div>
-                <h3>No results found</h3>
-                <p>No monitored people match the selected filters.</p>
+                <h3>@T("monitored.noResults")</h3>
+                <p>@T("monitored.noMatch")</p>
             </div>
         }
         else
@@ -100,7 +100,7 @@
                                     <p class="person-details">
                                         @{
                                             var age = GetAge(card.Person);
-                                            var ageText = age > 0 ? $"{age} ani" : "Vârstă N/A";
+                                            var ageText = age > 0 ? $"{age} {T("selected.years")}" : T("monitored.ageNA");
                                         }
                                         @ageText • @(card.Person.Gender ?? "N/A") • @(card.Person.Address ?? "N/A")
                                     </p>
@@ -114,37 +114,42 @@
                                     <span class="vital-icon-large">❤️</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@GetPulse(card.LastData)</span>
-                                        <span class="vital-label-large">Pulse (bpm)</span>
+                                        <span class="vital-label-large">@T("card.pulse")</span>
                                     </div>
                                 </div>
                                 <div class="vital-box @(GetOxygen(card.LastData) == "N/A" ? "no-data" : "")">
                                     <span class="vital-icon-large">🩸</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@GetOxygen(card.LastData)</span>
-                                        <span class="vital-label-large">SpO₂ (%)</span>
+                                        <span class="vital-label-large">@T("card.spo2")</span>
                                     </div>
                                 </div>
                                 <div class="vital-box @(GetTemperature(card.LastData) == "N/A" ? "no-data" : "")">
                                     <span class="vital-icon-large">🌡️</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@GetTemperature(card.LastData)</span>
-                                        <span class="vital-label-large">Temperature (°C)</span>
+                                        <span class="vital-label-large">@T("card.temperature")</span>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="additional-info">
                                 <div class="info-item">
-                                    <span class="info-label">📍 GPS:</span>
+                                    <span class="info-label">@T("card.gps")</span>
                                     <span class="info-value">@FormatGpsStatus(card.LastData?.Neo6m)</span>
                                 </div>
                                 <div class="info-item">
-                                    <span class="info-label">🧭 Fall detection:</span>
+                                    <span class="info-label">@T("card.fallDetection")</span>
                                     <span class="info-value">@FormatFallRisk(card)</span>
                                 </div>
                                 <div class="info-item">
-                                    <span class="info-label">⏰ Last Update:</span>
+                                    <span class="info-label">@T("card.lastUpdate")</span>
                                     <span class="info-value">@FormatLastUpdate(card)</span>
+                                </div>
+                                <div class="person-actions">
+                                    <button class="btn-action btn-location" @onclick:stopPropagation="true" @onclick='@(() => RequestLocation(card.Person.Id))'>@T("card.location")</button>
+                                    <button class="btn-action btn-call" @onclick:stopPropagation="true" @onclick='@(() => CallPerson(card.Person.Id))'>@T("card.call")</button>
+                                    <button class="btn-action btn-text" @onclick:stopPropagation="true" @onclick='@(() => TextPerson(card.Person.Id))'>@T("card.text")</button>
                                 </div>
                             </div>
                         </div>
@@ -160,7 +165,7 @@
     <div class="modal-overlay" @onclick="CloseAddPersonModal">
         <div class="modal-content-large" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h3>Add Monitored Person</h3>
+                <h3>@T("modal.addPerson")</h3>
                 <button class="close-btn" @onclick="CloseAddPersonModal">✕</button>
             </div>
             <div class="modal-body">
@@ -173,58 +178,58 @@
                     }
                     
                     <div class="form-group">
-                        <label>First Name</label>
-                        <InputText class="form-control" @bind-Value="newPerson.FirstName" placeholder="First name" />
+                        <label>@T("modal.firstName")</label>
+                        <InputText class="form-control" @bind-Value="newPerson.FirstName" placeholder="@T("modal.firstName")" />
                     </div>
                     <div class="form-group">
-                        <label>Last Name</label>
-                        <InputText class="form-control" @bind-Value="newPerson.LastName" placeholder="Last name" />
+                        <label>@T("modal.lastName")</label>
+                        <InputText class="form-control" @bind-Value="newPerson.LastName" placeholder="@T("modal.lastName")" />
                     </div>
                     <div class="form-group">
-                        <label>Birthdate</label>
+                        <label>@T("modal.birthdate")</label>
                         <InputDate class="form-control" @bind-Value="newPerson.Birthdate" />
                     </div>
                     <div class="form-group">
-                        <label>Gender</label>
+                        <label>@T("modal.gender")</label>
                         <InputSelect class="form-control" @bind-Value="newPerson.Gender">
-                            <option value="">Select...</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
+                            <option value="">@T("modal.select")</option>
+                            <option value="Male">@T("modal.male")</option>
+                            <option value="Female">@T("modal.female")</option>
+                            <option value="Other">@T("modal.other")</option>
                         </InputSelect>
                     </div>
                     <div class="form-group">
-                        <label>Address</label>
-                        <InputText class="form-control" @bind-Value="newPerson.Address" placeholder="Address" />
+                        <label>@T("modal.address")</label>
+                        <InputText class="form-control" @bind-Value="newPerson.Address" placeholder="@T("modal.address")" />
                     </div>
                     <div class="form-group">
-                        <label>Device Serial Number</label>
+                        <label>@T("modal.deviceSerial")</label>
                         <InputText class="form-control" @bind-Value="newPerson.DeviceSerialNumber" placeholder="ESP32-XXXXXXXXX" />
                     </div>
                     <div class="form-group">
-                        <label>Relationship</label>
+                        <label>@T("modal.relationship")</label>
                         <InputSelect class="form-control" @bind-Value="newPerson.Relationship">
-                            <option value="">Select...</option>
-                            <option value="mother">Mother</option>
-                            <option value="father">Father</option>
-                            <option value="grandmother">Grandmother</option>
-                            <option value="grandfather">Grandfather</option>
-                            <option value="aunt">Aunt</option>
-                            <option value="uncle">Uncle</option>
-                            <option value="husband">Husband</option>
-                            <option value="wife">Wife</option>
-                            <option value="sister">Sister</option>
-                            <option value="brother">Brother</option>
-                            <option value="friend">Friend</option>
-                            <option value="daughter">Daughter</option>
-                            <option value="son">Son</option>
-                            <option value="nephew">Nephew</option>
-                            <option value="niece">Niece</option>
+                            <option value="">@T("rel.select")</option>
+                            <option value="mother">@T("rel.mother")</option>
+                            <option value="father">@T("rel.father")</option>
+                            <option value="grandmother">@T("rel.grandmother")</option>
+                            <option value="grandfather">@T("rel.grandfather")</option>
+                            <option value="aunt">@T("rel.aunt")</option>
+                            <option value="uncle">@T("rel.uncle")</option>
+                            <option value="husband">@T("rel.husband")</option>
+                            <option value="wife">@T("rel.wife")</option>
+                            <option value="sister">@T("rel.sister")</option>
+                            <option value="brother">@T("rel.brother")</option>
+                            <option value="friend">@T("rel.friend")</option>
+                            <option value="daughter">@T("rel.daughter")</option>
+                            <option value="son">@T("rel.son")</option>
+                            <option value="nephew">@T("rel.nephew")</option>
+                            <option value="niece">@T("rel.niece")</option>
                         </InputSelect>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="modal-btn secondary" @onclick="CloseAddPersonModal">Cancel</button>
-                        <button type="submit" class="modal-btn primary">Add Person</button>
+                        <button type="button" class="modal-btn secondary" @onclick="CloseAddPersonModal">@T("modal.cancel")</button>
+                        <button type="submit" class="modal-btn primary">@T("modal.addButton")</button>
                     </div>
                 </EditForm>
             </div>

@@ -1,53 +1,87 @@
 @page "/about"
-@layout EmptyLayout
+@using LifeAlertPlus.Client.Components.Header
+@layout MainLayout
+
+<HeaderComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl"/>
 
 <div class="about-page">
     <div class="about-container">
-        <div class="about-header">
-            <div class="about-logo">LifeAlert +</div>
-            <p class="about-tagline">Because every heartbeat matters</p>
-        </div>
+        <h2 class="section-title">@T("about.title")</h2>
+        <p style="font-size:18px;color:#fff;opacity:0.95;margin:0;font-family:'Jua',sans-serif;">@T("about.intro")</p>
+    </div>
 
-        <div class="about-content">
-            <h2 class="section-title">About LifeAlertPlus</h2>
-            <p>LifeAlertPlus is an IoT-based monitoring system designed to improve the safety and quality of life of elderly individuals. By combining wearable technology with a modern web platform, the system enables real-time monitoring of activity and health-related data.</p>
+    <div class="about-content">
+        <div class="cards-grid">
+                <div class="info-card">
+                    <div class="card-icon">🎯</div>
+                    <h3 class="card-title">@T("about.missionTitle")</h3>
+                    <p>@T("about.missionText")</p>
+                </div>
 
-            <h3 class="subsection-title">Our Mission</h3>
-            <p>Our mission is to support independent living while ensuring safety through continuous monitoring and timely alerts. LifeAlertPlus helps caregivers and family members stay informed and respond quickly in case of unusual events.</p>
+                <div class="info-card">
+                    <div class="card-icon">⚡</div>
+                    <h3 class="card-title">@T("about.problemTitle")</h3>
+                    <p>@T("about.problemText")</p>
+                </div>
 
-            <h3 class="subsection-title">The Problem</h3>
-            <p>Many elderly individuals live alone or spend long periods without direct supervision. In such situations, incidents like falls, inactivity, or sudden health issues may go unnoticed, leading to delayed assistance and increased risks.</p>
+                <div class="info-card">
+                    <div class="card-icon">🔬</div>
+                    <h3 class="card-title">@T("about.visionTitle")</h3>
+                    <p>@T("about.visionText")</p>
+                </div>
+            </div>
 
-            <h3 class="subsection-title">Our Solution</h3>
-            <p>LifeAlertPlus provides a complete solution that integrates:</p>
-            <ul class="feature-list">
-                <li>A wearable IoT device for collecting activity data</li>
-                <li>A web-based application for real-time monitoring</li>
-                <li>Alert mechanisms for detecting abnormal situations</li>
-            </ul>
-            <p>The platform is designed to be intuitive, reliable, and scalable, making it suitable for both personal and extended use.</p>
+            <div class="solution-section">
+                <h3 class="subsection-title">🛠️ @T("about.solutionTitle")</h3>
+                <p>@T("about.solutionIntro")</p>
+                <div class="features-row">
+                    <div class="feature-pill">
+                        <span class="pill-icon">⌚</span>
+                        <span>@T("about.solutionWearable")</span>
+                    </div>
+                    <div class="feature-pill">
+                        <span class="pill-icon">🖥️</span>
+                        <span>@T("about.solutionWeb")</span>
+                    </div>
+                    <div class="feature-pill">
+                        <span class="pill-icon">🔔</span>
+                        <span>@T("about.solutionAlerts")</span>
+                    </div>
+                </div>
+            </div>
 
-            <h3 class="subsection-title">Key Features</h3>
-            <ul class="feature-list">
-                <li>Real-time activity monitoring</li>
-                <li>Secure authentication and user management</li>
-                <li>Email notifications and alerts</li>
-                <li>Dashboard for caregivers and administrators</li>
-                <li>Expandable architecture for future improvements</li>
-            </ul>
-
-            <h3 class="subsection-title">Our Vision</h3>
-            <p>We aim to create a reliable and accessible monitoring system that enhances safety, promotes independence, and provides peace of mind for both users and their families.</p>
+            <div class="features-section">
+                <h3 class="subsection-title">✨ @T("about.featuresTitle")</h3>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>@T("about.feature1")</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>@T("about.feature2")</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>@T("about.feature3")</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>@T("about.feature4")</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-check">✓</span>
+                        <span>@T("about.feature5")</span>
+                    </div>
+                </div>
+            </div>
 
             <div class="disclaimer-box">
-                <h3 class="subsection-title">Disclaimer</h3>
-                <p>LifeAlertPlus is not a medical device and does not replace professional medical services or emergency systems. In case of emergency, please contact local emergency services immediately.</p>
+                <div class="disclaimer-icon">⚠️</div>
+                <div>
+                    <h3 class="disclaimer-title">@T("about.disclaimerTitle")</h3>
+                    <p>@T("about.disclaimerText")</p>
+                </div>
             </div>
-        </div>
-
-        <div class="about-footer">
-            <a class="back-link" href="/dashboard">← Back to Dashboard</a>
-            <a class="back-link" href="/support">Support</a>
-        </div>
     </div>
 </div>

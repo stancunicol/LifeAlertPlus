@@ -3,6 +3,7 @@
 @inject IJSRuntime JSRuntime
 @inject LifeAlertPlus.Client.Services.TokenParserService TokenParser
 @inject LifeAlertPlus.Client.Services.ProfilePictureService ProfilePictureService
+@inject LifeAlertPlus.Client.Services.LanguageService Lang
 
 <Router AppAssembly="@typeof(App).Assembly" OnNavigateAsync="HandleNavigationAsync">
     <Found Context="routeData">
@@ -10,9 +11,9 @@
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
     <NotFound>
-        <PageTitle>Not found</PageTitle>
+        <PageTitle>@Lang.T("app.notFound")</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
+            <p role="alert">@Lang.T("app.notFoundText")</p>
         </LayoutView>
     </NotFound>
 </Router>
@@ -51,6 +52,19 @@
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var savedLang = await JSRuntime.InvokeAsync<string>("getLanguage");
+            if (!string.IsNullOrEmpty(savedLang))
+            {
+                Lang.SetLanguage(savedLang);
+                StateHasChanged();
+            }
+        }
     }
 
     private async Task HandleNavigationAsync(NavigationContext context)

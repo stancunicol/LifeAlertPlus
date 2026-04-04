@@ -6,15 +6,15 @@
 
 <div class="dashboard-container">
     <div class="dashboard-header">
-        <h1>Dashboard</h1>
-        <p class="dashboard-subtitle">Welcome back, @UserFullName! Here's your health monitoring overview.</p>
+        <h1>@T("dashboard.title")</h1>
+        <p class="dashboard-subtitle">@string.Format(T("dashboard.welcome"), UserFullName)</p>
     </div>
 
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-icon heart">❤️</div>
             <div class="stat-info">
-                <span class="stat-label">Total Monitored</span>
+                <span class="stat-label">@T("dashboard.totalMonitored")</span>
                 <span class="stat-value">@TotalMonitored</span>
             </div>
         </div>
@@ -22,7 +22,7 @@
         <div class="stat-card">
             <div class="stat-icon alert">⚠️</div>
             <div class="stat-info">
-                <span class="stat-label">Active Alerts</span>
+                <span class="stat-label">@T("dashboard.activeAlerts")</span>
                 <span class="stat-value critical">@ActiveAlerts</span>
             </div>
         </div>
@@ -30,7 +30,7 @@
         <div class="stat-card">
             <div class="stat-icon check">✓</div>
             <div class="stat-info">
-                <span class="stat-label">Stable Status</span>
+                <span class="stat-label">@T("dashboard.stableStatus")</span>
                 <span class="stat-value ok">@StableCount</span>
             </div>
         </div>
@@ -38,7 +38,7 @@
         <div class="stat-card">
             <div class="stat-icon off">📴</div>
             <div class="stat-info">
-                <span class="stat-label">Users Offline</span>
+                <span class="stat-label">@T("dashboard.usersOffline")</span>
                 <span class="stat-value muted">@OfflineCount</span>
             </div>
         </div>
@@ -46,7 +46,7 @@
         <div class="stat-card">
             <div class="stat-icon chart">📊</div>
             <div class="stat-info">
-                <span class="stat-label">Total Measurements Today</span>
+                <span class="stat-label">@T("dashboard.measurementsToday")</span>
                 <span class="stat-value">@TodayMeasurements</span>
             </div>
         </div>
@@ -55,8 +55,8 @@
     <div class="content-grid">
         <div class="section monitored-section full-width">
             <div class="section-header">
-                <h2>Monitored People</h2>
-                <a href="/monitored" class="view-all-link">View All →</a>
+                <h2>@T("dashboard.monitoredPeople")</h2>
+                <a href="/monitored" class="view-all-link">@T("dashboard.viewAll")</a>
             </div>
 
             <div class="monitored-grid">
@@ -80,38 +80,43 @@
                                 <div class="vital-box @(person.HeartRate <= 0 ? "no-data" : "")">
                                     <span class="vital-icon-large">❤️</span>
                                     <div class="vital-info">
-                                        <span class="vital-value-large">@(person.HeartRate > 0 ? person.HeartRate.ToString() : "N/A")</span>
-                                        <span class="vital-label-large">Pulse (bpm)</span>
+                                        <span class="vital-value-large">@(person.HeartRate > 0 ? person.HeartRate.ToString() : T("card.na"))</span>
+                                        <span class="vital-label-large">@T("card.pulse")</span>
                                     </div>
                                 </div>
                                 <div class="vital-box @(person.SpO2 == "N/A" ? "no-data" : "")">
                                     <span class="vital-icon-large">🩸</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@person.SpO2</span>
-                                        <span class="vital-label-large">SpO₂ (%)</span>
+                                        <span class="vital-label-large">@T("card.spo2")</span>
                                     </div>
                                 </div>
                                 <div class="vital-box @(person.Temperature == "N/A" ? "no-data" : "")">
                                     <span class="vital-icon-large">🌡️</span>
                                     <div class="vital-info">
                                         <span class="vital-value-large">@person.Temperature</span>
-                                        <span class="vital-label-large">Temperature (°C)</span>
+                                        <span class="vital-label-large">@T("card.temperature")</span>
                                     </div>
                                 </div>
                             </div>
                             <div class="additional-info">
                                 <div class="info-item">
-                                    <span class="info-label">📍 GPS:</span>
+                                    <span class="info-label">@T("card.gps")</span>
                                     <span class="info-value">@person.GPS</span>
                                 </div>
                                 <div class="info-item">
-                                    <span class="info-label">🧭 Fall detection:</span>
+                                    <span class="info-label">@T("card.fallDetection")</span>
                                     <span class="info-value">@person.FallDetection</span>
                                 </div>
                                 <div class="info-item">
-                                    <span class="info-label">⏰ Last Update:</span>
+                                    <span class="info-label">@T("card.lastUpdate")</span>
                                     <span class="info-value">@person.LastUpdateFull</span>
                                 </div>
+                            </div>
+                            <div class="person-actions">
+                                <button class="btn-action btn-location" @onclick:stopPropagation="true" @onclick='@(() => RequestLocation(person.Id))'>@T("card.location")</button>
+                                <button class="btn-action btn-call" @onclick:stopPropagation="true" @onclick='@(() => CallPerson(person.Id))'>@T("card.call")</button>
+                                <button class="btn-action btn-text" @onclick:stopPropagation="true" @onclick='@(() => TextPerson(person.Id))'>@T("card.text")</button>
                             </div>
                         </div>
                     </div>

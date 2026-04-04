@@ -36,6 +36,11 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 		[Inject]
 		private NavigationManager NavigationManager { get; set; } = default!;
 
+		[Inject]
+		private LanguageService Lang { get; set; } = default!;
+
+		private string T(string key) => Lang.T(key);
+
 		protected List<MonitoredUserDTO> Users { get; private set; } = new();
 		protected List<MonitoredPersonRow> MonitoredRows { get; private set; } = new();
 		protected string UserFullName { get; private set; } = "Admin";
