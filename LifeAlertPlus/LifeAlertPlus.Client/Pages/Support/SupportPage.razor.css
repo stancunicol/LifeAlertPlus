@@ -6,7 +6,7 @@
     justify-content: stretch;
     padding: 0;
     margin: 0;
-    background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 50%, #A5D6A7 100%);
 }
 
 .support-container {
@@ -72,7 +72,7 @@
     margin-top: 1.5rem;
     margin-bottom: 0.6rem;
     padding-left: 0.5rem;
-    border-left: 4px solid #E8A5C8;
+        border-left: 4px solid #E8F5E9;
 }
 
 .section-divider {
@@ -87,7 +87,7 @@
 }
 
 .contact-email a {
-    color: #D88BB7;
+    color: #A5D6A7;
     text-decoration: none;
     transition: opacity 0.3s ease;
 }
@@ -120,7 +120,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
 }
 
 .issue-card {
@@ -141,9 +141,9 @@
 .notice-box {
     margin-top: 2rem;
     padding: 1.2rem 1.5rem;
-    background: rgba(232, 165, 200, 0.1);
+    background: rgba(165, 214, 167, 0.1);
     border-radius: 16px;
-    border-left: 4px solid #E8A5C8;
+    border-left: 4px solid #E8F5E9;
 }
 
 .notice-box .subsection-title {
@@ -174,14 +174,14 @@
     text-decoration: none;
     padding: 0.6rem 1.5rem;
     border-radius: 30px;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+    box-shadow: 0 4px 12px rgba(165, 214, 167, 0.3);
 }
 
 .back-link:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+    box-shadow: 0 6px 16px rgba(165, 214, 167, 0.4);
 }
 
 /* ── Tablet ──────────────────────────────────────────────── */

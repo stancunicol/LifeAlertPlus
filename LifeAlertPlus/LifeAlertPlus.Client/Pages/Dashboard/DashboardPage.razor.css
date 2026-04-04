@@ -70,7 +70,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 12px;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
 }
 
 .stat-icon.off {
@@ -145,7 +145,7 @@
 .view-all-link {
     font-family: "Jua", sans-serif;
     font-size: 0.95rem;
-    color: #D88BB7;
+    color: #A5D6A7;
     text-decoration: none;
     transition: opacity 0.3s ease;
 }
@@ -214,7 +214,7 @@
     font-family: "Jua", sans-serif;
     font-size: 1.3rem;
     font-weight: 600;
-    color: #D88BB7;
+    color: #A5D6A7;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
 }

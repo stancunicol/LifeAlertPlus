@@ -25,7 +25,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
         private AppSettings Settings { get; set; } = new AppSettings
         {
             Theme = "pink",
-            AccentColor = "#E8A5C8",
+            AccentColor = "#A5D6A7",
             FontSize = "medium",
             EnableAnimations = true,
             FirstDayOfWeek = "monday",
@@ -177,7 +177,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Settings = new AppSettings
             {
                 Theme = "pink",
-                AccentColor = "#E8A5C8",
+                AccentColor = "#A5D6A7",
                 FontSize = "medium",
                 EnableAnimations = true,
                 FirstDayOfWeek = "monday",

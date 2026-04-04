@@ -8,7 +8,7 @@
     display: flex;
     flex-direction: row;
     align-items: stretch;
-    background: linear-gradient(90deg, rgba(255,235,245,1) 0%, rgba(255,235,245,1) 45%, rgba(255,235,245,0.8) 50%, rgba(255,235,245,0.5) 55%, rgba(255,235,245,0.5) 100%);
+    background: linear-gradient(90deg, rgba(232,245,233,1) 0%, rgba(232,245,233,1) 45%, rgba(232,245,233,0.8) 50%, rgba(232,245,233,0.5) 55%, rgba(232,245,233,0.5) 100%);
     box-shadow: 0 18px 40px rgba(0,0,0,0.16);
     border-radius: 50px;
     padding: 2rem;
@@ -175,20 +175,20 @@
     padding: 0.85rem;
     border: none;
     border-radius: 30px;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
     color: #000;
     font-family: "Jua", sans-serif;
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+    box-shadow: 0 4px 12px rgba(165, 214, 167, 0.3);
     margin-top: 0.3rem;
 }
 
     .login-button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+        box-shadow: 0 6px 16px rgba(165, 214, 167, 0.4);
     }
 
     .login-button:active {
@@ -196,15 +196,15 @@
     }
 
     .login-button:disabled {
-        background: linear-gradient(135deg, #F5D4E8 0%, #ECC4DC 100%);
+        background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
         cursor: not-allowed;
         opacity: 0.8;
-        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.2);
+        box-shadow: 0 2px 8px rgba(165, 214, 167, 0.2);
     }
 
     .login-button:disabled:hover {
         transform: none;
-        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.2);
+        box-shadow: 0 2px 8px rgba(165, 214, 167, 0.2);
     }
 
 .google-login {
@@ -348,20 +348,20 @@ a.form-link:visited {
     padding: 0.75rem 2rem;
     border: none;
     border-radius: 30px;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
     color: #000;
     font-family: "Jua", sans-serif;
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+    box-shadow: 0 4px 12px rgba(165, 214, 167, 0.3);
     min-width: 120px;
 }
 
     .modal-button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+        box-shadow: 0 6px 16px rgba(165, 214, 167, 0.4);
     }
 
     .modal-button:active {
@@ -370,7 +370,7 @@ a.form-link:visited {
 
 .modal-button-secondary {
     padding: 0.75rem 2rem;
-    border: 2px solid #E8A5C8;
+    border: 2px solid #E8F5E9;
     border-radius: 30px;
     background: white;
     color: #000;
@@ -383,7 +383,7 @@ a.form-link:visited {
 }
 
     .modal-button-secondary:hover {
-        background: rgba(232, 165, 200, 0.1);
+        background: rgba(165, 214, 167, 0.1);
         transform: translateY(-2px);
     }
 

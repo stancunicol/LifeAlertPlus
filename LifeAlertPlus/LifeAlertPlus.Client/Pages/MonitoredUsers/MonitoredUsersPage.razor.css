@@ -1,6 +1,7 @@
 :root {
-	--pink-main: #e8a5c8;
-	--pink-deep: #d88bb7;
+	--accent-light: #E8F5E9;
+	--accent-muted: #C8E6C9;
+	--accent-main: #A5D6A7;
 	--ink: #0f0f10;
 	--muted: #646473;
 	--surface: #ffffff;
@@ -11,7 +12,7 @@
 .monitored-users-page {
 	padding: 20px 24px 40px;
 	background: #f8f8f8;
-	min-height: 100vh;
+	background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-main) 100%);
 }
 
 .admin-container {
@@ -31,6 +32,7 @@
 	display: flex;
 	align-items: center;
 	gap: 12px;
+	    background: linear-gradient(90deg, var(--accent-main), var(--accent-light));
 }
 
 .admin-header-actions input[type='file'] {
@@ -93,7 +95,7 @@
 	align-items: center;
 	justify-content: center;
 	border-radius: 12px;
-	background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+    background: linear-gradient(135deg, var(--accent-muted) 0%, var(--accent-main) 100%);
 }
 
 .stat-icon.alert {
@@ -180,15 +182,15 @@
 }
 
 .filter-btn:hover {
-	border-color: var(--pink-main);
+	border-color: var(--accent-main);
 	color: var(--ink);
 }
 
 .filter-btn.active {
-	background: linear-gradient(135deg, rgba(232, 165, 200, 0.28), rgba(216, 139, 183, 0.3));
-	border-color: rgba(216, 139, 183, 0.6);
+	background: linear-gradient(135deg, rgba(200, 230, 201, 0.28), rgba(165, 214, 167, 0.3));
+	border-color: rgba(165, 214, 167, 0.6);
 	color: var(--ink);
-	box-shadow: 0 10px 20px rgba(216, 139, 183, 0.18);
+	box-shadow: 0 10px 20px rgba(165, 214, 167, 0.18);
 }
 
 .message-card {
@@ -212,13 +214,13 @@
 
 .message-card button {
 	border: none;
-	background: linear-gradient(135deg, var(--pink-main), var(--pink-deep));
+	background: linear-gradient(135deg, var(--accent-muted), var(--accent-main));
 	color: var(--ink);
 	padding: 8px 12px;
 	border-radius: 10px;
 	font-family: "Jua", sans-serif;
 	cursor: pointer;
-	box-shadow: 0 8px 16px rgba(216, 139, 183, 0.25);
+	box-shadow: 0 8px 16px rgba(165, 214, 167, 0.25);
 }
 
 .message-card button:hover {
@@ -263,7 +265,7 @@
 	width: 52px;
 	height: 52px;
 	border-radius: 50%;
-	background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+	background: linear-gradient(135deg, var(--accent-muted) 0%, var(--accent-main) 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -290,11 +292,11 @@
 .role-chip {
 	display: inline-flex;
 	padding: 0.35rem 0.75rem;
-	background: rgba(232, 165, 200, 0.18);
+	background: rgba(200, 230, 201, 0.18);
 	border-radius: 12px;
 	font-family: "Jua", sans-serif;
 	font-size: 0.85rem;
-	color: #b35b8d;
+	color: #5a9d73;
 	margin-top: 0.3rem;
 }
 
@@ -401,7 +403,7 @@
 }
 
 .admin-table thead {
-	background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+	background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-main) 100%);
 }
 
 .admin-table th {
@@ -425,7 +427,7 @@
 }
 
 .admin-table thead tr {
-	background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+	background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-main) 100%);
 }
 
 .admin-table tbody tr {
@@ -459,7 +461,7 @@
 }
 
 .btn-details {
-	background: linear-gradient(90deg,#D88BB7,#F6B3D9);
+	background: linear-gradient(90deg, var(--accent-main), var(--accent-light));
 	color: #000;
 	border: none;
 	padding: 8px 12px;
@@ -467,18 +469,18 @@
 	font-family: "Jua", sans-serif;
 	font-weight: 700;
 	cursor: pointer;
-	box-shadow: 0 8px 18px rgba(216,139,183,0.12);
+	box-shadow: 0 8px 18px rgba(165,214,167,0.12);
 	transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
 }
 
 .btn-details:hover {
 	transform: translateY(-2px);
 	opacity: 0.98;
-	box-shadow: 0 12px 28px rgba(216,139,183,0.18);
+	box-shadow: 0 12px 28px rgba(165,214,167,0.18);
 }
 
 .btn-details:focus {
-	outline: 3px solid rgba(216,139,183,0.18);
+	outline: 3px solid rgba(165,214,167,0.18);
 	outline-offset: 2px;
 }
 
@@ -504,7 +506,7 @@
 	width: 38px;
 	height: 38px;
 	border-radius: 50%;
-	background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+	background: linear-gradient(135deg, var(--accent-muted) 0%, var(--accent-main) 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -539,31 +541,7 @@
 	color: #000;
 }
 
-.user-email {
-	color: #666;
-	font-size: 0.9rem;
-}
-
-.device-badge {
-	display: inline-block;
-	padding: 0.4rem 0.8rem;
-	background: #f4f4f4;
-	border-radius: 10px;
-	font-family: "Jua", sans-serif;
-	font-size: 0.9rem;
-}
-
-.search {
-    flex: 1 1 320px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px 14px;
-    box-shadow: var(--shadow);
-    font-size: 1rem;
-    font-family: "Jua", sans-serif;
-    color: var(--ink);
-}
+/* duplicate .btn-details removed (consolidated above) */
 
 .status-indicator {
 	display: inline-flex;

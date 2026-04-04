@@ -1,6 +1,6 @@
 :root {
-	--pink-main: #e8a5c8;
-	--pink-deep: #d88bb7;
+	--pink-main: #C8E6C9;
+	--pink-deep: #A5D6A7;
 	--ink: #0f0f10;
 	--muted: #646473;
 	--surface: #ffffff;
@@ -169,7 +169,7 @@ button.primary:disabled {
 	border-radius: 10px;
 	font-family: "Jua", sans-serif;
 	cursor: pointer;
-	box-shadow: 0 8px 16px rgba(216, 139, 183, 0.25);
+	box-shadow: 0 8px 16px rgba(165, 214, 167, 0.25);
 }
 
 .sim-grid {
@@ -217,7 +217,7 @@ button.primary:disabled {
 .sim-search:focus {
 	outline: none;
 	border-color: var(--pink-main);
-	box-shadow: 0 2px 12px rgba(232, 165, 200, 0.2);
+	box-shadow: 0 2px 12px rgba(200, 230, 201, 0.2);
 }
 
 .sim-search::placeholder {
@@ -252,7 +252,7 @@ button.primary:disabled {
 	background: linear-gradient(135deg, var(--pink-main), var(--pink-deep));
 	color: #000;
 	border-color: transparent;
-	box-shadow: 0 3px 10px rgba(216, 139, 183, 0.3);
+	box-shadow: 0 3px 10px rgba(165, 214, 167, 0.3);
 }
 
 .sim-filter-btn.running.active {
@@ -298,7 +298,7 @@ button.primary:disabled {
 	font-family: "Jua", sans-serif;
 	font-size: 1.1rem;
 	font-weight: 700;
-	box-shadow: 0 10px 18px rgba(216, 139, 183, 0.28);
+	box-shadow: 0 10px 18px rgba(165, 214, 167, 0.28);
 }
 
 .sim-card-meta h3 {
@@ -332,10 +332,10 @@ button.primary {
 	padding: 0.7rem 1.2rem;
 	border-radius: 12px;
 	font-family: "Jua", sans-serif;
-	background: linear-gradient(135deg, #e8a5c8, #d88bb7);
+	background: linear-gradient(135deg, var(--pink-main), var(--pink-deep));
 	color: #000;
 	cursor: pointer;
-	box-shadow: 0 3px 10px rgba(216, 139, 183, 0.3);
+	box-shadow: 0 3px 10px rgba(165, 214, 167, 0.3);
 }
 
 button.primary:disabled {

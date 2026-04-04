@@ -1,6 +1,6 @@
 :root {
-    --pink-main: #e8a5c8;
-    --pink-deep: #d88bb7;
+    --pink-main: #C8E6C9;
+    --pink-deep: #A5D6A7;
     --ink: #0f0f10;
     --muted: #646473;
     --surface: #ffffff;
@@ -91,7 +91,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 12px;
-    background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+    background: linear-gradient(135deg, var(--pink-main) 0%, var(--pink-deep) 100%);
 }
 
 .stat-icon.alert {
@@ -271,10 +271,10 @@
 }
 
 .filter-btn.active {
-    background: linear-gradient(135deg, rgba(232, 165, 200, 0.28), rgba(216, 139, 183, 0.3));
-    border-color: rgba(216, 139, 183, 0.6);
+    background: linear-gradient(135deg, rgba(200, 230, 201, 0.28), rgba(165, 214, 167, 0.3));
+    border-color: rgba(165, 214, 167, 0.6);
     color: var(--ink);
-    box-shadow: 0 10px 20px rgba(216, 139, 183, 0.18);
+    box-shadow: 0 10px 20px rgba(165, 214, 167, 0.18);
 }
 
 .table-card {
@@ -296,7 +296,7 @@
 }
 
 .fancy-table thead tr {
-    background: linear-gradient(135deg, rgba(232, 165, 200, 0.15), rgba(216, 139, 183, 0.15));
+    background: linear-gradient(135deg, rgba(200, 230, 201, 0.15), rgba(165, 214, 167, 0.15));
 }
 
 .fancy-table th,
@@ -341,7 +341,7 @@
     font-family: "Jua", sans-serif;
     font-size: 1.1rem;
     font-weight: 700;
-    box-shadow: 0 10px 18px rgba(216, 139, 183, 0.28);
+    box-shadow: 0 10px 18px rgba(165, 214, 167, 0.28);
 }
 
 .user-info { display: flex; flex-direction: column; gap: 4px; }
@@ -395,15 +395,15 @@
     border-radius: 10px;
     font-family: "Jua", sans-serif;
     cursor: pointer;
-    box-shadow: 0 8px 16px rgba(216, 139, 183, 0.25);
+    box-shadow: 0 8px 16px rgba(165, 214, 167, 0.25);
 }
 
 .users-table thead tr {
-    background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+    background: linear-gradient(135deg, var(--pink-main) 0%, var(--pink-deep) 100%);
 }
 
 .users-table thead tr:hover {
-    background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+    background: linear-gradient(135deg, var(--pink-main) 0%, var(--pink-deep) 100%);
 }
 
 .users-table tbody tr {
@@ -436,7 +436,7 @@
 .actions-row { display:flex; gap:8px; justify-content:center; align-items:center; }
 
 .btn-details {
-    background: linear-gradient(90deg,#D88BB7,#F6B3D9);
+    background: linear-gradient(90deg,var(--pink-deep),#E8F5E9);
     color: #000;
     border: none;
     padding: 8px 12px;
@@ -444,7 +444,7 @@
     font-family: "Jua", sans-serif;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 8px 18px rgba(216,139,183,0.12);
+    box-shadow: 0 8px 18px rgba(165,214,167,0.12);
     transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
     margin: 0;
 }
@@ -452,10 +452,10 @@
 .btn-details:hover {
     transform: translateY(-2px);
     opacity: 0.98;
-    box-shadow: 0 12px 28px rgba(216,139,183,0.18);
+    box-shadow: 0 12px 28px rgba(165,214,167,0.18);
 }
 
-.btn-details:focus { outline: 3px solid rgba(216,139,183,0.18); outline-offset: 2px; }
+.btn-details:focus { outline: 3px solid rgba(165,214,167,0.18); outline-offset: 2px; }
 
 /* Action buttons in users table */
 .action-btn {
@@ -476,7 +476,7 @@
 }
 .action-btn:focus {
     outline: none;
-    box-shadow: 0 0 0 4px rgba(216,139,183,0.12);
+    box-shadow: 0 0 0 4px rgba(165,214,167,0.12);
 }
 .action-btn.danger {
     background: #fff5f5;
@@ -504,7 +504,7 @@
 }
 
 .admin-table thead {
-    background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+    background: linear-gradient(135deg, var(--pink-main) 0%, var(--pink-deep) 100%);
 }
 
 .admin-table th {
@@ -540,7 +540,7 @@
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #e8a5c8 0%, #d88bb7 100%);
+    background: linear-gradient(135deg, var(--pink-main) 0%, var(--pink-deep) 100%);
     display: flex;
     align-items: center;
     justify-content: center;

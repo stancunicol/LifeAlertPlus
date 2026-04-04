@@ -12,14 +12,14 @@
 }
 
 .profile-header {
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
     border-radius: 20px;
     padding: 40px;
     display: flex;
     align-items: center;
     gap: 40px;
     margin-bottom: 30px;
-    box-shadow: 0 5px 20px rgba(232, 165, 200, 0.3);
+    box-shadow: 0 5px 20px rgba(165, 214, 167, 0.3);
 }
 
 .profile-avatar-section {
@@ -34,7 +34,7 @@
     height: 140px;
     border-radius: 50%;
     background: white;
-    color: #D88BB7;
+    color: #2e7d32;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -46,7 +46,7 @@
 
 .btn-change-photo {
     background: white;
-    color: #D88BB7;
+    color: #2e7d32;
     border: none;
     padding: 10px 20px;
     border-radius: 10px;
@@ -141,7 +141,7 @@
     align-items: center;
     margin-bottom: 25px;
     padding-bottom: 15px;
-    border-bottom: 2px solid #FFE8F5;
+    border-bottom: 2px solid #E8F5E9;
 }
 
 .section-header h2 {
@@ -152,7 +152,7 @@
 }
 
 .btn-edit {
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
     color: white;
     border: none;
     padding: 10px 20px;
@@ -165,7 +165,7 @@
 
 .btn-edit:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.4);
+    box-shadow: 0 4px 12px rgba(165, 214, 167, 0.4);
 }
 
 .edit-actions {
@@ -240,7 +240,7 @@
 
 .input-edit {
     padding: 12px 15px;
-    border: 2px solid #E8A5C8;
+    border: 2px solid #A5D6A7;
     border-radius: 10px;
     font-size: 16px;
     font-family: 'Jua', sans-serif;
@@ -249,8 +249,8 @@
 
 .input-edit:focus {
     outline: none;
-    border-color: #D88BB7;
-    box-shadow: 0 0 0 3px rgba(232, 165, 200, 0.2);
+    border-color: #A5D6A7;
+    box-shadow: 0 0 0 3px rgba(165, 214, 167, 0.2);
 }
 
 .security-item,
@@ -290,7 +290,7 @@
 }
 
 .btn-security {
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -303,7 +303,7 @@
 
 .btn-security:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.4);
+    box-shadow: 0 4px 12px rgba(165, 214, 167, 0.4);
 }
 
 .btn-security:disabled {
@@ -349,7 +349,7 @@
 }
 
 input:checked + .slider {
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
 }
 
 input:checked + .slider:before {
@@ -430,7 +430,7 @@ input:checked + .slider:before {
     justify-content: space-between;
     align-items: center;
     padding: 25px 30px;
-    border-bottom: 2px solid #FFE8F5;
+    border-bottom: 2px solid #E8F5E9;
 }
 
 .modal-header h2 {
@@ -472,7 +472,7 @@ input:checked + .slider:before {
 .input-modal {
     width: 100%;
     padding: 12px 15px;
-    border: 2px solid #E8A5C8;
+    border: 2px solid #A5D6A7;
     border-radius: 10px;
     font-size: 16px;
     font-family: 'Jua', sans-serif;
@@ -482,8 +482,8 @@ input:checked + .slider:before {
 
 .input-modal:focus {
     outline: none;
-    border-color: #D88BB7;
-    box-shadow: 0 0 0 3px rgba(232, 165, 200, 0.2);
+    border-color: #A5D6A7;
+    box-shadow: 0 0 0 3px rgba(165, 214, 167, 0.2);
 }
 
 /* Password field toggle */
@@ -539,7 +539,7 @@ input:checked + .slider:before {
     justify-content: flex-end;
     gap: 15px;
     padding: 20px 30px;
-    border-top: 2px solid #FFE8F5;
+    border-top: 2px solid #E8F5E9;
 }
 
 .btn-modal-cancel {
@@ -559,7 +559,7 @@ input:checked + .slider:before {
 }
 
 .btn-modal-confirm {
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
     color: white;
     border: none;
     padding: 12px 24px;
@@ -572,7 +572,7 @@ input:checked + .slider:before {
 
 .btn-modal-confirm:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.4);
+    box-shadow: 0 4px 12px rgba(165, 214, 167, 0.4);
 }
 
 @media (max-width: 768px) {
@@ -616,5 +616,5 @@ input:checked + .slider:before {
 }
 
 .success-content strong {
-    color: #D88BB7;
+    color: #2e7d32;
 }

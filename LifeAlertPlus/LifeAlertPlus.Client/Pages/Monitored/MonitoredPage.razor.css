@@ -32,19 +32,19 @@
     padding: 0.9rem 1.8rem;
     border: none;
     border-radius: 30px;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
     color: #000;
     font-family: "Jua", sans-serif;
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+    box-shadow: 0 4px 12px rgba(165, 214, 167, 0.3);
 }
 
     .add-person-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+        box-shadow: 0 6px 16px rgba(165, 214, 167, 0.4);
     }
 
 .btn-icon {
@@ -99,13 +99,13 @@
 }
 
     .filter-btn:hover {
-        border-color: #D88BB7;
-        background: rgba(232, 165, 200, 0.1);
+        border-color: #A5D6A7;
+        background: rgba(165, 214, 167, 0.1);
     }
 
     .filter-btn.active {
-        background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-        border-color: #D88BB7;
+        background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
+        border-color: #A5D6A7;
         color: #000;
         font-weight: 500;
     }
@@ -219,8 +219,8 @@
     font-family: "Jua", sans-serif;
     font-size: 1.3rem;
     font-weight: 600;
-    color: #D88BB7;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: #A5D6A7;
+        color: #A5D6A7;
     flex-shrink: 0;
 }
 
@@ -541,24 +541,24 @@
 }
 
     .modal-btn.primary {
-        background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+        background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
         color: #000;
-        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.3);
+        box-shadow: 0 2px 8px rgba(165, 214, 167, 0.3);
     }
 
         .modal-btn.primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(232, 165, 200, 0.4);
+            box-shadow: 0 4px 12px rgba(165, 214, 167, 0.4);
         }
 
     .modal-btn.secondary {
         background: white;
         color: #000;
-        border: 2px solid #E8A5C8;
+        border: 2px solid #E8F5E9;
     }
 
         .modal-btn.secondary:hover {
-            background: rgba(232, 165, 200, 0.1);
+            background: rgba(165, 214, 167, 0.1);
         }
 
 @media (max-width: 1024px) {
@@ -662,13 +662,13 @@
 }
 
 ::deep .form-control:focus {
-    border-color: #D88BB7 !important;
+    border-color: #A5D6A7 !important;
     background: #ffffff !important;
-    box-shadow: 0 0 0 3px rgba(232, 165, 200, 0.15) !important;
+    box-shadow: 0 0 0 3px rgba(165, 214, 167, 0.15) !important;
 }
 
 ::deep .form-control:hover:not(:focus) {
-    border-color: #E8A5C8 !important;
+    border-color: #E8F5E9 !important;
 }
 
 ::deep select.form-control {

@@ -10,7 +10,7 @@
 
 body {
     font-family: "Jua", sans-serif;
-    background: linear-gradient(135deg, #FFD6EA 0%, #FFC4E1 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
     min-height: 100vh;
     overflow-y: auto;
 }
@@ -38,11 +38,11 @@ body {
     margin-bottom: 24px;
     animation: fadeInScale 1s ease-out;
     border-radius: 20px;
-    box-shadow: 0 8px 20px rgba(255, 105, 180, 0.3);
+    box-shadow: 0 8px 20px rgba(165, 214, 167, 0.3);
 }
 
 .loading-title {
-    color: #ff69b4;
+    color: #A5D6A7;
     font-size: 2rem;
     margin-bottom: 32px;
     font-weight: 600;
@@ -59,7 +59,7 @@ body {
 .loading-dots span {
     width: 12px;
     height: 12px;
-    background: #ff69b4;
+    background: #A5D6A7;
     border-radius: 50%;
     animation: bounce 1.4s infinite ease-in-out;
 }

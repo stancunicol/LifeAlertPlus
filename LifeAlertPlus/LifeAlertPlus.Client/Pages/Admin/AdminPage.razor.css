@@ -102,7 +102,7 @@
 	align-items: center;
 	justify-content: center;
 	border-radius: 12px;
-	background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+	background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
 }
 
 .stat-icon.alert {
@@ -195,7 +195,7 @@
 	width: 52px;
 	height: 52px;
 	border-radius: 50%;
-	background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+	background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -223,11 +223,11 @@
 .role-chip {
 	display: inline-flex;
 	padding: 0.35rem 0.75rem;
-	background: rgba(232, 165, 200, 0.18);
+	background: rgba(165, 214, 167, 0.18);
 	border-radius: 12px;
 	font-family: "Jua", sans-serif;
 	font-size: 0.85rem;
-	color: #b35b8d;
+	color: #2e7d32;
 	margin-top: 0.3rem;
 }
 
@@ -328,7 +328,7 @@
 }
 
 .admin-table thead {
-	background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+	background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
 }
 
 
@@ -373,7 +373,7 @@
 	width: 38px;
 	height: 38px;
 	border-radius: 50%;
-	background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+	background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
 	display: flex;
 	align-items: center;
 	justify-content: center;

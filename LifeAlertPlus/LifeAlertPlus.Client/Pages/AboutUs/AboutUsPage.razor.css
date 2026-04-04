@@ -6,7 +6,7 @@
     justify-content: stretch;
     padding: 0;
     margin: 0;
-    background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 50%, #fbcfe8 100%);
+    background: linear-gradient(135deg, #f1f8f2 0%, #E8F5E9 50%, #C8E6C9 100%);
 }
 
 .about-container {
@@ -72,7 +72,7 @@
     margin-top: 1.5rem;
     margin-bottom: 0.6rem;
     padding-left: 0.5rem;
-    border-left: 4px solid #E8A5C8;
+    border-left: 4px solid #A5D6A7;
 }
 
 .feature-list {
@@ -98,21 +98,21 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
 }
 
 .disclaimer-box {
     margin-top: 2rem;
     padding: 1.2rem 1.5rem;
-    background: rgba(255, 200, 200, 0.15);
+    background: rgba(165, 214, 167, 0.15);
     border-radius: 16px;
-    border-left: 4px solid #e8a5a5;
+    border-left: 4px solid #A5D6A7;
 }
 
 .disclaimer-box .subsection-title {
     border-left: none;
     padding-left: 0;
-    color: #b44;
+    color: #2e7d32;
     margin-top: 0;
 }
 
@@ -138,14 +138,14 @@
     text-decoration: none;
     padding: 0.6rem 1.5rem;
     border-radius: 30px;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+    box-shadow: 0 4px 12px rgba(165, 214, 167, 0.3);
 }
 
 .back-link:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+    box-shadow: 0 6px 16px rgba(165, 214, 167, 0.4);
 }
 
 /* ── Tablet ──────────────────────────────────────────────── */

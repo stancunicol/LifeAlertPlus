@@ -32,19 +32,19 @@
     padding: 0.9rem 1.8rem;
     border: none;
     border-radius: 30px;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
     color: #000;
     font-family: "Jua", sans-serif;
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(232, 165, 200, 0.3);
+    box-shadow: 0 4px 12px rgba(200, 230, 201, 0.3);
 }
 
     .mark-all-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(232, 165, 200, 0.4);
+        box-shadow: 0 6px 16px rgba(200, 230, 201, 0.4);
     }
 
 .btn-icon {
@@ -92,8 +92,8 @@
     }
 
     .stat-mini-card.unread {
-        border-left-color: #E8A5C8;
-        background: linear-gradient(to right, rgba(232, 165, 200, 0.05), white);
+        border-left-color: #E8F5E9;
+        background: linear-gradient(to right, rgba(200, 230, 201, 0.05), white);
     }
 
 .stat-number {
@@ -131,13 +131,13 @@
 }
 
     .tab-btn:hover {
-        border-color: #D88BB7;
-        background: rgba(232, 165, 200, 0.1);
+        border-color: #A5D6A7;
+        background: rgba(200, 230, 201, 0.1);
     }
 
     .tab-btn.active {
-        background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-        border-color: #D88BB7;
+        background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+        border-color: #A5D6A7;
         color: #000;
         font-weight: 500;
     }
@@ -173,13 +173,13 @@
         }
 
     .tab-btn.unread {
-        border-color: #E8A5C8;
+        border-color: #A5D6A7;
     }
 
-        .tab-btn.unread:hover,
-        .tab-btn.unread.active {
-            background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-            border-color: #D88BB7;
+        .tab-btn.unread:hover {
+            background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
+            border-color: #C8E6C9;
+        }
         }
 
 .notifications-feed {
@@ -206,8 +206,8 @@
     }
 
     .notification-card.unread {
-        background: linear-gradient(to right, rgba(232, 165, 200, 0.08), white);
-        box-shadow: 0 2px 8px rgba(232, 165, 200, 0.2);
+        background: linear-gradient(to right, rgba(200, 230, 201, 0.08), white);
+        box-shadow: 0 2px 8px rgba(200, 230, 201, 0.2);
     }
 
     .notification-card.read {
@@ -280,8 +280,8 @@
     margin: 0;
 }
 
-.unread-badge {
-    color: #E8A5C8;
+    .unread-badge {
+    color: #E8F5E9;
     font-size: 1.5rem;
     line-height: 1;
 }
@@ -336,7 +336,7 @@
 }
 
     .action-icon-btn:hover {
-        background: #E8A5C8;
+        background: #E8F5E9;
         color: white;
         transform: scale(1.1);
     }

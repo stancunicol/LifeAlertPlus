@@ -11,7 +11,7 @@
     top: 0;
     left: 0;
     width: 100%;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     padding: 0;
@@ -143,7 +143,7 @@
     font-family: "Jua", sans-serif;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #D88BB7;
+    color: #5a9d73;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -200,7 +200,7 @@
 }
 
     .profile-menu-item:hover {
-        background: rgba(232, 165, 200, 0.1);
+        background: rgba(200, 230, 201, 0.1);
         color: #000;
     }
 
@@ -297,7 +297,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 1.2rem 1.5rem;
-    background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
 }
 
 .mobile-nav-title {
@@ -338,17 +338,17 @@
     cursor: pointer;
 }
 
-.mobile-nav-link:hover {
-    background: rgba(232, 165, 200, 0.1);
-    border-left-color: #D88BB7;
-}
+    .mobile-nav-link:hover {
+        background: rgba(200, 230, 201, 0.1);
+        border-left-color: #A5D6A7;
+    }
 
-.mobile-nav-link.active {
-    background: rgba(232, 165, 200, 0.15);
-    border-left-color: #D88BB7;
-    color: #000;
-    font-weight: 600;
-}
+    .mobile-nav-link.active {
+        background: rgba(200, 230, 201, 0.15);
+        border-left-color: #A5D6A7;
+        color: #000;
+        font-weight: 600;
+    }
 
 .mobile-nav-link.logout {
     color: #dc3545;
