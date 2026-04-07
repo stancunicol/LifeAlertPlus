@@ -80,6 +80,7 @@
 					<div class="sim-grid">
 						@foreach (var person in FilteredPersons)
 						{
+							var pid = person.PersonId;
 							<div class="sim-card">
 								<div class="sim-card-top">
 									<div class="avatar">@GetInitials(person.Name)</div>
@@ -104,6 +105,14 @@
 										<span class="status-chip @(person.LastStatus.Success ? "ok" : "warn")">@person.LastStatus.Message</span>
 									}
 								</div>
+								@if (!string.IsNullOrWhiteSpace(person.LastCoordinates))
+								{
+									<div id="sim-map-@pid" class="sim-map" style="width:100%;height:180px;margin-top:10px;"></div>
+								}
+								else
+								{
+									<div class="sim-map-placeholder" style="width:100%;height:60px;margin-top:10px;color:#777">No coordinates</div>
+								}
 							</div>
 						}
 					</div>

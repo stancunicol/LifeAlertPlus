@@ -46,6 +46,53 @@
     </div>
     <script src="js/profile.js"></script>
     <script src="js/chartTooltip.js"></script>
+    <!-- Google Maps will be loaded dynamically from the API config endpoint to avoid embedding the key in source control -->
+    <script>
+        (function () {
+            async function loadMaps() {
+                const tryFetch = async (url) => {
+                    try {
+                        const r = await fetch(url, { credentials: 'include' });
+                        if (!r.ok) return null;
+                        return await r.json();
+                    } catch { return null; }
+                };
+
+                // try relative path first (works when client is hosted by the API)
+                let data = await tryFetch('/api/config/maps');
+
+                // fallback to known dev API origins if needed
+                if (!data) {
+                    const candidates = [
+                        'http://localhost:5176'
+                    ];
+                    for (const base of candidates) {
+                        data = await tryFetch(base + '/api/config/maps');
+                        if (data) break;
+                    }
+                }
+
+                if (!data) {
+                    console.warn('Maps API key not found on server (tried relative and common dev hosts)');
+                    return;
+                }
+
+                const key = data && (data.apiKey || data.ApiKey || data.key);
+                if (!key) {
+                    console.warn('Maps API key missing from config response');
+                    return;
+                }
+
+                const s = document.createElement('script');
+                s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key);
+                s.async = true; s.defer = true;
+                document.head.appendChild(s);
+            }
+            // load but don't block app startup
+            loadMaps();
+        })();
+    </script>
+    <script src="js/googleMapsInterop.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script>
         // expose simple getter for the app version (read from meta)

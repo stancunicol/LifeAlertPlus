@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using System.Globalization;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
 
@@ -37,7 +38,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private ElementReference _hrSvgRef;
         private ElementReference _tempSvgRef;
+        private ElementReference _mapRef;
         private bool _tooltipsInitialized;
+        private bool _mapInitialized;
 
         private DayOfWeek _firstDayOfWeek = DayOfWeek.Monday;
         private PersonDetail? Person { get; set; }
@@ -789,8 +792,11 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     await LoadChartDataAsync();
                     await LoadRecentAlertsAsync();
                     await LoadRecentMeasurementsAsync();
+                    // Reset map so it re-initializes with fresh GPS coordinates
+                    _mapInitialized = false;
                     StateHasChanged();
                     await InitTooltipsAsync();
+                    await InitMapAsync();
                 });
             }
             catch
@@ -804,6 +810,116 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             if (firstRender || !_tooltipsInitialized)
             {
                 await InitTooltipsAsync();
+            }
+
+            // Try map init on every render — Person data loads async so it may
+            // not be available on firstRender; InitMapAsync is idempotent.
+            await InitMapAsync();
+        }
+
+        private async Task InitMapAsync()
+        {
+            if (_mapInitialized) return;
+            if (Person == null) return;
+            if (string.IsNullOrWhiteSpace(Person.GPS)) return;
+
+            if (!TryParseGpsToLatLon(Person.GPS, out double lat, out double lon))
+            {
+                return;
+            }
+
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("googleMapsInterop.initMapOnElement", _mapRef, lat, lon);
+                _mapInitialized = true;
+            }
+            catch
+            {
+                // ignore JS errors
+            }
+        }
+
+        private bool TryParseGpsToLatLon(string gps, out double lat, out double lon)
+        {
+            lat = 0; lon = 0;
+            if (string.IsNullOrWhiteSpace(gps)) return false;
+
+            var lines = gps.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            var gprmc = lines.FirstOrDefault(l => l.StartsWith("$GPRMC", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(gprmc))
+            {
+                var parts = gprmc.Split(',');
+                if (parts.Length > 6 && !string.IsNullOrWhiteSpace(parts[3]) && !string.IsNullOrWhiteSpace(parts[5]))
+                {
+                    if (TryParseNmeaLatLon(parts[3], parts.ElementAtOrDefault(4), parts[5], parts.ElementAtOrDefault(6), out lat, out lon))
+                        return true;
+                }
+            }
+
+            var gpgll = lines.FirstOrDefault(l => l.StartsWith("$GPGLL", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(gpgll))
+            {
+                var parts = gpgll.Split(',');
+                if (parts.Length > 4 && !string.IsNullOrWhiteSpace(parts[1]) && !string.IsNullOrWhiteSpace(parts[3]))
+                {
+                    if (TryParseNmeaLatLon(parts[1], parts.ElementAtOrDefault(2), parts[3], parts.ElementAtOrDefault(4), out lat, out lon))
+                        return true;
+                }
+            }
+
+            // try plain "lat,lon"
+            var first = lines[0].Trim();
+            if (first.Contains(','))
+            {
+                var comps = first.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (comps.Length >= 2 && double.TryParse(comps[0], NumberStyles.Float, CultureInfo.InvariantCulture, out lat) && double.TryParse(comps[1], NumberStyles.Float, CultureInfo.InvariantCulture, out lon))
+                    return true;
+            }
+
+            // try space separated
+            var partsSpace = first.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (partsSpace.Length >= 2 && double.TryParse(partsSpace[0], NumberStyles.Float, CultureInfo.InvariantCulture, out lat) && double.TryParse(partsSpace[1], NumberStyles.Float, CultureInfo.InvariantCulture, out lon))
+                return true;
+
+            return false;
+        }
+
+        private bool TryParseNmeaLatLon(string latStr, string? latDir, string lonStr, string? lonDir, out double lat, out double lon)
+        {
+            lat = 0; lon = 0;
+            try
+            {
+                if (string.IsNullOrWhiteSpace(latStr) || string.IsNullOrWhiteSpace(lonStr)) return false;
+
+                latStr = latStr.Trim();
+                lonStr = lonStr.Trim();
+
+                int latDp = latStr.IndexOf('.') >= 0 ? latStr.IndexOf('.') : latStr.Length;
+                int latDegLen = Math.Max(0, latDp - 2);
+                var latDegPart = latStr.Substring(0, latDegLen);
+                var latMinPart = latStr.Substring(latDegLen);
+
+                int degLat = int.Parse(latDegPart, CultureInfo.InvariantCulture);
+                double minLat = double.Parse(latMinPart, CultureInfo.InvariantCulture);
+                lat = degLat + (minLat / 60.0);
+                if (!string.IsNullOrWhiteSpace(latDir) && latDir.Trim().Equals("S", StringComparison.OrdinalIgnoreCase)) lat = -lat;
+
+                int lonDp = lonStr.IndexOf('.') >= 0 ? lonStr.IndexOf('.') : lonStr.Length;
+                int lonDegLen = Math.Max(0, lonDp - 2);
+                var lonDegPart = lonStr.Substring(0, lonDegLen);
+                var lonMinPart = lonStr.Substring(lonDegLen);
+
+                int degLon = int.Parse(lonDegPart, CultureInfo.InvariantCulture);
+                double minLon = double.Parse(lonMinPart, CultureInfo.InvariantCulture);
+                lon = degLon + (minLon / 60.0);
+                if (!string.IsNullOrWhiteSpace(lonDir) && lonDir.Trim().Equals("W", StringComparison.OrdinalIgnoreCase)) lon = -lon;
+
+                return true;
+            }
+            catch
+            {
+                lat = 0; lon = 0; return false;
             }
         }
 

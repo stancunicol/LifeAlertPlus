@@ -1,4 +1,5 @@
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
+using System.Globalization;
 
 namespace LifeAlertPlus.Shared.Helpers
 {
@@ -47,6 +48,15 @@ namespace LifeAlertPlus.Shared.Helpers
             var temp = SimulationConstants.TemperatureMin + (rnd.NextDouble() * SimulationConstants.TemperatureRange);
             var battery = SimulationConstants.BatteryMin + (rnd.NextDouble() * SimulationConstants.BatteryRange);
 
+            // generate a random coordinate near a reasonable default (small area jitter)
+            // (adjust baseLat/baseLon if you want a different simulation region)
+            var baseLat = 44.4268; // Bucharest center as default
+            var baseLon = 26.1025;
+            var lat = baseLat + (rnd.NextDouble() - 0.5) * 0.2; // +/- 0.1 degrees
+            var lon = baseLon + (rnd.NextDouble() - 0.5) * 0.2;
+            var latStr = lat.ToString(CultureInfo.InvariantCulture);
+            var lonStr = lon.ToString(CultureInfo.InvariantCulture);
+
             return new ESPDataResponseDTO
             {
                 Serial = serial,
@@ -65,7 +75,8 @@ namespace LifeAlertPlus.Shared.Helpers
                     rnd.Next(SimulationConstants.GyroMin, SimulationConstants.GyroMax)
                 },
                 Max30100 = new List<int> { pulse, spo2 },
-                Neo6m = SimulationConstants.MockGPSData,
+                // store coordinates as plain "lat,lon" (parsed by client map helpers)
+                Neo6m = $"{latStr},{lonStr}",
                 Temperature = Math.Round(temp, 1),
                 Battery = Math.Round(battery, 1),
                 ErrorMessage = null

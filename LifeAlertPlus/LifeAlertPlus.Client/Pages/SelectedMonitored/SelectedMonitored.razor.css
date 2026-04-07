@@ -5,6 +5,46 @@
     padding-top: 32px;
 }
 
+/* Map section */
+.map-wrapper {
+    width: 100%;
+    height: 300px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #f4f6f8;
+    margin-bottom: 0;
+}
+
+.map-section {
+    margin-bottom: 24px;
+}
+.map-wrapper .map-container {
+    width: 100%;
+    height: 100%;
+}
+
+.map-no-data {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #999;
+    font-family: "Jua", sans-serif;
+    font-size: 1rem;
+}
+
+.map-no-data-icon {
+    font-size: 2rem;
+    opacity: 0.5;
+}
+
+.map-no-data p {
+    margin: 0;
+}
+
 .back-navigation {
     display: flex;
     align-items: center;

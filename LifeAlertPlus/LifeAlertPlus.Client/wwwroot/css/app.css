@@ -182,3 +182,65 @@ body {
         max-height: calc(100vh - 110px) !important;
     }
 }
+
+/* Global person-card action buttons - keep Dashboard and Monitored consistent */
+.person-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px 0;
+}
+
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid #E8F5E9;
+    background: #fff;
+    font-family: "Jua", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: #2f4f3b;
+    box-shadow: 0 6px 18px rgba(12,10,29,0.06);
+    transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+}
+
+.btn-action .btn-icon {
+    font-size: 1.05rem;
+    opacity: 0.9;
+}
+
+.btn-action:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 34px rgba(12,10,29,0.10);
+}
+
+.btn-action:focus {
+    outline: 3px solid rgba(165,214,167,0.18);
+    outline-offset: 3px;
+}
+
+.btn-location {
+    background: linear-gradient(135deg, #A5D6A7 0%, #77C78B 100%);
+    color: #fff;
+    border: none;
+}
+
+.btn-call {
+    background: linear-gradient(135deg, #FF9A9E 0%, #FF6A88 100%);
+    color: #fff;
+    border: none;
+}
+
+.btn-text {
+    background: transparent;
+    color: #5a9d73;
+    border: 1px solid transparent;
+    box-shadow: none;
+}

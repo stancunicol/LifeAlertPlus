@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using System.Globalization;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using System.Linq;
@@ -19,6 +21,9 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 
 		[Inject]
 		private MeasurementService MeasurementService { get; set; } = default!;
+
+		[Inject]
+		private IJSRuntime JSRuntime { get; set; } = default!;
 
 		[Inject]
 		private LanguageService Lang { get; set; } = default!;
@@ -176,8 +181,25 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 					Temperature = payload.Temperature ?? 0,
 					Activity = "Simulated Activity",
 					IsFall = false,
-					Coordinates = string.Empty
+					Coordinates = payload.Neo6m ?? string.Empty
 				};
+
+				// keep last coordinates on the UI even if saving fails
+				person.LastCoordinates = request.Coordinates;
+
+				// initialize the map immediately for this person (if coords parse)
+				if (TryParseGpsToLatLonSimple(person.LastCoordinates, out var _lat, out var _lon))
+				{
+					try
+					{
+						await JSRuntime.InvokeVoidAsync("googleMapsInterop.initMapOnElementById", $"sim-map-{person.PersonId}", _lat, _lon);
+						_mapCoords[person.PersonId] = person.LastCoordinates!;
+					}
+					catch
+					{
+						// ignore JS errors
+					}
+				}
 
 				try
 				{
@@ -317,6 +339,48 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			public SimStatus? LastStatus { get; set; }
 			public bool IsRunning { get; set; }
 			public bool IsSending { get; set; }
+			public string? LastCoordinates { get; set; }
+		}
+
+		// Track last-used coordinates per person to avoid reinitializing unchanged maps
+		private readonly Dictionary<Guid, string> _mapCoords = new();
+
+		private bool TryParseGpsToLatLonSimple(string gps, out double lat, out double lon)
+		{
+			lat = 0; lon = 0;
+			if (string.IsNullOrWhiteSpace(gps)) return false;
+			var parts = gps.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+			if (parts.Length < 2) return false;
+			return double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out lat)
+				&& double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out lon);
+		}
+
+		protected override async Task OnAfterRenderAsync(bool firstRender)
+		{
+			if (_disposed) return;
+			// initialize or update maps for persons that have coordinates — use element IDs
+			foreach (var person in Persons.ToList())
+			{
+				if (string.IsNullOrWhiteSpace(person.LastCoordinates))
+					continue;
+
+				if (_mapCoords.TryGetValue(person.PersonId, out var prev) && prev == person.LastCoordinates)
+					continue; // already initialized with same coords
+
+				if (!TryParseGpsToLatLonSimple(person.LastCoordinates, out var lat, out var lon))
+					continue;
+
+				try
+				{
+					var elementId = $"sim-map-{person.PersonId}";
+					await JSRuntime.InvokeVoidAsync("googleMapsInterop.initMapOnElementById", elementId, lat, lon);
+					_mapCoords[person.PersonId] = person.LastCoordinates!;
+				}
+				catch
+				{
+					// ignore JS errors
+				}
+			}
 		}
 
 		private async Task LoadUserFromTokenAsync()

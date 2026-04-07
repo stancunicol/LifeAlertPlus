@@ -3,6 +3,7 @@ using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using System.Globalization;
 
 namespace LifeAlertPlus.Client.Pages.Monitored;
 
@@ -519,9 +520,34 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     protected async Task RequestLocation(Guid personId)
     {
-        // navigate to the monitored detail (map or detail view)
-        ViewDetails(personId);
-        await Task.CompletedTask;
+        var card = _monitoredCards.FirstOrDefault(c => c.Person.Id == personId);
+        var gps = card?.LastData?.Neo6m;
+
+        if (string.IsNullOrWhiteSpace(gps) || !TryParseGpsToLatLon(gps, out var lat, out var lon))
+        {
+            // no coordinates available
+            await JSRuntime.InvokeVoidAsync("alert", T("selected.noCoordinates"));
+            return;
+        }
+
+        var url = $"https://www.google.com/maps/search/?api=1&query={lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private bool TryParseGpsToLatLon(string gps, out double lat, out double lon)
+    {
+        lat = 0; lon = 0;
+        if (string.IsNullOrWhiteSpace(gps)) return false;
+        var s = gps.Trim();
+        var parts = s.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) return false;
+        if (!double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out lat) &&
+            !double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.CurrentCulture, out lat))
+            return false;
+        if (!double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out lon) &&
+            !double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.CurrentCulture, out lon))
+            return false;
+        return true;
     }
 
     protected async Task CallPerson(Guid personId)

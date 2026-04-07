@@ -193,6 +193,37 @@
 	box-shadow: 0 10px 20px rgba(165, 214, 167, 0.18);
 }
 
+/* Table action button (details) */
+.actions-cell {
+	text-align: right;
+}
+
+.btn-details {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 12px;
+	height: 36px;
+	border-radius: 999px;
+	background: #fff;
+	border: 1px solid var(--border);
+	color: var(--ink);
+	font-weight: 700;
+	font-family: "Jua", sans-serif;
+	box-shadow: var(--shadow);
+	transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+
+.btn-details:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 12px 28px rgba(12,10,29,0.08);
+}
+
+@media (max-width: 768px) {
+	.actions-cell { text-align: left; }
+	.btn-details { width: 100%; justify-content: center; }
+}
+
 .message-card {
 	margin-top: 12px;
 	padding: 14px 16px;

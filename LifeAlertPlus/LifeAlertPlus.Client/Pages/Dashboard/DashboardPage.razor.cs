@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using LifeAlertPlus.Client.Services;
+using System.Globalization;
 
 namespace LifeAlertPlus.Client.Pages.Dashboard;
 
@@ -392,9 +393,33 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
 
     protected async Task RequestLocation(Guid personId)
     {
-        // Reuse existing navigation to open the monitored detail/map
-        NavigateToMonitored(personId);
-        await Task.CompletedTask;
+        var sample = MonitoredSamples.FirstOrDefault(m => m.Id == personId);
+        var gps = sample?.GPS;
+
+        if (string.IsNullOrWhiteSpace(gps) || !TryParseGpsToLatLon(gps, out var lat, out var lon))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", T("selected.noCoordinates"));
+            return;
+        }
+
+        var url = $"https://www.google.com/maps/search/?api=1&query={lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}";
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private bool TryParseGpsToLatLon(string gps, out double lat, out double lon)
+    {
+        lat = 0; lon = 0;
+        if (string.IsNullOrWhiteSpace(gps)) return false;
+        var s = gps.Trim();
+        var parts = s.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2) return false;
+        if (!double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out lat) &&
+            !double.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.CurrentCulture, out lat))
+            return false;
+        if (!double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out lon) &&
+            !double.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.CurrentCulture, out lon))
+            return false;
+        return true;
     }
 
     protected async Task CallPerson(Guid personId)

@@ -137,6 +137,25 @@
             </div>
         </div>
 
+        <div class="map-section section-card">
+            <div class="section-header">
+                <h2>📍 @T("selected.currentLocation")</h2>
+            </div>
+            <div class="map-wrapper">
+                @if (GetGPSStatus(Person.GPS) == "disabled")
+                {
+                    <div class="map-no-data">
+                        <span class="map-no-data-icon">📍</span>
+                        <p>@T("selected.noCoordinates")</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="map-container" @ref="_mapRef"></div>
+                }
+            </div>
+        </div>
+
         <div class="content-grid">
             <div class="chart-section">
                 <div class="section-card">
