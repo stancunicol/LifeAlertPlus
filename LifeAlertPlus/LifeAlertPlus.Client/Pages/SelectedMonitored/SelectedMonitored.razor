@@ -14,7 +14,7 @@
                 <span class="back-icon">←</span> @T("selected.goBack")
             </button>
             <div class="top-actions">
-                <button class="btn-action-main">📤 @T("selected.export")</button>
+                <button class="btn-action-main" @onclick="ExportPdfAsync">📤 @T("selected.export")</button>
             </div>
         </div>
 
@@ -137,6 +137,76 @@
             </div>
         </div>
 
+        <div class="ai-prediction-section section-card">
+            <div class="section-header">
+                <h2>🤖 @T("selected.aiPrediction")</h2>
+            </div>
+            @if (AIPredictionLoading)
+            {
+                <div class="ai-loading">
+                    <div class="ai-spinner"></div>
+                    <span>@T("selected.aiAnalyzing")</span>
+                </div>
+            }
+            else if (AIPrediction != null)
+            {
+                <div class="ai-prediction-content">
+                    <div class="ai-main-result">
+                        <div class="ai-risk-badge @AIPrediction.RiskLevel.ToLower()">
+                            <span class="ai-risk-icon">@GetAIRiskIcon(AIPrediction.RiskLevel)</span>
+                            <div class="ai-risk-info">
+                                <span class="ai-risk-label">@T("selected.aiRiskLevel")</span>
+                                <span class="ai-risk-value">@GetAIRiskText(AIPrediction.RiskLevel)</span>
+                            </div>
+                        </div>
+                        <div class="ai-confidence">
+                            <span class="ai-confidence-label">@T("selected.aiConfidence")</span>
+                            <div class="ai-confidence-bar">
+                                <div class="ai-confidence-fill @AIPrediction.RiskLevel.ToLower()" style="width: @((AIPrediction.Confidence * 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                            </div>
+                            <span class="ai-confidence-value">@((AIPrediction.Confidence * 100).ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%</span>
+                        </div>
+                        <div class="ai-state">
+                            <span class="ai-state-label">@T("selected.aiDetectedState")</span>
+                            <span class="ai-state-value">@AIPrediction.Prediction</span>
+                        </div>
+                        <div class="ai-health-score">
+                            <span class="ai-health-label">@T("selected.aiHealthScore")</span>
+                            <span class="ai-health-value @(AIPrediction.HealthScore >= 80 ? "critical" : AIPrediction.HealthScore >= 40 ? "alert" : "normal")">@AIPrediction.HealthScore / 100</span>
+                        </div>
+                    </div>
+                    <div class="ai-details">
+                        <p>@AIPrediction.Details</p>
+                    </div>
+                    @if (AIPrediction.AllProbabilities != null && AIPrediction.AllProbabilities.Count > 1)
+                    {
+                        <div class="ai-probabilities">
+                            <span class="ai-prob-title">@T("selected.aiProbabilities")</span>
+                            <div class="ai-prob-bars">
+                                @foreach (var prob in AIPrediction.AllProbabilities.OrderByDescending(p => p.Value))
+                                {
+                                    <div class="ai-prob-item">
+                                        <span class="ai-prob-label">@prob.Key</span>
+                                        <div class="ai-prob-bar">
+                                            <div class="ai-prob-fill" style="width: @((prob.Value * 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                        </div>
+                                        <span class="ai-prob-value">@((prob.Value * 100).ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="ai-unavailable">
+                    <span class="ai-unavailable-icon">🤖</span>
+                    <p>@T("selected.aiUnavailable")</p>
+                </div>
+            }
+        </div>
+
         <div class="map-section section-card">
             <div class="section-header">
                 <h2>📍 @T("selected.currentLocation")</h2>
@@ -170,6 +240,32 @@
                     </div>
 
                     <div class="charts-wrapper">
+                        <div class="chart-week-nav">
+                            @if (CurrentChartView == ChartViewMode.Weekly)
+                            {
+                                <button class="btn-week-arrow @(_hasPrevWeekData ? "" : "disabled")"
+                                        @onclick="GoToPreviousWeek" disabled="@(!_hasPrevWeekData)">
+                                    <span>◀</span>
+                                </button>
+                                <span class="chart-week-label">@_chartWeekLabel</span>
+                                <button class="btn-week-arrow @(_weekOffset >= 0 ? "disabled" : "")"
+                                        @onclick="GoToNextWeek" disabled="@(_weekOffset >= 0)">
+                                    <span>▶</span>
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="btn-week-arrow @(_hasPrevDayData ? "" : "disabled")"
+                                        @onclick="GoToPreviousDay" disabled="@(!_hasPrevDayData)">
+                                    <span>◀</span>
+                                </button>
+                                <span class="chart-week-label">@_chartDayLabel</span>
+                                <button class="btn-week-arrow @(_dayOffset >= 0 ? "disabled" : "")"
+                                        @onclick="GoToNextDay" disabled="@(_dayOffset >= 0)">
+                                    <span>▶</span>
+                                </button>
+                            }
+                        </div>
                         <!-- Heart Rate -->
                         <div class="chart-item">
                             <div class="chart-item-title">

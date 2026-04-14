@@ -3,7 +3,8 @@ using Microsoft.JSInterop;
 using System.Globalization;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
-
+using LifeAlertPlus.Shared.DTOs.Requests.AI;
+using LifeAlertPlus.Shared.DTOs.Responses.AI;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 
 namespace LifeAlertPlus.Client.Pages.SelectedMonitored
@@ -27,6 +28,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         [Inject]
         private UserService UserService { get; set; } = default!;
+
+        [Inject]
+        private AIPredictionService AIPredictionService { get; set; } = default!;
 
         [Inject]
         private IJSRuntime JSRuntime { get; set; } = default!;
@@ -55,9 +59,17 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private List<TooltipPoint> TempTooltipData { get; set; } = new();
         private List<Alert> RecentAlerts { get; set; } = new();
         private List<Measurement> RecentMeasurements { get; set; } = new();
+        private AIPredictionResponseDTO? AIPrediction { get; set; }
+        private bool AIPredictionLoading { get; set; }
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
         private ChartViewMode CurrentChartView { get; set; } = ChartViewMode.Daily;
+        private int _weekOffset = 0; // 0 = current week, -1 = previous week, etc.
+        private string _chartWeekLabel = "";
+        private bool _hasPrevWeekData = false;
+        private int _dayOffset = 0; // 0 = today, -1 = yesterday, etc.
+        private string _chartDayLabel = "";
+        private bool _hasPrevDayData = false;
         private System.Threading.Timer? _refreshTimer;
         private bool _disposed = false;
 
@@ -176,6 +188,12 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     UpdateFrequency = monitored.UpdateFrequency ?? _userUpdateFrequency
                 };
 
+                // Load AI prediction
+                if (espData?.IsAvailable == true)
+                {
+                    _ = LoadAIPredictionAsync(espData);
+                }
+
                 IsLoading = false;
             }
             catch (Exception ex)
@@ -200,6 +218,39 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
 
             return age;
+        }
+
+        private async Task LoadAIPredictionAsync(LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO espData)
+        {
+            try
+            {
+                AIPredictionLoading = true;
+                await InvokeAsync(StateHasChanged);
+
+                var request = new AIPredictionRequestDTO
+                {
+                    Pulse = espData.Max30100 != null && espData.Max30100.Count >= 1 ? espData.Max30100[0] : 0,
+                    Temperature = espData.Temperature ?? 0,
+                    Spo2 = espData.Max30100 != null && espData.Max30100.Count >= 2 ? espData.Max30100[1] : 97.0,
+                    AccelX = espData.Mpu6050 != null && espData.Mpu6050.Count >= 1 ? espData.Mpu6050[0] : 0,
+                    AccelY = espData.Mpu6050 != null && espData.Mpu6050.Count >= 2 ? espData.Mpu6050[1] : 0,
+                    AccelZ = espData.Mpu6050 != null && espData.Mpu6050.Count >= 3 ? espData.Mpu6050[2] : 0,
+                    GyroX = espData.Gyro != null && espData.Gyro.Count >= 1 ? espData.Gyro[0] : 0,
+                    GyroY = espData.Gyro != null && espData.Gyro.Count >= 2 ? espData.Gyro[1] : 0,
+                    GyroZ = espData.Gyro != null && espData.Gyro.Count >= 3 ? espData.Gyro[2] : 0,
+                };
+
+                AIPrediction = await AIPredictionService.GetPredictionAsync(request);
+            }
+            catch
+            {
+                AIPrediction = null;
+            }
+            finally
+            {
+                AIPredictionLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
         }
 
         private List<ChartDataPoint> HeartRateHistoryFiltered =>
@@ -246,11 +297,21 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private void LoadDailyChartData(List<MeasurementResponseDTO> measurements)
         {
-            var today = DateTime.Now.Date;
+            var targetDay = DateTime.Now.Date.AddDays(_dayOffset);
+
+            // Set day label
+            if (_dayOffset == 0)
+                _chartDayLabel = targetDay.ToString("dddd, dd MMM yyyy");
+            else
+                _chartDayLabel = targetDay.ToString("dddd, dd MMM yyyy");
+
+            // Check if previous day has data
+            var prevDay = targetDay.AddDays(-1);
+            _hasPrevDayData = measurements.Any(m => m.CreatedAt.ToLocalTime().Date == prevDay);
 
             // For daily view we want to show every measurement of the day (no aggregation by buckets).
             var todayMs = measurements
-                .Where(m => m.CreatedAt.ToLocalTime().Date == today)
+                .Where(m => m.CreatedAt.ToLocalTime().Date == targetDay)
                 .OrderBy(m => m.CreatedAt)
                 .ToList();
 
@@ -305,8 +366,21 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
             // Find the start of the current week based on user's preferred first day
             int diff = ((int)today.DayOfWeek - (int)_firstDayOfWeek + 7) % 7;
-            var weekStart = today.AddDays(-diff);
+            var currentWeekStart = today.AddDays(-diff);
+            var weekStart = currentWeekStart.AddDays(_weekOffset * 7);
             var days = Enumerable.Range(0, 7).Select(i => weekStart.AddDays(i)).ToList();
+
+            // Set week label
+            _chartWeekLabel = $"{weekStart:dd MMM} - {days[6]:dd MMM yyyy}";
+
+            // Check if previous week has data
+            var prevWeekStart = weekStart.AddDays(-7);
+            var prevWeekEnd = weekStart.AddDays(-1);
+            _hasPrevWeekData = measurements.Any(m =>
+            {
+                var d = m.CreatedAt.ToLocalTime().Date;
+                return d >= prevWeekStart && d <= prevWeekEnd;
+            });
 
             var hrByDay = measurements
                 .Where(m => m.CreatedAt.ToLocalTime().Date >= days[0] && m.CreatedAt.ToLocalTime().Date <= days[6])
@@ -336,6 +410,52 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private async Task SwitchChartView(ChartViewMode mode)
         {
             CurrentChartView = mode;
+            _weekOffset = 0;
+            _dayOffset = 0;
+            HeartRateHistory = new List<ChartDataPoint>();
+            TemperatureHistory = new List<ChartDataPoint>();
+            HeartRatePoints = new List<(double X, double Y)>();
+            TemperaturePoints = new List<(double X, double Y)>();
+            HrTooltipData = new List<TooltipPoint>();
+            TempTooltipData = new List<TooltipPoint>();
+            _tooltipsInitialized = false;
+            StateHasChanged();
+            await Task.Delay(50);
+            await LoadChartDataAsync();
+            StateHasChanged();
+            await InitTooltipsAsync();
+        }
+
+        private async Task GoToPreviousWeek()
+        {
+            if (!_hasPrevWeekData) return;
+            _weekOffset--;
+            await ReloadChartAsync();
+        }
+
+        private async Task GoToNextWeek()
+        {
+            if (_weekOffset >= 0) return;
+            _weekOffset++;
+            await ReloadChartAsync();
+        }
+
+        private async Task GoToPreviousDay()
+        {
+            if (!_hasPrevDayData) return;
+            _dayOffset--;
+            await ReloadChartAsync();
+        }
+
+        private async Task GoToNextDay()
+        {
+            if (_dayOffset >= 0) return;
+            _dayOffset++;
+            await ReloadChartAsync();
+        }
+
+        private async Task ReloadChartAsync()
+        {
             HeartRateHistory = new List<ChartDataPoint>();
             TemperatureHistory = new List<ChartDataPoint>();
             HeartRatePoints = new List<(double X, double Y)>();
@@ -1061,9 +1181,147 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             };
         }
 
+        private string GetAIRiskIcon(string riskLevel)
+        {
+            return riskLevel?.ToUpper() switch
+            {
+                "CRITICAL" => "🚨",
+                "ALERT" => "⚠️",
+                "NORMAL" => "✅",
+                _ => "🤖"
+            };
+        }
+
+        private string GetAIRiskText(string riskLevel)
+        {
+            return riskLevel?.ToUpper() switch
+            {
+                "CRITICAL" => T("selected.aiCritical"),
+                "ALERT" => T("selected.aiWarning"),
+                "NORMAL" => T("selected.aiOK"),
+                _ => riskLevel ?? ""
+            };
+        }
+
         private void GoBack()
         {
             NavigationManager.NavigateTo("/monitored");
+        }
+
+        private async Task ExportPdfAsync()
+        {
+            if (Person == null) return;
+
+            try
+            {
+                // Fetch last 20 measurements for the report table
+                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 20);
+                var measurementRows = (measurements ?? Enumerable.Empty<MeasurementResponseDTO>())
+                    .OrderByDescending(m => m.CreatedAt)
+                    .Select(m => new
+                    {
+                        date = m.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm"),
+                        pulse = $"{m.Pulse:F0} bpm",
+                        temperature = $"{m.Temperature:F1} °C",
+                        activity = m.Activity ?? "-"
+                    })
+                    .ToArray();
+
+                // Map status strings to color keys for the PDF
+                string MapStatusColor(string cssClass) => cssClass switch
+                {
+                    "normal" => "good",
+                    "warning" => "warning",
+                    "critical" => "danger",
+                    _ => "neutral"
+                };
+
+                var vitals = new object[]
+                {
+                    new {
+                        type = "heart",
+                        label = T("selected.heartRate"),
+                        value = Person.HeartRate > 0 ? $"{Person.HeartRate} bpm" : "-",
+                        statusText = Person.HeartRate > 0 ? GetVitalStatusText(Person.HeartRate, Person.MinHeartRate, Person.MaxHeartRate) : T("selected.noData"),
+                        statusColor = Person.HeartRate > 0 ? MapStatusColor(GetVitalStatus(Person.HeartRate, Person.MinHeartRate, Person.MaxHeartRate)) : "neutral"
+                    },
+                    new {
+                        type = "spo2",
+                        label = T("selected.bloodOxygen"),
+                        value = Person.SpO2 > 0 ? $"{Person.SpO2}%" : "-",
+                        statusText = Person.SpO2 > 0 ? GetSpO2StatusText(Person.SpO2) : T("selected.noData"),
+                        statusColor = Person.SpO2 > 0 ? MapStatusColor(GetSpO2Status(Person.SpO2)) : "neutral"
+                    },
+                    new {
+                        type = "temp",
+                        label = T("selected.temperature"),
+                        value = Person.Temperature > 0 ? $"{Person.Temperature:F1} °C" : "-",
+                        statusText = Person.Temperature > 0 ? GetTempStatusText(Person.Temperature, Person.MinTemperature, Person.MaxTemperature) : T("selected.noData"),
+                        statusColor = Person.Temperature > 0 ? MapStatusColor(GetTempStatus(Person.Temperature, Person.MinTemperature, Person.MaxTemperature)) : "neutral"
+                    },
+                    new {
+                        type = "gps",
+                        label = T("selected.gpsLocation"),
+                        value = Person.GPS ?? "-",
+                        statusText = GetGPSStatusText(Person.GPS ?? ""),
+                        statusColor = GetGPSStatus(Person.GPS ?? "") == "normal" ? "good" : "neutral"
+                    }
+                };
+
+                object? aiSection = null;
+                if (AIPrediction != null)
+                {
+                    aiSection = new
+                    {
+                        prediction = AIPrediction.Prediction,
+                        riskLevel = AIPrediction.RiskLevel,
+                        confidence = $"{(AIPrediction.Confidence * 100):F1}%",
+                        healthScore = $"{AIPrediction.HealthScore} / 100",
+                        details = AIPrediction.Details
+                    };
+                }
+
+                var pdfData = new
+                {
+                    reportTitle = T("export.reportTitle"),
+                    generatedAt = $"{T("export.generatedAt")} {DateTime.Now:dd MMM yyyy, HH:mm}",
+                    patientSectionTitle = T("export.patientInfo"),
+                    nameLabel = T("export.name"),
+                    patientName = Person.Name,
+                    ageLabel = T("export.age"),
+                    patientAge = Person.Age > 0 ? $"{Person.Age} {T("selected.years")}" : "-",
+                    deviceLabel = T("selected.device"),
+                    deviceSerial = Person.DeviceSerial,
+                    statusLabel = T("export.status"),
+                    status = GetStatusText(Person.Status),
+                    locationLabel = T("export.location"),
+                    location = Person.Location,
+                    lastUpdateLabel = T("selected.lastUpdate"),
+                    lastUpdate = Person.LastUpdate,
+                    vitalsSectionTitle = T("export.currentVitals"),
+                    vitals,
+                    aiSectionTitle = T("export.aiAnalysis"),
+                    aiStateLabel = T("selected.aiDetectedState"),
+                    aiRiskLabel = T("selected.aiRiskLevel"),
+                    aiConfidenceLabel = T("selected.aiConfidence"),
+                    aiHealthScoreLabel = T("selected.aiHealthScore"),
+                    aiPrediction = aiSection,
+                    measurementsSectionTitle = T("export.recentMeasurements"),
+                    mDateHeader = T("export.date"),
+                    mPulseHeader = T("selected.heartRate"),
+                    mTempHeader = T("selected.temperature"),
+                    mActivityHeader = T("export.activity"),
+                    measurements = measurementRows,
+                    footerDisclaimer = T("export.disclaimer")
+                };
+
+                await JSRuntime.InvokeVoidAsync("pdfExport.generateMedicalReport", pdfData);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"PDF export error: {ex.Message}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Export failed: {ex.Message}");
+            }
         }
 
         private async void OpenEditModal()

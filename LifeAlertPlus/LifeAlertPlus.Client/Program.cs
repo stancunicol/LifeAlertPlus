@@ -28,6 +28,7 @@ builder.Services.AddScoped<TokenParserService>();
 builder.Services.AddScoped<ProfilePictureService>();
 builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<MeasurementService>();
+builder.Services.AddScoped<AIPredictionService>();
 builder.Services.AddSingleton<LanguageService>();
 
 await builder.Build().RunAsync();

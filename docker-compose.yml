@@ -1,4 +1,17 @@
 services:
+  ai-service:
+    build:
+      context: .
+      dockerfile: ai-service/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_DIR=/app/models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
   api:
     build:
       context: .
@@ -11,11 +24,14 @@ services:
       - ConnectionStrings__Default=Data Source=/data/lifealert.db
       - Urls__ApiBaseUrl=https://localhost:8443
       - Urls__ClientBaseUrl=http://localhost:8081
+      - Urls__AiServiceUrl=http://ai-service:8000
       - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
       - ASPNETCORE_Kestrel__Certificates__Default__Password=2hr4tyfy2296A
     volumes:
       - lifealert-data:/data
       - ./certs:/https:ro
+    depends_on:
+      - ai-service
   client:
     build:
       context: .

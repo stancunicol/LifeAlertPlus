@@ -398,6 +398,52 @@
     padding-top: 4px;
 }
 
+.chart-week-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 4px 0 8px;
+}
+
+.btn-week-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+    color: #4CAF50;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 6px rgba(76, 175, 80, 0.15);
+}
+
+.btn-week-arrow:hover:not(.disabled) {
+    background: linear-gradient(135deg, #A5D6A7 0%, #81C784 100%);
+    color: white;
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.3);
+    transform: scale(1.08);
+}
+
+.btn-week-arrow.disabled {
+    background: #F0F0F0;
+    color: #CCC;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.chart-week-label {
+    font-family: 'Jua', sans-serif;
+    font-size: 14px;
+    color: #555;
+    min-width: 160px;
+    text-align: center;
+}
+
 .chart-item {
     width: 100%;
 }
@@ -982,4 +1028,293 @@
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── AI Prediction Section ─────────────────────────────── */
+.ai-prediction-section {
+    margin-bottom: 24px;
+}
+
+.ai-loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    color: #888;
+    font-family: 'Jua', sans-serif;
+}
+
+.ai-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #E8F5E9;
+    border-top: 3px solid #A5D6A7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.ai-prediction-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.ai-main-result {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.ai-risk-badge {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    border-radius: 14px;
+    min-width: 180px;
+}
+
+.ai-risk-badge.normal {
+    background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+}
+
+.ai-risk-badge.alert {
+    background: linear-gradient(135deg, #FFF8E1, #FFE082);
+}
+
+.ai-risk-badge.critical {
+    background: linear-gradient(135deg, #FFEBEE, #EF9A9A);
+}
+
+.ai-risk-icon {
+    font-size: 28px;
+}
+
+.ai-risk-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-risk-label {
+    font-size: 12px;
+    color: #888;
+    font-family: 'Jua', sans-serif;
+}
+
+.ai-risk-value {
+    font-size: 20px;
+    font-family: 'Jua', sans-serif;
+    color: #333;
+}
+
+.ai-confidence {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 200px;
+}
+
+.ai-confidence-label {
+    font-size: 13px;
+    color: #888;
+    font-family: 'Jua', sans-serif;
+    white-space: nowrap;
+}
+
+.ai-confidence-bar {
+    flex: 1;
+    height: 10px;
+    background: #f0f0f0;
+    border-radius: 5px;
+    overflow: hidden;
+    min-width: 80px;
+}
+
+.ai-confidence-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.5s ease;
+}
+
+.ai-confidence-fill.normal {
+    background: linear-gradient(90deg, #A5D6A7, #66BB6A);
+}
+
+.ai-confidence-fill.alert {
+    background: linear-gradient(90deg, #FFE082, #FFB300);
+}
+
+.ai-confidence-fill.critical {
+    background: linear-gradient(90deg, #EF9A9A, #E53935);
+}
+
+.ai-confidence-value {
+    font-size: 14px;
+    font-family: 'Jua', sans-serif;
+    color: #555;
+    min-width: 48px;
+    text-align: right;
+}
+
+.ai-state {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ai-state-label {
+    font-size: 12px;
+    color: #888;
+    font-family: 'Jua', sans-serif;
+}
+
+.ai-state-value {
+    font-size: 16px;
+    font-family: 'Jua', sans-serif;
+    color: #333;
+    text-transform: capitalize;
+}
+
+.ai-health-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.ai-health-label {
+    font-size: 12px;
+    color: #888;
+    font-family: 'Jua', sans-serif;
+}
+
+.ai-health-value {
+    font-size: 18px;
+    font-weight: bold;
+    font-family: 'Jua', sans-serif;
+}
+
+.ai-health-value.normal {
+    color: #4CAF50;
+}
+
+.ai-health-value.alert {
+    color: #FF9800;
+}
+
+.ai-health-value.critical {
+    color: #F44336;
+}
+
+.ai-details {
+    background: #f8faf8;
+    border-radius: 12px;
+    padding: 16px 20px;
+    border-left: 4px solid #A5D6A7;
+}
+
+.ai-details p {
+    margin: 0;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.ai-probabilities {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ai-prob-title {
+    font-size: 13px;
+    color: #888;
+    font-family: 'Jua', sans-serif;
+}
+
+.ai-prob-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ai-prob-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ai-prob-label {
+    font-size: 13px;
+    color: #555;
+    min-width: 100px;
+    text-transform: capitalize;
+    font-family: 'Jua', sans-serif;
+}
+
+.ai-prob-bar {
+    flex: 1;
+    height: 8px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.ai-prob-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #A5D6A7, #66BB6A);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.ai-prob-value {
+    font-size: 12px;
+    color: #888;
+    min-width: 45px;
+    text-align: right;
+    font-family: 'Jua', sans-serif;
+}
+
+.ai-unavailable {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 30px;
+    color: #999;
+    font-family: 'Jua', sans-serif;
+}
+
+.ai-unavailable-icon {
+    font-size: 2rem;
+    opacity: 0.5;
+}
+
+.ai-unavailable p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* AI section mobile responsive */
+@media (max-width: 768px) {
+    .ai-main-result {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .ai-risk-badge {
+        min-width: unset;
+    }
+
+    .ai-confidence {
+        min-width: unset;
+    }
 }

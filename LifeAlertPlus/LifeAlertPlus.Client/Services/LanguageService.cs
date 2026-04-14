@@ -376,6 +376,19 @@ namespace LifeAlertPlus.Client.Services
             // Selected Monitored
             ["selected.goBack"] = "Go Back to Monitored List",
             ["selected.export"] = "Export",
+            ["export.reportTitle"] = "Medical Report",
+            ["export.generatedAt"] = "Generated on",
+            ["export.patientInfo"] = "Patient Information",
+            ["export.name"] = "Name",
+            ["export.age"] = "Age",
+            ["export.status"] = "Status",
+            ["export.location"] = "Location",
+            ["export.currentVitals"] = "Current Vital Signs",
+            ["export.aiAnalysis"] = "AI Analysis",
+            ["export.recentMeasurements"] = "Recent Measurements",
+            ["export.date"] = "Date",
+            ["export.activity"] = "Activity",
+            ["export.disclaimer"] = "This report is automatically generated and should not replace professional medical evaluation.",
             ["selected.years"] = "years",
             ["selected.noAgeGender"] = "No age/gender info",
             ["selected.lastUpdate"] = "Last Update:",
@@ -549,6 +562,19 @@ namespace LifeAlertPlus.Client.Services
             ["viewUser.monitoredPeople"] = "Monitored People",
             ["viewUser.noMonitored"] = "No monitored people.",
             ["viewUser.details"] = "Details",
+
+            // AI Prediction
+            ["selected.aiPrediction"] = "AI Health Analysis",
+            ["selected.aiAnalyzing"] = "Analyzing patient data...",
+            ["selected.aiRiskLevel"] = "Risk Level",
+            ["selected.aiConfidence"] = "Confidence",
+            ["selected.aiDetectedState"] = "Detected State",
+            ["selected.aiHealthScore"] = "Health Score",
+            ["selected.aiProbabilities"] = "State Probabilities",
+            ["selected.aiUnavailable"] = "AI analysis unavailable. Service may be offline.",
+            ["selected.aiCritical"] = "Critical",
+            ["selected.aiWarning"] = "Warning",
+            ["selected.aiOK"] = "Normal",
         };
 
         // ── Română ──
@@ -897,6 +923,19 @@ namespace LifeAlertPlus.Client.Services
             // Selected Monitored
             ["selected.goBack"] = "Înapoi la lista de monitorizați",
             ["selected.export"] = "Exportă",
+            ["export.reportTitle"] = "Raport Medical",
+            ["export.generatedAt"] = "Generat pe",
+            ["export.patientInfo"] = "Informații Pacient",
+            ["export.name"] = "Nume",
+            ["export.age"] = "Vârstă",
+            ["export.status"] = "Stare",
+            ["export.location"] = "Locație",
+            ["export.currentVitals"] = "Semne Vitale Curente",
+            ["export.aiAnalysis"] = "Analiză AI",
+            ["export.recentMeasurements"] = "Măsurători Recente",
+            ["export.date"] = "Data",
+            ["export.activity"] = "Activitate",
+            ["export.disclaimer"] = "Acest raport este generat automat și nu înlocuiește evaluarea medicală profesională.",
             ["selected.years"] = "ani",
             ["selected.noAgeGender"] = "Fără informații vârstă/gen",
             ["selected.lastUpdate"] = "Ultima actualizare:",
@@ -1070,6 +1109,19 @@ namespace LifeAlertPlus.Client.Services
             ["viewUser.monitoredPeople"] = "Persoane monitorizate",
             ["viewUser.noMonitored"] = "Nicio persoană monitorizată.",
             ["viewUser.details"] = "Detalii",
+
+            // AI Prediction
+            ["selected.aiPrediction"] = "Analiză AI a Sănătății",
+            ["selected.aiAnalyzing"] = "Se analizează datele pacientului...",
+            ["selected.aiRiskLevel"] = "Nivel de Risc",
+            ["selected.aiConfidence"] = "Încredere",
+            ["selected.aiDetectedState"] = "Stare Detectată",
+            ["selected.aiHealthScore"] = "Scor Sănătate",
+            ["selected.aiProbabilities"] = "Probabilități de Stare",
+            ["selected.aiUnavailable"] = "Analiza AI indisponibilă. Serviciul poate fi offline.",
+            ["selected.aiCritical"] = "Critic",
+            ["selected.aiWarning"] = "Avertizare",
+            ["selected.aiOK"] = "Normal",
         };
     }
 }
