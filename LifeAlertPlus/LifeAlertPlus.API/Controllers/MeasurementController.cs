@@ -10,10 +10,12 @@ namespace LifeAlertPlus.API.Controllers
     public class MeasurementController : ControllerBase
     {
         private readonly IMeasurementService _measurementService;
+        private readonly Services.AlertMonitorService _alertMonitor;
 
-        public MeasurementController(IMeasurementService measurementService)
+        public MeasurementController(IMeasurementService measurementService, Services.AlertMonitorService alertMonitor)
         {
             _measurementService = measurementService;
+            _alertMonitor = alertMonitor;
         }
 
         [HttpPost]
@@ -40,11 +42,21 @@ namespace LifeAlertPlus.API.Controllers
                 IdMonitored = measurementDto.IdMonitored,
                 Pulse = measurementDto.Pulse,
                 Temperature = measurementDto.Temperature,
+                SpO2 = measurementDto.SpO2,
                 Coordinates = measurementDto.Coordinates,
                 CreatedAt = DateTime.UtcNow
             };
 
             await _measurementService.AddMeasurementAsync(measurement);
+
+            // Feed the measurement to the alert monitor for sustained-alert detection
+            _ = _alertMonitor.ProcessMeasurementAsync(
+                measurementDto.IdMonitored,
+                measurementDto.Pulse,
+                measurementDto.Temperature,
+                measurementDto.SpO2,
+                measurementDto.IsFall);
+
             return Ok(new { Message = "Measurement added successfully." });
         }
 

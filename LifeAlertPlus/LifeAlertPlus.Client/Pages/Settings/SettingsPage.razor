@@ -90,6 +90,34 @@
 
         <div class="settings-section">
             <div class="section-header">
+                <h2>@T("settings.notifications")</h2>
+            </div>
+            <div class="section-content">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>@T("settings.notifyEmail")</h3>
+                        <p>@T("settings.notifyEmailDesc")</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="Settings.NotifyByEmail" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>@T("settings.notifyPush")</h3>
+                        <p>@T("settings.notifyPushDesc")</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="Settings.NotifyByPush" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="section-header">
                 <h2>@T("settings.dataManagement")</h2>
             </div>
             <div class="section-content">
@@ -117,7 +145,6 @@
                         <option value="90">@T("settings.90days")</option>
                         <option value="180">@T("settings.6months")</option>
                         <option value="365">@T("settings.1year")</option>
-                        <option value="0">@T("settings.unlimited")</option>
                     </select>
                 </div>
             </div>
@@ -146,7 +173,7 @@
                     </div>
                     <div class="info-row">
                         <span>@T("settings.lastUpdate")</span>
-                        <span class="info-value">24 November 2025</span>
+                        <span class="info-value">@LastUpdated</span>
                     </div>
                     <div class="info-row">
                         <span>@T("settings.usedSpace")</span>

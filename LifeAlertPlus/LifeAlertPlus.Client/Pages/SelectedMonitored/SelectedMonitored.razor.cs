@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Globalization;
+using System.Net.Http.Json;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
 using LifeAlertPlus.Shared.DTOs.Requests.AI;
@@ -37,6 +38,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         [Inject]
         private LanguageService Lang { get; set; } = default!;
+
+        [Inject]
+        private HttpClient HttpClient { get; set; } = default!;
 
         private string T(string key) => Lang.T(key);
 
@@ -97,6 +101,24 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private double? _editMinTemp;
         private double? _editMaxTemp;
         private int? _editUpdateFrequency;
+
+        // Export modal state
+        private bool _showExportModal;
+        private bool _isExporting;
+        private DateTime? _exportStartDate;
+        private DateTime? _exportEndDate;
+        private DateTime? _exportMinDate;
+        private DateTime? _exportMaxDate;
+        private int? _exportMeasurementCount;
+        private int _exportDistinctDays;
+
+        // Email modal state
+        private bool _showEmailModal;
+        private bool _isSendingEmail;
+        private string _doctorEmail = string.Empty;
+        private string? _emailStatusMessage;
+        private bool _emailSuccess;
+        private static SelectedMonitored? _instance;
 
         private enum ChartViewMode
         {
@@ -160,6 +182,26 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     status = "Offline";
                 }
 
+                // Save measurement so the server-side alert monitor can track sustained alerts
+                if (espData?.IsAvailable == true && (heartRate > 0 || temperature > 0))
+                {
+                    try
+                    {
+                        await MeasurementService.AddMeasurementAsync(new LifeAlertPlus.Shared.DTOs.Requests.Measurement.MeasurementRequestDTO
+                        {
+                            Name = "Auto",
+                            Activity = "Monitoring",
+                            IsFall = false,
+                            IdMonitored = monitored.Id,
+                            Pulse = heartRate,
+                            Temperature = temperature,
+                            SpO2 = spO2,
+                            Coordinates = gps
+                        });
+                    }
+                    catch { /* Don't block UI if save fails */ }
+                }
+
                 // Get last measurement time
                 var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(monitored.Id, 1, 1);
                 var lastMeasurement = measurements?.FirstOrDefault();
@@ -171,6 +213,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 {
                     Id = monitored.Id,
                     Name = $"{monitored.FirstName} {monitored.LastName}".Trim(),
+                    FirstName = monitored.FirstName ?? "",
+                    LastName = monitored.LastName ?? "",
                     Age = GetAge(monitored.Birthdate),
                     Relationship = monitored.Gender ?? "N/A",
                     HeartRate = heartRate,
@@ -850,6 +894,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
         protected override async Task OnInitializedAsync()
         {
+            _instance = this;
             // Read query parameter to decide whether the Edit button should be displayed
             try
             {
@@ -1214,114 +1259,634 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
             try
             {
-                // Fetch last 20 measurements for the report table
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 20);
-                var measurementRows = (measurements ?? Enumerable.Empty<MeasurementResponseDTO>())
-                    .OrderByDescending(m => m.CreatedAt)
+                // Fetch all measurements to determine date range
+                var allMeasurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 10000);
+                var list = (allMeasurements ?? Enumerable.Empty<MeasurementResponseDTO>()).ToList();
+
+                if (list.Count == 0)
+                {
+                    _exportMinDate = DateTime.Today;
+                    _exportMaxDate = DateTime.Today;
+                }
+                else
+                {
+                    _exportMinDate = list.Min(m => m.CreatedAt).ToLocalTime().Date;
+                    _exportMaxDate = list.Max(m => m.CreatedAt).ToLocalTime().Date;
+                }
+
+                _exportStartDate = _exportMinDate;
+                _exportEndDate = _exportMaxDate;
+                _exportMeasurementCount = list.Count;
+                _exportDistinctDays = list.Select(m => m.CreatedAt.ToLocalTime().Date).Distinct().Count();
+                _showExportModal = true;
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Export modal error: {ex.Message}");
+            }
+        }
+
+        private void CloseExportModal()
+        {
+            _showExportModal = false;
+        }
+
+        [JSInvokable]
+        public static Task OpenEmailModal()
+        {
+            if (_instance != null)
+            {
+                _instance._doctorEmail = string.Empty;
+                _instance._emailStatusMessage = null;
+                _instance._showEmailModal = true;
+                _instance.StateHasChanged();
+            }
+            return Task.CompletedTask;
+        }
+
+        private void CloseEmailModal()
+        {
+            _showEmailModal = false;
+            _emailStatusMessage = null;
+        }
+
+        private async Task SendEmailToDoctorAsync()
+        {
+            if (string.IsNullOrWhiteSpace(_doctorEmail) || Person == null) return;
+            _isSendingEmail = true;
+            _emailStatusMessage = null;
+            StateHasChanged();
+
+            try
+            {
+                var base64 = await JSRuntime.InvokeAsync<string>("pdfExport.getPdfBase64");
+                if (string.IsNullOrEmpty(base64))
+                {
+                    _emailStatusMessage = T("email.sendError");
+                    _emailSuccess = false;
+                    return;
+                }
+
+                var payload = new
+                {
+                    doctorEmail = _doctorEmail,
+                    patientName = $"{Person.FirstName} {Person.LastName}",
+                    pdfBase64 = base64
+                };
+
+                var response = await HttpClient.PostAsJsonAsync("api/email/send-report", payload);
+                if (response.IsSuccessStatusCode)
+                {
+                    _emailStatusMessage = T("email.sent");
+                    _emailSuccess = true;
+                }
+                else
+                {
+                    _emailStatusMessage = T("email.sendError");
+                    _emailSuccess = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Email send error: {ex.Message}");
+                _emailStatusMessage = T("email.sendError");
+                _emailSuccess = false;
+            }
+            finally
+            {
+                _isSendingEmail = false;
+                StateHasChanged();
+            }
+        }
+
+        private async Task GenerateExportPdfAsync()
+        {
+            if (Person == null) return;
+            _isExporting = true;
+            StateHasChanged();
+
+            try
+            {
+                var allMeasurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 10000);
+                var filtered = (allMeasurements ?? Enumerable.Empty<MeasurementResponseDTO>())
+                    .Where(m =>
+                    {
+                        var local = m.CreatedAt.ToLocalTime().Date;
+                        return (!_exportStartDate.HasValue || local >= _exportStartDate.Value.Date)
+                            && (!_exportEndDate.HasValue || local <= _exportEndDate.Value.Date);
+                    })
+                    .OrderBy(m => m.CreatedAt)
+                    .ToList();
+
+                var periodLabel = "";
+                if (_exportStartDate.HasValue && _exportEndDate.HasValue)
+                {
+                    periodLabel = _exportStartDate.Value.Date == _exportEndDate.Value.Date
+                        ? $"{_exportStartDate.Value:dd MMM yyyy}"
+                        : $"{_exportStartDate.Value:dd MMM yyyy} - {_exportEndDate.Value:dd MMM yyyy}";
+                }
+
+                // --- Summary stats over entire period ---
+                object? summary = null;
+                if (filtered.Count > 0)
+                {
+                    var pulses = filtered.Select(m => m.Pulse).ToList();
+                    var temps = filtered.Select(m => m.Temperature).ToList();
+                    var spo2s = filtered.Select(m => m.SpO2).ToList();
+                    summary = new
+                    {
+                        totalMeasurements = filtered.Count,
+                        pulseAvg = $"{pulses.Average():F1} bpm",
+                        pulseMin = $"{pulses.Min():F0} bpm",
+                        pulseMax = $"{pulses.Max():F0} bpm",
+                        pulseStdDev = $"{StdDev(pulses):F2}",
+                        tempAvg = $"{temps.Average():F2} C",
+                        tempMin = $"{temps.Min():F1} C",
+                        tempMax = $"{temps.Max():F1} C",
+                        tempStdDev = $"{StdDev(temps):F2}",
+                        spo2Avg = $"{spo2s.Average():F1}",
+                        spo2Min = $"{spo2s.Min():F1}",
+                        spo2Max = $"{spo2s.Max():F1}",
+                        spo2StdDev = $"{StdDev(spo2s):F2}"
+                    };
+                }
+
+                // --- Weekly breakdown ---
+                var weeklyBreakdown = filtered
+                    .GroupBy(m =>
+                    {
+                        var local = m.CreatedAt.ToLocalTime();
+                        var cal = System.Globalization.CultureInfo.CurrentCulture.Calendar;
+                        var weekOfYear = cal.GetWeekOfYear(local, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+                        return new { local.Year, Week = weekOfYear };
+                    })
+                    .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Week)
+                    .Select(g =>
+                    {
+                        var items = g.ToList();
+                        var pulses = items.Select(m => m.Pulse).ToList();
+                        var temps = items.Select(m => m.Temperature).ToList();
+                        var spo2s = items.Select(m => m.SpO2).ToList();
+                        var first = items.Min(m => m.CreatedAt).ToLocalTime();
+                        var last = items.Max(m => m.CreatedAt).ToLocalTime();
+                        return new
+                        {
+                            weekLabel = $"{first:dd MMM} – {last:dd MMM yyyy}",
+                            count = items.Count,
+                            pulseAvg = $"{pulses.Average():F1}",
+                            pulseMin = $"{pulses.Min():F0}",
+                            pulseMax = $"{pulses.Max():F0}",
+                            pulseStdDev = $"{StdDev(pulses):F2}",
+                            tempAvg = $"{temps.Average():F2}",
+                            tempMin = $"{temps.Min():F1}",
+                            tempMax = $"{temps.Max():F1}",
+                            tempStdDev = $"{StdDev(temps):F2}",
+                            spo2Avg = $"{spo2s.Average():F1}",
+                            spo2Min = $"{spo2s.Min():F1}",
+                            spo2Max = $"{spo2s.Max():F1}",
+                            spo2StdDev = $"{StdDev(spo2s):F2}"
+                        };
+                    })
+                    .ToArray();
+
+                // --- Daily breakdown ---
+                var dailyBreakdown = filtered
+                    .GroupBy(m => m.CreatedAt.ToLocalTime().Date)
+                    .OrderBy(g => g.Key)
+                    .Select(g =>
+                    {
+                        var items = g.ToList();
+                        var pulses = items.Select(m => m.Pulse).ToList();
+                        var temps = items.Select(m => m.Temperature).ToList();
+                        var spo2s = items.Select(m => m.SpO2).ToList();
+                        return new
+                        {
+                            date = g.Key.ToString("dd MMM yyyy"),
+                            count = items.Count,
+                            pulseAvg = $"{pulses.Average():F1}",
+                            pulseMin = $"{pulses.Min():F0}",
+                            pulseMax = $"{pulses.Max():F0}",
+                            tempAvg = $"{temps.Average():F2}",
+                            tempMin = $"{temps.Min():F1}",
+                            tempMax = $"{temps.Max():F1}",
+                            spo2Avg = $"{spo2s.Average():F1}",
+                            spo2Min = $"{spo2s.Min():F1}",
+                            spo2Max = $"{spo2s.Max():F1}"
+                        };
+                    })
+                    .ToArray();
+
+                // --- Alerts (measurements outside normal thresholds) ---
+                var alerts = filtered
+                    .Where(m =>
+                        (m.Pulse < Person.MinHeartRate || m.Pulse > Person.MaxHeartRate) ||
+                        (m.Temperature < Person.MinTemperature || m.Temperature > Person.MaxTemperature) ||
+                        (m.SpO2 > 0 && m.SpO2 < 95))
+                    .Select(m =>
+                    {
+                        var reasons = new List<string>();
+                        if (m.Pulse < Person.MinHeartRate) reasons.Add($"HR low ({m.Pulse:F0} bpm)");
+                        else if (m.Pulse > Person.MaxHeartRate) reasons.Add($"HR high ({m.Pulse:F0} bpm)");
+                        if (m.Temperature < Person.MinTemperature) reasons.Add($"Temp low ({m.Temperature:F1} C)");
+                        else if (m.Temperature > Person.MaxTemperature) reasons.Add($"Temp high ({m.Temperature:F1} C)");
+                        if (m.SpO2 > 0 && m.SpO2 < 95) reasons.Add($"SpO2 low ({m.SpO2:F1})");
+                        return new
+                        {
+                            date = m.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm"),
+                            reason = string.Join(", ", reasons),
+                            pulse = $"{m.Pulse:F0} bpm",
+                            temperature = $"{m.Temperature:F1} C",
+                            spo2 = m.SpO2 > 0 ? $"{m.SpO2:F1}" : "-"
+                        };
+                    })
+                    .ToArray();
+
+                // --- Critical events (falls + extreme values) ---
+                var criticals = filtered
+                    .Where(m =>
+                        m.IsFall ||
+                        m.Pulse < Person.MinHeartRate - 20 || m.Pulse > Person.MaxHeartRate + 30 ||
+                        m.Temperature < Person.MinTemperature - 1 || m.Temperature > Person.MaxTemperature + 1.5 ||
+                        (m.SpO2 > 0 && m.SpO2 < 90))
+                    .Select(m =>
+                    {
+                        var reasons = new List<string>();
+                        if (m.IsFall) reasons.Add("Fall detected");
+                        if (m.Pulse < Person.MinHeartRate - 20) reasons.Add($"HR critically low ({m.Pulse:F0} bpm)");
+                        if (m.Pulse > Person.MaxHeartRate + 30) reasons.Add($"HR critically high ({m.Pulse:F0} bpm)");
+                        if (m.Temperature < Person.MinTemperature - 1) reasons.Add($"Hypothermia ({m.Temperature:F1} C)");
+                        if (m.Temperature > Person.MaxTemperature + 1.5) reasons.Add($"Hyperthermia ({m.Temperature:F1} C)");
+                        if (m.SpO2 > 0 && m.SpO2 < 90) reasons.Add($"SpO2 critical ({m.SpO2:F1})");
+                        return new
+                        {
+                            date = m.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm"),
+                            reason = string.Join(", ", reasons),
+                            pulse = $"{m.Pulse:F0} bpm",
+                            temperature = $"{m.Temperature:F1} C",
+                            spo2 = m.SpO2 > 0 ? $"{m.SpO2:F1}" : "-"
+                        };
+                    })
+                    .ToArray();
+
+                // --- Raw data rows ---
+                var rawData = filtered
                     .Select(m => new
                     {
                         date = m.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm"),
                         pulse = $"{m.Pulse:F0} bpm",
-                        temperature = $"{m.Temperature:F1} °C",
-                        activity = m.Activity ?? "-"
+                        temperature = $"{m.Temperature:F1} C",
+                        spo2 = m.SpO2 > 0 ? $"{m.SpO2:F1}" : "-",
+                        activity = m.Activity ?? "-",
+                        fall = m.IsFall ? "Yes" : "-"
                     })
                     .ToArray();
 
-                // Map status strings to color keys for the PDF
-                string MapStatusColor(string cssClass) => cssClass switch
+                // --- Automatic Interpretation (severity-aware) ---
+                // Each item: { text, plain, severity } where severity = "low" | "medium" | "high"
+                var interpretationItems = new List<object>();
+                int riskScore = 0;
+                string riskLevel = "LOW";
+                var riskBreakdown = new List<object>(); // { factor, points }
+                var topConcerns = new List<object>();    // { rank, text, severity }
+                string dataConfidence = "LOW";
+                string dataConfidenceNote = "";
+                if (filtered.Count > 0)
                 {
-                    "normal" => "good",
-                    "warning" => "warning",
-                    "critical" => "danger",
-                    _ => "neutral"
-                };
+                    var avgPulse = filtered.Average(m => m.Pulse);
+                    var avgTemp = filtered.Average(m => m.Temperature);
+                    var avgSpo2 = filtered.Average(m => m.SpO2);
+                    var minPulse = filtered.Min(m => m.Pulse);
+                    var maxPulse = filtered.Max(m => m.Pulse);
+                    var minTemp = filtered.Min(m => m.Temperature);
+                    var maxTemp = filtered.Max(m => m.Temperature);
+                    var minSpo2 = filtered.Min(m => m.SpO2);
+                    var fallCount = filtered.Count(m => m.IsFall);
+                    var totalDays = filtered.Select(m => m.CreatedAt.ToLocalTime().Date).Distinct().Count();
 
-                var vitals = new object[]
-                {
-                    new {
-                        type = "heart",
-                        label = T("selected.heartRate"),
-                        value = Person.HeartRate > 0 ? $"{Person.HeartRate} bpm" : "-",
-                        statusText = Person.HeartRate > 0 ? GetVitalStatusText(Person.HeartRate, Person.MinHeartRate, Person.MaxHeartRate) : T("selected.noData"),
-                        statusColor = Person.HeartRate > 0 ? MapStatusColor(GetVitalStatus(Person.HeartRate, Person.MinHeartRate, Person.MaxHeartRate)) : "neutral"
-                    },
-                    new {
-                        type = "spo2",
-                        label = T("selected.bloodOxygen"),
-                        value = Person.SpO2 > 0 ? $"{Person.SpO2}%" : "-",
-                        statusText = Person.SpO2 > 0 ? GetSpO2StatusText(Person.SpO2) : T("selected.noData"),
-                        statusColor = Person.SpO2 > 0 ? MapStatusColor(GetSpO2Status(Person.SpO2)) : "neutral"
-                    },
-                    new {
-                        type = "temp",
-                        label = T("selected.temperature"),
-                        value = Person.Temperature > 0 ? $"{Person.Temperature:F1} °C" : "-",
-                        statusText = Person.Temperature > 0 ? GetTempStatusText(Person.Temperature, Person.MinTemperature, Person.MaxTemperature) : T("selected.noData"),
-                        statusColor = Person.Temperature > 0 ? MapStatusColor(GetTempStatus(Person.Temperature, Person.MinTemperature, Person.MaxTemperature)) : "neutral"
-                    },
-                    new {
-                        type = "gps",
-                        label = T("selected.gpsLocation"),
-                        value = Person.GPS ?? "-",
-                        statusText = GetGPSStatusText(Person.GPS ?? ""),
-                        statusColor = GetGPSStatus(Person.GPS ?? "") == "normal" ? "good" : "neutral"
-                    }
-                };
+                    // ── Data Confidence ──
+                    if (filtered.Count >= 30 && totalDays >= 7)
+                    { dataConfidence = "HIGH"; dataConfidenceNote = T("export.confidence.high").Replace("{0}", $"{filtered.Count}").Replace("{1}", $"{totalDays}"); }
+                    else if (filtered.Count >= 14 && totalDays >= 3)
+                    { dataConfidence = "MEDIUM"; dataConfidenceNote = T("export.confidence.medium").Replace("{0}", $"{filtered.Count}").Replace("{1}", $"{totalDays}"); }
+                    else
+                    { dataConfidence = "LOW"; dataConfidenceNote = T("export.confidence.low").Replace("{0}", $"{filtered.Count}").Replace("{1}", $"{totalDays}"); }
 
-                object? aiSection = null;
-                if (AIPrediction != null)
-                {
-                    aiSection = new
+                    // ── Heart Rate ──
+                    bool hrAvgOk = avgPulse >= Person.MinHeartRate && avgPulse <= Person.MaxHeartRate;
+                    bool hrHasSpike = maxPulse > Person.MaxHeartRate;
+                    bool hrHasDip = minPulse < Person.MinHeartRate;
+
+                    if (hrAvgOk && !hrHasSpike && !hrHasDip)
                     {
-                        prediction = AIPrediction.Prediction,
-                        riskLevel = AIPrediction.RiskLevel,
-                        confidence = $"{(AIPrediction.Confidence * 100):F1}%",
-                        healthScore = $"{AIPrediction.HealthScore} / 100",
-                        details = AIPrediction.Details
-                    };
+                        interpretationItems.Add(new { text = T("export.interp.hrNormal").Replace("{0}", $"{avgPulse:F0}"), plain = T("export.plain.hrNormal"), severity = "low" });
+                    }
+                    else if (hrAvgOk && (hrHasSpike || hrHasDip))
+                    {
+                        var spikeTxt = hrHasSpike
+                            ? T("export.interp.hrNormalWithSpikes").Replace("{0}", $"{avgPulse:F0}").Replace("{1}", $"{maxPulse:F0}")
+                            : T("export.interp.hrNormalWithDips").Replace("{0}", $"{avgPulse:F0}").Replace("{1}", $"{minPulse:F0}");
+                        var plainTxt = hrHasSpike
+                            ? T("export.plain.hrSpike").Replace("{0}", $"{maxPulse:F0}")
+                            : T("export.plain.hrDip").Replace("{0}", $"{minPulse:F0}");
+                        var sev = maxPulse > Person.MaxHeartRate + 30 || minPulse < Person.MinHeartRate - 20 ? "high" : "medium";
+                        interpretationItems.Add(new { text = spikeTxt, plain = plainTxt, severity = sev });
+                        var pts = sev == "high" ? 15 : 8;
+                        riskScore += pts;
+                        riskBreakdown.Add(new { factor = T("export.risk.hrSpikes"), points = pts });
+                    }
+                    else if (avgPulse < Person.MinHeartRate)
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.hrLow").Replace("{0}", $"{avgPulse:F0}"), plain = T("export.plain.hrLowSimple"), severity = "medium" });
+                        riskScore += 10;
+                        riskBreakdown.Add(new { factor = T("export.risk.hrLow"), points = 10 });
+                    }
+                    else
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.hrHigh").Replace("{0}", $"{avgPulse:F0}"), plain = T("export.plain.hrHighSimple"), severity = "medium" });
+                        riskScore += 10;
+                        riskBreakdown.Add(new { factor = T("export.risk.hrHigh"), points = 10 });
+                    }
+
+                    if (maxPulse - minPulse > 50)
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.hrVariability").Replace("{0}", $"{minPulse:F0}").Replace("{1}", $"{maxPulse:F0}"), plain = T("export.plain.hrVariability"), severity = "medium" });
+                        riskScore += 5;
+                        riskBreakdown.Add(new { factor = T("export.risk.hrVariability"), points = 5 });
+                    }
+
+                    // ── Temperature ──
+                    bool tempAvgOk = avgTemp >= Person.MinTemperature && avgTemp <= Person.MaxTemperature;
+                    bool tempHasSpike = maxTemp > Person.MaxTemperature;
+
+                    if (tempAvgOk && !tempHasSpike)
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.tempNormal").Replace("{0}", $"{avgTemp:F1}"), plain = T("export.plain.tempNormal"), severity = "low" });
+                    }
+                    else if (tempAvgOk && tempHasSpike)
+                    {
+                        var sev = maxTemp > Person.MaxTemperature + 1.0 ? "high" : "medium";
+                        interpretationItems.Add(new { text = T("export.interp.tempNormalWithSpikes").Replace("{0}", $"{avgTemp:F1}").Replace("{1}", $"{maxTemp:F1}"), plain = T("export.plain.tempSpike").Replace("{0}", $"{maxTemp:F1}"), severity = sev });
+                        var pts = sev == "high" ? 12 : 6;
+                        riskScore += pts;
+                        riskBreakdown.Add(new { factor = T("export.risk.fever"), points = pts });
+                    }
+                    else if (avgTemp > Person.MaxTemperature)
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.tempHigh").Replace("{0}", $"{avgTemp:F1}"), plain = T("export.plain.tempHighSimple"), severity = "high" });
+                        riskScore += 12;
+                        riskBreakdown.Add(new { factor = T("export.risk.tempHigh"), points = 12 });
+                    }
+                    else
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.tempLow").Replace("{0}", $"{avgTemp:F1}"), plain = T("export.plain.tempLowSimple"), severity = "medium" });
+                        riskScore += 8;
+                        riskBreakdown.Add(new { factor = T("export.risk.tempLow"), points = 8 });
+                    }
+
+                    // ── SpO2 ──
+                    bool spo2AvgOk = avgSpo2 >= 95;
+                    bool spo2HasDip = minSpo2 < 95;
+
+                    if (spo2AvgOk && !spo2HasDip)
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.spo2Normal").Replace("{0}", $"{avgSpo2:F1}"), plain = T("export.plain.spo2Normal"), severity = "low" });
+                    }
+                    else if (spo2AvgOk && spo2HasDip)
+                    {
+                        var sev = minSpo2 < 90 ? "high" : "medium";
+                        interpretationItems.Add(new { text = T("export.interp.spo2NormalWithDips").Replace("{0}", $"{avgSpo2:F1}").Replace("{1}", $"{minSpo2:F1}"), plain = T("export.plain.spo2Dip").Replace("{0}", $"{minSpo2:F1}"), severity = sev });
+                        var pts = sev == "high" ? 15 : 6;
+                        riskScore += pts;
+                        riskBreakdown.Add(new { factor = T("export.risk.spo2Dips"), points = pts });
+                    }
+                    else if (avgSpo2 >= 90)
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.spo2Low").Replace("{0}", $"{avgSpo2:F1}"), plain = T("export.plain.spo2LowSimple"), severity = "medium" });
+                        riskScore += 10;
+                        riskBreakdown.Add(new { factor = T("export.risk.spo2Low"), points = 10 });
+                    }
+                    else if (avgSpo2 > 0)
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.spo2Critical").Replace("{0}", $"{avgSpo2:F1}"), plain = T("export.plain.spo2CriticalSimple"), severity = "high" });
+                        riskScore += 20;
+                        riskBreakdown.Add(new { factor = T("export.risk.spo2Critical"), points = 20 });
+                    }
+
+                    // ── Events ──
+                    if (alerts.Length > 0)
+                    {
+                        var sev = alerts.Length > 10 ? "medium" : "low";
+                        interpretationItems.Add(new { text = T("export.interp.alertsFound").Replace("{0}", $"{alerts.Length}").Replace("{1}", $"{totalDays}"), plain = T("export.plain.alerts").Replace("{0}", $"{alerts.Length}"), severity = sev });
+                        var pts = Math.Min(alerts.Length * 2, 15);
+                        riskScore += pts;
+                        riskBreakdown.Add(new { factor = $"{alerts.Length} {T("export.risk.alerts")}", points = pts });
+                    }
+                    if (criticals.Length > 0)
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.criticalsFound").Replace("{0}", $"{criticals.Length}"), plain = T("export.plain.criticals").Replace("{0}", $"{criticals.Length}"), severity = "high" });
+                        var pts = criticals.Length * 8;
+                        riskScore += pts;
+                        riskBreakdown.Add(new { factor = $"{criticals.Length} {T("export.risk.criticals")}", points = pts });
+                    }
+                    if (fallCount > 0)
+                    {
+                        interpretationItems.Add(new { text = T("export.interp.fallsDetected").Replace("{0}", $"{fallCount}"), plain = T("export.plain.falls").Replace("{0}", $"{fallCount}"), severity = "high" });
+                        var pts = fallCount * 10;
+                        riskScore += pts;
+                        riskBreakdown.Add(new { factor = $"{fallCount} {T("export.risk.falls")}", points = pts });
+                    }
+
+                    if (alerts.Length == 0 && criticals.Length == 0 && fallCount == 0)
+                        interpretationItems.Add(new { text = T("export.interp.noIncidents"), plain = T("export.plain.noIncidents"), severity = "low" });
+
+                    // ── Risk Score (cap at 100) ──
+                    riskScore = Math.Min(riskScore, 100);
+                    riskLevel = riskScore >= 60 ? "HIGH" : riskScore >= 30 ? "MEDIUM" : "LOW";
+
+                    // ── Top Concerns (ranked by severity, max 3) ──
+                    int rank = 0;
+                    if (fallCount > 0 && (hrHasSpike || tempHasSpike))
+                    {
+                        topConcerns.Add(new { rank = ++rank, text = T("export.concern.fallWithSpike").Replace("{0}", $"{maxPulse:F0}").Replace("{1}", $"{maxTemp:F1}"), severity = "high" });
+                    }
+                    else if (fallCount > 0)
+                    {
+                        topConcerns.Add(new { rank = ++rank, text = T("export.concern.fall").Replace("{0}", $"{fallCount}"), severity = "high" });
+                    }
+                    if (criticals.Length > 0 && rank == 0)
+                    {
+                        topConcerns.Add(new { rank = ++rank, text = T("export.concern.criticals").Replace("{0}", $"{criticals.Length}"), severity = "high" });
+                    }
+                    if (tempHasSpike && maxTemp > Person.MaxTemperature + 0.5)
+                    {
+                        topConcerns.Add(new { rank = ++rank, text = T("export.concern.fever").Replace("{0}", $"{maxTemp:F1}"), severity = maxTemp > Person.MaxTemperature + 1.0 ? "high" : "medium" });
+                    }
+                    if (hrHasSpike && maxPulse > Person.MaxHeartRate + 10)
+                    {
+                        topConcerns.Add(new { rank = ++rank, text = T("export.concern.hrSpike").Replace("{0}", $"{maxPulse:F0}"), severity = maxPulse > Person.MaxHeartRate + 30 ? "high" : "medium" });
+                    }
+                    if (spo2HasDip && minSpo2 < 93)
+                    {
+                        topConcerns.Add(new { rank = ++rank, text = T("export.concern.spo2").Replace("{0}", $"{minSpo2:F1}"), severity = minSpo2 < 90 ? "high" : "medium" });
+                    }
+                    // Limit to top 3
+                    if (topConcerns.Count > 3) topConcerns = topConcerns.Take(3).ToList();
+                }
+
+                // --- Conclusion (clinical synthesis) ---
+                var conclusionParts = new List<string>();
+                if (filtered.Count > 0)
+                {
+                    var avgPulse = filtered.Average(m => m.Pulse);
+                    var avgTemp = filtered.Average(m => m.Temperature);
+                    var avgSpo2 = filtered.Average(m => m.SpO2);
+                    var maxPulse = filtered.Max(m => m.Pulse);
+                    var maxTemp = filtered.Max(m => m.Temperature);
+                    var minSpo2 = filtered.Min(m => m.SpO2);
+                    var totalDays = filtered.Select(m => m.CreatedAt.ToLocalTime().Date).Distinct().Count();
+                    var fallCount = filtered.Count(m => m.IsFall);
+
+                    conclusionParts.Add(T("export.conclusion.overview")
+                        .Replace("{0}", $"{filtered.Count}")
+                        .Replace("{1}", $"{totalDays}"));
+
+                    // Detect acute episodes
+                    bool hasFalls = fallCount > 0;
+                    bool hasCriticalHR = maxPulse > Person.MaxHeartRate + 30;
+                    bool hasFever = maxTemp > Person.MaxTemperature + 0.5;
+                    bool hasCriticalSpo2 = minSpo2 < 90;
+
+                    if (hasFalls && (hasCriticalHR || hasFever))
+                    {
+                        conclusionParts.Add(T("export.conclusion.acuteEpisode")
+                            .Replace("{0}", $"{maxPulse:F0}")
+                            .Replace("{1}", $"{maxTemp:F1}"));
+                    }
+
+                    if (riskLevel == "LOW" && criticals.Length == 0 && fallCount == 0)
+                        conclusionParts.Add(T("export.conclusion.stable"));
+                    else if (riskLevel == "HIGH")
+                        conclusionParts.Add(T("export.conclusion.highRisk"));
+                    else
+                        conclusionParts.Add(T("export.conclusion.monitoring"));
+
+                    // Specific findings
+                    if (criticals.Length > 0)
+                        conclusionParts.Add(T("export.conclusion.criticalSummary").Replace("{0}", $"{criticals.Length}"));
+                    if (alerts.Length > 0)
+                        conclusionParts.Add(T("export.conclusion.alertSummary").Replace("{0}", $"{alerts.Length}"));
+                    if (fallCount > 0)
+                        conclusionParts.Add(T("export.conclusion.fallSummary").Replace("{0}", $"{fallCount}"));
+
+                    // Peak values summary
+                    if (maxPulse > Person.MaxHeartRate || maxTemp > Person.MaxTemperature || minSpo2 < 95)
+                    {
+                        conclusionParts.Add(T("export.conclusion.peakValues")
+                            .Replace("{0}", $"{maxPulse:F0}")
+                            .Replace("{1}", $"{maxTemp:F1}")
+                            .Replace("{2}", $"{minSpo2:F1}"));
+                    }
+
+                    conclusionParts.Add(T("export.conclusion.recommendation"));
                 }
 
                 var pdfData = new
                 {
+                    // Header
                     reportTitle = T("export.reportTitle"),
                     generatedAt = $"{T("export.generatedAt")} {DateTime.Now:dd MMM yyyy, HH:mm}",
+                    // 1. Patient info
                     patientSectionTitle = T("export.patientInfo"),
-                    nameLabel = T("export.name"),
-                    patientName = Person.Name,
+                    firstNameLabel = T("selected.firstName"),
+                    patientFirstName = Person.FirstName,
+                    lastNameLabel = T("selected.lastName"),
+                    patientLastName = Person.LastName,
                     ageLabel = T("export.age"),
                     patientAge = Person.Age > 0 ? $"{Person.Age} {T("selected.years")}" : "-",
-                    deviceLabel = T("selected.device"),
-                    deviceSerial = Person.DeviceSerial,
-                    statusLabel = T("export.status"),
-                    status = GetStatusText(Person.Status),
-                    locationLabel = T("export.location"),
-                    location = Person.Location,
-                    lastUpdateLabel = T("selected.lastUpdate"),
-                    lastUpdate = Person.LastUpdate,
-                    vitalsSectionTitle = T("export.currentVitals"),
-                    vitals,
-                    aiSectionTitle = T("export.aiAnalysis"),
-                    aiStateLabel = T("selected.aiDetectedState"),
-                    aiRiskLabel = T("selected.aiRiskLevel"),
-                    aiConfidenceLabel = T("selected.aiConfidence"),
-                    aiHealthScoreLabel = T("selected.aiHealthScore"),
-                    aiPrediction = aiSection,
-                    measurementsSectionTitle = T("export.recentMeasurements"),
-                    mDateHeader = T("export.date"),
-                    mPulseHeader = T("selected.heartRate"),
-                    mTempHeader = T("selected.temperature"),
-                    mActivityHeader = T("export.activity"),
-                    measurements = measurementRows,
+                    addressLabel = T("export.address"),
+                    address = Person.Location,
+                    // 2. Period
+                    periodSectionTitle = T("export.selectedPeriod"),
+                    period = periodLabel,
+                    // 3. Summary
+                    summarySectionTitle = T("export.summary"),
+                    summary,
+                    // Headers for summary table
+                    hMetric = T("export.metric"),
+                    hAvg = T("export.avg"),
+                    hMin = T("export.min"),
+                    hMax = T("export.max"),
+                    hStdDev = T("export.stdDev"),
+                    // 4. Weekly breakdown
+                    weeklySectionTitle = T("export.weeklyBreakdown"),
+                    weeklyBreakdown,
+                    // 5. Daily breakdown
+                    dailySectionTitle = T("export.dailyBreakdown"),
+                    dailyBreakdown,
+                    // 6. Alerts
+                    alertsSectionTitle = T("export.alerts"),
+                    alerts,
+                    // 7. Critical events
+                    criticalsSectionTitle = T("export.criticalEvents"),
+                    criticals,
+                    // 8. Raw data
+                    rawDataSectionTitle = T("export.rawData"),
+                    rawData,
+                    // 9. Interpretation (severity-aware)
+                    interpretationSectionTitle = T("export.interpretation"),
+                    interpretations = interpretationItems.ToArray(),
+                    // Risk score + breakdown
+                    riskScore,
+                    riskLevel,
+                    riskScoreLabel = T("export.riskScore"),
+                    riskBreakdown = riskBreakdown.ToArray(),
+                    riskBreakdownTitle = T("export.riskBreakdown"),
+                    // Data confidence
+                    dataConfidence,
+                    dataConfidenceNote,
+                    dataConfidenceLabel = T("export.dataConfidence"),
+                    // Top concerns
+                    topConcerns = topConcerns.ToArray(),
+                    topConcernsTitle = T("export.topConcerns"),
+                    // 10. Conclusion
+                    conclusionSectionTitle = T("export.conclusion"),
+                    conclusion = conclusionParts.ToArray(),
+                    hDate = T("export.date"),
+                    hPulse = T("selected.heartRate"),
+                    hTemp = T("selected.temperature"),
+                    hSpo2 = "SpO2",
+                    hActivity = T("export.activity"),
+                    hFall = T("export.fall"),
+                    hReason = T("export.reason"),
+                    hWeek = T("export.week"),
+                    hCount = T("export.count"),
+                    patientName = Person.Name,
+                    // Footer
                     footerDisclaimer = T("export.disclaimer")
                 };
 
                 await JSRuntime.InvokeVoidAsync("pdfExport.generateMedicalReport", pdfData);
+                _showExportModal = false;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"PDF export error: {ex.Message}");
                 await JSRuntime.InvokeVoidAsync("alert", $"Export failed: {ex.Message}");
             }
+            finally
+            {
+                _isExporting = false;
+                StateHasChanged();
+            }
+        }
+
+        private static double StdDev(List<double> values)
+        {
+            if (values.Count <= 1) return 0;
+            var avg = values.Average();
+            var sumSq = values.Sum(v => (v - avg) * (v - avg));
+            return Math.Sqrt(sumSq / (values.Count - 1));
         }
 
         private async void OpenEditModal()
@@ -1410,6 +1975,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         {
             public Guid Id { get; set; }
             public string Name { get; set; } = string.Empty;
+            public string FirstName { get; set; } = string.Empty;
+            public string LastName { get; set; } = string.Empty;
             public int Age { get; set; }
             public string Relationship { get; set; } = string.Empty;
             public int HeartRate { get; set; }

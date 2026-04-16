@@ -29,6 +29,9 @@
         public double? MinTemperature { get; set; }
         public double? MaxTemperature { get; set; }
         public int? UpdateFrequency { get; set; }
+        public int? DataRetentionDays { get; set; }
+        public bool NotifyByEmail { get; set; } = true;
+        public bool NotifyByPush { get; set; } = true;
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }

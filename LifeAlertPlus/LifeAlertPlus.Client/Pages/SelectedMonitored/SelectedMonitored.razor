@@ -365,6 +365,7 @@
                 <div class="section-card">
                     <div class="section-header">
                         <h2>🔔 @T("selected.recentAlerts")</h2>
+                        <a class="view-all-link" href="/monitored/@PersonId/measurements">→</a>
                     </div>
                     <div class="alerts-list">
                         @foreach (var alert in RecentAlerts)
@@ -384,6 +385,7 @@
                 <div class="section-card">
                     <div class="section-header">
                         <h2>📋 @T("selected.recentMeasurements")</h2>
+                        <a class="view-all-link" href="/monitored/@PersonId/measurements">→</a>
                     </div>
                     <div class="measurements-list">
                         @foreach (var measurement in RecentMeasurements)
@@ -502,6 +504,73 @@
                 <button class="btn-cancel" @onclick="CloseEditModal">@T("common.cancel")</button>
                 <button class="btn-save" @onclick="SaveEditAsync" disabled="@_isSaving">
                     @(_isSaving ? T("selected.saving") : "💾 " + T("common.save"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showExportModal)
+{
+    <div class="modal-overlay" @onclick="CloseExportModal">
+        <div class="modal-content export-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>📤 @T("export.selectPeriod")</h2>
+                <button class="modal-close" @onclick="CloseExportModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="export-date-range">
+                    <div class="form-group">
+                        <label>@T("export.startDate")</label>
+                        <input type="date" @bind="_exportStartDate" min="@_exportMinDate?.ToString("yyyy-MM-dd")" max="@_exportEndDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="form-group">
+                        <label>@T("export.endDate")</label>
+                        <input type="date" @bind="_exportEndDate" min="@_exportStartDate?.ToString("yyyy-MM-dd")" max="@_exportMaxDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                </div>
+                @if (_exportMeasurementCount.HasValue)
+                {
+                    <p class="export-info">@string.Format(T("export.measurementsInPeriod"), _exportMeasurementCount.Value)</p>
+                    <p class="export-info">@string.Format(T("export.daysWithData"), _exportDistinctDays)</p>
+                    @if (_exportDistinctDays < 7)
+                    {
+                        <p class="export-warning">@T("export.minDaysWarning")</p>
+                    }
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseExportModal">@T("common.cancel")</button>
+                <button class="btn-save" @onclick="GenerateExportPdfAsync" disabled="@(_isExporting || _exportDistinctDays < 7)">
+                    @(_isExporting ? T("export.generating") : "📄 " + T("export.generate"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showEmailModal)
+{
+    <div class="modal-overlay" @onclick="CloseEmailModal">
+        <div class="modal-content email-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>📧 @T("email.sendToDoctor")</h2>
+                <button class="modal-close" @onclick="CloseEmailModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>@T("email.doctorEmail")</label>
+                    <input type="email" @bind="_doctorEmail" placeholder="@T("email.placeholder")" />
+                </div>
+                @if (!string.IsNullOrEmpty(_emailStatusMessage))
+                {
+                    <p class="@(_emailSuccess ? "email-success" : "email-error")">@_emailStatusMessage</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseEmailModal">@T("common.cancel")</button>
+                <button class="btn-save" @onclick="SendEmailToDoctorAsync" disabled="@(_isSendingEmail || string.IsNullOrWhiteSpace(_doctorEmail))">
+                    @(_isSendingEmail ? T("email.sending") : "📧 " + T("email.send"))
                 </button>
             </div>
         </div>

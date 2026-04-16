@@ -39,6 +39,49 @@ namespace LifeAlertPlus.Shared.Helpers
     /// </summary>
     public static class ESPDataGenerator
     {
+        /// <summary>
+        /// Generates alert-level data: high pulse, low SpO2, elevated temperature.
+        /// </summary>
+        public static ESPDataResponseDTO GenerateAlertPayload(string serial)
+        {
+            var rnd = Random.Shared;
+
+            // Alert-level ranges
+            var pulse = rnd.Next(125, 145);          // >120 => Alert
+            var spo2 = rnd.Next(88, 94);             // <95 => Alert, <90 => Critical
+            var temp = 38.6 + (rnd.NextDouble() * 1.0); // >38.5 => Alert, >39.5 => Critical
+            var battery = SimulationConstants.BatteryMin + (rnd.NextDouble() * SimulationConstants.BatteryRange);
+
+            var baseLat = 44.4268;
+            var baseLon = 26.1025;
+            var lat = baseLat + (rnd.NextDouble() - 0.5) * 0.2;
+            var lon = baseLon + (rnd.NextDouble() - 0.5) * 0.2;
+
+            return new ESPDataResponseDTO
+            {
+                Serial = serial,
+                Date = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                IsAvailable = true,
+                Mpu6050 = new List<int>
+                {
+                    rnd.Next(SimulationConstants.AccelerometerMin, SimulationConstants.AccelerometerMax),
+                    rnd.Next(SimulationConstants.AccelerometerMin, SimulationConstants.AccelerometerMax),
+                    rnd.Next(SimulationConstants.AccelerometerMin, SimulationConstants.AccelerometerMax)
+                },
+                Gyro = new List<int>
+                {
+                    rnd.Next(SimulationConstants.GyroMin, SimulationConstants.GyroMax),
+                    rnd.Next(SimulationConstants.GyroMin, SimulationConstants.GyroMax),
+                    rnd.Next(SimulationConstants.GyroMin, SimulationConstants.GyroMax)
+                },
+                Max30100 = new List<int> { pulse, spo2 },
+                Neo6m = $"{lat.ToString(CultureInfo.InvariantCulture)},{lon.ToString(CultureInfo.InvariantCulture)}",
+                Temperature = Math.Round(temp, 1),
+                Battery = Math.Round(battery, 1),
+                ErrorMessage = null
+            };
+        }
+
         public static ESPDataResponseDTO GeneratePayload(string serial)
         {
             var rnd = Random.Shared;

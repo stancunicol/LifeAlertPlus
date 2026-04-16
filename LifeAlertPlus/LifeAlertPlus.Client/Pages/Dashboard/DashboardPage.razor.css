@@ -108,15 +108,37 @@
     }
 
 .view-all-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-family: "Jua", sans-serif;
-    font-size: 0.95rem;
-    color: #A5D6A7;
+    font-size: 0.85rem;
+    color: #81C784;
     text-decoration: none;
-    transition: opacity 0.3s ease;
+    padding: 6px 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f0faf0, #f8fdf8);
+    border: 1px solid rgba(165, 214, 167, 0.25);
+    transition: all 0.25s ease;
+    white-space: nowrap;
 }
 
+    .view-all-link::after {
+        content: '→';
+        font-size: 0.9rem;
+        transition: transform 0.2s ease;
+    }
+
     .view-all-link:hover {
-        opacity: 0.7;
+        color: #5a9e5e;
+        background: linear-gradient(135deg, #E8F5E9, #f0faf0);
+        border-color: rgba(165, 214, 167, 0.4);
+        box-shadow: 0 3px 10px rgba(165, 214, 167, 0.18);
+        transform: translateX(2px);
+    }
+
+    .view-all-link:hover::after {
+        transform: translateX(3px);
     }
 
 .monitored-grid {

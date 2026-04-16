@@ -34,6 +34,7 @@ namespace LifeAlertPlus.Application.Services
                 IdMonitored = m.IdMonitored,
                 Pulse = m.Pulse,
                 Temperature = m.Temperature,
+                SpO2 = m.SpO2,
                 Coordinates = m.Coordinates,
                 CreatedAt = m.CreatedAt
             });
@@ -53,6 +54,7 @@ namespace LifeAlertPlus.Application.Services
                 IdMonitored = measurement.IdMonitored,
                 Pulse = measurement.Pulse,
                 Temperature = measurement.Temperature,
+                SpO2 = measurement.SpO2,
                 Coordinates = measurement.Coordinates,
                 CreatedAt = measurement.CreatedAt
             };
@@ -61,6 +63,11 @@ namespace LifeAlertPlus.Application.Services
         public async Task<int> GetTodayMeasurementsCountAsync()
         {
             return await _measurementRepository.GetTodayMeasurementsCountAsync();
+        }
+
+        public async Task<int> DeleteMeasurementsOlderThanAsync(IEnumerable<Guid> monitoredIds, DateTime cutoffDate)
+        {
+            return await _measurementRepository.DeleteMeasurementsOlderThanAsync(monitoredIds, cutoffDate);
         }
     }
 }

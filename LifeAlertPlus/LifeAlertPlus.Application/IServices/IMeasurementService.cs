@@ -9,5 +9,6 @@ namespace LifeAlertPlus.Application.IServices
         Task<IEnumerable<MeasurementResponseDTO>?> GetMeasurementsByMonitoredIdAsync(Guid idMonitored, int pageNumber, int pageSize);
         Task<MeasurementResponseDTO?> GetMeasurementByIdAsync(Guid id);
         Task<int> GetTodayMeasurementsCountAsync();
+        Task<int> DeleteMeasurementsOlderThanAsync(IEnumerable<Guid> monitoredIds, DateTime cutoffDate);
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using System.Globalization;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Client.Services;
 using Microsoft.JSInterop;
@@ -47,6 +48,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
             NotificationVibration = true,
             DesktopNotifications = true,
             CheckInterval = "60",
+            NotifyByEmail = true,
+            NotifyByPush = true,
 
             AutoSave = true,
             AutoBackup = true,
@@ -62,6 +65,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
         private string Version = "";
+        private string LastUpdated = "";
+        private DateTime? _lastUpdatedDate;
         private Guid UserId;
 
         private string T(string key) => Lang.T(key);
@@ -72,6 +77,13 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Lang.SetLanguage(Settings.Language);
             await JSRuntime.InvokeVoidAsync("setLanguage", Settings.Language);
 
+            // Re-format last update date with the new language
+            if (_lastUpdatedDate.HasValue)
+            {
+                var culture = Settings.Language == "ro" ? new CultureInfo("ro-RO") : new CultureInfo("en-US");
+                LastUpdated = _lastUpdatedDate.Value.ToString("dd MMMM yyyy", culture);
+            }
+
             var settings = new UserUpdateRequestDTO
             {
                 FirstDayOfTheWeek = Settings.FirstDayOfWeek,
@@ -81,7 +93,10 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 MaxHeartRate = Settings.HeartRateMax,
                 MinTemperature = (float)Settings.TemperatureMin,
                 MaxTemperature = (float)Settings.TemperatureMax,
-                UpdateFrequency = Settings.UpdateFrequency
+                UpdateFrequency = Settings.UpdateFrequency,
+                DataRetentionDays = int.TryParse(Settings.HistoryRetention, out var ret) ? ret : 0,
+                NotifyByEmail = Settings.NotifyByEmail,
+                NotifyByPush = Settings.NotifyByPush
             };
 
             var request = await UserService.UpdateUserAsync(UserId, settings);
@@ -115,6 +130,21 @@ namespace LifeAlertPlus.Client.Pages.Settings
             catch
             {
                 Version = AppVersion.Version;
+            }
+
+            try
+            {
+                var luUrl = Navigation.BaseUri + "LAST_UPDATED";
+                var lu = await Http.GetStringAsync(luUrl);
+                var raw = (lu ?? string.Empty).Trim();
+                if (DateTime.TryParse(raw, out var dt))
+                    _lastUpdatedDate = dt;
+                else
+                    LastUpdated = raw;
+            }
+            catch
+            {
+                LastUpdated = "—";
             }
 
             var claims = await TokenParser.GetClaimsAsync();
@@ -155,6 +185,15 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Settings.TemperatureMax = userFromApi.MaxTemperature;
             if (userFromApi.UpdateFrequency > 0)
                 Settings.UpdateFrequency = userFromApi.UpdateFrequency;
+            Settings.HistoryRetention = userFromApi.DataRetentionDays > 0 ? userFromApi.DataRetentionDays.ToString() : "365";
+            Settings.NotifyByEmail = userFromApi.NotifyByEmail;
+            Settings.NotifyByPush = userFromApi.NotifyByPush;
+
+            if (_lastUpdatedDate.HasValue)
+            {
+                var culture = Settings.Language == "ro" ? new CultureInfo("ro-RO") : new CultureInfo("en-US");
+                LastUpdated = _lastUpdatedDate.Value.ToString("dd MMMM yyyy", culture);
+            }
 
             if (!string.IsNullOrEmpty(userFromApi.ProfilePictureUrl))
             {
@@ -204,6 +243,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 NotificationVibration = true,
                 DesktopNotifications = true,
                 CheckInterval = "60",
+                NotifyByEmail = true,
+                NotifyByPush = true,
                 AutoSave = true,
                 AutoBackup = true,
                 HistoryRetention = "365",
@@ -239,6 +280,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
             public bool NotificationVibration { get; set; }
             public bool DesktopNotifications { get; set; }
             public string CheckInterval { get; set; } = string.Empty;
+            public bool NotifyByEmail { get; set; } = true;
+            public bool NotifyByPush { get; set; } = true;
 
             // Data Management
             public bool AutoSave { get; set; }

@@ -14,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<LifeAlertPlus.API.Services.SimulationManager>();
+builder.Services.AddSingleton<LifeAlertPlus.API.Services.AlertMonitorService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

@@ -8,6 +8,7 @@ namespace LifeAlertPlus.Shared.DTOs.Requests.Measurement
         public Guid IdMonitored { get; set; }
         public double Pulse { get; set; }
         public double Temperature { get; set; }
+        public double SpO2 { get; set; }
         public string Coordinates { get; set; } = string.Empty;
     }
 }

@@ -1,0 +1,161 @@
+@page "/monitored/{PersonId:guid}/measurements"
+@using LifeAlertPlus.Client.Components.Header
+@layout MainLayout
+@using LifeAlertPlus.Domain.Entities
+
+<HeaderComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
+
+<div class="measurements-page">
+	<div class="measurements-container">
+		<div class="page-header">
+			<button class="btn-back" @onclick="GoBack">
+				<span class="back-icon">←</span> @T("meas.back")
+			</button>
+			<div class="header-title-section">
+				<h1>@T("meas.title")</h1>
+				<p class="page-subtitle">@PersonName</p>
+			</div>
+		</div>
+
+		@if (IsLoading)
+		{
+			<div class="loading-state">
+				<div class="spinner"></div>
+				<p>@T("meas.loading")</p>
+			</div>
+		}
+		else if (!string.IsNullOrEmpty(ErrorMessage))
+		{
+			<div class="message-card error">
+				<span>@ErrorMessage</span>
+				<button class="btn-retry" @onclick="LoadAllAsync">@T("meas.retry")</button>
+			</div>
+		}
+		else
+		{
+			<div class="stats-bar">
+				<div class="stat-chip normal">
+					<span class="stat-dot normal"></span>
+					@NormalCount @T("meas.normal")
+				</div>
+				<div class="stat-chip alert">
+					<span class="stat-dot alert"></span>
+					@AlertCount @T("meas.alert")
+				</div>
+				<div class="stat-chip critical">
+					<span class="stat-dot critical"></span>
+					@CriticalCount @T("meas.critical")
+				</div>
+				<div class="stat-chip total">
+					@TotalLoaded @T("meas.total")
+				</div>
+			</div>
+
+			<div class="filters-bar">
+				<div class="filter-group">
+					<span class="filter-label">@T("meas.status"):</span>
+					<button class="filter-btn @(StatusFilter == "all" ? "active" : "")" @onclick='() => SetStatusFilter("all")'>
+						@T("meas.all")
+					</button>
+					<button class="filter-btn normal @(StatusFilter == "normal" ? "active" : "")" @onclick='() => SetStatusFilter("normal")'>
+						@T("meas.normal")
+					</button>
+					<button class="filter-btn alert-f @(StatusFilter == "alert" ? "active" : "")" @onclick='() => SetStatusFilter("alert")'>
+						@T("meas.alert")
+					</button>
+					<button class="filter-btn critical-f @(StatusFilter == "critical" ? "active" : "")" @onclick='() => SetStatusFilter("critical")'>
+						@T("meas.critical")
+					</button>
+				</div>
+				<div class="filter-group">
+					<span class="filter-label">@T("meas.type"):</span>
+					<button class="filter-btn @(TypeFilter == "all" ? "active" : "")" @onclick='() => SetTypeFilter("all")'>
+						@T("meas.all")
+					</button>
+					<button class="filter-btn @(TypeFilter == "hr" ? "active" : "")" @onclick='() => SetTypeFilter("hr")'>
+						❤️ @T("meas.hr")
+					</button>
+					<button class="filter-btn @(TypeFilter == "spo2" ? "active" : "")" @onclick='() => SetTypeFilter("spo2")'>
+						🫁 SpO2
+					</button>
+					<button class="filter-btn @(TypeFilter == "temp" ? "active" : "")" @onclick='() => SetTypeFilter("temp")'>
+						🌡️ @T("meas.temp")
+					</button>
+					<button class="filter-btn @(TypeFilter == "fall" ? "active" : "")" @onclick='() => SetTypeFilter("fall")'>
+						⚠️ @T("meas.falls")
+					</button>
+				</div>
+			</div>
+
+			@if (!FilteredMeasurements.Any())
+			{
+				<div class="message-card">@T("meas.noMatch")</div>
+			}
+			else
+			{
+				<div class="meas-table-wrap">
+					<table class="meas-table">
+						<thead>
+							<tr>
+								<th>@T("meas.date")</th>
+								<th>❤️ @T("meas.hr")</th>
+								<th>🌡️ @T("meas.temp")</th>
+								<th>🫁 SpO2</th>
+								<th>@T("meas.activity")</th>
+								<th>@T("meas.fall")</th>
+								<th>@T("meas.statusCol")</th>
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (var m in FilteredMeasurements)
+							{
+								var status = GetStatus(m);
+								<tr class="@status">
+									<td class="cell-date">@m.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</td>
+									<td class="@GetCellClass(m, "hr")">@m.Pulse.ToString("F0")</td>
+									<td class="@GetCellClass(m, "temp")">@m.Temperature.ToString("F1")°</td>
+									<td class="@GetCellClass(m, "spo2")">@m.SpO2.ToString("F0")%</td>
+									<td>@(string.IsNullOrWhiteSpace(m.Activity) ? "-" : m.Activity)</td>
+									<td>
+										@if (m.IsFall)
+										{
+											<span class="fall-badge">⚠️ @T("meas.yes")</span>
+										}
+										else
+										{
+											<span class="no-fall">-</span>
+										}
+									</td>
+									<td>
+										<span class="status-badge @status">@GetStatusLabel(status)</span>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+
+				@if (TotalPages > 1)
+				{
+					<div class="pagination">
+						<button class="page-btn" @onclick="() => GoToPage(1)" disabled="@(!HasPrevious)">«</button>
+						<button class="page-btn" @onclick="() => GoToPage(CurrentPage - 1)" disabled="@(!HasPrevious)">‹</button>
+						@foreach (var p in GetPageNumbers())
+						{
+							@if (p == -1)
+							{
+								<span class="page-ellipsis">…</span>
+							}
+							else
+							{
+								<button class="page-btn @(p == CurrentPage ? "active" : "")" @onclick="() => GoToPage(p)">@p</button>
+							}
+						}
+						<button class="page-btn" @onclick="() => GoToPage(CurrentPage + 1)" disabled="@(!HasNext)">›</button>
+						<button class="page-btn" @onclick="() => GoToPage(TotalPages)" disabled="@(!HasNext)">»</button>
+					</div>
+				}
+			}
+		}
+	</div>
+</div>

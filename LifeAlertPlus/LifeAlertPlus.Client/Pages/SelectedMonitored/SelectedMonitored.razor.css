@@ -358,6 +358,26 @@
     color: #333;
 }
 
+.view-all-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #81C784;
+    text-decoration: none;
+    font-size: 1.2rem;
+    transition: all 0.25s ease;
+    background: transparent;
+}
+
+.view-all-link:hover {
+    color: #5a9e5e;
+    background: #f0faf0;
+    transform: translateX(2px);
+}
+
 /* ── Toggle buttons ─────────────────────────────────────── */
 .chart-view-toggle {
     display: flex;
@@ -1317,4 +1337,57 @@
     .ai-confidence {
         min-width: unset;
     }
+}
+
+/* Export modal */
+.export-modal {
+    width: 420px;
+}
+
+.email-modal {
+    width: 420px;
+}
+
+.email-success {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: #43a047;
+    text-align: center;
+    font-family: 'Jua', sans-serif;
+    font-weight: bold;
+}
+
+.email-error {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: #e53935;
+    text-align: center;
+    font-family: 'Jua', sans-serif;
+    font-weight: bold;
+}
+
+.export-date-range {
+    display: flex;
+    gap: 16px;
+}
+
+.export-date-range .form-group {
+    flex: 1;
+}
+
+.export-info {
+    margin: 0;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+    font-family: 'Jua', sans-serif;
+}
+
+.export-warning {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: #e53935;
+    text-align: center;
+    font-family: 'Jua', sans-serif;
+    font-weight: bold;
 }

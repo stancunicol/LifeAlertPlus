@@ -10,7 +10,7 @@ namespace LifeAlertPlus.API.Services
     public static class SimulationConfig
     {
         // Timing (server-side configuration)
-        public static readonly TimeSpan DefaultInterval = TimeSpan.FromMinutes(2);
+        public static readonly TimeSpan DefaultInterval = TimeSpan.FromSeconds(30);
         public static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(5);
 
         // Data generation constants moved to Shared project

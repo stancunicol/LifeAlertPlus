@@ -44,5 +44,16 @@ namespace LifeAlertPlus.Infrastructure.Repositories
                 .Where(m => m.CreatedAt >= today && m.CreatedAt < tomorrow)
                 .CountAsync();
         }
+
+        public async Task<int> DeleteMeasurementsOlderThanAsync(IEnumerable<Guid> monitoredIds, DateTime cutoffDate)
+        {
+            var ids = monitoredIds.ToList();
+            var old = await _dbContext.Measurements
+                .Where(m => ids.Contains(m.IdMonitored) && m.CreatedAt < cutoffDate)
+                .ToListAsync();
+            if (old.Count == 0) return 0;
+            _dbContext.Measurements.RemoveRange(old);
+            return await _dbContext.SaveChangesAsync();
+        }
     }
 }

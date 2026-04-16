@@ -10,13 +10,22 @@ namespace LifeAlertPlus.API.Services
     {
         private readonly ConcurrentDictionary<Guid, (CancellationTokenSource Cts, Task RunningTask)> _runs = new();
         private readonly ConcurrentDictionary<string, ESPDataResponseDTO> _simulatedData = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<Guid, DateTime> _simulationStartTimes = new();
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<SimulationManager> _logger;
+        private readonly AlertMonitorService _alertMonitor;
 
-        public SimulationManager(IServiceScopeFactory scopeFactory, ILogger<SimulationManager> logger)
+        /// <summary>
+        /// Duration from simulation start during which alert-level data is generated.
+        /// Set to TimeSpan.Zero to disable alert simulation.
+        /// </summary>
+        public static TimeSpan AlertPhaseDuration { get; set; } = TimeSpan.FromMinutes(3);
+
+        public SimulationManager(IServiceScopeFactory scopeFactory, ILogger<SimulationManager> logger, AlertMonitorService alertMonitor)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _alertMonitor = alertMonitor;
         }
 
         public ESPDataResponseDTO? GetData(string serial)
@@ -79,6 +88,7 @@ namespace LifeAlertPlus.API.Services
             var delay = interval ?? SimulationConfig.DefaultInterval;
             var serial = monitored.DeviceSerialNumber.Trim();
             var cts = new CancellationTokenSource();
+            _simulationStartTimes[personId] = DateTime.UtcNow;
 
             _logger.LogInformation("Starting simulation for person {PersonId} with serial {Serial}, interval {Interval}", 
                 personId, serial, delay);
@@ -89,11 +99,22 @@ namespace LifeAlertPlus.API.Services
                 {
                     try
                     {
-                        var payload = ESPDataGenerator.GeneratePayload(serial);
+                        // Determine if we're in the alert phase
+                        var inAlertPhase = AlertPhaseDuration > TimeSpan.Zero
+                            && _simulationStartTimes.TryGetValue(personId, out var started)
+                            && (DateTime.UtcNow - started) < AlertPhaseDuration;
+
+                        var payload = inAlertPhase
+                            ? ESPDataGenerator.GenerateAlertPayload(serial)
+                            : ESPDataGenerator.GeneratePayload(serial);
                         _simulatedData[serial] = payload;
+
+                        var pulse = payload.Max30100?[0] ?? 0;
+                        var spo2 = payload.Max30100?[1] ?? 0;
+                        var temp = payload.Temperature ?? 0;
                         
-                        _logger.LogDebug("Generated simulation data for {Serial}: Pulse={Pulse}, Temp={Temp}, SpO2={SpO2}", 
-                            serial, payload.Max30100?[0], payload.Temperature, payload.Max30100?[1]);
+                        _logger.LogDebug("Generated {Mode} data for {Serial}: Pulse={Pulse}, Temp={Temp}, SpO2={SpO2}", 
+                            inAlertPhase ? "ALERT" : "normal", serial, pulse, temp, spo2);
 
                         // Save to database
                         using var innerScope = _scopeFactory.CreateScope();
@@ -102,17 +123,21 @@ namespace LifeAlertPlus.API.Services
                         var measurement = new LifeAlertPlus.Domain.Entities.Measurement
                         {
                             Id = Guid.NewGuid(),
-                            Name = "Simulated Data",
+                            Name = inAlertPhase ? "Alert Simulation" : "Simulated Data",
                             Activity = "Auto-generated",
                             IsFall = false,
                             IdMonitored = personId,
-                            Pulse = payload.Max30100?[0] ?? 0,
-                            Temperature = payload.Temperature ?? 0,
+                            Pulse = pulse,
+                            SpO2 = spo2,
+                            Temperature = temp,
                             Coordinates = payload.Neo6m ?? string.Empty,
                             CreatedAt = DateTime.UtcNow
                         };
 
                         await measurementService.AddMeasurementAsync(measurement);
+
+                        // Feed data to the alert monitor so notifications can trigger
+                        await _alertMonitor.ProcessMeasurementAsync(personId, pulse, temp, spo2, false);
                         
                         _logger.LogDebug("Saved measurement to database for person {PersonId}", personId);
                     }

@@ -178,10 +178,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 					Name = "Simulated",
 					IdMonitored = person.PersonId,
 					Pulse = payload.Max30100?[0] ?? 0,
-					Temperature = payload.Temperature ?? 0,
-					Activity = "Simulated Activity",
-					IsFall = false,
-					Coordinates = payload.Neo6m ?? string.Empty
+					SpO2 = payload.Max30100?[1] ?? 0
 				};
 
 				// keep last coordinates on the UI even if saving fails
