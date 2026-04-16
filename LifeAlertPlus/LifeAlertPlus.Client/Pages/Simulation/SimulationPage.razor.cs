@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
-using System.Globalization;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using System.Linq;
@@ -23,9 +21,6 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		private MeasurementService MeasurementService { get; set; } = default!;
 
 		[Inject]
-		private IJSRuntime JSRuntime { get; set; } = default!;
-
-		[Inject]
 		private LanguageService Lang { get; set; } = default!;
 
 		private string T(string key) => Lang.T(key);
@@ -44,6 +39,8 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		{
 			if (StatusFilter == "running" && !p.IsRunning) return false;
 			if (StatusFilter == "idle" && p.IsRunning) return false;
+			if (StatusFilter == "selected" && !p.IsSelected) return false;
+			if (StatusFilter == "not-selected" && p.IsSelected) return false;
 
 			if (!string.IsNullOrWhiteSpace(SearchQuery))
 			{
@@ -57,12 +54,32 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			return true;
 		});
 
+		protected List<SimPerson> SelectedPersons => Persons.Where(p => p.IsSelected).ToList();
 		protected int RunningCount => Persons.Count(p => p.IsRunning);
 		protected int IdleCount => Persons.Count(p => !p.IsRunning);
+		protected int SelectedCount => Persons.Count(p => p.IsSelected);
+		protected int NotSelectedCount => Persons.Count(p => !p.IsSelected);
 
 		protected void SetStatusFilter(string filter)
 		{
 			StatusFilter = filter;
+		}
+
+		protected void ToggleSelection(SimPerson person)
+		{
+			person.IsSelected = !person.IsSelected;
+		}
+
+		protected void SelectAll()
+		{
+			foreach (var p in FilteredPersons)
+				p.IsSelected = true;
+		}
+
+		protected void DeselectAll()
+		{
+			foreach (var p in FilteredPersons)
+				p.IsSelected = false;
 		}
 
 		protected override async Task OnInitializedAsync()
@@ -139,7 +156,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 
 		protected async Task SendAllAsync()
 		{
-			var candidates = Persons.Where(p => !p.IsRunning && !p.IsSending).ToList();
+			var candidates = SelectedPersons.Where(p => !p.IsRunning && !p.IsSending).ToList();
 			if (!candidates.Any())
 				return;
 
@@ -172,7 +189,6 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 
 			if (ok)
 			{
-				// Also save to measurements database
 				var request = new MeasurementRequestDTO
 				{
 					Name = "Simulated",
@@ -180,23 +196,6 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 					Pulse = payload.Max30100?[0] ?? 0,
 					SpO2 = payload.Max30100?[1] ?? 0
 				};
-
-				// keep last coordinates on the UI even if saving fails
-				person.LastCoordinates = request.Coordinates;
-
-				// initialize the map immediately for this person (if coords parse)
-				if (TryParseGpsToLatLonSimple(person.LastCoordinates, out var _lat, out var _lon))
-				{
-					try
-					{
-						await JSRuntime.InvokeVoidAsync("googleMapsInterop.initMapOnElementById", $"sim-map-{person.PersonId}", _lat, _lon);
-						_mapCoords[person.PersonId] = person.LastCoordinates!;
-					}
-					catch
-					{
-						// ignore JS errors
-					}
-				}
 
 				try
 				{
@@ -265,57 +264,26 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 
 		protected async Task StartAllAutoAsync()
 		{
-			try
+			var targets = SelectedPersons.Where(p => !p.IsRunning).ToList();
+			if (!targets.Any())
+				return;
+
+			foreach (var person in targets)
 			{
-				// Use the efficient server-side StartAll endpoint
-				var ok = await SimulationService.StartAllSimulationsAsync();
-				if (ok)
-				{
-					// Mark all eligible persons as running
-					var targets = Persons.Where(p => !p.IsRunning).ToList();
-					foreach (var person in targets)
-					{
-						person.IsRunning = true;
-						person.LastStatus = SimStatus.Ok("Auto running");
-					}
-				}
-				else
-				{
-					// Fallback: individual starts
-					var targets = Persons.Where(p => !p.IsRunning).ToList();
-					foreach (var person in targets)
-					{
-						await StartAutoAsync(person);
-					}
-				}
-			}
-			catch
-			{
-				// Fallback: individual starts
-				var targets = Persons.Where(p => !p.IsRunning).ToList();
-				foreach (var person in targets)
-				{
-					await StartAutoAsync(person);
-				}
+				await StartAutoAsync(person);
 			}
 			StateHasChanged();
 		}
 
 		protected async Task StopAllAutoAsync()
 		{
-			try
+			var running = SelectedPersons.Where(p => p.IsRunning).ToList();
+			if (!running.Any())
+				return;
+
+			foreach (var person in running)
 			{
-				await SimulationService.StopAllSimulationsAsync();
-				var running = Persons.Where(p => p.IsRunning).ToList();
-				foreach (var person in running)
-				{
-					person.IsRunning = false;
-					person.LastStatus = SimStatus.Warn("Auto stopped");
-				}
-			}
-			catch
-			{
-				// best effort
+				await StopAutoAsync(person);
 			}
 			StateHasChanged();
 		}
@@ -336,48 +304,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			public SimStatus? LastStatus { get; set; }
 			public bool IsRunning { get; set; }
 			public bool IsSending { get; set; }
-			public string? LastCoordinates { get; set; }
-		}
-
-		// Track last-used coordinates per person to avoid reinitializing unchanged maps
-		private readonly Dictionary<Guid, string> _mapCoords = new();
-
-		private bool TryParseGpsToLatLonSimple(string gps, out double lat, out double lon)
-		{
-			lat = 0; lon = 0;
-			if (string.IsNullOrWhiteSpace(gps)) return false;
-			var parts = gps.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-			if (parts.Length < 2) return false;
-			return double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out lat)
-				&& double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out lon);
-		}
-
-		protected override async Task OnAfterRenderAsync(bool firstRender)
-		{
-			if (_disposed) return;
-			// initialize or update maps for persons that have coordinates — use element IDs
-			foreach (var person in Persons.ToList())
-			{
-				if (string.IsNullOrWhiteSpace(person.LastCoordinates))
-					continue;
-
-				if (_mapCoords.TryGetValue(person.PersonId, out var prev) && prev == person.LastCoordinates)
-					continue; // already initialized with same coords
-
-				if (!TryParseGpsToLatLonSimple(person.LastCoordinates, out var lat, out var lon))
-					continue;
-
-				try
-				{
-					var elementId = $"sim-map-{person.PersonId}";
-					await JSRuntime.InvokeVoidAsync("googleMapsInterop.initMapOnElementById", elementId, lat, lon);
-					_mapCoords[person.PersonId] = person.LastCoordinates!;
-				}
-				catch
-				{
-					// ignore JS errors
-				}
-			}
+			public bool IsSelected { get; set; }
 		}
 
 		private async Task LoadUserFromTokenAsync()

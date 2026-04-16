@@ -675,6 +675,11 @@ namespace LifeAlertPlus.Client.Services
             ["sim.autoRunning"] = "Auto running",
             ["sim.startAuto"] = "Start auto",
             ["sim.stop"] = "Stop",
+            ["sim.selected"] = "selected for simulation",
+            ["sim.selectedFilter"] = "Selected",
+            ["sim.notSelected"] = "Not selected",
+            ["sim.selectAll"] = "Select all",
+            ["sim.deselectAll"] = "Deselect all",
 
             // Measurements page
             ["meas.title"] = "Measurements",
@@ -1369,6 +1374,11 @@ namespace LifeAlertPlus.Client.Services
             ["sim.autoRunning"] = "Auto rulează",
             ["sim.startAuto"] = "Pornește auto",
             ["sim.stop"] = "Oprește",
+            ["sim.selected"] = "selectate pentru simulare",
+            ["sim.selectedFilter"] = "Selectate",
+            ["sim.notSelected"] = "Neselectate",
+            ["sim.selectAll"] = "Selectează toate",
+            ["sim.deselectAll"] = "Deselectează toate",
 
             // Measurements page
             ["meas.title"] = "Măsurători",

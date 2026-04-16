@@ -269,6 +269,52 @@ button.primary:disabled,
 	box-shadow: none;
 }
 
+.sim-filter-btn.selected.active {
+	background: rgba(76, 175, 80, 0.08);
+	color: #4caf50;
+	border-color: rgba(76, 175, 80, 0.2);
+	box-shadow: none;
+}
+
+.sim-filter-btn.not-selected.active {
+	background: rgba(158, 158, 158, 0.08);
+	color: #9e9e9e;
+	border-color: rgba(158, 158, 158, 0.2);
+	box-shadow: none;
+}
+
+.sim-select-actions {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 1rem;
+}
+
+button.ghost.small {
+	padding: 0.4rem 0.8rem;
+	font-size: 0.85rem;
+}
+
+.sim-checkbox-wrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.sim-checkbox-wrap input[type="checkbox"] {
+	width: 20px;
+	height: 20px;
+	accent-color: #66BB6A;
+	cursor: pointer;
+	margin: 0;
+}
+
+.sim-card.selected {
+	border-color: rgba(76, 175, 80, 0.35);
+	background: rgba(232, 245, 233, 0.3);
+}
+
 .sim-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
