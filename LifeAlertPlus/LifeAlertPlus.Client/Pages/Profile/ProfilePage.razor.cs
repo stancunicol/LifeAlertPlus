@@ -113,8 +113,34 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 ProfilePictureService.SetUrl(null);
             }
 
+            // Sync notification preferences from backend
+            Preferences.EmailNotifications = CurrentUser.NotifyByEmail;
+            Preferences.PushNotifications = CurrentUser.NotifyByPush;
+
             // Load monitored people count
             await LoadMonitoredDataAsync();
+        }
+
+        private async Task SaveNotificationPreferencesAsync()
+        {
+            var updateRequest = new UserUpdateRequestDTO
+            {
+                NotifyByEmail = Preferences.EmailNotifications,
+                NotifyByPush = Preferences.PushNotifications
+            };
+            await UserService.UpdateUserAsync(CurrentUser.Id, updateRequest);
+        }
+
+        private async Task OnEmailNotifChanged(ChangeEventArgs e)
+        {
+            Preferences.EmailNotifications = e.Value is bool b && b;
+            await SaveNotificationPreferencesAsync();
+        }
+
+        private async Task OnPushNotifChanged(ChangeEventArgs e)
+        {
+            Preferences.PushNotifications = e.Value is bool b && b;
+            await SaveNotificationPreferencesAsync();
         }
 
         private async Task LoadMonitoredDataAsync()

@@ -1,0 +1,58 @@
+@* ToastNotification.razor *@
+<div class="toast-container">
+    @foreach (var toast in Toasts)
+    {
+        <div class="toast @toast.Severity.ToLower()" @onclick="() => CloseToast(toast.Id)">
+            <span class="toast-icon">@GetIcon(toast.Severity)</span>
+            <span class="toast-message">@toast.Message</span>
+            <button class="toast-close" @onclick:stopPropagation="true" @onclick="() => CloseToast(toast.Id)">×</button>
+        </div>
+    }
+</div>
+
+@code {
+    private class ToastModel
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Message { get; set; } = string.Empty;
+        public string Severity { get; set; } = "info";
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    private List<ToastModel> Toasts { get; set; } = new();
+
+    public void Show(string message, string severity)
+    {
+        var toast = new ToastModel { Message = message, Severity = severity };
+        Toasts.Add(toast);
+        StateHasChanged();
+        _ = AutoCloseAsync(toast);
+    }
+
+    private async Task AutoCloseAsync(ToastModel toast)
+    {
+        await Task.Delay(20000); // 20 sec
+        CloseToast(toast.Id);
+    }
+
+    private void CloseToast(Guid id)
+    {
+        var toast = Toasts.FirstOrDefault(t => t.Id == id);
+        if (toast != null)
+        {
+            Toasts.Remove(toast);
+            StateHasChanged();
+        }
+    }
+
+    private MarkupString GetIcon(string severity)
+    {
+        // SVG inline icons for critical, warning, info
+        return severity.ToLower() switch
+        {
+            "critical" => (MarkupString)"<svg width=\"22\" height=\"22\" fill=\"none\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#dc3545\"/><path d=\"M12 7v5m0 4h.01\" stroke=\"#fff\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg>",
+            "warning" => (MarkupString)"<svg width=\"22\" height=\"22\" fill=\"none\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#ffc107\"/><path d=\"M12 8v4m0 4h.01\" stroke=\"#fff\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg>",
+            _ => (MarkupString)"<svg width=\"22\" height=\"22\" fill=\"none\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"#17a2b8\"/><path d=\"M12 10v2m0 4h.01\" stroke=\"#fff\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg>"
+        };
+    }
+}

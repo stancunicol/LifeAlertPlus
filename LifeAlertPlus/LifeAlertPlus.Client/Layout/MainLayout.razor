@@ -1,8 +1,11 @@
 ﻿@inherits LayoutComponentBase
+@code {
+    // See MainLayout.razor.cs for logic
+}
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
 
 <div class="page">
+    <LifeAlertPlus.Client.Components.ToastNotification @ref="ToastRef" />
     <main>
         <article class="content">
             @Body

@@ -1,15 +1,21 @@
-﻿namespace LifeAlertPlus.Domain.Entities
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace LifeAlertPlus.Domain.Entities
 {
     public class Notification
     {
         public Guid Id { get; set; }
+
+        [ForeignKey(nameof(Monitored))]
         public Guid IdMonitored { get; set; }
+
         public string NotificationType { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
 
-        
+        public bool IsRead { get; set; } = false;
+
         public Monitored Monitored { get; set; } = null!;
     }
 }

@@ -610,7 +610,6 @@ namespace LifeAlertPlus.Application.Services
                             <p>Hello <strong>{recipientName}</strong>,</p>
                             <p>An alert has been triggered for <strong>{patientName}</strong> that has persisted for over 2 minutes:</p>
                             <div class='alert-box'>{details}</div>
-                            <p>Please check on {patientName}'s condition as soon as possible.</p>
                             <p style='font-size:13px;color:#777;'>You are receiving this because you enabled email notifications in LifeAlert+. You can disable them in Settings.</p>
                         </div>
                         <div class='footer'>

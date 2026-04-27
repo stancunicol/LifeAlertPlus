@@ -16,6 +16,11 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.10" />
+    <PackageReference Include="Twilio" Version="7.14.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LifeAlertPlus.Application\LifeAlertPlus.Application.csproj" />
   </ItemGroup>
 
 	<ItemGroup>

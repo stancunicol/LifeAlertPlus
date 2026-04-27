@@ -11,8 +11,20 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddSingleton<IPushNotificationService, PushNotificationService>();
+// SignalR
+builder.Services.AddSignalR();
+
+// Twilio Service
+builder.Services.AddScoped<ITwilioService, LifeAlertPlus.Infrastructure.Services.TwilioService>();
+
 builder.Services.AddControllers();
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("AiService", client =>
+{
+    var aiBaseUrl = builder.Configuration["Urls:AiServiceUrl"] ?? "http://localhost:8000";
+    client.BaseAddress = new Uri(aiBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
 builder.Services.AddSingleton<LifeAlertPlus.API.Services.SimulationManager>();
 builder.Services.AddSingleton<LifeAlertPlus.API.Services.AlertMonitorService>();
 
@@ -120,6 +132,9 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
+
 app.MapControllers();
+// SignalR NotificationHub
+app.MapHub<LifeAlertPlus.API.Hubs.NotificationHub>("/notificationhub");
 
 app.Run();

@@ -84,6 +84,8 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     IsEmailConfirmed = true,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("20042005!Nicol"),
                     Provider = "Local",
+                    PhoneNumber = "+40746512348",
+                    NotifyBySms = true,
                     CreatedAt = DateTime.UtcNow
                 };
 

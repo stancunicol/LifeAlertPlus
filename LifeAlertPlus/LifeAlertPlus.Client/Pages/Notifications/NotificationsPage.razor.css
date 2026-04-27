@@ -219,7 +219,8 @@
     }
 
         .notification-card.critical.unread {
-            background: linear-gradient(to right, rgba(220, 53, 69, 0.08), white);
+            background: linear-gradient(to right, #ffeaea 0%, #fff 100%);
+            box-shadow: 0 2px 12px rgba(220, 53, 69, 0.18);
         }
 
     .notification-card.warning {

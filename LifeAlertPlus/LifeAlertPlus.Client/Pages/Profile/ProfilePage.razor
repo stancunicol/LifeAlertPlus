@@ -126,7 +126,7 @@
                         <p>@T("profile.emailNotifDesc")</p>
                     </div>
                     <label class="switch">
-                        <input type="checkbox" @bind="Preferences.EmailNotifications" />
+                        <input type="checkbox" checked="@Preferences.EmailNotifications" @onchange="@(e => OnEmailNotifChanged(e))" />
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -136,7 +136,7 @@
                         <p>@T("profile.pushNotifDesc")</p>
                     </div>
                     <label class="switch">
-                        <input type="checkbox" @bind="Preferences.PushNotifications" />
+                        <input type="checkbox" checked="@Preferences.PushNotifications" @onchange="@(e => OnPushNotifChanged(e))" />
                         <span class="slider"></span>
                     </label>
                 </div>

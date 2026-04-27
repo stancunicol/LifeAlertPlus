@@ -32,6 +32,8 @@
         public int? DataRetentionDays { get; set; }
         public bool NotifyByEmail { get; set; } = true;
         public bool NotifyByPush { get; set; } = true;
+        public bool NotifyBySms { get; set; } = false;
+        public string? PhoneNumber { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }

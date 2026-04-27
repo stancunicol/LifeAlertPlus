@@ -54,6 +54,12 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<Notification>()
                 .HasIndex(n => n.IdMonitored);
 
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.Monitored)
+                .WithMany(m => m.Notifications)
+                .HasForeignKey(n => n.IdMonitored)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<DailyHistory>()
                 .HasIndex(d => d.IdMonitored);
 

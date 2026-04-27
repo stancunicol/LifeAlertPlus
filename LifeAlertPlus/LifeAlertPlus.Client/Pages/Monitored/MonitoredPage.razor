@@ -146,11 +146,6 @@
                                     <span class="info-label">@T("card.lastUpdate")</span>
                                     <span class="info-value">@FormatLastUpdate(card)</span>
                                 </div>
-                                <div class="person-actions">
-                                    <button class="btn-action btn-location" @onclick:stopPropagation="true" @onclick='@(() => RequestLocation(card.Person.Id))'>@T("card.location")</button>
-                                    <button class="btn-action btn-call" @onclick:stopPropagation="true" @onclick='@(() => CallPerson(card.Person.Id))'>@T("card.call")</button>
-                                    <button class="btn-action btn-text" @onclick:stopPropagation="true" @onclick='@(() => TextPerson(card.Person.Id))'>@T("card.text")</button>
-                                </div>
                             </div>
                         </div>
                     </div>

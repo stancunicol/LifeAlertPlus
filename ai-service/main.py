@@ -164,9 +164,15 @@ def analyze_patient_data(
     else:
         combined_rule_state = "NORMAL"
 
-    healthscore_combined = min(100, int(
-        base_score * 20 + (100 - spo2) * 2 + max(0, hr - 100)
-    ))
+    # --- Health score from model.py logic ---
+    from model import analyze_patient_data as analyze_patient_data_full
+    try:
+        _, _, _, health_score, _, _, _ = analyze_patient_data_full(
+            temp, hr, spo2, ax, ay, az, gx, gy, gz, model, label_encoder, feature_order, scaler
+        )
+    except Exception as e:
+        logger.error(f"Error in model.py health score calculation: {e}")
+        health_score = 0
 
     system_confidence_combined: int = 0
     if combined_rule_state == "CRITICAL":
@@ -181,44 +187,36 @@ def analyze_patient_data(
     # --- Final state: medical rules override ---
     final_state = ""
     explanation = ""
-    health_score = 0
     system_confidence = 0
 
     if spo2 < 90:
         final_state = "CRITICAL"
         explanation = f"Critical state: SpO2 ({data['spo2']:.1f}%) is dangerously low (below 90%). This is an absolute medical rule and requires immediate attention."
-        health_score = 100
         system_confidence = 100
     elif spo2 < 95 and (hr > 120 or temp >= 39):
         final_state = "CRITICAL"
         explanation = "Critical combination: low SpO2 with severe physiological stress (high heart rate or high fever)."
-        health_score = 95
         system_confidence = 98
     elif temp >= 38.5:
         final_state = "ALERT"
         explanation = f"ALERT: High temperature ({data['temp']:.1f}°C) is detected (>= 38.5°C). This could indicate fever or infection and warrants attention."
-        health_score = 60
         system_confidence = 85
     elif spo2 < 95:
         final_state = "ALERT"
         explanation = f"ALERT: SpO2 ({data['spo2']:.1f}%) is low (between 90% and 95%). This indicates a potential respiratory issue and requires monitoring."
-        health_score = 70
         system_confidence = 90
     elif hr > 120:
         final_state = "ALERT"
         explanation = f"ALERT: Heart rate ({data['hr']:.0f} bpm) is high (>120 bpm). This may suggest tachycardia or stress and requires assessment."
-        health_score = 50
         system_confidence = 80
     else:
         final_state = "NORMAL"
         explanation = "All vital signs are stable and within physiological norms. "
         if combined_rule_state != "NORMAL":
             explanation += f"However, the system's combined rule-based analysis suggests a '{combined_rule_state}' tendency due to factors like: " + "; ".join(reasons) + "."
-            health_score = healthscore_combined
             system_confidence = system_confidence_combined
         else:
             explanation += "No significant risks identified from any analysis."
-            health_score = 0
             system_confidence = 100
 
     if predicted_state_model != final_state and model_confidence > 70:

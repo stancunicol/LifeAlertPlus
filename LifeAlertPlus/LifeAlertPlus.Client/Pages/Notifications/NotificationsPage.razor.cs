@@ -4,13 +4,20 @@ using LifeAlertPlus.Domain.Entities;
 
 namespace LifeAlertPlus.Client.Pages.Notifications;
 
-public partial class NotificationsPage : ComponentBase
+public partial class NotificationsPage : ComponentBase, IAsyncDisposable
 {
+
         [Inject]
         private TokenParserService TokenParserService { get; set; } = default!;
 
         [Inject]
         private UserService UserService { get; set; } = default!;
+
+        [Inject]
+        private NotificationService NotificationService { get; set; } = default!;
+
+        [Inject]
+        private PushNotificationClientService PushService { get; set; } = default!;
 
         [Inject]
         private LanguageService Lang { get; set; } = default!;
@@ -22,6 +29,7 @@ public partial class NotificationsPage : ComponentBase
         private string ActiveFilter = "All";
         private List<Notification> AllNotifications = new();
 
+        private bool _subscribed = false;
         protected override async Task OnInitializedAsync()
         {
             var claims = await TokenParserService.GetClaimsAsync();
@@ -39,10 +47,36 @@ public partial class NotificationsPage : ComponentBase
                     if (!string.IsNullOrWhiteSpace(userProfile.ProfilePictureUrl))
                         ProfilePictureUrl = userProfile.ProfilePictureUrl;
                 }
+
+                // Load notifications
+                AllNotifications = await NotificationService.GetRecentNotificationsAsync(50);
+
+                // Subscribe to push notifications for live update
+                if (!_subscribed)
+                {
+                    PushService.OnNotificationReceived += OnPushNotificationReceived;
+                    _subscribed = true;
+                }
             }
             else
             {
                 UserFullName = "User";
+            }
+        }
+
+        private async void OnPushNotificationReceived(string message, string severity)
+        {
+            // Reload notifications from API (to get full details)
+            AllNotifications = await NotificationService.GetRecentNotificationsAsync(50);
+            await InvokeAsync(StateHasChanged);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (_subscribed)
+            {
+                PushService.OnNotificationReceived -= OnPushNotificationReceived;
+                _subscribed = false;
             }
         }
 }

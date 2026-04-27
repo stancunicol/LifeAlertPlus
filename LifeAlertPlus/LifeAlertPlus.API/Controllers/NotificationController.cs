@@ -39,7 +39,8 @@ namespace LifeAlertPlus.API.Controllers
                     n.NotificationType,
                     n.Message,
                     n.CreatedAt,
-                    n.IdMonitored
+                    n.IdMonitored,
+                    n.IsRead
                 })
                 .ToListAsync();
 

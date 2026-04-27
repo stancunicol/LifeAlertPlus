@@ -19,6 +19,7 @@ builder.Services.AddScoped(sp =>
 });
 
 builder.Services.AddScoped<AuthenticationService>();
+builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<MonitoredService>();
 builder.Services.AddScoped<UserMonitoredService>();
@@ -29,6 +30,9 @@ builder.Services.AddScoped<ProfilePictureService>();
 builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<MeasurementService>();
 builder.Services.AddScoped<AIPredictionService>();
+
 builder.Services.AddSingleton<LanguageService>();
+builder.Services.AddScoped<PushNotificationClientService>(sp =>
+    new PushNotificationClientService(sp.GetRequiredService<IConfiguration>()));
 
 await builder.Build().RunAsync();

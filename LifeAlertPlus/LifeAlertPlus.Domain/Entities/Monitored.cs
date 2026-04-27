@@ -1,4 +1,6 @@
-﻿namespace LifeAlertPlus.Domain.Entities
+﻿using System.Collections.Generic;
+
+namespace LifeAlertPlus.Domain.Entities
 {
     public class Monitored
     {
@@ -18,5 +20,7 @@
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
+
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 }

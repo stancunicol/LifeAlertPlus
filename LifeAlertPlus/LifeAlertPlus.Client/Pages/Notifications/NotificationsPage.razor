@@ -26,4 +26,25 @@
             <span class="stat-label">@T("notifications.unread")</span>
         </div>
     </div>
+    <div class="notifications-feed">
+        @if (AllNotifications.Count == 0)
+        {
+            <div class="no-notifications">@T("admin.noNotifications")</div>
+        }
+        else
+        {
+            @foreach (var notif in AllNotifications)
+            {
+                <div class="notification-card @notif.NotificationType.ToLower() @(notif.IsRead ? "read" : "unread")">
+                    <div class="notification-content">
+                        <div class="notification-header-row">
+                            <span class="notification-type">@notif.NotificationType</span>
+                            <span class="notification-date">@notif.CreatedAt.ToLocalTime().ToString("g")</span>
+                        </div>
+                        <div class="notification-message">@notif.Message</div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
 </div>
