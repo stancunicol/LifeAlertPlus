@@ -26,6 +26,7 @@ builder.Services.AddHttpClient("AiService", client =>
     client.Timeout = TimeSpan.FromSeconds(15);
 });
 builder.Services.AddSingleton<LifeAlertPlus.API.Services.SimulationManager>();
+builder.Services.AddSingleton<LifeAlertPlus.API.Services.ActivityProfileService>();
 builder.Services.AddSingleton<LifeAlertPlus.API.Services.AlertMonitorService>();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -54,6 +55,8 @@ builder.Services.AddScoped<IMonitoredRepository, MonitoredRepository>();
 builder.Services.AddScoped<IUserMonitoredRepository, UserMonitoredRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
+builder.Services.AddScoped<IInvitationRepository, InvitationRepository>();
+builder.Services.AddScoped<IActivityProfileRepository, ActivityProfileRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

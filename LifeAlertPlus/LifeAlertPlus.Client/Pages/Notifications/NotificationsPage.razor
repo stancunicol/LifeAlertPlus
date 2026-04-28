@@ -1,50 +1,183 @@
 @page "/notifications"
-
-@using LifeAlertPlus.Domain.Entities
+@using LifeAlertPlus.Shared.DTOs.Responses.Notification
+@using LifeAlertPlus.Client.Components.Header
+@layout MainLayout
 
 <HeaderComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl"/>
 
-<div class="notifications-container">
-    <div class="notifications-header">
-        <div class="header-title-section">
-            <h1>@T("notifications.title")</h1>
-            <p class="notifications-subtitle">@T("notifications.subtitle")</p>
+<div class="notif-page">
+
+    <!-- Header -->
+    <div class="notif-header">
+        <div>
+            <h1 class="notif-title">@T("notifications.title")</h1>
+            <p class="notif-subtitle">@T("notifications.subtitle")</p>
+        </div>
+        <button class="btn-mark-all" @onclick="MarkAllAsReadAsync" disabled="@(_markingAll || (_paged?.UnreadCount ?? 0) == 0)">
+            @if (_markingAll)
+            {
+                <span class="btn-spinner"></span>
+            }
+            else
+            {
+                <span>✓</span>
+            }
+            @T("notifications.markAllRead")
+        </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="notif-stats">
+        <div class="stat-card critical">
+            <span class="stat-icon">🚨</span>
+            <div class="stat-body">
+                <span class="stat-num">@(_paged?.CriticalCount ?? 0)</span>
+                <span class="stat-lbl">@T("notifications.critical")</span>
+            </div>
+        </div>
+        <div class="stat-card alert">
+            <span class="stat-icon">⚠️</span>
+            <div class="stat-body">
+                <span class="stat-num">@(_paged?.AlertCount ?? 0)</span>
+                <span class="stat-lbl">@T("notifications.alert")</span>
+            </div>
+        </div>
+        <div class="stat-card unread">
+            <span class="stat-icon">🔴</span>
+            <div class="stat-body">
+                <span class="stat-num">@(_paged?.UnreadCount ?? 0)</span>
+                <span class="stat-lbl">@T("notifications.unread")</span>
+            </div>
+        </div>
+        <div class="stat-card total">
+            <span class="stat-icon">📋</span>
+            <div class="stat-body">
+                <span class="stat-num">@(_paged?.TotalCount ?? 0)</span>
+                <span class="stat-lbl">@T("notifications.total")</span>
+            </div>
         </div>
     </div>
 
-    <div class="stats-row">
-        <div class="stat-mini-card critical">
-            <span class="stat-label">@T("notifications.criticalAlerts")</span>
-        </div>
-        <div class="stat-mini-card warning">
-            <span class="stat-label">@T("notifications.warnings")</span>
-        </div>
-        <div class="stat-mini-card info">
-            <span class="stat-label">@T("notifications.infoMessages")</span>
-        </div>
-        <div class="stat-mini-card unread">
-            <span class="stat-label">@T("notifications.unread")</span>
-        </div>
-    </div>
-    <div class="notifications-feed">
-        @if (AllNotifications.Count == 0)
-        {
-            <div class="no-notifications">@T("admin.noNotifications")</div>
-        }
-        else
-        {
-            @foreach (var notif in AllNotifications)
+    <!-- Filters -->
+    <div class="notif-filters">
+        <button class="filter-btn @(_activeFilter == "" && !_unreadOnly ? "active" : "")"
+                @onclick='() => SetFilter("")'>
+            @T("notifications.filterAll")
+            @if (_paged != null)
             {
-                <div class="notification-card @notif.NotificationType.ToLower() @(notif.IsRead ? "read" : "unread")">
-                    <div class="notification-content">
-                        <div class="notification-header-row">
-                            <span class="notification-type">@notif.NotificationType</span>
-                            <span class="notification-date">@notif.CreatedAt.ToLocalTime().ToString("g")</span>
+                <span class="filter-count">@_paged.TotalCount</span>
+            }
+        </button>
+        <button class="filter-btn critical @(_activeFilter == "Critical" ? "active" : "")"
+                @onclick='() => SetFilter("Critical")'>
+            🚨 @T("notifications.critical")
+            @if (_paged != null)
+            {
+                <span class="filter-count">@_paged.CriticalCount</span>
+            }
+        </button>
+        <button class="filter-btn alert-btn @(_activeFilter == "Alert" ? "active" : "")"
+                @onclick='() => SetFilter("Alert")'>
+            ⚠️ @T("notifications.alert")
+            @if (_paged != null)
+            {
+                <span class="filter-count">@_paged.AlertCount</span>
+            }
+        </button>
+        <button class="filter-btn unread-btn @(_unreadOnly ? "active" : "")"
+                @onclick="SetUnreadFilter">
+            🔴 @T("notifications.unreadOnly")
+            @if (_paged != null && _paged.UnreadCount > 0)
+            {
+                <span class="filter-count unread">@_paged.UnreadCount</span>
+            }
+        </button>
+    </div>
+
+    <!-- Feed -->
+    @if (_loading)
+    {
+        <div class="notif-loading">
+            <div class="loading-ring"></div>
+            <span>@T("notifications.loading")</span>
+        </div>
+    }
+    else if (_paged == null || _paged.Items.Count == 0)
+    {
+        <div class="notif-empty">
+            <span class="empty-icon">🔕</span>
+            <h3>@T("notifications.emptyTitle")</h3>
+            <p>@T("notifications.emptySubtitle")</p>
+        </div>
+    }
+    else
+    {
+        <div class="notif-feed">
+            @foreach (var n in _paged.Items)
+            {
+                var typeClass = GetTypeClass(n.NotificationType);
+                <div class="notif-card @typeClass @(n.IsRead ? "is-read" : "is-unread")">
+                    <div class="notif-icon-col">
+                        <div class="notif-icon @typeClass">@GetTypeIcon(n.NotificationType)</div>
+                        @if (!n.IsRead)
+                        {
+                            <span class="unread-dot"></span>
+                        }
+                    </div>
+                    <div class="notif-body">
+                        <div class="notif-meta-row">
+                            <span class="notif-type-badge @typeClass">@n.NotificationType</span>
+                            @if (!string.IsNullOrWhiteSpace(n.MonitoredName))
+                            {
+                                <span class="notif-person">👤 @n.MonitoredName</span>
+                            }
+                            <span class="notif-time">🕐 @FormatDate(n.CreatedAt)</span>
                         </div>
-                        <div class="notification-message">@notif.Message</div>
+                        <p class="notif-message">@n.Message</p>
+                    </div>
+                    <div class="notif-actions">
+                        @if (!n.IsRead)
+                        {
+                            <button class="btn-read" title="@T("notifications.markRead")"
+                                    @onclick="() => MarkAsReadAsync(n.Id)">✓</button>
+                        }
+                        else
+                        {
+                            <span class="read-check" title="@T("notifications.alreadyRead")">✓</span>
+                        }
                     </div>
                 </div>
             }
+        </div>
+
+        <!-- Pagination -->
+        @if (_paged.TotalPages > 1)
+        {
+            <div class="notif-pagination">
+                <button class="page-btn nav" disabled="@(_page <= 1)" @onclick="() => GoToPage(_page - 1)">←</button>
+
+                @{ int? prev = null; }
+                @foreach (var p in GetPageNumbers())
+                {
+                    if (p == -1)
+                    {
+                        @if (prev != -1)
+                        {
+                            <span class="page-ellipsis">…</span>
+                        }
+                    }
+                    else
+                    {
+                        <button class="page-btn @(p == _page ? "active" : "")" @onclick="() => GoToPage(p)">@p</button>
+                    }
+                    prev = p;
+                }
+
+                <button class="page-btn nav" disabled="@(_page >= _paged.TotalPages)" @onclick="() => GoToPage(_page + 1)">→</button>
+            </div>
+            <p class="pagination-info">
+                @string.Format(T("notifications.pageInfo"), _page, _paged.TotalPages, _paged.TotalCount)
+            </p>
         }
-    </div>
+    }
 </div>

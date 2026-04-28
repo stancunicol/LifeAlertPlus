@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using LifeAlertPlus.Domain.Entities;
+﻿using LifeAlertPlus.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace LifeAlertPlus.Infrastructure.Context
 {
@@ -9,14 +9,16 @@ namespace LifeAlertPlus.Infrastructure.Context
         {
         }
 
-        public DbSet<User> Users { get; set; }
-        public DbSet<Monitored> Monitoreds { get; set; }
-        public DbSet<Measurement> Measurements { get; set; }
-        public DbSet<Notification> Notifications { get; set; }
-        public DbSet<DailyHistory> DailyHistories { get; set; }
-        public DbSet<WeeklyHistory> WeeklyHistories { get; set; }
-        public DbSet<UserMonitored> UserMonitoreds { get; set; }
-        public DbSet<Role> Roles { get; set; }
+        public DbSet<User> Users { get; set; } = default!;
+        public DbSet<Monitored> Monitoreds { get; set; } = default!;
+        public DbSet<Measurement> Measurements { get; set; } = default!;
+        public DbSet<Notification> Notifications { get; set; } = default!;
+        public DbSet<DailyHistory> DailyHistories { get; set; } = default!;
+        public DbSet<WeeklyHistory> WeeklyHistories { get; set; } = default!;
+        public DbSet<UserMonitored> UserMonitoreds { get; set; } = default!;
+        public DbSet<Role> Roles { get; set; } = default!;
+        public DbSet<Invitation> Invitations { get; set; } = default!;
+        public DbSet<ActivityProfile> ActivityProfiles { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -29,18 +31,19 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<DailyHistory>().HasKey(d => d.Id);
             modelBuilder.Entity<WeeklyHistory>().HasKey(w => w.Id);
             modelBuilder.Entity<Role>().HasKey(r => r.Id);
+
             modelBuilder.Entity<UserMonitored>().HasKey(um => new { um.IdUser, um.IdMonitored });
             modelBuilder.Entity<UserMonitored>()
-            .HasOne(um => um.User)
-            .WithMany()
-            .HasForeignKey(um => um.IdUser)
-            .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(um => um.User)
+                .WithMany()
+                .HasForeignKey(um => um.IdUser)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<UserMonitored>()
-            .HasOne(um => um.Monitored)
-            .WithMany()
-            .HasForeignKey(um => um.IdMonitored)
-            .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(um => um.Monitored)
+                .WithMany()
+                .HasForeignKey(um => um.IdMonitored)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Measurement>()
                 .HasOne(m => m.Monitored)
@@ -65,6 +68,19 @@ namespace LifeAlertPlus.Infrastructure.Context
 
             modelBuilder.Entity<WeeklyHistory>()
                 .HasIndex(w => w.IdMonitored);
+
+            modelBuilder.Entity<Invitation>().HasKey(i => i.Id);
+            modelBuilder.Entity<Invitation>().HasIndex(i => i.Token).IsUnique();
+            modelBuilder.Entity<Invitation>().HasIndex(i => new { i.DoctorEmail, i.PatientId });
+
+            modelBuilder.Entity<ActivityProfile>().HasKey(ap => new { ap.IdMonitored, ap.HourOfDay });
+            modelBuilder.Entity<ActivityProfile>()
+                .HasOne(ap => ap.Monitored)
+                .WithMany()
+                .HasForeignKey(ap => ap.IdMonitored)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<ActivityProfile>()
+                .HasIndex(ap => ap.IdMonitored);
         }
     }
 }

@@ -55,7 +55,8 @@ namespace LifeAlertPlus.API.Controllers
                 measurementDto.Pulse,
                 measurementDto.Temperature,
                 measurementDto.SpO2,
-                measurementDto.IsFall);
+                measurementDto.IsFall,
+                measurementDto.Activity);
 
             return Ok(new { Message = "Measurement added successfully." });
         }

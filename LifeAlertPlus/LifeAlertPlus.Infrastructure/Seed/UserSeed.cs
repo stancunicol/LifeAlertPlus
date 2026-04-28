@@ -29,6 +29,10 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 await context.Database.EnsureCreatedAsync();
             }
 
+            // Ensure the Invitations table exists even when the DB was created without EF migrations.
+            // (EnsureCreated doesn't evolve schema, so older DBs might miss newer tables.)
+            await EnsureInvitationsTableAsync(context);
+
             var hasUsers = await context.Users.AnyAsync();
             if (!hasUsers)
             {
@@ -178,6 +182,27 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 context.Set<Measurement>().AddRange(measurements);
                 await context.SaveChangesAsync();
             }
+                }
+
+        private static async Task EnsureInvitationsTableAsync(LifeAlertPlusDbContext context)
+        {
+            // SQLite DDL: safe to run multiple times.
+            const string createTableSql = @"
+CREATE TABLE IF NOT EXISTS Invitations (
+    Id TEXT NOT NULL CONSTRAINT PK_Invitations PRIMARY KEY,
+    DoctorEmail TEXT NOT NULL,
+    PatientId TEXT NOT NULL,
+    Token TEXT NOT NULL,
+    ExpiresAt TEXT NOT NULL,
+    IsAccepted INTEGER NOT NULL,
+    CreatedAt TEXT NOT NULL
+);";
+
+            const string createTokenIndexSql = @"
+CREATE UNIQUE INDEX IF NOT EXISTS IX_Invitations_Token ON Invitations(Token);";
+
+            await context.Database.ExecuteSqlRawAsync(createTableSql);
+            await context.Database.ExecuteSqlRawAsync(createTokenIndexSql);
         }
     }
 }

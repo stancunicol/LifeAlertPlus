@@ -1,4 +1,5 @@
 @page "/monitored/{PersonId:guid}"
+@page "/doctor/patient/{PersonId:guid}"
 @using LifeAlertPlus.Client.Components.Header
 @layout MainLayout
 
@@ -15,6 +16,10 @@
             </button>
             <div class="top-actions">
                 <button class="btn-action-main" @onclick="ExportPdfAsync">📤 @T("selected.export")</button>
+                @if (_showEditButton)
+                {
+                    <button class="btn-action-main" @onclick="OpenInviteModal">✉️ @T("invite.sendToDoctor")</button>
+                }
             </div>
         </div>
 
@@ -203,6 +208,123 @@
                 <div class="ai-unavailable">
                     <span class="ai-unavailable-icon">🤖</span>
                     <p>@T("selected.aiUnavailable")</p>
+                </div>
+            }
+        </div>
+
+        <div class="trend-prediction-section section-card">
+            <div class="section-header">
+                <h2>📈 @T("selected.trendTitle")</h2>
+            </div>
+            @if (TrendPredictionsLoading)
+            {
+                <div class="ai-loading">
+                    <div class="ai-spinner"></div>
+                    <span>@T("selected.aiAnalyzing")</span>
+                </div>
+            }
+            else if (TrendPredictions == null || TrendPredictions.BufferDataPoints < 3)
+            {
+                <div class="trend-no-data">
+                    <span class="trend-no-data-icon">📊</span>
+                    <p>@T("selected.trendNoData")</p>
+                </div>
+            }
+            else if (!TrendPredictions.Predictions.Any())
+            {
+                <div class="trend-stable">
+                    <span class="trend-stable-icon">✅</span>
+                    <p>@T("selected.trendNone")</p>
+                    <span class="trend-buffer-info">@TrendPredictions.BufferDataPoints @T("selected.trendDataPoints") / @((int)TrendPredictions.BufferDurationSeconds)s</span>
+                </div>
+            }
+            else
+            {
+                <div class="trend-predictions-list">
+                    @foreach (var pred in TrendPredictions.Predictions)
+                    {
+                        <div class="trend-prediction-card @pred.Severity">
+                            <div class="trend-card-header">
+                                <span class="trend-metric-icon">@GetTrendMetricIcon(pred.Metric)</span>
+                                <span class="trend-label">@pred.Label</span>
+                                <span class="trend-direction-badge @pred.Direction">
+                                    @(pred.Direction == "rising" ? "↑" : "↓") @T(pred.Direction == "rising" ? "selected.trendRising" : "selected.trendFalling")
+                                </span>
+                            </div>
+                            <div class="trend-card-body">
+                                <div class="trend-stat">
+                                    <span class="trend-stat-label">@T("selected.trendRate")</span>
+                                    <span class="trend-stat-value">@FormatTrendRate(pred.Metric, pred.ChangeRatePerMinute)</span>
+                                </div>
+                                <div class="trend-stat">
+                                    <span class="trend-stat-label">@T("selected.trendThreshold")</span>
+                                    <span class="trend-stat-value">@pred.ThresholdDescription</span>
+                                </div>
+                                @if (pred.SecondsToThreshold.HasValue)
+                                {
+                                    <div class="trend-stat trend-time">
+                                        <span class="trend-stat-label">@T("selected.trendTimeToThreshold")</span>
+                                        <span class="trend-stat-value trend-time-value @pred.Severity">
+                                            @FormatSecondsToThreshold(pred.SecondsToThreshold.Value, T("selected.trendMinutes"), T("selected.trendSeconds"))
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="trend-buffer-footer">
+                    @TrendPredictions.BufferDataPoints @T("selected.trendDataPoints") / @((int)TrendPredictions.BufferDurationSeconds)s
+                </div>
+            }
+        </div>
+
+        <div class="activity-profile-section section-card">
+            <div class="section-header">
+                <h2>🕐 @T("selected.activityProfile")</h2>
+                @if (ActivityProfile?.LastUpdated != null)
+                {
+                    <span class="profile-updated-at">@T("selected.activityProfileUpdated") @ActivityProfile.LastUpdated.Value.ToLocalTime().ToString("dd MMM yyyy")</span>
+                }
+            </div>
+            @if (ActivityProfileLoading)
+            {
+                <div class="ai-loading">
+                    <div class="ai-spinner"></div>
+                    <span>@T("selected.activityProfileLoading")</span>
+                </div>
+            }
+            else if (ActivityProfile == null || !ActivityProfile.HourlyProfiles.Any())
+            {
+                <div class="trend-no-data">
+                    <span class="trend-no-data-icon">📊</span>
+                    <p>@T("selected.activityProfileNoData")</p>
+                </div>
+            }
+            else
+            {
+                <div class="activity-timeline">
+                    @for (int h = 0; h < 24; h++)
+                    {
+                        var hour = h;
+                        var slot = ActivityProfile.HourlyProfiles.FirstOrDefault(p => p.HourOfDay == hour);
+                        var slotClass = slot != null ? GetActivitySlotClass(slot.Label) : "slot-nodata";
+                        var tooltip = GetSlotTooltip(slot, hour);
+                        <div class="activity-slot @slotClass" title="@tooltip">
+                            <span class="activity-slot-hour">@hour.ToString("D2")</span>
+                            @if (slot != null && slot.DataPoints >= 10)
+                            {
+                                <span class="activity-slot-pulse">@slot.AveragePulse.ToString("F0")</span>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="activity-legend">
+                    <div class="legend-item"><span class="legend-dot slot-sleep"></span>@T("selected.activitySleep")</div>
+                    <div class="legend-item"><span class="legend-dot slot-active"></span>@T("selected.activityActive")</div>
+                    <div class="legend-item"><span class="legend-dot slot-moderate"></span>@T("selected.activityModerate")</div>
+                    <div class="legend-item"><span class="legend-dot slot-rest"></span>@T("selected.activityRest")</div>
+                    <div class="legend-item"><span class="legend-dot slot-nodata"></span>@T("selected.activityNoData")</div>
                 </div>
             }
         </div>
@@ -571,6 +693,34 @@
                 <button class="btn-cancel" @onclick="CloseEmailModal">@T("common.cancel")</button>
                 <button class="btn-save" @onclick="SendEmailToDoctorAsync" disabled="@(_isSendingEmail || string.IsNullOrWhiteSpace(_doctorEmail))">
                     @(_isSendingEmail ? T("email.sending") : "📧 " + T("email.send"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showInviteModal)
+{
+    <div class="modal-overlay" @onclick="CloseInviteModal">
+        <div class="modal-content email-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>✉️ @T("invite.sendTitle")</h2>
+                <button class="modal-close" @onclick="CloseInviteModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>@T("invite.doctorEmail")</label>
+                    <input type="email" @bind="_inviteDoctorEmail" placeholder="@T("invite.doctorEmailPlaceholder")" />
+                </div>
+                @if (!string.IsNullOrEmpty(_inviteStatusMessage))
+                {
+                    <p class="@(_inviteSuccess ? "email-success" : "email-error")">@_inviteStatusMessage</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseInviteModal">@T("common.cancel")</button>
+                <button class="btn-save" @onclick="SendInvitationToDoctorAsync" disabled="@(_isSendingInvitation || string.IsNullOrWhiteSpace(_inviteDoctorEmail))">
+                    @(_isSendingInvitation ? T("invite.sendingInvitation") : "✉️ " + T("invite.sendInvitation"))
                 </button>
             </div>
         </div>

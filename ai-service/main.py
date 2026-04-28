@@ -64,11 +64,49 @@ def calculate_acceleration_magnitude(ax: float, ay: float, az: float) -> float:
     return float(np.sqrt(ax**2 + ay**2 + az**2))
 
 
+def compute_health_score(temp: float, hr: float, spo2: float, acc: float) -> int:
+    """Compute a simple 0..100 score where higher = worse."""
+    score = 0.0
+
+    # SpO2 dominates (clinical priority)
+    if spo2 < 90:
+        score += 60
+    elif spo2 < 95:
+        score += 30 + (95 - spo2) * 3
+
+    # Heart rate
+    if hr > 130:
+        score += 25
+    elif hr > 110:
+        score += 12
+    elif hr < 50:
+        score += 20
+    elif hr < 60:
+        score += 10
+
+    # Temperature
+    if temp > 39:
+        score += 20
+    elif temp > 38:
+        score += 10
+    elif temp < 35:
+        score += 20
+    elif temp < 36:
+        score += 10
+
+    # Immobility / fall suspicion (very low acceleration magnitude)
+    if acc < 0.2:
+        score += 8
+
+    return int(max(0, min(100, round(score))))
+
+
 def analyze_patient_data(
     temp: float, hr: float, spo2: float,
     ax: float, ay: float, az: float,
     gx: float, gy: float, gz: float,
 ) -> Dict:
+
     """
     Analyzes patient data using both ML model and rule-based logic.
     Returns a dict with all prediction fields.
@@ -164,15 +202,11 @@ def analyze_patient_data(
     else:
         combined_rule_state = "NORMAL"
 
-    # --- Health score from model.py logic ---
-    from model import analyze_patient_data as analyze_patient_data_full
-    try:
-        _, _, _, health_score, _, _, _ = analyze_patient_data_full(
-            temp, hr, spo2, ax, ay, az, gx, gy, gz, model, label_encoder, feature_order, scaler
-        )
-    except Exception as e:
-        logger.error(f"Error in model.py health score calculation: {e}")
-        health_score = 0
+        # --- Health score (lightweight, inference-safe) ---
+    # 0 = best, 100 = worst (matches UI usage where higher means worse)
+    # We avoid importing ai-service/model.py because it contains training / Colab-only code.
+    health_score = compute_health_score(temp=temp, hr=hr, spo2=spo2, acc=data["acc"])
+
 
     system_confidence_combined: int = 0
     if combined_rule_state == "CRITICAL":

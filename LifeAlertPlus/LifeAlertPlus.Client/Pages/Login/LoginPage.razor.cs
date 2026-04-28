@@ -38,9 +38,12 @@ namespace LifeAlertPlus.Client.Pages.Login
         private bool IsForgotPasswordSuccess { get; set; } = false;
         private bool IsLoading { get; set; } = false;
 
+        private string? _returnUrl;
+
         protected override Task OnInitializedAsync()
         {
             Version = AppVersion.Version;
+            _returnUrl = GetQueryParam("returnUrl");
             return Task.CompletedTask;
         }
 
@@ -65,18 +68,24 @@ namespace LifeAlertPlus.Client.Pages.Login
                 {
                     if(response.Success)
                     {
+                        await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
+
+                        var safeReturn = NormalizeSafeReturnUrl(_returnUrl);
+                        if (!string.IsNullOrWhiteSpace(safeReturn))
+                        {
+                            Navigation.NavigateTo(safeReturn, forceLoad: true);
+                            return;
+                        }
+
                         if(response.IsAdmin)
                         {
-                            await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
-							
                             Navigation.NavigateTo("/admin-dashboard");
                             return;
                         }
 						
-                        await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
-						
                         Navigation.NavigateTo("/dashboard");
                     }
+
                     else
                     {
                         ErrorMessage = response.Message ?? T("login.error.failed");
@@ -168,9 +177,59 @@ namespace LifeAlertPlus.Client.Pages.Login
         {
             var apiBaseUrl = (Configuration["ApiBaseUrl"] ?? Navigation.BaseUri).TrimEnd('/');
             var clientBaseUrl = Navigation.BaseUri.TrimEnd('/');
-            var clientDashboardUrl = $"{clientBaseUrl}/dashboard";
-            var googleAuthUrl = $"{apiBaseUrl}/api/auth/google-login?returnUrl={Uri.EscapeDataString(clientDashboardUrl)}";
+
+            var safeReturn = NormalizeSafeReturnUrl(_returnUrl);
+            var clientReturnUrl = string.IsNullOrWhiteSpace(safeReturn)
+                ? $"{clientBaseUrl}/dashboard"
+                : $"{clientBaseUrl}{safeReturn}";
+
+            var googleAuthUrl = $"{apiBaseUrl}/api/auth/google-login?returnUrl={Uri.EscapeDataString(clientReturnUrl)}";
             Navigation.NavigateTo(googleAuthUrl, forceLoad: true);
+        }
+
+        private static string? NormalizeSafeReturnUrl(string? returnUrl)
+        {
+            if (string.IsNullOrWhiteSpace(returnUrl))
+                return null;
+
+            // Only allow local relative paths.
+            if (!returnUrl.StartsWith("/", StringComparison.Ordinal))
+                return null;
+
+            if (returnUrl.StartsWith("//", StringComparison.Ordinal))
+                return null;
+
+            if (returnUrl.Contains("://", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return returnUrl;
+        }
+
+        private string? GetQueryParam(string name)
+        {
+            try
+            {
+                var uri = new Uri(Navigation.Uri);
+                var query = uri.Query;
+                if (string.IsNullOrWhiteSpace(query)) return null;
+
+                if (query.StartsWith("?")) query = query[1..];
+                var parts = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var part in parts)
+                {
+                    var kv = part.Split('=', 2);
+                    if (kv.Length == 0) continue;
+                    var key = Uri.UnescapeDataString(kv[0]);
+                    if (!key.Equals(name, StringComparison.OrdinalIgnoreCase)) continue;
+                    return kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : string.Empty;
+                }
+
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

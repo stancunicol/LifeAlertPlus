@@ -19,7 +19,18 @@
 </Router>
 
 @code {
-    private static readonly string[] PublicRoutes =
+    private static readonly string[] AllowAnonymousRoutes =
+    {
+        string.Empty,
+        "login",
+        "register",
+        "reset-password",
+        "invite/accept", // backward-compatible
+        "invite/patient"
+    };
+
+    // Routes that should clear any stale auth data when opened intentionally.
+    private static readonly string[] ClearAuthRoutes =
     {
         string.Empty,
         "login",
@@ -75,14 +86,19 @@
             return;
         }
 
-        var path = context.Path.Trim('/');
-        if (PublicRoutes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)))
+        var path = NormalizeRoute(context.Path);
+        if (AllowAnonymousRoutes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)))
         {
-            // Navigating intentionally to login/register/reset-password should clear any stale auth data
-            // so the next login is forced to create a new session.
-            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
-            await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
-            ProfilePictureService.SetUrl(null);
+            if (ClearAuthRoutes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)))
+            {
+                // Navigating intentionally to login/register/reset-password should clear any stale auth data
+                // so the next login is forced to create a new session.
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
+                await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
+                ProfilePictureService.SetUrl(null);
+            }
+
+            // Allow anonymous route without forcing auth.
             return;
         }
 
@@ -111,8 +127,8 @@
             return;
         }
 
-        var path = Navigation.ToBaseRelativePath(uri).Trim('/');
-        if (PublicRoutes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)))
+        var path = NormalizeRoute(Navigation.ToBaseRelativePath(uri));
+        if (AllowAnonymousRoutes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)))
         {
             return;
         }
@@ -125,6 +141,22 @@
         }
 
         EnforceRoleAccess(path, claims);
+    }
+
+    private static string NormalizeRoute(string rawPath)
+    {
+        if (string.IsNullOrWhiteSpace(rawPath))
+            return string.Empty;
+
+        // Strip query string and fragments so allow-anonymous matching works for URLs like
+        // /invite/patient?token=... which would otherwise not equal "invite/patient".
+        var pathOnly = rawPath;
+        var q = pathOnly.IndexOf('?');
+        if (q >= 0) pathOnly = pathOnly.Substring(0, q);
+        var hash = pathOnly.IndexOf('#');
+        if (hash >= 0) pathOnly = pathOnly.Substring(0, hash);
+
+        return pathOnly.Trim('/');
     }
 
     private void EnforceRoleAccess(string path, TokenClaims claims)

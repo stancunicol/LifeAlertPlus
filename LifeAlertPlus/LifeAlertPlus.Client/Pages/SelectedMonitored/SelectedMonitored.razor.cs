@@ -6,7 +6,9 @@ using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
 using LifeAlertPlus.Shared.DTOs.Requests.AI;
 using LifeAlertPlus.Shared.DTOs.Responses.AI;
+using LifeAlertPlus.Shared.DTOs.Requests.Email;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
+using LifeAlertPlus.Shared.DTOs.Responses.ActivityProfile;
 
 namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 {
@@ -65,6 +67,10 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private List<Measurement> RecentMeasurements { get; set; } = new();
         private AIPredictionResponseDTO? AIPrediction { get; set; }
         private bool AIPredictionLoading { get; set; }
+        private LifeAlertPlus.Shared.DTOs.Responses.Monitoring.TrendPredictionResponseDTO? TrendPredictions { get; set; }
+        private bool TrendPredictionsLoading { get; set; }
+        private ActivityProfileResponseDTO? ActivityProfile { get; set; }
+        private bool ActivityProfileLoading { get; set; }
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
         private ChartViewMode CurrentChartView { get; set; } = ChartViewMode.Daily;
@@ -112,12 +118,20 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private int? _exportMeasurementCount;
         private int _exportDistinctDays;
 
-        // Email modal state
+        // Email modal state (report)
         private bool _showEmailModal;
         private bool _isSendingEmail;
         private string _doctorEmail = string.Empty;
         private string? _emailStatusMessage;
         private bool _emailSuccess;
+
+        // Invitation modal state (doctor invite link)
+        private bool _showInviteModal;
+        private bool _isSendingInvitation;
+        private string _inviteDoctorEmail = string.Empty;
+        private string? _inviteStatusMessage;
+        private bool _inviteSuccess;
+
         private static SelectedMonitored? _instance;
 
         private enum ChartViewMode
@@ -238,6 +252,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     _ = LoadAIPredictionAsync(espData);
                 }
 
+                _ = LoadTrendPredictionsAsync(PersonId);
+                _ = LoadActivityProfileAsync(PersonId);
+
                 IsLoading = false;
             }
             catch (Exception ex)
@@ -295,6 +312,69 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 AIPredictionLoading = false;
                 await InvokeAsync(StateHasChanged);
             }
+        }
+
+        private async Task LoadTrendPredictionsAsync(Guid monitoredId)
+        {
+            try
+            {
+                TrendPredictionsLoading = true;
+                await InvokeAsync(StateHasChanged);
+
+                var response = await HttpClient.GetAsync($"api/monitoring/{monitoredId}/predictions");
+                if (response.IsSuccessStatusCode)
+                    TrendPredictions = await response.Content.ReadFromJsonAsync<LifeAlertPlus.Shared.DTOs.Responses.Monitoring.TrendPredictionResponseDTO>();
+                else
+                    TrendPredictions = null;
+            }
+            catch
+            {
+                TrendPredictions = null;
+            }
+            finally
+            {
+                TrendPredictionsLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
+        private async Task LoadActivityProfileAsync(Guid monitoredId)
+        {
+            try
+            {
+                ActivityProfileLoading = true;
+                await InvokeAsync(StateHasChanged);
+
+                var response = await HttpClient.GetAsync($"api/activityprofile/{monitoredId}");
+                ActivityProfile = response.IsSuccessStatusCode
+                    ? await response.Content.ReadFromJsonAsync<ActivityProfileResponseDTO>()
+                    : null;
+            }
+            catch
+            {
+                ActivityProfile = null;
+            }
+            finally
+            {
+                ActivityProfileLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
+        private static string GetActivitySlotClass(string label) => label switch
+        {
+            "Somn" => "slot-sleep",
+            "Activ" => "slot-active",
+            "Moderat activ" => "slot-moderate",
+            "Inactiv / Odihnă" => "slot-rest",
+            _ => "slot-nodata"
+        };
+
+        private static string GetSlotTooltip(HourlyProfileDTO? slot, int hour)
+        {
+            if (slot == null || slot.DataPoints < 10)
+                return $"{hour:00}:00 – date insuficiente";
+            return $"{hour:00}:00 | {slot.Label} | Puls mediu: {slot.AveragePulse:F0} bpm | Mișcare: {slot.MovementRate:P0} | Somn: {slot.SleepProbability:P0}";
         }
 
         private List<ChartDataPoint> HeartRateHistoryFiltered =>
@@ -959,6 +1039,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     await LoadRecentMeasurementsAsync();
                     // Reset map so it re-initializes with fresh GPS coordinates
                     _mapInitialized = false;
+                    _ = LoadTrendPredictionsAsync(PersonId);
                     StateHasChanged();
                     await InitTooltipsAsync();
                     await InitMapAsync();
@@ -1248,6 +1329,29 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             };
         }
 
+        private static string GetTrendMetricIcon(string metric) => metric switch
+        {
+            "temperature" => "🌡️",
+            "pulse" => "❤️",
+            "spo2" => "🩸",
+            _ => "📊"
+        };
+
+        private static string FormatTrendRate(string metric, double ratePerMinute) => metric switch
+        {
+            "temperature" => $"{(ratePerMinute >= 0 ? "+" : "")}{ratePerMinute:F2} °C/min",
+            "pulse" => $"{(ratePerMinute >= 0 ? "+" : "")}{ratePerMinute:F1} bpm/min",
+            "spo2" => $"{(ratePerMinute >= 0 ? "+" : "")}{ratePerMinute:F2} %/min",
+            _ => $"{ratePerMinute:F2}/min"
+        };
+
+        private static string FormatSecondsToThreshold(int seconds, string minLabel, string secLabel)
+        {
+            if (seconds >= 60)
+                return $"~{seconds / 60} {minLabel} {seconds % 60} {secLabel}";
+            return $"~{seconds} {secLabel}";
+        }
+
         private void GoBack()
         {
             NavigationManager.NavigateTo("/monitored");
@@ -1309,6 +1413,71 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         {
             _showEmailModal = false;
             _emailStatusMessage = null;
+        }
+
+        private void OpenInviteModal()
+        {
+            _inviteDoctorEmail = string.Empty;
+            _inviteStatusMessage = null;
+            _inviteSuccess = false;
+            _showInviteModal = true;
+        }
+
+        private void CloseInviteModal()
+        {
+            _showInviteModal = false;
+            _inviteStatusMessage = null;
+        }
+
+        private async Task SendInvitationToDoctorAsync()
+        {
+            if (Person == null) return;
+
+            _inviteStatusMessage = null;
+            _inviteSuccess = false;
+
+            if (string.IsNullOrWhiteSpace(_inviteDoctorEmail) || !_inviteDoctorEmail.Contains('@'))
+            {
+                _inviteStatusMessage = T("invite.invitationSendError");
+                _inviteSuccess = false;
+                return;
+            }
+
+            _isSendingInvitation = true;
+            StateHasChanged();
+
+            try
+            {
+                var dto = new SendDoctorInvitationRequestDTO
+                {
+                    DoctorEmail = _inviteDoctorEmail.Trim(),
+                    PatientId = PersonId,
+                    PatientName = $"{Person.FirstName} {Person.LastName}".Trim()
+                };
+
+                var response = await HttpClient.PostAsJsonAsync("api/email/send-doctor-invitation", dto);
+                if (response.IsSuccessStatusCode)
+                {
+                    _inviteStatusMessage = T("invite.invitationSent");
+                    _inviteSuccess = true;
+                }
+                else
+                {
+                    _inviteStatusMessage = T("invite.invitationSendError");
+                    _inviteSuccess = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Invite send error: {ex.Message}");
+                _inviteStatusMessage = T("invite.invitationSendError");
+                _inviteSuccess = false;
+            }
+            finally
+            {
+                _isSendingInvitation = false;
+                StateHasChanged();
+            }
         }
 
         private async Task SendEmailToDoctorAsync()

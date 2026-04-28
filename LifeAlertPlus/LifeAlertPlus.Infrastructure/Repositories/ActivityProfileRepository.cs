@@ -1,0 +1,57 @@
+using LifeAlertPlus.Domain.Entities;
+using LifeAlertPlus.Domain.IRepositories;
+using LifeAlertPlus.Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
+
+namespace LifeAlertPlus.Infrastructure.Repositories
+{
+    public class ActivityProfileRepository : IActivityProfileRepository
+    {
+        private readonly LifeAlertPlusDbContext _db;
+
+        public ActivityProfileRepository(LifeAlertPlusDbContext db)
+        {
+            _db = db;
+        }
+
+        public async Task<IEnumerable<ActivityProfile>> GetByMonitoredIdAsync(Guid monitoredId) =>
+            await _db.ActivityProfiles
+                .Where(p => p.IdMonitored == monitoredId)
+                .OrderBy(p => p.HourOfDay)
+                .ToListAsync();
+
+        public async Task UpsertAsync(ActivityProfile profile)
+        {
+            var existing = await _db.ActivityProfiles
+                .FirstOrDefaultAsync(p => p.IdMonitored == profile.IdMonitored && p.HourOfDay == profile.HourOfDay);
+
+            if (existing == null)
+            {
+                _db.ActivityProfiles.Add(profile);
+            }
+            else
+            {
+                existing.AveragePulse = profile.AveragePulse;
+                existing.MovementRate = profile.MovementRate;
+                existing.SleepProbability = profile.SleepProbability;
+                existing.DataPoints = profile.DataPoints;
+                existing.LastUpdated = profile.LastUpdated;
+            }
+
+            await _db.SaveChangesAsync();
+        }
+
+        public async Task DeleteByMonitoredIdAsync(Guid monitoredId)
+        {
+            var profiles = await _db.ActivityProfiles
+                .Where(p => p.IdMonitored == monitoredId)
+                .ToListAsync();
+
+            if (profiles.Count > 0)
+            {
+                _db.ActivityProfiles.RemoveRange(profiles);
+                await _db.SaveChangesAsync();
+            }
+        }
+    }
+}

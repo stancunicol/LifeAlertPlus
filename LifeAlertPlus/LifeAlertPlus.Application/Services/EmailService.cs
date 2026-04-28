@@ -1,4 +1,4 @@
-using LifeAlertPlus.Application.IServices;
+        using LifeAlertPlus.Application.IServices;
 using System.Net;
 using System.Net.Mail;
 using Microsoft.Extensions.Configuration;
@@ -619,6 +619,59 @@ namespace LifeAlertPlus.Application.Services
                 </body>
                 </html>
             ";
+        }
+
+        public async Task SendDoctorInvitationEmailAsync(string doctorEmail, string patientName, string invitationLink)
+        {
+            using var smtpClient = CreateSmtpClient();
+            var mailMessage = new MailMessage
+            {
+                From = GetSenderAddress(),
+                Subject = $"LifeAlert+ - Invitație pentru acces la datele pacientului {patientName}",
+                Body = GenerateDoctorInvitationEmailBody(patientName, invitationLink),
+                IsBodyHtml = true
+            };
+            mailMessage.To.Add(doctorEmail);
+            await smtpClient.SendMailAsync(mailMessage);
+        }
+
+        private string GenerateDoctorInvitationEmailBody(string patientName, string invitationLink)
+        {
+            return $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+                        .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }}
+                        .header {{ background: linear-gradient(135deg, #81C784, #66BB6A); padding: 30px; text-align: center; color: white; }}
+                        .header h1 {{ margin: 0; font-size: 24px; }}
+                        .body {{ padding: 30px; color: #444; line-height: 1.6; }}
+                        .footer {{ padding: 20px 30px; background: #f9f9f9; text-align: center; font-size: 12px; color: #999; }}
+                        .button {{ display: inline-block; padding: 12px 24px; background: #66BB6A; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 20px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>Life Alert +</h1>
+                            <p>Invitație pentru acces la datele pacientului</p>
+                        </div>
+                        <div class='body'>
+                            <p>Stimate doctor,</p>
+                            <p>Ați fost invitat să vizualizați datele medicale ale pacientului <strong>{patientName}</strong> prin intermediul platformei <strong>LifeAlert+</strong>.</p>
+                            <p>Pentru a vizualiza datele pacientului, vă rugăm să apăsați pe butonul de mai jos:</p>
+                            <p><a href='{invitationLink}' class='button'>Vezi datele pacientului</a></p>
+                            <p style='color:#777;font-size:13px;margin-top:10px;'>Link-ul este valabil 24 de ore.</p>
+                            <p>Dacă nu ați solicitat această invitație, puteți ignora acest email.</p>
+                            <p>Cu stimă,<br/>Echipa LifeAlert+</p>
+                        </div>
+                        <div class='footer'>
+                            <p>Acesta este un mesaj automat. Vă rugăm să nu răspundeți la acest email.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>";
         }
     }
 }
