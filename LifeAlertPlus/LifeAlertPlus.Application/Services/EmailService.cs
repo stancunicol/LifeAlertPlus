@@ -565,25 +565,47 @@ namespace LifeAlertPlus.Application.Services
             ";
         }
 
-        public async Task SendAlertNotificationEmailAsync(string recipientEmail, string recipientName, string patientName, string severity, string details)
+        public async Task SendAlertNotificationEmailAsync(string recipientEmail, string recipientName, string patientName, string severity, string details, string lang = "ro")
         {
             using var client = CreateSmtpClient();
             var sender = GetSenderAddress();
 
+            bool isEn = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase);
+            string severityLabel = severity == "CRITICAL"
+                ? (isEn ? "CRITICAL" : "CRITIC")
+                : (isEn ? "ALERT" : "ALERTĂ");
+
             var mail = new MailMessage(sender, new MailAddress(recipientEmail, recipientName))
             {
-                Subject = $"⚠ LifeAlert+ {severity}: {patientName}",
+                Subject = $"⚠ LifeAlert+ {severityLabel}: {patientName}",
                 IsBodyHtml = true,
-                Body = GenerateAlertEmailBody(recipientName, patientName, severity, details)
+                Body = GenerateAlertEmailBody(recipientName, patientName, severity, details, isEn)
             };
 
             await client.SendMailAsync(mail);
         }
 
-        private string GenerateAlertEmailBody(string recipientName, string patientName, string severity, string details)
+        private string GenerateAlertEmailBody(string recipientName, string patientName, string severity, string details, bool isEn)
         {
             var severityColor = severity == "CRITICAL" ? "#e53935" : "#FF8F00";
             var severityBg = severity == "CRITICAL" ? "#FFEBEE" : "#FFF3E0";
+            var headerDark = severity == "CRITICAL" ? "#c62828" : "#E65100";
+
+            string severityLabel = severity == "CRITICAL"
+                ? (isEn ? "CRITICAL" : "CRITIC")
+                : (isEn ? "ALERT" : "ALERTĂ");
+
+            string headerTitle  = isEn ? "⚠ Health Alert"    : "⚠ Alertă Medicală";
+            string greeting     = isEn ? $"Hello <strong>{recipientName}</strong>,"
+                                       : $"Bună ziua, <strong>{recipientName}</strong>,";
+            string bodyText     = isEn
+                ? $"An alert has been triggered for <strong>{patientName}</strong> that has persisted for over 2 minutes:"
+                : $"O alertă a fost declanșată pentru <strong>{patientName}</strong> și persistă de peste 2 minute:";
+            string disclaimer   = isEn
+                ? "You are receiving this because you enabled email notifications in LifeAlert+. You can disable them in Settings."
+                : "Primiți acest email deoarece ați activat notificările prin email în LifeAlert+. Le puteți dezactiva din Setări.";
+            string footerText   = isEn ? "&copy; 2026 LifeAlert+. All rights reserved."
+                                       : "&copy; 2026 LifeAlert+. Toate drepturile rezervate.";
 
             return $@"
                 <!DOCTYPE html>
@@ -592,28 +614,28 @@ namespace LifeAlertPlus.Application.Services
                     <style>
                         body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }}
                         .container {{ max-width: 520px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
-                        .header {{ background: linear-gradient(135deg, {severityColor}, {(severity == "CRITICAL" ? "#c62828" : "#E65100")}); padding: 28px 24px; text-align: center; }}
+                        .header {{ background: linear-gradient(135deg, {severityColor}, {headerDark}); padding: 28px 24px; text-align: center; }}
                         .header h1 {{ color: #fff; margin: 0; font-size: 22px; }}
                         .header .severity {{ display: inline-block; background: rgba(255,255,255,0.25); color: #fff; padding: 4px 16px; border-radius: 20px; font-weight: 700; font-size: 13px; margin-top: 8px; letter-spacing: 1px; }}
                         .body {{ padding: 28px 24px; }}
-                        .alert-box {{ background: {severityBg}; border-left: 4px solid {severityColor}; padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 15px; color: #333; }}
+                        .alert-box {{ background: {severityBg}; border-left: 4px solid {severityColor}; padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 15px; color: #333; white-space: pre-line; }}
                         .footer {{ background: #fafafa; padding: 16px 24px; text-align: center; font-size: 12px; color: #999; }}
                     </style>
                 </head>
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h1>⚠ Health Alert</h1>
-                            <div class='severity'>{severity}</div>
+                            <h1>{headerTitle}</h1>
+                            <div class='severity'>{severityLabel}</div>
                         </div>
                         <div class='body'>
-                            <p>Hello <strong>{recipientName}</strong>,</p>
-                            <p>An alert has been triggered for <strong>{patientName}</strong> that has persisted for over 2 minutes:</p>
+                            <p>{greeting}</p>
+                            <p>{bodyText}</p>
                             <div class='alert-box'>{details}</div>
-                            <p style='font-size:13px;color:#777;'>You are receiving this because you enabled email notifications in LifeAlert+. You can disable them in Settings.</p>
+                            <p style='font-size:13px;color:#777;'>{disclaimer}</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; 2026 LifeAlert+. All rights reserved.</p>
+                            <p>{footerText}</p>
                         </div>
                     </div>
                 </body>

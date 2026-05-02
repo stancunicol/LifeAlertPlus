@@ -38,13 +38,13 @@ window.chartTooltip = {
         label.setAttribute('fill', '#333');
         label.setAttribute('font-size', '12');
         label.setAttribute('font-weight', 'bold');
-        label.setAttribute('font-family', "'Jua', sans-serif");
+        label.setAttribute('font-family', "Inter, sans-serif");
 
         var timeLabel = document.createElementNS(ns, 'text');
         timeLabel.setAttribute('text-anchor', 'middle');
         timeLabel.setAttribute('fill', '#999');
         timeLabel.setAttribute('font-size', '10');
-        timeLabel.setAttribute('font-family', "'Jua', sans-serif");
+        timeLabel.setAttribute('font-family', "Inter, sans-serif");
 
         g.appendChild(vline);
         g.appendChild(bg);

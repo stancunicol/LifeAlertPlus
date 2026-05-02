@@ -23,6 +23,7 @@ namespace LifeAlertPlus.API.Services
 
         private readonly IPushNotificationService _pushNotificationService;
         private readonly ActivityProfileService _activityProfileService;
+        private readonly ConditionRuleEngine _conditionRuleEngine;
 
         // Per-person metric buffer for last 120 seconds (2 minutes)
         private static readonly TimeSpan BufferWindow = TimeSpan.FromSeconds(120);
@@ -36,12 +37,13 @@ namespace LifeAlertPlus.API.Services
             public Queue<(DateTime Timestamp, double Value)> SpO2 = new();
         }
 
-        public AlertMonitorService(IServiceScopeFactory scopeFactory, ILogger<AlertMonitorService> logger, IConfiguration configuration, IPushNotificationService pushNotificationService, ActivityProfileService activityProfileService)
+        public AlertMonitorService(IServiceScopeFactory scopeFactory, ILogger<AlertMonitorService> logger, IConfiguration configuration, IPushNotificationService pushNotificationService, ActivityProfileService activityProfileService, ConditionRuleEngine conditionRuleEngine)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
             _pushNotificationService = pushNotificationService;
             _activityProfileService = activityProfileService;
+            _conditionRuleEngine = conditionRuleEngine;
             _sendCriticalSmsImmediately = bool.TryParse(configuration["AlertMonitor:SendCriticalSmsImmediately"], out var immediate) && immediate;
             _sendAlertSmsImmediately = bool.TryParse(configuration["AlertMonitor:SendAlertSmsImmediately"], out var immediateAlert) && immediateAlert;
 
@@ -100,6 +102,10 @@ namespace LifeAlertPlus.API.Services
                     severity = AlertSeverity.Alert;
             }
 
+            var (adjSeverity, conditionRecommendations, immediateAction) = await _conditionRuleEngine.EvaluateAsync(
+                monitoredId, pulse, temperature, spo2, isFall, severity);
+            severity = adjSeverity;
+
             _logger.LogInformation("Processing measurement for {MonitoredId}: pulse={Pulse}, temp={Temperature}, spo2={SpO2}, isFall={IsFall}, severity={Severity}.", monitoredId, pulse, temperature, spo2, isFall, severity);
 
             if (severity == AlertSeverity.Normal)
@@ -133,6 +139,17 @@ namespace LifeAlertPlus.API.Services
             state.LastTemperature = temperature;
             state.LastSpO2 = spo2;
             state.IsFall = isFall;
+            state.ConditionRecommendations = conditionRecommendations;
+            state.ImmediateAction = immediateAction;
+
+            if (immediateAction && severity == AlertSeverity.Critical)
+            {
+                _lastNotificationSent[monitoredId] = now;
+                state.ConsecutiveCount = 0;
+                _logger.LogInformation("ImmediateAction triggered for {MonitoredId} (condition-based fall detection). Bypassing all cooldowns.", monitoredId);
+                _ = Task.Run(() => SendNotificationsAsync(monitoredId, state));
+                return;
+            }
 
             var elapsed = now - state.FirstDetected;
 
@@ -361,19 +378,9 @@ namespace LifeAlertPlus.API.Services
                 var monitored = await dbContext.Monitoreds.FindAsync(monitoredId);
                 var patientName = monitored != null ? $"{monitored.FirstName} {monitored.LastName}".Trim() : "Unknown";
 
-                var userLang = userMonitoreds.Select(um => um.User?.Language).FirstOrDefault(l => !string.IsNullOrWhiteSpace(l)) ?? "ro";
                 string? aiContext = null;
-
-                var notification = new Domain.Entities.Notification
-                {
-                    Id = Guid.NewGuid(),
-                    IdMonitored = monitoredId,
-                    NotificationType = state.Severity == AlertSeverity.Critical ? "Critical" : "Alert",
-                    Message = BuildNotificationMessage(state, patientName, userLang, aiContext, false, false),
-                    CreatedAt = DateTime.UtcNow
-                };
-                dbContext.Notifications.Add(notification);
-                await dbContext.SaveChangesAsync();
+                string notifType = state.Severity == AlertSeverity.Critical ? "Critical" : "Alert";
+                var createdAt = DateTime.UtcNow;
 
                 _logger.LogInformation("SendNotificationsAsync starting for monitored {MonitoredId} with {UserCount} watchers.", monitoredId, userMonitoreds.Count);
 
@@ -382,18 +389,31 @@ namespace LifeAlertPlus.API.Services
                     var user = um.User;
                     if (user == null || user.DeletedAt.HasValue) continue;
 
+                    var notification = new Domain.Entities.Notification
+                    {
+                        Id = Guid.NewGuid(),
+                        IdUser = user.Id,
+                        IdMonitored = monitoredId,
+                        NotificationType = notifType,
+                        Message = BuildNotificationMessage(state, patientName, user.Language ?? "ro", aiContext, false, false),
+                        CreatedAt = createdAt
+                    };
+                    dbContext.Notifications.Add(notification);
+
                     _logger.LogInformation("Preparing notifications for user {UserId} ({Email}) monitoring monitored {MonitoredId}.", user.Id, user.Email, monitoredId);
 
                     if (user.NotifyByEmail)
                     {
                         try
                         {
+                            var userLang = user.Language ?? "ro";
                             await emailService.SendAlertNotificationEmailAsync(
                                 user.Email,
                                 $"{user.FirstName} {user.LastName}".Trim(),
                                 patientName,
                                 state.Severity == AlertSeverity.Critical ? "CRITICAL" : "ALERT",
-                                BuildNotificationMessage(state, patientName, user.Language ?? "ro", aiContext, false, false));
+                                BuildNotificationMessage(state, patientName, userLang, aiContext, false, false),
+                                userLang);
                         }
                         catch (Exception ex)
                         {
@@ -440,6 +460,8 @@ namespace LifeAlertPlus.API.Services
                         }
                     }
                 }
+
+                await dbContext.SaveChangesAsync();
             }
             catch (Exception ex)
             {
@@ -463,42 +485,80 @@ namespace LifeAlertPlus.API.Services
 
         private static string BuildNotificationMessage(AlertState state, string patientName, string lang = "ro", string? aiContext = null, bool isSms = false, bool isPush = false)
         {
-            string spo2Str = state.LastSpO2 > 0 ? $"SpO2: {state.LastSpO2:F0}%" : string.Empty;
-            string pulseStr = state.LastPulse > 0 ? $"Puls: {state.LastPulse:F0}" : string.Empty;
-            string tempStr = state.LastTemperature > 0 ? $"Temp: {state.LastTemperature:F1}°C" : string.Empty;
+            bool isRo = !string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase);
 
             if (isSms)
             {
                 string arrowSpo2 = state.LastSpO2 > 0 && state.LastSpO2 < 95 ? "↓" : "";
                 string arrowPulse = state.LastPulse > 120 ? "↑" : "";
-                string sms = $"🚨 CRITICAL: {patientName}\n";
-                sms += $"{(spo2Str != null ? spo2Str + (arrowSpo2 != "" ? " " + arrowSpo2 : "") : "")}";
-                if (pulseStr != null) sms += $" | {pulseStr}{(arrowPulse != "" ? " " + arrowPulse : "")}";
-                if (tempStr != null) sms += $" | {tempStr}";
-                sms += "\nVerificați IMEDIAT!";
+                string prefix = state.Severity == AlertSeverity.Critical
+                    ? (isRo ? "🚨 CRITIC" : "🚨 CRITICAL")
+                    : (isRo ? "⚠️ ALERTĂ" : "⚠️ ALERT");
+                string sms = $"{prefix}: {patientName}\n";
+                if (state.LastSpO2 > 0) sms += $"SpO2: {state.LastSpO2:F0}%{(arrowSpo2 != "" ? " " + arrowSpo2 : "")}";
+                if (state.LastPulse > 0) sms += $" | {(isRo ? "Puls" : "HR")}: {state.LastPulse:F0}{(arrowPulse != "" ? " " + arrowPulse : "")}";
+                if (state.LastTemperature > 0) sms += $" | Temp: {state.LastTemperature:F1}°C";
+                sms += isRo ? "\nVerificați IMEDIAT!" : "\nCheck IMMEDIATELY!";
+                if (state.ConditionRecommendations.Count > 0)
+                    sms += $"\n{state.ConditionRecommendations[0]}";
                 return sms;
             }
 
             if (isPush)
             {
-                string push = $"🚨 {patientName} – stare CRITICĂ\n";
+                string prefix = state.Severity == AlertSeverity.Critical ? "🚨" : "⚠️";
+                string statusLabel = state.Severity == AlertSeverity.Critical
+                    ? (isRo ? "stare CRITICĂ" : "CRITICAL state")
+                    : (isRo ? "alertă" : "alert");
+                string push = $"{prefix} {patientName} – {statusLabel}\n";
                 var details = new List<string>();
-                if (state.LastSpO2 > 0) details.Add($"SpO2 scăzută ({state.LastSpO2:F0}%)");
-                if (state.LastPulse > 0) details.Add($"puls {state.LastPulse:F0} bpm");
-                if (state.LastTemperature > 38.5) details.Add("febră");
+                if (state.LastSpO2 > 0) details.Add(isRo ? $"SpO2 scăzută ({state.LastSpO2:F0}%)" : $"low SpO2 ({state.LastSpO2:F0}%)");
+                if (state.LastPulse > 0) details.Add(isRo ? $"puls {state.LastPulse:F0} bpm" : $"HR {state.LastPulse:F0} bpm");
+                if (state.LastTemperature > 38.5) details.Add(isRo ? "febră" : "fever");
+                if (state.IsFall) details.Add(isRo ? "cădere detectată" : "fall detected");
                 push += string.Join(", ", details);
-                push += "\nVerifică acum";
+                if (state.ConditionRecommendations.Count > 0)
+                    push += $"\n{state.ConditionRecommendations[0]}";
+                else
+                    push += isRo ? "\nVerifică acum" : "\nCheck now";
                 return push;
             }
 
             var lines = new List<string>();
+            string severityLabel = state.Severity == AlertSeverity.Critical
+                ? (isRo ? "CRITIC" : "CRITICAL")
+                : (isRo ? "ALERTĂ" : "ALERT");
+            lines.Add(isRo
+                ? $"Pacient: {patientName} | Severitate: {severityLabel}"
+                : $"Patient: {patientName} | Severity: {severityLabel}");
+            lines.Add("");
             if (state.LastSpO2 > 0)
-                lines.Add($"⚠️ SpO2: {state.LastSpO2:F0}% {(state.LastSpO2 < 95 ? "(low)" : "")}");
+                lines.Add(isRo
+                    ? $"⚠️ SpO2: {state.LastSpO2:F0}%{(state.LastSpO2 < 95 ? " (scăzut)" : "")}"
+                    : $"⚠️ SpO2: {state.LastSpO2:F0}%{(state.LastSpO2 < 95 ? " (low)" : "")}");
             if (state.LastPulse > 0)
-                lines.Add($"⚠️ Pulse: {state.LastPulse:F0} bpm {(state.LastPulse > 120 ? "(high)" : "")}");
+                lines.Add(isRo
+                    ? $"⚠️ Puls: {state.LastPulse:F0} bpm{(state.LastPulse > 120 ? " (crescut)" : state.LastPulse < 50 ? " (scăzut)" : "")}"
+                    : $"⚠️ Heart rate: {state.LastPulse:F0} bpm{(state.LastPulse > 120 ? " (high)" : state.LastPulse < 50 ? " (low)" : "")}");
             if (state.LastTemperature > 0)
-                lines.Add($"⚠️ Temperature: {state.LastTemperature:F1}°C {(state.LastTemperature > 38.5 ? "(fever)" : "")}");
-            lines.Add("\nImmediate action recommended: Please check on the patient now. Contact emergency services if the condition worsens.");
+                lines.Add(isRo
+                    ? $"⚠️ Temperatură: {state.LastTemperature:F1}°C{(state.LastTemperature > 38.5 ? " (febră)" : state.LastTemperature < 35.5 ? " (hipotermie)" : "")}"
+                    : $"⚠️ Temperature: {state.LastTemperature:F1}°C{(state.LastTemperature > 38.5 ? " (fever)" : state.LastTemperature < 35.5 ? " (hypothermia)" : "")}");
+            if (state.IsFall)
+                lines.Add(isRo ? "⚠️ Cădere detectată!" : "⚠️ Fall detected!");
+
+            if (state.ConditionRecommendations.Count > 0)
+            {
+                lines.Add("");
+                lines.Add(isRo ? "📋 Recomandări medicale:" : "📋 Medical recommendations:");
+                foreach (var rec in state.ConditionRecommendations)
+                    lines.Add($"  • {rec}");
+            }
+
+            lines.Add("");
+            lines.Add(isRo
+                ? "Acțiune imediată recomandată: Verificați pacientul acum. Contactați serviciile de urgență dacă situația se agravează."
+                : "Immediate action recommended: Check the patient now. Contact emergency services if the situation worsens.");
             return string.Join("\n", lines);
         }
 
@@ -512,6 +572,8 @@ namespace LifeAlertPlus.API.Services
             public double LastTemperature { get; set; }
             public double LastSpO2 { get; set; }
             public bool IsFall { get; set; }
+            public List<string> ConditionRecommendations { get; set; } = new();
+            public bool ImmediateAction { get; set; }
         }
 
         private async Task CheckBehavioralAnomalyAsync(Guid monitoredId, string activity, double pulse, DateTime now)
@@ -541,27 +603,25 @@ namespace LifeAlertPlus.API.Services
                 var monitored = await dbContext.Monitoreds.FindAsync(monitoredId);
                 var patientName = monitored != null ? $"{monitored.FirstName} {monitored.LastName}".Trim() : "Unknown";
 
-                var notification = new Domain.Entities.Notification
-                {
-                    Id = Guid.NewGuid(),
-                    IdMonitored = monitoredId,
-                    NotificationType = "Alert",
-                    Message = message,
-                    CreatedAt = now
-                };
-                dbContext.Notifications.Add(notification);
-                await dbContext.SaveChangesAsync();
-
-                var userMonitoreds = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
-                    .ToListAsync(
-                        dbContext.UserMonitoreds
-                            .Where(um => um.IdMonitored == monitoredId)
-                            .Include(um => um.User));
+                var userMonitoreds = await dbContext.UserMonitoreds
+                    .Where(um => um.IdMonitored == monitoredId)
+                    .Include(um => um.User)
+                    .ToListAsync();
 
                 foreach (var um in userMonitoreds)
                 {
                     var user = um.User;
                     if (user == null || user.DeletedAt.HasValue) continue;
+
+                    dbContext.Notifications.Add(new Domain.Entities.Notification
+                    {
+                        Id = Guid.NewGuid(),
+                        IdUser = user.Id,
+                        IdMonitored = monitoredId,
+                        NotificationType = "Alert",
+                        Message = message,
+                        CreatedAt = now
+                    });
 
                     if (user.NotifyByPush)
                     {
@@ -575,6 +635,8 @@ namespace LifeAlertPlus.API.Services
                         }
                     }
                 }
+
+                await dbContext.SaveChangesAsync();
             }
             catch (Exception ex)
             {
@@ -582,11 +644,5 @@ namespace LifeAlertPlus.API.Services
             }
         }
 
-        private enum AlertSeverity
-        {
-            Normal = 0,
-            Alert = 1,
-            Critical = 2
-        }
     }
 }

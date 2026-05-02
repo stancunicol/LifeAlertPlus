@@ -329,6 +329,54 @@
             }
         </div>
 
+        <div class="conditions-section section-card">
+            <div class="section-header">
+                <h2>🩺 @T("conditions.title")</h2>
+                @if (_showEditButton)
+                {
+                    <button class="btn-action-secondary" @onclick="OpenConditionsModal">✏️ @T("conditions.edit")</button>
+                }
+            </div>
+
+            @if (_conditionsLoading)
+            {
+                <div class="conditions-loading">
+                    <div class="ai-spinner"></div>
+                </div>
+            }
+            else if (_conditions.Count == 0)
+            {
+                <div class="conditions-empty">
+                    <span>@T("conditions.none")</span>
+                    @if (_showEditButton)
+                    {
+                        <button class="btn-add-condition" @onclick="OpenConditionsModal">+ @T("conditions.add")</button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="conditions-groups">
+                    @foreach (var group in ConditionGroups)
+                    {
+                        var active = group.Keys.Where(k => _conditions.Contains(k)).ToList();
+                        @if (active.Any())
+                        {
+                            <div class="condition-group">
+                                <span class="condition-group-label">@group.Icon @T(group.CategoryKey)</span>
+                                <div class="condition-chips">
+                                    @foreach (var key in active)
+                                    {
+                                        <span class="condition-chip @group.ColorClass">@T("conditions." + key)</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+
         <div class="map-section section-card">
             <div class="section-header">
                 <h2>📍 @T("selected.currentLocation")</h2>
@@ -693,6 +741,44 @@
                 <button class="btn-cancel" @onclick="CloseEmailModal">@T("common.cancel")</button>
                 <button class="btn-save" @onclick="SendEmailToDoctorAsync" disabled="@(_isSendingEmail || string.IsNullOrWhiteSpace(_doctorEmail))">
                     @(_isSendingEmail ? T("email.sending") : "📧 " + T("email.send"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showConditionsModal)
+{
+    <div class="modal-overlay" @onclick="CloseConditionsModal">
+        <div class="modal-content conditions-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>🩺 @T("conditions.editTitle")</h2>
+                <button class="modal-close" @onclick="CloseConditionsModal">✕</button>
+            </div>
+            <div class="modal-body">
+                @foreach (var group in ConditionGroups)
+                {
+                    <div class="conditions-modal-group">
+                        <h4 class="conditions-modal-category @group.ColorClass">@group.Icon @T(group.CategoryKey)</h4>
+                        <div class="conditions-modal-items">
+                            @foreach (var key in group.Keys)
+                            {
+                                var k = key;
+                                var isChecked = _editConditions.Contains(k);
+                                <label class="condition-checkbox-label">
+                                    <input type="checkbox" checked="@isChecked"
+                                           @onchange="e => ToggleCondition(k, (bool)(e.Value ?? false))" />
+                                    <span class="condition-checkbox-text">@T("conditions." + k)</span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseConditionsModal">@T("common.cancel")</button>
+                <button class="btn-save" @onclick="SaveConditionsAsync" disabled="@_isSavingConditions">
+                    @(_isSavingConditions ? T("selected.saving") : "💾 " + T("common.save"))
                 </button>
             </div>
         </div>

@@ -1,4 +1,4 @@
-.view-user-page {
+﻿.view-user-page {
     max-width: 1100px;
     margin: 48px auto;
     padding: 28px;
@@ -24,10 +24,10 @@
     font-weight: 700;
     background: linear-gradient(135deg,#A5D6A7,#E8F5E9);
     box-shadow: 0 6px 18px rgba(165,214,167,0.16);
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
-.user-info h1 { margin: 0; font-family: 'Jua', sans-serif; font-size: 1.6rem; color: #222; }
-.user-info .muted { color: var(--muted); margin: 6px 0 0 0; font-family: 'Jua', sans-serif; }
+.user-info h1 { margin: 0; font-family: var(--font-heading); font-size: 1.6rem; color: #222; }
+.user-info .muted { color: var(--muted); margin: 6px 0 0 0; font-family: var(--font-body); }
 .badges { margin-top: 8px; display:flex; gap:8px; align-items:center; }
 .badges .badge {
     display: inline-flex;
@@ -36,23 +36,23 @@
     border-radius: 999px;
     background: #f6f5f9;
     color: var(--muted);
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.85rem;
     border: 1px solid #f0e8ef;
 }
 .monitored-list { list-style: none; padding: 0; margin: 12px 0 0 0; }
 .monitored-list li { padding: 12px 0; display:flex; justify-content:space-between; gap:12px; border-bottom: 1px solid #f0f0f0; align-items:center; }
-.monitored-list li a { color: #2a2a2a; text-decoration: none; font-weight:600; font-family: 'Jua', sans-serif; }
+.monitored-list li a { color: #2a2a2a; text-decoration: none; font-weight:600; font-family: var(--font-body); }
 .monitored-list li a:hover { color: #5a9d73; text-decoration: underline; }
 .monitored-left { display:flex; flex-direction:column; gap:4px; }
-.monitored-name { font-weight:700; font-family: 'Jua', sans-serif; color:#222; }
+.monitored-name { font-weight:700; font-family: var(--font-body); color:#222; }
 .btn-view {
     background: linear-gradient(90deg,#A5D6A7,#E8F5E9);
     color: #fff;
     border: none;
     padding: 8px 12px;
     border-radius: 8px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-weight: 700;
     cursor: pointer;
     transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
@@ -69,7 +69,7 @@
     border: 1px solid #F0E3EA;
     padding: 10px 14px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     cursor: pointer;
     transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
@@ -79,7 +79,7 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 18px rgba(165,214,167,0.12);
 }
-.message-card { padding: 12px 16px; border-radius: 8px; background: #fbfbfc; color: #333; font-family: 'Jua', sans-serif; }
+.message-card { padding: 12px 16px; border-radius: 8px; background: #fbfbfc; color: #333; font-family: var(--font-body); }
 .message-card.error { background: #fff6f8; color: #a33; }
 
 @media (max-width: 768px) {

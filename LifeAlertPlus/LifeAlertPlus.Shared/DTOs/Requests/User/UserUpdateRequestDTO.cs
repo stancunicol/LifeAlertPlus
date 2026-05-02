@@ -16,5 +16,6 @@ namespace LifeAlertPlus.Shared.DTOs.Requests.User
         public int? DataRetentionDays { get; set; }
         public bool? NotifyByEmail { get; set; }
         public bool? NotifyByPush { get; set; }
+        public bool? EnableDailyReport { get; set; }
     }
 }

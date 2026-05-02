@@ -30,7 +30,7 @@
     position: relative;
     left: auto;
     transform: none;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 65px;
     font-weight: 550;
     color: #000;
@@ -42,7 +42,7 @@
 
 .login-description {
     font-size: 2.5rem;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     color: #222;
     line-height: 1.2;
     text-align: left;
@@ -61,7 +61,7 @@
     bottom: 0;
     font-size: 0.9rem;
     color: rgba(0, 0, 0, 0.5);
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     margin: 0;
     opacity: 0.8;
 }
@@ -85,7 +85,7 @@
 }
 
 .form-label {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.15rem;
     color: #000;
     font-weight: 500;
@@ -105,7 +105,7 @@
     border: none;
     border-radius: 30px;
     background: rgba(255, 255, 255, 0.9);
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: #666;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -177,7 +177,7 @@
     border-radius: 30px;
     background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
     color: #000;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
@@ -245,7 +245,7 @@
     }
 
 .error-message {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.70rem;
     text-align: center;
     padding: 0.5rem;
@@ -267,7 +267,7 @@
 
 a.form-link,
 a.form-link:visited {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1rem;
     color: #000 !important;
     text-decoration: none !important;
@@ -319,7 +319,7 @@ a.form-link:visited {
 }
 
     .modal-header h3 {
-        font-family: "Jua", sans-serif;
+        font-family: var(--font-heading);
         font-size: 1.8rem;
         color: #000;
         margin: 0;
@@ -330,7 +330,7 @@ a.form-link:visited {
 }
 
     .modal-body p {
-        font-family: "Jua", sans-serif;
+        font-family: var(--font-body);
         font-size: 1rem;
         color: #333;
         margin: 0 0 1rem 0;
@@ -350,7 +350,7 @@ a.form-link:visited {
     border-radius: 30px;
     background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
     color: #000;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
@@ -374,7 +374,7 @@ a.form-link:visited {
     border-radius: 30px;
     background: white;
     color: #000;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
@@ -392,7 +392,7 @@ a.form-link:visited {
     }
 
 .success-message {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     text-align: center;
     padding: 0.5rem;
@@ -511,7 +511,7 @@ a.form-link:visited {
     color: #222;
     border: 1.5px solid #d1d1d1;
     border-radius: 30px;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.1rem;
     font-weight: 500;
     padding: 0.7rem 1.5rem;

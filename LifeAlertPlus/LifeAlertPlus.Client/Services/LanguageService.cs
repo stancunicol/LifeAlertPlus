@@ -225,6 +225,18 @@ namespace LifeAlertPlus.Client.Services
             ["notifications.warnings"] = "Warnings",
             ["notifications.infoMessages"] = "Info Messages",
             ["notifications.unread"] = "Unread",
+            ["notifications.critical"] = "Critical",
+            ["notifications.alert"] = "Alert",
+            ["notifications.total"] = "Total",
+            ["notifications.markAllRead"] = "Mark all as read",
+            ["notifications.filterAll"] = "All",
+            ["notifications.unreadOnly"] = "Unread only",
+            ["notifications.loading"] = "Loading notifications…",
+            ["notifications.emptyTitle"] = "No notifications",
+            ["notifications.emptySubtitle"] = "No notifications match your current filters.",
+            ["notifications.markRead"] = "Mark as read",
+            ["notifications.alreadyRead"] = "Already read",
+            ["notifications.pageInfo"] = "Page {0} of {1} · {2} notifications",
 
             // Support
             ["support.tagline"] = "We're here to help",
@@ -791,6 +803,34 @@ namespace LifeAlertPlus.Client.Services
             ["selected.activityModerate"] = "Moderately active",
             ["selected.activityRest"] = "Rest / Inactive",
             ["selected.activityNoData"] = "Insufficient data",
+
+            // Medical conditions
+            ["conditions.title"] = "Medical Conditions",
+            ["conditions.edit"] = "Edit",
+            ["conditions.editTitle"] = "Edit Medical Conditions",
+            ["conditions.none"] = "No conditions recorded.",
+            ["conditions.add"] = "Add condition",
+            ["conditions.cardio"] = "Cardiovascular",
+            ["conditions.respiratory"] = "Respiratory",
+            ["conditions.neuro"] = "Neurological",
+            ["conditions.metabolic"] = "Metabolic",
+            ["conditions.hypertension"] = "Hypertension",
+            ["conditions.arrhythmia"] = "Cardiac Arrhythmia",
+            ["conditions.heart_failure"] = "Heart Failure",
+            ["conditions.mi_risk"] = "Myocardial Infarction Risk",
+            ["conditions.asthma"] = "Asthma",
+            ["conditions.copd"] = "COPD",
+            ["conditions.parkinson"] = "Parkinson's Disease",
+            ["conditions.epilepsy"] = "Epilepsy",
+            ["conditions.diabetes"] = "Diabetes Mellitus",
+
+            // Chatbot
+            ["chatbot.title"] = "LifeAlert+ Assistant",
+            ["chatbot.subtitle"] = "Ask about thresholds & conditions",
+            ["chatbot.placeholder"] = "Type a message… (Enter to send)",
+            ["chatbot.welcome"] = "Hi! I'm the LifeAlert+ assistant. I can answer questions about the app, vital sign thresholds (SpO₂, heart rate, temperature), and medical conditions related to elderly care. How can I help you?",
+            ["chatbot.error"] = "Sorry, I couldn't process your request. Please try again.",
+            ["chatbot.send"] = "Send",
         };
 
         // ── Română ──
@@ -988,6 +1028,18 @@ namespace LifeAlertPlus.Client.Services
             ["notifications.warnings"] = "Avertismente",
             ["notifications.infoMessages"] = "Mesaje informative",
             ["notifications.unread"] = "Necitite",
+            ["notifications.critical"] = "Critic",
+            ["notifications.alert"] = "Alertă",
+            ["notifications.total"] = "Total",
+            ["notifications.markAllRead"] = "Marchează toate ca citite",
+            ["notifications.filterAll"] = "Toate",
+            ["notifications.unreadOnly"] = "Doar necitite",
+            ["notifications.loading"] = "Se încarcă notificările…",
+            ["notifications.emptyTitle"] = "Nicio notificare",
+            ["notifications.emptySubtitle"] = "Nicio notificare nu corespunde filtrelor selectate.",
+            ["notifications.markRead"] = "Marchează ca citit",
+            ["notifications.alreadyRead"] = "Deja citit",
+            ["notifications.pageInfo"] = "Pagina {0} din {1} · {2} notificări",
 
             // Support
             ["support.tagline"] = "Suntem aici să te ajutăm",
@@ -1554,6 +1606,34 @@ namespace LifeAlertPlus.Client.Services
             ["selected.activityModerate"] = "Moderat activ",
             ["selected.activityRest"] = "Odihnă / Inactiv",
             ["selected.activityNoData"] = "Date insuficiente",
+
+            // Afecțiuni medicale
+            ["conditions.title"] = "Afecțiuni medicale",
+            ["conditions.edit"] = "Editează",
+            ["conditions.editTitle"] = "Editează afecțiuni medicale",
+            ["conditions.none"] = "Nicio afecțiune înregistrată.",
+            ["conditions.add"] = "Adaugă afecțiune",
+            ["conditions.cardio"] = "Afecțiuni cardiovasculare",
+            ["conditions.respiratory"] = "Afecțiuni respiratorii",
+            ["conditions.neuro"] = "Afecțiuni neurologice",
+            ["conditions.metabolic"] = "Afecțiuni metabolice",
+            ["conditions.hypertension"] = "Hipertensiune arterială",
+            ["conditions.arrhythmia"] = "Aritmie cardiacă",
+            ["conditions.heart_failure"] = "Insuficiență cardiacă",
+            ["conditions.mi_risk"] = "Risc infarct miocardic",
+            ["conditions.asthma"] = "Astm",
+            ["conditions.copd"] = "BPOC",
+            ["conditions.parkinson"] = "Boala Parkinson",
+            ["conditions.epilepsy"] = "Epilepsie",
+            ["conditions.diabetes"] = "Diabet zaharat",
+
+            // Chatbot
+            ["chatbot.title"] = "Asistent LifeAlert+",
+            ["chatbot.subtitle"] = "Întreabă despre praguri și afecțiuni",
+            ["chatbot.placeholder"] = "Scrie un mesaj… (Enter pentru trimitere)",
+            ["chatbot.welcome"] = "Salut! Sunt asistentul LifeAlert+. Pot răspunde la întrebări despre aplicație, pragurile semnelor vitale (SpO₂, puls, temperatură) și afecțiunile medicale legate de îngrijirea persoanelor în vârstă. Cu ce te pot ajuta?",
+            ["chatbot.error"] = "Îmi pare rău, nu am putut procesa cererea. Te rog încearcă din nou.",
+            ["chatbot.send"] = "Trimite",
         };
     }
 }

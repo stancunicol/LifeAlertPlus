@@ -30,6 +30,7 @@ builder.Services.AddScoped<ProfilePictureService>();
 builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<MeasurementService>();
 builder.Services.AddScoped<AIPredictionService>();
+builder.Services.AddScoped<ChatbotClientService>();
 
 builder.Services.AddSingleton<LanguageService>();
 builder.Services.AddScoped<PushNotificationClientService>(sp =>

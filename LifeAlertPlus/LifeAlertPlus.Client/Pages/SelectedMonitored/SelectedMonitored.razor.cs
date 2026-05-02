@@ -254,6 +254,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
                 _ = LoadTrendPredictionsAsync(PersonId);
                 _ = LoadActivityProfileAsync(PersonId);
+                _ = LoadConditionsAsync(PersonId);
 
                 IsLoading = false;
             }
@@ -358,6 +359,80 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             {
                 ActivityProfileLoading = false;
                 await InvokeAsync(StateHasChanged);
+            }
+        }
+
+        // ── Conditions ────────────────────────────────────────────
+
+        private List<string> _conditions = new();
+        private List<string> _editConditions = new();
+        private bool _conditionsLoading;
+        private bool _showConditionsModal;
+        private bool _isSavingConditions;
+
+        private record ConditionGroupDef(string CategoryKey, string Icon, string ColorClass, List<string> Keys);
+
+        private static readonly List<ConditionGroupDef> ConditionGroups = new()
+        {
+            new("conditions.cardio",       "❤️",  "cardio",      new() { "hypertension", "arrhythmia", "heart_failure", "mi_risk" }),
+            new("conditions.respiratory",  "🫁",  "respiratory", new() { "asthma", "copd" }),
+            new("conditions.neuro",        "🧠",  "neuro",       new() { "parkinson", "epilepsy" }),
+            new("conditions.metabolic",    "🔬",  "metabolic",   new() { "diabetes" }),
+        };
+
+        private async Task LoadConditionsAsync(Guid monitoredId)
+        {
+            _conditionsLoading = true;
+            StateHasChanged();
+            try
+            {
+                var response = await HttpClient.GetAsync($"api/monitoredcondition/{monitoredId}");
+                _conditions = response.IsSuccessStatusCode
+                    ? (await response.Content.ReadFromJsonAsync<List<string>>()) ?? new()
+                    : new();
+            }
+            catch { _conditions = new(); }
+            finally
+            {
+                _conditionsLoading = false;
+                StateHasChanged();
+            }
+        }
+
+        private void OpenConditionsModal()
+        {
+            _editConditions = new List<string>(_conditions);
+            _showConditionsModal = true;
+        }
+
+        private void CloseConditionsModal() => _showConditionsModal = false;
+
+        private void ToggleCondition(string key, bool isChecked)
+        {
+            if (isChecked && !_editConditions.Contains(key))
+                _editConditions.Add(key);
+            else if (!isChecked)
+                _editConditions.Remove(key);
+        }
+
+        private async Task SaveConditionsAsync()
+        {
+            _isSavingConditions = true;
+            StateHasChanged();
+            try
+            {
+                var response = await HttpClient.PutAsJsonAsync($"api/monitoredcondition/{PersonId}", _editConditions);
+                if (response.IsSuccessStatusCode)
+                {
+                    _conditions = new List<string>(_editConditions);
+                    _showConditionsModal = false;
+                }
+            }
+            catch { }
+            finally
+            {
+                _isSavingConditions = false;
+                StateHasChanged();
             }
         }
 

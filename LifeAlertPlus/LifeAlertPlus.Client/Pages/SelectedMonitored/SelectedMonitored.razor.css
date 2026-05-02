@@ -1,4 +1,4 @@
-.selected-monitored-container {
+﻿.selected-monitored-container {
     max-width: 1600px;
     margin: 0 auto;
     padding: 25px;
@@ -17,7 +17,7 @@
     gap: 8px;
     padding: 32px 16px;
     color: #888;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
 }
 
 .trend-no-data-icon, .trend-stable-icon {
@@ -33,7 +33,7 @@
     color: #bbb;
     text-align: right;
     padding: 4px 0 0;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
 }
 
 .trend-predictions-list {
@@ -47,7 +47,7 @@
     padding: 14px 18px;
     border-left: 5px solid #f39c12;
     background: #fffbf2;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
 }
 
 .trend-prediction-card.danger {
@@ -160,7 +160,7 @@
     justify-content: center;
     gap: 8px;
     color: #999;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1rem;
 }
 
@@ -193,7 +193,7 @@
     border: 2px solid #E8F5E9;
     padding: 12px 20px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 16px;
     cursor: pointer;
     display: flex;
@@ -241,7 +241,7 @@
     justify-content: center;
     font-size: 42px;
     font-weight: bold;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -254,7 +254,7 @@
 .person-name-main {
     margin: 0;
     font-size: 36px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .person-meta {
@@ -338,7 +338,7 @@
     border: none;
     padding: 12px 20px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -410,14 +410,14 @@
 
 .stat-value-huge {
     font-size: 36px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: #333;
     font-weight: bold;
 }
 
 .stat-value-gps {
     font-size: 16px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: #333;
     font-weight: 500;
     word-break: break-all;
@@ -482,7 +482,7 @@
 .section-header h2 {
     margin: 0;
     font-size: 22px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     color: #333;
 }
 
@@ -520,7 +520,7 @@
     border: none;
     background: transparent;
     color: #888;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 13px;
     border-radius: 7px;
     cursor: pointer;
@@ -585,7 +585,7 @@
 }
 
 .chart-week-label {
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     color: #555;
     min-width: 160px;
@@ -600,7 +600,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 13px;
     color: #777;
     margin-bottom: 6px;
@@ -662,13 +662,13 @@
 .chart-x-label {
     font-size: 11px;
     fill: #999;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .chart-y-label {
     font-size: 11px;
     fill: #AAA;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     text-anchor: start;
 }
 
@@ -772,7 +772,7 @@
 .alert-content h4 {
     margin: 0 0 5px 0;
     font-size: 16px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     color: #333;
 }
 
@@ -818,7 +818,7 @@
 .measurement-content h4 {
     margin: 0 0 5px 0;
     font-size: 16px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     color: #333;
 }
 
@@ -861,7 +861,7 @@
 .loading-state p {
     font-size: 18px;
     color: #666;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 @media (max-width: 1200px) {
@@ -997,7 +997,7 @@
 
 .modal-header h2 {
     margin: 0;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     font-size: 20px;
     color: #333;
 }
@@ -1037,7 +1037,7 @@
 }
 
 .form-group label {
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 13px;
     color: #777;
 }
@@ -1047,7 +1047,7 @@
     padding: 10px 14px;
     border: 2px solid #e8e8e8;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     color: #333;
     outline: none;
@@ -1067,7 +1067,7 @@
 }
 
 .form-group-separator span {
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 12px;
     color: #bbb;
     white-space: nowrap;
@@ -1093,7 +1093,7 @@
     padding: 10px 14px;
     border-radius: 10px;
     font-size: 13px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .modal-footer {
@@ -1109,7 +1109,7 @@
     border: 2px solid #e0e0e0;
     background: white;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     color: #888;
     cursor: pointer;
@@ -1126,7 +1126,7 @@
     border: none;
     background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     color: white;
     cursor: pointer;
@@ -1189,7 +1189,7 @@
     gap: 12px;
     padding: 20px;
     color: #888;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .ai-spinner {
@@ -1251,12 +1251,12 @@
 .ai-risk-label {
     font-size: 12px;
     color: #888;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .ai-risk-value {
     font-size: 20px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: #333;
 }
 
@@ -1271,7 +1271,7 @@
 .ai-confidence-label {
     font-size: 13px;
     color: #888;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     white-space: nowrap;
 }
 
@@ -1304,7 +1304,7 @@
 
 .ai-confidence-value {
     font-size: 14px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: #555;
     min-width: 48px;
     text-align: right;
@@ -1319,12 +1319,12 @@
 .ai-state-label {
     font-size: 12px;
     color: #888;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .ai-state-value {
     font-size: 16px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: #333;
     text-transform: capitalize;
 }
@@ -1339,13 +1339,13 @@
 .ai-health-label {
     font-size: 12px;
     color: #888;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .ai-health-value {
     font-size: 18px;
     font-weight: bold;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .ai-health-value.normal {
@@ -1383,7 +1383,7 @@
 .ai-prob-title {
     font-size: 13px;
     color: #888;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .ai-prob-bars {
@@ -1403,7 +1403,7 @@
     color: #555;
     min-width: 100px;
     text-transform: capitalize;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .ai-prob-bar {
@@ -1426,7 +1426,7 @@
     color: #888;
     min-width: 45px;
     text-align: right;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .ai-unavailable {
@@ -1437,7 +1437,7 @@
     gap: 8px;
     padding: 30px;
     color: #999;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .ai-unavailable-icon {
@@ -1481,7 +1481,7 @@
     font-size: 13px;
     color: #43a047;
     text-align: center;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-weight: bold;
 }
 
@@ -1490,7 +1490,7 @@
     font-size: 13px;
     color: #e53935;
     text-align: center;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-weight: bold;
 }
 
@@ -1508,7 +1508,7 @@
     font-size: 13px;
     color: #888;
     text-align: center;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .export-warning {
@@ -1516,7 +1516,7 @@
     font-size: 13px;
     color: #e53935;
     text-align: center;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-weight: bold;
 }
 
@@ -1528,7 +1528,7 @@
 .profile-updated-at {
     font-size: 0.75rem;
     color: #aaa;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .activity-timeline {
@@ -1558,14 +1558,14 @@
 
 .activity-slot-hour {
     font-size: 0.7rem;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: rgba(255,255,255,0.85);
     font-weight: 700;
 }
 
 .activity-slot-pulse {
     font-size: 0.65rem;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: rgba(255,255,255,0.7);
 }
 
@@ -1591,7 +1591,7 @@
     align-items: center;
     gap: 6px;
     font-size: 0.78rem;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: #555;
 }
 
@@ -1600,4 +1600,155 @@
     height: 12px;
     border-radius: 3px;
     display: inline-block;
+}
+
+/* ── Conditions Section ────────────────────────────── */
+.conditions-section {
+    margin-bottom: 24px;
+}
+
+.btn-action-secondary {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 2px solid #e0e0e0;
+    background: #fff;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #555;
+}
+
+.btn-action-secondary:hover {
+    border-color: #A5D6A7;
+    background: #f0faf0;
+    color: #2e7d32;
+}
+
+.conditions-loading {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.conditions-empty {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 0 6px;
+    color: #aaa;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+}
+
+.btn-add-condition {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 2px dashed #A5D6A7;
+    background: transparent;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    color: #4caf50;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-add-condition:hover {
+    background: #f0faf0;
+}
+
+.conditions-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 4px;
+}
+
+.condition-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.condition-group-label {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #777;
+    white-space: nowrap;
+    min-width: 180px;
+    padding-top: 4px;
+}
+
+.condition-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.condition-chip {
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+/* chip colors by category */
+.condition-chip.cardio      { background: #ffebee; color: #c62828; border: 1.5px solid #ffcdd2; }
+.condition-chip.respiratory { background: #e3f2fd; color: #1565c0; border: 1.5px solid #bbdefb; }
+.condition-chip.neuro       { background: #f3e5f5; color: #6a1b9a; border: 1.5px solid #e1bee7; }
+.condition-chip.metabolic   { background: #fff3e0; color: #e65100; border: 1.5px solid #ffe0b2; }
+
+/* ── Conditions Modal ──────────────────────────────── */
+.conditions-modal {
+    max-width: 520px;
+}
+
+.conditions-modal-group {
+    margin-bottom: 20px;
+}
+
+.conditions-modal-category {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin: 0 0 10px;
+    padding: 4px 0;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.conditions-modal-category.cardio      { color: #c62828; border-color: #ffcdd2; }
+.conditions-modal-category.respiratory { color: #1565c0; border-color: #bbdefb; }
+.conditions-modal-category.neuro       { color: #6a1b9a; border-color: #e1bee7; }
+.conditions-modal-category.metabolic   { color: #e65100; border-color: #ffe0b2; }
+
+.conditions-modal-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 4px;
+}
+
+.condition-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: #333;
+    padding: 4px 0;
+}
+
+.condition-checkbox-label input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #4caf50;
+}
+
+.condition-checkbox-text {
+    line-height: 1.3;
 }

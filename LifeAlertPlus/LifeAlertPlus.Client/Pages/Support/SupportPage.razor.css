@@ -1,4 +1,4 @@
-/* ── Page Container ───────────────────────────────────── */
+﻿/* ── Page Container ───────────────────────────────────── */
 .support-page {
     max-width: 900px;
     margin: 0 auto;
@@ -17,7 +17,7 @@
 
 /* ── Content ──────────────────────────────────────────── */
 .support-content {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     color: #333;
     line-height: 1.75;
 }
@@ -25,6 +25,15 @@
 .support-content p {
     font-size: 1rem;
     margin-bottom: 0.8rem;
+}
+
+.support-intro-text {
+    font-size: 1.05rem;
+    color: #fff;
+    opacity: 0.95;
+    margin: 0;
+    font-family: var(--font-body);
+    line-height: 1.6;
 }
 
 /* ── Intro Card (header banner) ───────────────────────── */
@@ -36,7 +45,7 @@
 }
 
 .section-title {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 36px;
     color: #fff;
     margin: 0 0 10px 0;
@@ -51,7 +60,7 @@
 }
 
 .subsection-title {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.25rem;
     color: #2e7d32;
     margin-bottom: 1rem;
@@ -85,7 +94,7 @@
 }
 
 .contact-body h3 {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.15rem;
     color: #2e7d32;
     margin-bottom: 0.4rem;
@@ -98,7 +107,7 @@
 
 .email-link {
     display: inline-block;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1rem;
     color: #2e7d32;
     background: rgba(165, 214, 167, 0.2);
@@ -144,7 +153,7 @@
     padding: 0.9rem 1.2rem;
     border-radius: 14px;
     background: rgba(232, 245, 233, 0.5);
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: #333;
     transition: background 0.2s;
@@ -197,7 +206,7 @@
 }
 
 .issue-header h4 {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.95rem;
     color: #2e7d32;
     margin: 0;
@@ -210,7 +219,7 @@
 }
 
 .issue-steps li {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.9rem;
     color: #555;
     padding: 0.3rem 0 0.3rem 1.2rem;
@@ -254,7 +263,7 @@
     background: rgba(232, 245, 233, 0.4);
     border-radius: 12px;
     border: 1px solid rgba(165, 214, 167, 0.15);
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: #333;
     transition: background 0.2s;
@@ -290,7 +299,7 @@
 
 .noreply-badge {
     display: inline-block;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     background: rgba(232, 245, 233, 0.7);
     border: 1px solid rgba(165, 214, 167, 0.3);
@@ -323,7 +332,7 @@
 }
 
 .notice-title {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.05rem;
     color: #e65100;
     margin-bottom: 0.3rem;

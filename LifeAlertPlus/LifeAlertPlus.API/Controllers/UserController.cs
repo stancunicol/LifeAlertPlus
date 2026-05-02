@@ -73,6 +73,7 @@ namespace LifeAlertPlus.API.Controllers
             user.DataRetentionDays = updatedUser.DataRetentionDays ?? user.DataRetentionDays;
             user.NotifyByEmail = updatedUser.NotifyByEmail ?? user.NotifyByEmail;
             user.NotifyByPush = updatedUser.NotifyByPush ?? user.NotifyByPush;
+            user.EnableDailyReport = updatedUser.EnableDailyReport ?? user.EnableDailyReport;
             user.UpdatedAt = DateTime.UtcNow;
 
             var result = await _userService.UpdateUserAsync(user);
@@ -371,6 +372,22 @@ namespace LifeAlertPlus.API.Controllers
             }
 
             return Ok(response);
+        }
+
+        [HttpPatch("{id}/daily-report")]
+        public async Task<IActionResult> ToggleDailyReport(Guid id, [FromBody] ToggleDailyReportRequest request)
+        {
+            if (!CallerOwns(id))
+                return Forbid();
+
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null)
+                return NotFound();
+
+            user.EnableDailyReport = request.Enabled;
+            await _userService.UpdateUserAsync(user);
+
+            return Ok(new { EnableDailyReport = request.Enabled });
         }
 
         private static bool IsAdminRole(string? role)

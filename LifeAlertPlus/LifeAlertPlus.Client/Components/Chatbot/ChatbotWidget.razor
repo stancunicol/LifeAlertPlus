@@ -1,0 +1,62 @@
+@namespace LifeAlertPlus.Client.Components.Chatbot
+
+@if (_show)
+{
+    @if (_isOpen)
+    {
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <div class="chat-bot-avatar">🤖</div>
+                    <div>
+                        <div class="chat-title">@Lang.T("chatbot.title")</div>
+                        <div class="chat-subtitle">@Lang.T("chatbot.subtitle")</div>
+                    </div>
+                </div>
+                <button class="chat-close" @onclick="Close" title="Close">✕</button>
+            </div>
+
+            <div class="chat-messages" id="chatbot-msgs">
+                @foreach (var msg in _messages)
+                {
+                    <div class="chat-msg @msg.Role">
+                        @if (msg.Role == "assistant")
+                        {
+                            <span class="msg-avatar-icon">🤖</span>
+                        }
+                        <div class="msg-bubble">@((MarkupString)FormatMessage(msg.Text))</div>
+                    </div>
+                }
+                @if (_isLoading)
+                {
+                    <div class="chat-msg assistant">
+                        <span class="msg-avatar-icon">🤖</span>
+                        <div class="msg-bubble typing">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="chat-input-area">
+                <textarea class="chat-input"
+                          placeholder="@Lang.T("chatbot.placeholder")"
+                          @bind="_input"
+                          @bind:event="oninput"
+                          @onkeydown="OnKeyDown"
+                          rows="1"
+                          disabled="@_isLoading" />
+                <button class="chat-send"
+                        @onclick="SendMessage"
+                        disabled="@(_isLoading || string.IsNullOrWhiteSpace(_input))"
+                        title="@Lang.T("chatbot.send")">
+                    ➤
+                </button>
+            </div>
+        </div>
+    }
+
+    <button class="chat-fab @(_isOpen ? "fab-open" : "")" @onclick="Toggle" title="@Lang.T("chatbot.title")">
+        @(_isOpen ? "✕" : "💬")
+    </button>
+}

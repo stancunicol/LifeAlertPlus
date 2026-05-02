@@ -9,6 +9,9 @@ namespace LifeAlertPlus.Domain.Entities
         [ForeignKey(nameof(Monitored))]
         public Guid IdMonitored { get; set; }
 
+        [ForeignKey(nameof(User))]
+        public Guid? IdUser { get; set; }
+
         public string NotificationType { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
@@ -17,5 +20,6 @@ namespace LifeAlertPlus.Domain.Entities
         public bool IsRead { get; set; } = false;
 
         public Monitored Monitored { get; set; } = null!;
+        public User? User { get; set; }
     }
 }

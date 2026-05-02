@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authentication.Google;
 using System.Text;
 using LifeAlertPlus.API.Services;
 using LifeAlertPlus.Application.IServices;
@@ -25,9 +24,18 @@ builder.Services.AddHttpClient("AiService", client =>
     client.BaseAddress = new Uri(aiBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(15);
 });
-builder.Services.AddSingleton<LifeAlertPlus.API.Services.SimulationManager>();
-builder.Services.AddSingleton<LifeAlertPlus.API.Services.ActivityProfileService>();
-builder.Services.AddSingleton<LifeAlertPlus.API.Services.AlertMonitorService>();
+builder.Services.AddHttpClient("Anthropic", client =>
+{
+    client.BaseAddress = new Uri("https://api.anthropic.com/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddScoped<ChatbotService>();
+builder.Services.AddSingleton<SimulationManager>();
+builder.Services.AddSingleton<ActivityProfileService>();
+builder.Services.AddSingleton<ConditionRuleEngine>();
+builder.Services.AddSingleton<AlertMonitorService>();
+builder.Services.AddScoped<DailyReportService>();
+builder.Services.AddHostedService<DailyReportBackgroundService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -57,6 +65,7 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
 builder.Services.AddScoped<IInvitationRepository, InvitationRepository>();
 builder.Services.AddScoped<IActivityProfileRepository, ActivityProfileRepository>();
+builder.Services.AddScoped<IMonitoredConditionRepository, MonitoredConditionRepository>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

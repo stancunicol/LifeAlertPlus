@@ -1,4 +1,4 @@
-/* ── Page Container ───────────────────────────────────── */
+﻿/* ── Page Container ───────────────────────────────────── */
 .about-page {
     max-width: 900px;
     margin: 0 auto;
@@ -17,7 +17,7 @@
 
 /* ── Content ──────────────────────────────────────────── */
 .about-content {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     color: #333;
     line-height: 1.75;
 }
@@ -25,6 +25,15 @@
 .about-content p {
     font-size: 1rem;
     margin-bottom: 0.8rem;
+}
+
+.about-intro-text {
+    font-size: 1.05rem;
+    color: #fff;
+    opacity: 0.95;
+    margin: 0;
+    font-family: var(--font-body);
+    line-height: 1.6;
 }
 
 /* ── Intro Card (header banner) ───────────────────────── */
@@ -36,7 +45,7 @@
 }
 
 .section-title {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 36px;
     color: #fff;
     margin: 0 0 10px 0;
@@ -79,7 +88,7 @@
 }
 
 .card-title {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.15rem;
     color: #2e7d32;
     margin-bottom: 0.6rem;
@@ -103,7 +112,7 @@
 }
 
 .subsection-title {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.25rem;
     color: #2e7d32;
     margin-bottom: 1rem;
@@ -126,7 +135,7 @@
     border: 1px solid rgba(165, 214, 167, 0.3);
     border-radius: 14px;
     padding: 1rem 1.4rem;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: #333;
     transition: background 0.2s, transform 0.2s;
@@ -166,7 +175,7 @@
     padding: 0.8rem 1.2rem;
     border-radius: 12px;
     background: rgba(232, 245, 233, 0.5);
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: #333;
     transition: background 0.2s;
@@ -209,7 +218,7 @@
 }
 
 .disclaimer-title {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.05rem;
     color: #e65100;
     margin-bottom: 0.3rem;

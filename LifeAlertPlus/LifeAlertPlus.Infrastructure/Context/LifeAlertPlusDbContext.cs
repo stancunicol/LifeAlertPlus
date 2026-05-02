@@ -19,6 +19,7 @@ namespace LifeAlertPlus.Infrastructure.Context
         public DbSet<Role> Roles { get; set; } = default!;
         public DbSet<Invitation> Invitations { get; set; } = default!;
         public DbSet<ActivityProfile> ActivityProfiles { get; set; } = default!;
+        public DbSet<MonitoredCondition> MonitoredConditions { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -63,6 +64,16 @@ namespace LifeAlertPlus.Infrastructure.Context
                 .HasForeignKey(n => n.IdMonitored)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.IdUser)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => n.IdUser);
+
             modelBuilder.Entity<DailyHistory>()
                 .HasIndex(d => d.IdMonitored);
 
@@ -81,6 +92,18 @@ namespace LifeAlertPlus.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<ActivityProfile>()
                 .HasIndex(ap => ap.IdMonitored);
+
+            modelBuilder.Entity<MonitoredCondition>().HasKey(c => c.Id);
+            modelBuilder.Entity<MonitoredCondition>()
+                .HasOne(c => c.Monitored)
+                .WithMany()
+                .HasForeignKey(c => c.IdMonitored)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<MonitoredCondition>()
+                .HasIndex(c => c.IdMonitored);
+            modelBuilder.Entity<MonitoredCondition>()
+                .HasIndex(c => new { c.IdMonitored, c.ConditionKey })
+                .IsUnique();
         }
     }
 }

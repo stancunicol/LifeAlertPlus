@@ -32,13 +32,8 @@ namespace LifeAlertPlus.API.Controllers
             pageSize = Math.Clamp(pageSize, 1, 50);
             page = Math.Max(1, page);
 
-            var monitoredIds = await _dbContext.UserMonitoreds
-                .Where(um => um.IdUser == userId.Value)
-                .Select(um => um.IdMonitored)
-                .ToListAsync();
-
             var baseQuery = _dbContext.Notifications
-                .Where(n => monitoredIds.Contains(n.IdMonitored) && n.DeletedAt == null);
+                .Where(n => n.IdUser == userId.Value && n.DeletedAt == null);
 
             var criticalCount = await baseQuery.CountAsync(n => n.NotificationType == "Critical");
             var alertCount    = await baseQuery.CountAsync(n => n.NotificationType == "Alert");
@@ -91,13 +86,8 @@ namespace LifeAlertPlus.API.Controllers
             var userId = GetCallerId();
             if (userId == null) return Forbid();
 
-            var monitoredIds = await _dbContext.UserMonitoreds
-                .Where(um => um.IdUser == userId.Value)
-                .Select(um => um.IdMonitored)
-                .ToListAsync();
-
             var notifications = await _dbContext.Notifications
-                .Where(n => monitoredIds.Contains(n.IdMonitored) && n.DeletedAt == null)
+                .Where(n => n.IdUser == userId.Value && n.DeletedAt == null)
                 .OrderByDescending(n => n.CreatedAt)
                 .Take(count)
                 .Select(n => new { n.Id, n.NotificationType, n.Message, n.CreatedAt, n.IdMonitored, n.IsRead })
@@ -112,13 +102,8 @@ namespace LifeAlertPlus.API.Controllers
             var userId = GetCallerId();
             if (userId == null) return Forbid();
 
-            var monitoredIds = await _dbContext.UserMonitoreds
-                .Where(um => um.IdUser == userId.Value)
-                .Select(um => um.IdMonitored)
-                .ToListAsync();
-
             var notification = await _dbContext.Notifications
-                .FirstOrDefaultAsync(n => n.Id == id && monitoredIds.Contains(n.IdMonitored) && n.DeletedAt == null);
+                .FirstOrDefaultAsync(n => n.Id == id && n.IdUser == userId.Value && n.DeletedAt == null);
 
             if (notification == null) return NotFound();
 
@@ -133,13 +118,8 @@ namespace LifeAlertPlus.API.Controllers
             var userId = GetCallerId();
             if (userId == null) return Forbid();
 
-            var monitoredIds = await _dbContext.UserMonitoreds
-                .Where(um => um.IdUser == userId.Value)
-                .Select(um => um.IdMonitored)
-                .ToListAsync();
-
             var unread = await _dbContext.Notifications
-                .Where(n => monitoredIds.Contains(n.IdMonitored) && !n.IsRead && n.DeletedAt == null)
+                .Where(n => n.IdUser == userId.Value && !n.IsRead && n.DeletedAt == null)
                 .ToListAsync();
 
             foreach (var n in unread)
@@ -159,13 +139,8 @@ namespace LifeAlertPlus.API.Controllers
             if (!string.IsNullOrEmpty(since) && DateTime.TryParse(since, out var parsed))
                 sinceDate = parsed.ToUniversalTime();
 
-            var monitoredIds = await _dbContext.UserMonitoreds
-                .Where(um => um.IdUser == userId.Value)
-                .Select(um => um.IdMonitored)
-                .ToListAsync();
-
             var count = await _dbContext.Notifications
-                .Where(n => monitoredIds.Contains(n.IdMonitored) && n.DeletedAt == null && n.CreatedAt > sinceDate)
+                .Where(n => n.IdUser == userId.Value && n.DeletedAt == null && n.CreatedAt > sinceDate)
                 .CountAsync();
 
             return Ok(new { Count = count });

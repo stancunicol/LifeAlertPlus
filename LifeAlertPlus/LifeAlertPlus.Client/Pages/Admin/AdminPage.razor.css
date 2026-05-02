@@ -1,4 +1,4 @@
-.admin-container {
+﻿.admin-container {
 	padding: 2.5rem 2rem 2rem;
 	max-width: 1400px;
 	margin: 12px auto 0;
@@ -15,14 +15,14 @@
 
 
 .header-title-section h1 {
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-heading);
 	font-size: 2.2rem;
 	color: #000;
 	margin: 0 0 0.5rem 0;
 }
 
 .admin-subtitle {
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 1.1rem;
 	color: #666;
 	margin: 0;
@@ -31,7 +31,7 @@
 .tag {
 	padding: 0.6rem 1rem;
 	border-radius: 999px;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 0.95rem;
 	border: 1px solid #e0e0e0;
 }
@@ -46,7 +46,7 @@
 .empty-message {
 	padding: 2rem;
 	text-align: center;
-	font-family: 'Jua', sans-serif;
+	font-family: var(--font-body);
 	font-size: 1.1rem;
 	border-radius: 12px;
 	margin: 2rem 0;
@@ -116,14 +116,14 @@
 }
 
 .stat-label {
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 0.95rem;
 	color: #666;
 	margin-bottom: 0.25rem;
 }
 
 .stat-value {
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 1.8rem;
 	font-weight: 600;
 	color: #000;
@@ -150,14 +150,14 @@
 }
 
 .section-header h2 {
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-heading);
 	font-size: 1.5rem;
 	color: #000;
 	margin: 0;
 }
 
 .section-note {
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 0.95rem;
 	color: #666;
 }
@@ -199,7 +199,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-weight: 700;
 	color: #000;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -208,14 +208,14 @@
 
 .user-main h3 {
 	margin: 0 0 0.2rem 0;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-heading);
 	font-size: 1.2rem;
 	color: #000;
 }
 
 .user-main p {
 	margin: 0;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 0.95rem;
 	color: #666;
 }
@@ -225,7 +225,7 @@
 	padding: 0.35rem 0.75rem;
 	background: rgba(165, 214, 167, 0.18);
 	border-radius: 12px;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 0.85rem;
 	color: #2e7d32;
 	margin-top: 0.3rem;
@@ -235,7 +235,7 @@
 	margin-left: auto;
 	padding: 0.4rem 0.75rem;
 	border-radius: 999px;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 0.85rem;
 	border: 1px solid #e6e6e6;
 }
@@ -254,7 +254,7 @@
 .user-meta {
 	display: flex;
 	justify-content: space-between;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 0.9rem;
 	color: #555;
 }
@@ -300,7 +300,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 0.95rem;
 	color: #000;
 }
@@ -324,7 +324,7 @@
 .admin-table {
 	width: 100%;
 	border-collapse: collapse;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 }
 
 .admin-table thead {
@@ -418,7 +418,7 @@
 	padding: 0.4rem 0.8rem;
 	background: #f4f4f4;
 	border-radius: 10px;
-	font-family: "Jua", sans-serif;
+	font-family: var(--font-body);
 	font-size: 0.9rem;
 }
 

@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --pink-main: #C8E6C9;
     --pink-deep: #A5D6A7;
     --ink: #0f0f10;
@@ -34,14 +34,14 @@
 }
 
 .header-title-section h1 {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-heading);
     font-size: 2.2rem;
     color: #000;
     margin: 0 0 0.5rem 0;
 }
 
 .admin-subtitle {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.1rem;
     color: #666;
     margin: 0;
@@ -50,7 +50,7 @@
 .tag {
     padding: 0.6rem 1rem;
     border-radius: 999px;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     border: 1px solid #e0e0e0;
 }
@@ -105,14 +105,14 @@
 }
 
 .stat-label {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: #666;
     margin-bottom: 0.25rem;
 }
 
 .stat-value {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.8rem;
     font-weight: 600;
     color: #000;
@@ -139,14 +139,14 @@
 }
 
 .section-header h2 {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.5rem;
     color: #000;
     margin: 0;
 }
 
 .section-note {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: #666;
 }
@@ -177,7 +177,7 @@
 
 .eyebrow {
     margin: 0 0 4px 0;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: var(--muted);
     letter-spacing: 0.5px;
@@ -185,14 +185,14 @@
 
 .page-header h1 {
     margin: 0;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-heading);
     font-size: 2rem;
     color: var(--ink);
 }
 
 .subtitle {
     margin: 4px 0 0 0;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1rem;
     color: var(--muted);
 }
@@ -212,7 +212,7 @@
     background: rgba(255, 255, 255, 0.68);
     border: 1px solid rgba(233, 231, 238, 0.8);
     box-shadow: 0 10px 24px rgba(12, 10, 29, 0.1);
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     color: var(--ink);
 }
 
@@ -244,7 +244,7 @@
     padding: 12px 14px;
     box-shadow: var(--shadow);
     font-size: 1rem;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     color: var(--ink);
 }
 
@@ -258,7 +258,7 @@
     background: var(--surface);
     padding: 10px 16px;
     border-radius: 12px;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: var(--muted);
     cursor: pointer;
@@ -291,7 +291,7 @@
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     color: var(--ink);
 }
 
@@ -338,7 +338,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.1rem;
     font-weight: 700;
     box-shadow: 0 10px 18px rgba(165, 214, 167, 0.28);
@@ -350,12 +350,12 @@
 
 .name { font-weight: 700; color: var(--ink); }
 
-.email { margin: 0; font-family: "Jua", sans-serif; font-size: 0.95rem; color: var(--muted); }
+.email { margin: 0; font-family: var(--font-body); font-size: 0.95rem; color: var(--muted); }
 
 .status-pill {
     padding: 6px 10px;
     border-radius: 10px;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.85rem;
     border: 1px solid var(--border);
     box-shadow: 0 6px 12px rgba(12, 10, 29, 0.06);
@@ -364,12 +364,12 @@
 .status-pill.ok { background: rgba(52, 199, 89, 0.12); color: #1a7c3f; border-color: rgba(52, 199, 89, 0.35); }
 .status-pill.off { background: #f4f4f4; color: var(--muted); }
 
-.badge { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 10px; font-family: "Jua", sans-serif; font-size: 0.85rem; background: #f6f5f9; color: var(--muted); }
+.badge { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 10px; font-family: var(--font-body); font-size: 0.85rem; background: #f6f5f9; color: var(--muted); }
 .badge.muted { background: #f1f1f5; }
 .badge.ok { background: rgba(52, 199, 89, 0.12); color: #1a7c3f; }
 .badge.warn { background: rgba(255, 171, 64, 0.16); color: #c06800; }
 
-.mono { font-family: "Jua", sans-serif; color: var(--muted); }
+.mono { font-family: var(--font-body); color: var(--muted); }
 
 .message-card {
     margin-top: 12px;
@@ -377,7 +377,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     color: var(--ink);
     display: inline-flex;
     align-items: center;
@@ -393,7 +393,7 @@
     color: var(--ink);
     padding: 8px 12px;
     border-radius: 10px;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     cursor: pointer;
     box-shadow: 0 8px 16px rgba(165, 214, 167, 0.25);
 }
@@ -441,7 +441,7 @@
     border: none;
     padding: 8px 12px;
     border-radius: 8px;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 8px 18px rgba(165,214,167,0.12);
@@ -465,7 +465,7 @@
     background: #fafafa;
     cursor: pointer;
     font-size: 0.9rem;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     transition: background 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
 }
@@ -500,7 +500,7 @@
 .admin-table {
     width: 100%;
     border-collapse: collapse;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
 }
 
 .admin-table thead {

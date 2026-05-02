@@ -1,4 +1,4 @@
-.profile-avatar-img {
+﻿.profile-avatar-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -40,7 +40,7 @@
     justify-content: center;
     font-size: 48px;
     font-weight: bold;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -50,7 +50,7 @@
     border: none;
     padding: 10px 20px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -71,7 +71,7 @@
 .profile-info h1 {
     margin: 0 0 10px 0;
     font-size: 36px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
 }
 
 .profile-email {
@@ -113,7 +113,7 @@
 .stat-mini-value {
     font-size: 28px;
     font-weight: bold;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .stat-mini-label {
@@ -147,7 +147,7 @@
 .section-header h2 {
     margin: 0;
     font-size: 24px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     color: #333;
 }
 
@@ -157,7 +157,7 @@
     border: none;
     padding: 10px 20px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -179,7 +179,7 @@
     border: none;
     padding: 10px 20px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -196,7 +196,7 @@
     border: none;
     padding: 10px 20px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -234,23 +234,23 @@
 .info-item p {
     font-size: 16px;
     color: #333;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     margin: 0;
 }
 
 .input-edit {
-    padding: 12px 15px;
-    border: 2px solid #A5D6A7;
-    border-radius: 10px;
-    font-size: 16px;
-    font-family: 'Jua', sans-serif;
-    transition: all 0.3s ease;
+    padding: 0.65rem 1rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-family: var(--font-body);
+    transition: border-color 0.18s, box-shadow 0.18s;
 }
 
 .input-edit:focus {
     outline: none;
-    border-color: #A5D6A7;
-    box-shadow: 0 0 0 3px rgba(165, 214, 167, 0.2);
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-focus);
 }
 
 .security-item,
@@ -277,7 +277,7 @@
 .danger-info h3 {
     margin: 0 0 5px 0;
     font-size: 18px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     color: #333;
 }
 
@@ -295,7 +295,7 @@
     border: none;
     padding: 12px 24px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -374,7 +374,7 @@ input:checked + .slider:before {
     border: none;
     padding: 12px 24px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -436,7 +436,7 @@ input:checked + .slider:before {
 .modal-header h2 {
     margin: 0;
     font-size: 24px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     color: #333;
 }
 
@@ -471,19 +471,19 @@ input:checked + .slider:before {
 
 .input-modal {
     width: 100%;
-    padding: 12px 15px;
-    border: 2px solid #A5D6A7;
-    border-radius: 10px;
-    font-size: 16px;
-    font-family: 'Jua', sans-serif;
-    transition: all 0.3s ease;
+    padding: 0.65rem 1rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-family: var(--font-body);
+    transition: border-color 0.18s, box-shadow 0.18s;
     box-sizing: border-box;
 }
 
 .input-modal:focus {
     outline: none;
-    border-color: #A5D6A7;
-    box-shadow: 0 0 0 3px rgba(165, 214, 167, 0.2);
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-focus);
 }
 
 /* Password field toggle */
@@ -548,7 +548,7 @@ input:checked + .slider:before {
     border: none;
     padding: 12px 24px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -564,7 +564,7 @@ input:checked + .slider:before {
     border: none;
     padding: 12px 24px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;

@@ -1,4 +1,4 @@
-.monitored-container {
+﻿.monitored-container {
     padding: 2rem;
     max-width: 1400px;
     margin: 0 auto;
@@ -12,14 +12,14 @@
 }
 
 .header-title-section h1 {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-heading);
     font-size: 2.2rem;
     color: #000;
     margin: 0 0 0.5rem 0;
 }
 
 .monitored-subtitle {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.1rem;
     color: #666;
     margin: 0;
@@ -34,7 +34,7 @@
     border-radius: 30px;
     background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
     color: #000;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.05rem;
     font-weight: 500;
     cursor: pointer;
@@ -73,7 +73,7 @@
     }
 
     .filter-group label {
-        font-family: "Jua", sans-serif;
+        font-family: var(--font-body);
         font-size: 1rem;
         color: #333;
         margin-bottom: 0.8rem;
@@ -92,7 +92,7 @@
     border-radius: 25px;
     background: white;
     color: #333;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -169,17 +169,18 @@
 }
 
 .person-card-detailed {
-    background: white;
-    border-radius: 20px;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+    border-left: 4px solid transparent;
+    transition: box-shadow 0.22s ease, border-color 0.22s ease;
     cursor: pointer;
 }
 
     .person-card-detailed:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+        box-shadow: var(--shadow-lg);
+        border-left-color: var(--color-primary-mid);
     }
 
 .card-header-colored {
@@ -216,7 +217,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.3rem;
     font-weight: 600;
     color: #A5D6A7;
@@ -229,7 +230,7 @@
 }
 
 .person-name-big {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.4rem;
     font-weight: 600;
     color: #000;
@@ -237,7 +238,7 @@
 }
 
 .person-details {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1rem;
     color: #333;
     margin: 0;
@@ -274,7 +275,7 @@
 }
 
 .status-text {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1rem;
     font-weight: 500;
 }
@@ -341,7 +342,7 @@
 }
 
 .vital-value-large {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1.3rem;
     font-weight: 600;
     color: #000;
@@ -349,7 +350,7 @@
 }
 
 .vital-label-large {
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.85rem;
     color: #666;
 }
@@ -367,7 +368,7 @@
 .info-item {
     display: flex;
     justify-content: space-between;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
 }
 
@@ -399,7 +400,7 @@
     border-radius: 999px;
     border: 1px solid #E8F5E9;
     background: #fff;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
@@ -457,14 +458,14 @@
 }
 
     .empty-state h3 {
-        font-family: "Jua", sans-serif;
+        font-family: var(--font-heading);
         font-size: 1.5rem;
         color: #000;
         margin: 0 0 0.5rem 0;
     }
 
     .empty-state p {
-        font-family: "Jua", sans-serif;
+        font-family: var(--font-body);
         font-size: 1rem;
         color: #666;
         margin: 0;
@@ -521,7 +522,7 @@
     padding: 0.9rem 1rem;
     border-radius: 8px;
     margin-bottom: 1.5rem;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     color: #856404;
     font-size: 0.95rem;
 }
@@ -532,7 +533,7 @@
 
 .form-group label {
     display: block;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     color: #333;
     margin-bottom: 0.5rem;
@@ -547,7 +548,7 @@
 }
 
     .modal-header h3 {
-        font-family: "Jua", sans-serif;
+        font-family: var(--font-heading);
         font-size: 1.8rem;
         color: #000;
         margin: 0;
@@ -579,7 +580,7 @@
 }
 
     .modal-body p {
-        font-family: "Jua", sans-serif;
+        font-family: var(--font-body);
         font-size: 1rem;
         color: #666;
         line-height: 1.6;
@@ -595,7 +596,7 @@
 .modal-btn {
     padding: 0.75rem 2rem;
     border-radius: 30px;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
@@ -668,7 +669,7 @@
         border-radius:8px;
         border:1px solid #e6e6e6;
         background:#fff;
-        font-family:"Jua", sans-serif;
+        font-family: var(--font-body);
         font-size:0.95rem;
         font-weight:600;
         cursor:pointer;
@@ -752,7 +753,7 @@
     border-radius: 8px;
     border: 1px solid #e6e6e6;
     background: #fff;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
@@ -781,7 +782,7 @@
     padding: 0.75rem 1rem !important;
     border-radius: 8px !important;
     border: 2px solid #ddd !important;
-    font-family: "Jua", sans-serif !important;
+    font-family: var(--font-body) !important;
     font-size: 1rem !important;
     outline: none !important;
     background: #ffffff !important;
@@ -798,9 +799,9 @@
 }
 
 ::deep .form-control:focus {
-    border-color: #A5D6A7 !important;
+    border-color: var(--color-primary) !important;
     background: #ffffff !important;
-    box-shadow: 0 0 0 3px rgba(165, 214, 167, 0.15) !important;
+    box-shadow: var(--shadow-focus) !important;
 }
 
 ::deep .form-control:hover:not(:focus) {

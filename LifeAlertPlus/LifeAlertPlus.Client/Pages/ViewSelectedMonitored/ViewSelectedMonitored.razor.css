@@ -1,4 +1,4 @@
-.selected-monitored-container {
+﻿.selected-monitored-container {
     max-width: 1600px;
     margin: 0 auto;
     padding: 25px;
@@ -32,7 +32,7 @@
     justify-content: center;
     gap: 8px;
     color: #999;
-    font-family: "Jua", sans-serif;
+    font-family: var(--font-body);
     font-size: 1rem;
 }
 
@@ -65,7 +65,7 @@
     border: 2px solid #E8F5E9;
     padding: 12px 20px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 16px;
     cursor: pointer;
     display: flex;
@@ -113,7 +113,7 @@
     justify-content: center;
     font-size: 42px;
     font-weight: bold;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
@@ -126,7 +126,7 @@
 .person-name-main {
     margin: 0;
     font-size: 36px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .person-meta {
@@ -210,7 +210,7 @@
     border: none;
     padding: 12px 20px;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -305,14 +305,14 @@
 
 .stat-value-huge {
     font-size: 36px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: #333;
     font-weight: bold;
 }
 
 .stat-value-gps {
     font-size: 16px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     color: #333;
     font-weight: 500;
     word-break: break-all;
@@ -377,7 +377,7 @@
 .section-header h2 {
     margin: 0;
     font-size: 22px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     color: #333;
 }
 
@@ -395,7 +395,7 @@
     border: none;
     background: transparent;
     color: #888;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 13px;
     border-radius: 7px;
     cursor: pointer;
@@ -429,7 +429,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 13px;
     color: #777;
     margin-bottom: 6px;
@@ -491,13 +491,13 @@
 .chart-x-label {
     font-size: 11px;
     fill: #999;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 .chart-y-label {
     font-size: 11px;
     fill: #AAA;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     text-anchor: start;
 }
 
@@ -601,7 +601,7 @@
 .alert-content h4 {
     margin: 0 0 5px 0;
     font-size: 16px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     color: #333;
 }
 
@@ -647,7 +647,7 @@
 .measurement-content h4 {
     margin: 0 0 5px 0;
     font-size: 16px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     color: #333;
 }
 
@@ -690,7 +690,7 @@
 .loading-state p {
     font-size: 18px;
     color: #666;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
 
 @media (max-width: 1200px) {
@@ -830,7 +830,7 @@
 
 .modal-header h2 {
     margin: 0;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-heading);
     font-size: 20px;
     color: #333;
 }
@@ -870,7 +870,7 @@
 }
 
 .form-group label {
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 13px;
     color: #777;
 }
@@ -880,7 +880,7 @@
     padding: 10px 14px;
     border: 2px solid #e8e8e8;
     border-radius: 10px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 14px;
     color: #333;
     outline: none;
@@ -900,7 +900,7 @@
 }
 
 .form-group-separator span {
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
     font-size: 12px;
     color: #bbb;
     white-space: nowrap;
@@ -926,5 +926,5 @@
     padding: 10px 14px;
     border-radius: 10px;
     font-size: 13px;
-    font-family: 'Jua', sans-serif;
+    font-family: var(--font-body);
 }
