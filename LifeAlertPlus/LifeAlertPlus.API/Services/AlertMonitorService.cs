@@ -24,6 +24,11 @@ namespace LifeAlertPlus.API.Services
         private readonly IPushNotificationService _pushNotificationService;
         private readonly ActivityProfileService _activityProfileService;
         private readonly ConditionRuleEngine _conditionRuleEngine;
+        private readonly NearestHospitalService _nearestHospitalService;
+
+        // Per-person threshold cache: patient-specific HR and temperature limits
+        private readonly ConcurrentDictionary<Guid, (DateTime CachedAt, int? MaxHr, int? MinHr, double? MaxTemp, double? MinTemp)> _thresholdCache = new();
+        private static readonly TimeSpan ThresholdCacheDuration = TimeSpan.FromHours(4);
 
         // Per-person metric buffer for last 120 seconds (2 minutes)
         private static readonly TimeSpan BufferWindow = TimeSpan.FromSeconds(120);
@@ -37,13 +42,14 @@ namespace LifeAlertPlus.API.Services
             public Queue<(DateTime Timestamp, double Value)> SpO2 = new();
         }
 
-        public AlertMonitorService(IServiceScopeFactory scopeFactory, ILogger<AlertMonitorService> logger, IConfiguration configuration, IPushNotificationService pushNotificationService, ActivityProfileService activityProfileService, ConditionRuleEngine conditionRuleEngine)
+        public AlertMonitorService(IServiceScopeFactory scopeFactory, ILogger<AlertMonitorService> logger, IConfiguration configuration, IPushNotificationService pushNotificationService, ActivityProfileService activityProfileService, ConditionRuleEngine conditionRuleEngine, NearestHospitalService nearestHospitalService)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
             _pushNotificationService = pushNotificationService;
             _activityProfileService = activityProfileService;
             _conditionRuleEngine = conditionRuleEngine;
+            _nearestHospitalService = nearestHospitalService;
             _sendCriticalSmsImmediately = bool.TryParse(configuration["AlertMonitor:SendCriticalSmsImmediately"], out var immediate) && immediate;
             _sendAlertSmsImmediately = bool.TryParse(configuration["AlertMonitor:SendAlertSmsImmediately"], out var immediateAlert) && immediateAlert;
 
@@ -51,6 +57,32 @@ namespace LifeAlertPlus.API.Services
                 _logger.LogWarning("AlertMonitor is configured to send critical SMS immediately for testing.");
             if (_sendAlertSmsImmediately)
                 _logger.LogWarning("AlertMonitor is configured to send alert SMS immediately for testing.");
+        }
+
+        public void InvalidateThresholdCache(Guid monitoredId) => _thresholdCache.TryRemove(monitoredId, out _);
+
+        private async Task<(int? MaxHr, int? MinHr, double? MaxTemp, double? MinTemp)> GetPatientThresholdsAsync(Guid monitoredId)
+        {
+            if (_thresholdCache.TryGetValue(monitoredId, out var cached) &&
+                (DateTime.UtcNow - cached.CachedAt) < ThresholdCacheDuration)
+                return (cached.MaxHr, cached.MinHr, cached.MaxTemp, cached.MinTemp);
+
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
+                var monitored = await db.Monitoreds.FindAsync(monitoredId);
+                var t = monitored != null
+                    ? (monitored.MaxHeartRate, monitored.MinHeartRate, monitored.MaxTemperature, monitored.MinTemperature)
+                    : ((int?)null, (int?)null, (double?)null, (double?)null);
+                _thresholdCache[monitoredId] = (DateTime.UtcNow, t.Item1, t.Item2, t.Item3, t.Item4);
+                return t;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load thresholds for {MonitoredId}. Using global defaults.", monitoredId);
+                return (null, null, null, null);
+            }
         }
 
         private void UpdateMetricBuffer(Guid id, DateTime now, double pulse, double temp, double spo2)
@@ -77,7 +109,7 @@ namespace LifeAlertPlus.API.Services
             return (avg, slope);
         }
 
-        public async Task ProcessMeasurementAsync(Guid monitoredId, double pulse, double temperature, double spo2, bool isFall, string activity = "")
+        public async Task ProcessMeasurementAsync(Guid monitoredId, double pulse, double temperature, double spo2, bool isFall, string activity = "", string coordinates = "")
         {
             var now = DateTime.UtcNow;
             UpdateMetricBuffer(monitoredId, now, pulse, temperature, spo2);
@@ -94,7 +126,8 @@ namespace LifeAlertPlus.API.Services
             bool tempRising = tempSlope > 0.01 && tempAvg > 37.5;
             bool spo2Dropping = spo2Slope < -0.02 && spo2Avg < 95;
 
-            var severity = EvaluateSeverity(pulse, temperature, spo2, isFall);
+            var (maxHr, minHr, maxTemp, minTemp) = await GetPatientThresholdsAsync(monitoredId);
+            var severity = EvaluateSeverity(pulse, temperature, spo2, isFall, maxHr, minHr, maxTemp, minTemp);
             if (pulseRising || tempRising || spo2Dropping)
             {
                 _logger.LogWarning("Trend alert for {MonitoredId}: pulseRising={PulseRising}, tempRising={TempRising}, spo2Dropping={Spo2Dropping}", monitoredId, pulseRising, tempRising, spo2Dropping);
@@ -141,6 +174,8 @@ namespace LifeAlertPlus.API.Services
             state.IsFall = isFall;
             state.ConditionRecommendations = conditionRecommendations;
             state.ImmediateAction = immediateAction;
+            if (!string.IsNullOrWhiteSpace(coordinates))
+                state.LastCoordinates = coordinates;
 
             if (immediateAction && severity == AlertSeverity.Critical)
             {
@@ -378,6 +413,16 @@ namespace LifeAlertPlus.API.Services
                 var monitored = await dbContext.Monitoreds.FindAsync(monitoredId);
                 var patientName = monitored != null ? $"{monitored.FirstName} {monitored.LastName}".Trim() : "Unknown";
 
+                // Find nearest hospital when fall or critical and coordinates are available
+                if ((state.IsFall || state.Severity == AlertSeverity.Critical)
+                    && state.NearestHospital == null
+                    && !string.IsNullOrWhiteSpace(state.LastCoordinates))
+                {
+                    var (lat, lon) = ParseCoordinates(state.LastCoordinates);
+                    if (lat != 0 || lon != 0)
+                        state.NearestHospital = _nearestHospitalService.FindNearest(lat, lon);
+                }
+
                 string? aiContext = null;
                 string notifType = state.Severity == AlertSeverity.Critical ? "Critical" : "Alert";
                 var createdAt = DateTime.UtcNow;
@@ -469,16 +514,30 @@ namespace LifeAlertPlus.API.Services
             }
         }
 
-        private static AlertSeverity EvaluateSeverity(double pulse, double temperature, double spo2, bool isFall)
+        private static AlertSeverity EvaluateSeverity(
+            double pulse, double temperature, double spo2, bool isFall,
+            int? maxHr = null, int? minHr = null, double? maxTemp = null, double? minTemp = null)
         {
+            // Global defaults (clinical evidence-based)
+            int critMaxHr   = maxHr   ?? 150;
+            int critMinHr   = minHr   ?? 40;
+            double critMaxT = maxTemp ?? 39.5;
+            double critMinT = minTemp ?? 34.5;
+
+            // Alert thresholds: 85% of critical HR range, 1°C below critical temperature
+            int alertMaxHr   = (int)(critMaxHr * 0.80);   // 150→120, custom 100→80
+            int alertMinHr   = (int)(critMinHr * 1.25);   //  40→50,  custom  55→69
+            double alertMaxT = critMaxT - 1.0;            // 39.5→38.5
+            double alertMinT = critMinT + 1.0;            // 34.5→35.5
+
             if (isFall) return AlertSeverity.Critical;
             if (spo2 > 0 && spo2 < 90) return AlertSeverity.Critical;
-            if (pulse > 150 || (pulse > 0 && pulse < 40)) return AlertSeverity.Critical;
-            if (temperature > 39.5 || (temperature > 0 && temperature < 34.5)) return AlertSeverity.Critical;
+            if (pulse > critMaxHr || (pulse > 0 && pulse < critMinHr)) return AlertSeverity.Critical;
+            if (temperature > critMaxT || (temperature > 0 && temperature < critMinT)) return AlertSeverity.Critical;
 
             if (spo2 > 0 && spo2 < 95) return AlertSeverity.Alert;
-            if (pulse > 120 || (pulse > 0 && pulse < 50)) return AlertSeverity.Alert;
-            if (temperature > 38.5 || (temperature > 0 && temperature < 35.5)) return AlertSeverity.Alert;
+            if (pulse > alertMaxHr || (pulse > 0 && pulse < alertMinHr)) return AlertSeverity.Alert;
+            if (temperature > alertMaxT || (temperature > 0 && temperature < alertMinT)) return AlertSeverity.Alert;
 
             return AlertSeverity.Normal;
         }
@@ -486,21 +545,24 @@ namespace LifeAlertPlus.API.Services
         private static string BuildNotificationMessage(AlertState state, string patientName, string lang = "ro", string? aiContext = null, bool isSms = false, bool isPush = false)
         {
             bool isRo = !string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase);
+            var h = state.NearestHospital;
 
             if (isSms)
             {
-                string arrowSpo2 = state.LastSpO2 > 0 && state.LastSpO2 < 95 ? "↓" : "";
+                string arrowSpo2  = state.LastSpO2  > 0 && state.LastSpO2  < 95 ? "↓" : "";
                 string arrowPulse = state.LastPulse > 120 ? "↑" : "";
                 string prefix = state.Severity == AlertSeverity.Critical
                     ? (isRo ? "🚨 CRITIC" : "🚨 CRITICAL")
                     : (isRo ? "⚠️ ALERTĂ" : "⚠️ ALERT");
                 string sms = $"{prefix}: {patientName}\n";
-                if (state.LastSpO2 > 0) sms += $"SpO2: {state.LastSpO2:F0}%{(arrowSpo2 != "" ? " " + arrowSpo2 : "")}";
-                if (state.LastPulse > 0) sms += $" | {(isRo ? "Puls" : "HR")}: {state.LastPulse:F0}{(arrowPulse != "" ? " " + arrowPulse : "")}";
+                if (state.LastSpO2        > 0) sms += $"SpO2: {state.LastSpO2:F0}%{(arrowSpo2 != "" ? " " + arrowSpo2 : "")}";
+                if (state.LastPulse       > 0) sms += $" | {(isRo ? "Puls" : "HR")}: {state.LastPulse:F0}{(arrowPulse != "" ? " " + arrowPulse : "")}";
                 if (state.LastTemperature > 0) sms += $" | Temp: {state.LastTemperature:F1}°C";
                 sms += isRo ? "\nVerificați IMEDIAT!" : "\nCheck IMMEDIATELY!";
                 if (state.ConditionRecommendations.Count > 0)
                     sms += $"\n{state.ConditionRecommendations[0]}";
+                if (h != null)
+                    sms += $"\n🏥 {h.HospitalName}, {h.City} (~{h.EstimatedMinutes} min)";
                 return sms;
             }
 
@@ -512,18 +574,21 @@ namespace LifeAlertPlus.API.Services
                     : (isRo ? "alertă" : "alert");
                 string push = $"{prefix} {patientName} – {statusLabel}\n";
                 var details = new List<string>();
-                if (state.LastSpO2 > 0) details.Add(isRo ? $"SpO2 scăzută ({state.LastSpO2:F0}%)" : $"low SpO2 ({state.LastSpO2:F0}%)");
-                if (state.LastPulse > 0) details.Add(isRo ? $"puls {state.LastPulse:F0} bpm" : $"HR {state.LastPulse:F0} bpm");
+                if (state.LastSpO2        > 0)    details.Add(isRo ? $"SpO2 scăzută ({state.LastSpO2:F0}%)" : $"low SpO2 ({state.LastSpO2:F0}%)");
+                if (state.LastPulse       > 0)    details.Add(isRo ? $"puls {state.LastPulse:F0} bpm" : $"HR {state.LastPulse:F0} bpm");
                 if (state.LastTemperature > 38.5) details.Add(isRo ? "febră" : "fever");
-                if (state.IsFall) details.Add(isRo ? "cădere detectată" : "fall detected");
+                if (state.IsFall)                 details.Add(isRo ? "cădere detectată" : "fall detected");
                 push += string.Join(", ", details);
                 if (state.ConditionRecommendations.Count > 0)
                     push += $"\n{state.ConditionRecommendations[0]}";
                 else
                     push += isRo ? "\nVerifică acum" : "\nCheck now";
+                if (h != null)
+                    push += $"\n🏥 {h.HospitalName} – ~{h.EstimatedMinutes} min";
                 return push;
             }
 
+            // ── Full notification (email / in-app) ──────────────────────────────
             var lines = new List<string>();
             string severityLabel = state.Severity == AlertSeverity.Critical
                 ? (isRo ? "CRITIC" : "CRITICAL")
@@ -555,11 +620,36 @@ namespace LifeAlertPlus.API.Services
                     lines.Add($"  • {rec}");
             }
 
+            if (h != null)
+            {
+                lines.Add("");
+                lines.Add(isRo ? "🏥 Cel mai apropiat spital de urgență:" : "🏥 Nearest emergency hospital:");
+                lines.Add($"  {h.HospitalName}, {h.City} (~{h.EstimatedMinutes} min)");
+                if (h.Route.Count > 0)
+                    lines.Add(isRo
+                        ? $"  Rută: {string.Join(" → ", h.Route)}"
+                        : $"  Route: {string.Join(" → ", h.Route)}");
+            }
+
             lines.Add("");
             lines.Add(isRo
                 ? "Acțiune imediată recomandată: Verificați pacientul acum. Contactați serviciile de urgență dacă situația se agravează."
                 : "Immediate action recommended: Check the patient now. Contact emergency services if the situation worsens.");
             return string.Join("\n", lines);
+        }
+
+        private static (double Lat, double Lon) ParseCoordinates(string coordinates)
+        {
+            if (string.IsNullOrWhiteSpace(coordinates)) return (0, 0);
+            var sep = coordinates.Contains(',') ? ',' : ' ';
+            var parts = coordinates.Split(sep, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) return (0, 0);
+            if (double.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var lat) &&
+                double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var lon))
+                return (lat, lon);
+            return (0, 0);
         }
 
         private class AlertState
@@ -574,6 +664,8 @@ namespace LifeAlertPlus.API.Services
             public bool IsFall { get; set; }
             public List<string> ConditionRecommendations { get; set; } = new();
             public bool ImmediateAction { get; set; }
+            public string LastCoordinates { get; set; } = string.Empty;
+            public HospitalRouteResult? NearestHospital { get; set; }
         }
 
         private async Task CheckBehavioralAnomalyAsync(Guid monitoredId, string activity, double pulse, DateTime now)

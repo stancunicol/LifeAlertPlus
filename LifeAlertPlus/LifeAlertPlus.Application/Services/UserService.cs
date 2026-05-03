@@ -78,7 +78,18 @@ namespace LifeAlertPlus.Application.Services
                 EmailConfirmationToken = emailToken,
                 EmailConfirmationExpires = DateTime.UtcNow.AddHours(24),
                 CreatedAt = DateTime.UtcNow,
-                Provider = "Local"
+                Provider = "Local",
+                MinHeartRate = 60,
+                MaxHeartRate = 100,
+                MinTemperature = 36.0,
+                MaxTemperature = 37.5,
+                MinSpO2 = 95,
+                MaxSpO2 = 100,
+                Language = "ro",
+                FontSize = "medium",
+                UpdateFrequency = 30,
+                NotifyByEmail = true,
+                NotifyByPush = true
             };
 
             var result = await _userRepository.CreateUserAsync(newUser);
@@ -153,7 +164,18 @@ namespace LifeAlertPlus.Application.Services
                 IsEmailConfirmed = true,
                 Provider = "Google",
                 ProviderKey = googleId,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                MinHeartRate = 60,
+                MaxHeartRate = 100,
+                MinTemperature = 36.0,
+                MaxTemperature = 37.5,
+                MinSpO2 = 95,
+                MaxSpO2 = 100,
+                Language = "ro",
+                FontSize = "medium",
+                UpdateFrequency = 30,
+                NotifyByEmail = true,
+                NotifyByPush = true
             };
             var created = await _userRepository.CreateUserAsync(newUser);
             return created ? newUser : null;

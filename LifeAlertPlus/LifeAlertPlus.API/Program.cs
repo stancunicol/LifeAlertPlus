@@ -66,6 +66,7 @@ builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
 builder.Services.AddScoped<IInvitationRepository, InvitationRepository>();
 builder.Services.AddScoped<IActivityProfileRepository, ActivityProfileRepository>();
 builder.Services.AddScoped<IMonitoredConditionRepository, MonitoredConditionRepository>();
+builder.Services.AddSingleton<NearestHospitalService>();
 
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();

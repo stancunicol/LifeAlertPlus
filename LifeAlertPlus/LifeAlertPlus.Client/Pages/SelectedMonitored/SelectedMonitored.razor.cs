@@ -292,6 +292,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
                 var request = new AIPredictionRequestDTO
                 {
+                    MonitoredId = PersonId,
                     Pulse = espData.Max30100 != null && espData.Max30100.Count >= 1 ? espData.Max30100[0] : 0,
                     Temperature = espData.Temperature ?? 0,
                     Spo2 = espData.Max30100 != null && espData.Max30100.Count >= 2 ? espData.Max30100[1] : 97.0,
@@ -427,6 +428,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 {
                     _conditions = new List<string>(_editConditions);
                     _showConditionsModal = false;
+                    // Reload person so edit modal reflects auto-adjusted thresholds
+                    await LoadPersonDataAsync();
                 }
             }
             catch { }
@@ -866,7 +869,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         // Spread close X positions so plotted circles don't visually overlap
         private static List<(double X, double Y)> SpreadCloseXs(List<(double X, double Y)> pts, double minX, double maxX, double spacing = 6.0)
         {
-            if (pts == null || pts.Count <= 1) return pts;
+            if (pts == null) return new();
+            if (pts.Count <= 1) return pts;
 
             // pts expected sorted by X
             var result = pts.Select(p => (X: p.X, Y: p.Y)).ToList();

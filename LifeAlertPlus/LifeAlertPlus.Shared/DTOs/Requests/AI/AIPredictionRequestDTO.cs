@@ -11,5 +11,7 @@ namespace LifeAlertPlus.Shared.DTOs.Requests.AI
         public double GyroX { get; set; }
         public double GyroY { get; set; }
         public double GyroZ { get; set; }
+
+        public Guid? MonitoredId { get; set; }
     }
 }

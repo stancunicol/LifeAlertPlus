@@ -84,6 +84,22 @@
                     </div>
                 </div>
 
+                <div class="alert-threshold-group">
+                    <h3>@T("settings.spo2Section")</h3>
+                    <div class="threshold-inputs">
+                        <div class="threshold-input-group">
+                            <label>@T("settings.spo2Min")</label>
+                            <input type="number" @bind="Settings.SpO2Min" class="number-input" min="70" max="100" />
+                            <span class="unit">%</span>
+                        </div>
+                        <div class="threshold-input-group">
+                            <label>@T("settings.spo2Max")</label>
+                            <input type="number" @bind="Settings.SpO2Max" class="number-input" min="70" max="100" />
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+                </div>
+
                 <button class="btn-reset-thresholds" @onclick="ResetThresholds">@T("settings.resetDefaults")</button>
             </div>
         </div>

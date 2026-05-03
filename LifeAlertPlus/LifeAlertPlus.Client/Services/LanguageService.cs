@@ -185,6 +185,9 @@ namespace LifeAlertPlus.Client.Services
             ["settings.temperatureSection"] = "🌡️ Temperature",
             ["settings.tempMin"] = "Temperature Min",
             ["settings.tempMax"] = "Temperature Max",
+            ["settings.spo2Section"] = "🩸 Blood Oxygen (SpO₂)",
+            ["settings.spo2Min"] = "SpO₂ Min",
+            ["settings.spo2Max"] = "SpO₂ Max",
             ["settings.resetDefaults"] = "🔄 Reset to default values",
             ["settings.notifications"] = "🔔 Notifications",
             ["settings.notifyEmail"] = "Email Notifications",
@@ -264,6 +267,7 @@ namespace LifeAlertPlus.Client.Services
             ["common.details"] = "Details",
             ["common.bpm"] = "bpm",
             ["common.celsius"] = "°C",
+            ["common.note"] = "Note",
 
             // About Us
             ["about.title"] = "About LifeAlertPlus",
@@ -750,6 +754,7 @@ namespace LifeAlertPlus.Client.Services
             ["meas.type"] = "Type",
             ["meas.all"] = "All",
             ["meas.hr"] = "Heart Rate",
+            ["meas.spo2"] = "SpO₂",
             ["meas.temp"] = "Temperature",
             ["meas.falls"] = "Falls",
             ["meas.noMatch"] = "No measurements match your filters.",
@@ -991,6 +996,9 @@ namespace LifeAlertPlus.Client.Services
             ["settings.temperatureSection"] = "🌡️ Temperatură",
             ["settings.tempMin"] = "Temperatură minimă",
             ["settings.tempMax"] = "Temperatură maximă",
+            ["settings.spo2Section"] = "🩸 Oxigen din sânge (SpO₂)",
+            ["settings.spo2Min"] = "SpO₂ Min",
+            ["settings.spo2Max"] = "SpO₂ Max",
             ["settings.resetDefaults"] = "🔄 Resetare la valorile implicite",
             ["settings.notifications"] = "🔔 Notificări",
             ["settings.notifyEmail"] = "Notificări prin email",
@@ -1070,6 +1078,7 @@ namespace LifeAlertPlus.Client.Services
             ["common.details"] = "Detalii",
             ["common.bpm"] = "bpm",
             ["common.celsius"] = "°C",
+            ["common.note"] = "Notă",
 
             // About Us
             ["about.title"] = "Despre LifeAlertPlus",
@@ -1556,6 +1565,7 @@ namespace LifeAlertPlus.Client.Services
             ["meas.type"] = "Tip",
             ["meas.all"] = "Toate",
             ["meas.hr"] = "Puls",
+            ["meas.spo2"] = "SpO₂",
             ["meas.temp"] = "Temperatură",
             ["meas.falls"] = "Căderi",
             ["meas.noMatch"] = "Nicio măsurătoare nu corespunde filtrelor.",

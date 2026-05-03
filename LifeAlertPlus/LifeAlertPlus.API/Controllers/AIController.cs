@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Shared.DTOs.Requests.AI;
 using LifeAlertPlus.Shared.DTOs.Responses.AI;
+using LifeAlertPlus.Domain.IRepositories;
+using LifeAlertPlus.Infrastructure.Context;
 using System.Text.Json;
 
 namespace LifeAlertPlus.API.Controllers
@@ -14,6 +16,7 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AIController> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -24,11 +27,13 @@ namespace LifeAlertPlus.API.Controllers
         public AIController(
             IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
-            ILogger<AIController> logger)
+            ILogger<AIController> logger,
+            IServiceScopeFactory scopeFactory)
         {
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _logger = logger;
+            _scopeFactory = scopeFactory;
         }
 
         [HttpPost("predict")]
@@ -39,20 +44,56 @@ namespace LifeAlertPlus.API.Controllers
 
             var aiBaseUrl = _configuration["Urls:AiServiceUrl"] ?? "http://localhost:8000";
 
+            // Load patient-specific conditions and thresholds when MonitoredId is provided
+            List<string> conditions = new();
+            int? maxHr = null, minHr = null;
+            double? maxTemp = null, minTemp = null;
+
+            if (request.MonitoredId.HasValue && request.MonitoredId != Guid.Empty)
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
+                    var condRepo = scope.ServiceProvider.GetRequiredService<IMonitoredConditionRepository>();
+
+                    var monitored = await db.Monitoreds.FindAsync(request.MonitoredId.Value);
+                    if (monitored != null)
+                    {
+                        maxHr   = monitored.MaxHeartRate;
+                        minHr   = monitored.MinHeartRate;
+                        maxTemp = monitored.MaxTemperature;
+                        minTemp = monitored.MinTemperature;
+                    }
+
+                    var conds = await condRepo.GetByMonitoredIdAsync(request.MonitoredId.Value);
+                    conditions = conds.Select(c => c.ConditionKey).ToList();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load conditions/thresholds for MonitoredId {MonitoredId}. Using defaults.", request.MonitoredId);
+                }
+            }
+
             try
             {
                 var client = _httpClientFactory.CreateClient();
                 var payload = new
                 {
-                    pulse = request.Pulse,
-                    temperature = request.Temperature,
-                    spo2 = request.Spo2,
-                    accel_x = request.AccelX,
-                    accel_y = request.AccelY,
-                    accel_z = request.AccelZ,
-                    gyro_x = request.GyroX,
-                    gyro_y = request.GyroY,
-                    gyro_z = request.GyroZ
+                    pulse            = request.Pulse,
+                    temperature      = request.Temperature,
+                    spo2             = request.Spo2,
+                    accel_x          = request.AccelX,
+                    accel_y          = request.AccelY,
+                    accel_z          = request.AccelZ,
+                    gyro_x           = request.GyroX,
+                    gyro_y           = request.GyroY,
+                    gyro_z           = request.GyroZ,
+                    conditions,
+                    max_heart_rate   = maxHr,
+                    min_heart_rate   = minHr,
+                    max_temperature  = maxTemp,
+                    min_temperature  = minTemp,
                 };
 
                 var response = await client.PostAsJsonAsync($"{aiBaseUrl}/predict", payload);

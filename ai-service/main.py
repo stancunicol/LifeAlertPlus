@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict
 import joblib
 import numpy as np
 import pandas as pd
@@ -64,39 +64,98 @@ def calculate_acceleration_magnitude(ax: float, ay: float, az: float) -> float:
     return float(np.sqrt(ax**2 + ay**2 + az**2))
 
 
-def compute_health_score(temp: float, hr: float, spo2: float, acc: float) -> int:
-    """Compute a simple 0..100 score where higher = worse."""
-    score = 0.0
+def compute_health_score(
+    temp: float, hr: float, spo2: float, acc: float,
+    conditions: Optional[List[str]] = None,
+    max_hr: Optional[int] = None,
+    min_hr: Optional[int] = None,
+    max_temp: Optional[float] = None,
+    min_temp: Optional[float] = None,
+) -> int:
+    """Compute a 0..100 danger score where higher = worse.
 
-    # SpO2 dominates (clinical priority)
+    Uses patient-specific thresholds when available, falling back to
+    evidence-based clinical defaults. Applies extra penalty points for
+    conditions whose physiology makes a given reading more dangerous.
+    """
+    score = 0.0
+    conds = conditions or []
+
+    # --- Effective thresholds (personalized with clinical fallback) ---
+    eff_max_hr   = max_hr   if max_hr   else 130
+    eff_min_hr   = min_hr   if min_hr   else 50
+    eff_max_temp = max_temp if max_temp else 39.0
+    eff_min_temp = min_temp if min_temp else 35.0
+
+    hr_warn_high   = int(eff_max_hr  * 0.85)   # e.g. 130→110, custom 100→85
+    hr_warn_low    = int(eff_min_hr  * 1.20)   # e.g.  50→60,  custom  55→66
+    temp_warn_high = eff_max_temp - 1.0        # e.g. 39→38,   custom 38.5→37.5
+    temp_warn_low  = eff_min_temp + 1.0        # e.g. 35→36,   custom 34→35
+
+    # --- SpO2 (universal clinical priority, not threshold-adjusted) ---
     if spo2 < 90:
         score += 60
     elif spo2 < 95:
         score += 30 + (95 - spo2) * 3
 
-    # Heart rate
-    if hr > 130:
+    # --- Heart rate (relative to patient thresholds) ---
+    if hr > eff_max_hr:
         score += 25
-    elif hr > 110:
+    elif hr > hr_warn_high:
         score += 12
-    elif hr < 50:
+    elif 0 < hr < eff_min_hr:
         score += 20
-    elif hr < 60:
+    elif 0 < hr < hr_warn_low:
         score += 10
 
-    # Temperature
-    if temp > 39:
+    # --- Temperature (relative to patient thresholds) ---
+    if temp > eff_max_temp:
         score += 20
-    elif temp > 38:
+    elif temp > temp_warn_high:
         score += 10
-    elif temp < 35:
+    elif 0 < temp < eff_min_temp:
         score += 20
-    elif temp < 36:
+    elif 0 < temp < temp_warn_low:
         score += 10
 
-    # Immobility / fall suspicion (very low acceleration magnitude)
+    # --- Immobility / fall suspicion ---
     if acc < 0.2:
         score += 8
+
+    # --- Condition-specific penalty modifiers ---
+    for cond in conds:
+        if cond == "heart_failure":
+            # Safe SpO2 threshold is 93% (not 90%) for decompensated heart failure
+            if 90 <= spo2 < 93:
+                score += 15
+        elif cond == "copd":
+            # COPD patients: SpO2 86-91% is already a serious desaturation
+            if 86 <= spo2 < 91:
+                score += 15
+        elif cond == "asthma":
+            # Asthma: SpO2 88-93% warrants early intervention
+            if 88 <= spo2 < 93:
+                score += 10
+        elif cond == "hypertension":
+            # High HR is more dangerous for hypertensive patients
+            if hr > 100:
+                score += 8
+        elif cond == "arrhythmia":
+            # Any extreme HR is significantly more dangerous
+            if hr > 110 or (0 < hr < 52):
+                score += 10
+        elif cond == "mi_risk":
+            # Cardiac stress markers combined are high-risk
+            if hr > 110 and temp > 37.8:
+                score += 12
+        elif cond == "diabetes":
+            # Fever in diabetics greatly raises infection risk
+            if temp > 38.0:
+                score += 8
+        elif cond in ("parkinson", "epilepsy"):
+            # Near-immobility is more concerning (potential fall/seizure)
+            if acc < 0.5:
+                score += 5
 
     return int(max(0, min(100, round(score))))
 
@@ -105,12 +164,19 @@ def analyze_patient_data(
     temp: float, hr: float, spo2: float,
     ax: float, ay: float, az: float,
     gx: float, gy: float, gz: float,
+    conditions: Optional[List[str]] = None,
+    max_hr: Optional[int] = None,
+    min_hr: Optional[int] = None,
+    max_temp: Optional[float] = None,
+    min_temp: Optional[float] = None,
 ) -> Dict:
-
     """
     Analyzes patient data using both ML model and rule-based logic.
+    Respects patient-specific thresholds and medical conditions.
     Returns a dict with all prediction fields.
     """
+    conds = conditions or []
+
     # Validate sensor data
     if not (0 < spo2 <= 100 and 20 < hr < 250 and 30 < temp < 45):
         return {
@@ -128,6 +194,16 @@ def analyze_patient_data(
         "gx": gx, "gy": gy, "gz": gz,
     }
     data["acc"] = calculate_acceleration_magnitude(ax, ay, az)
+
+    # --- Effective patient thresholds ---
+    eff_max_hr   = max_hr   if max_hr   else 130
+    eff_min_hr   = min_hr   if min_hr   else 50
+    eff_max_temp = max_temp if max_temp else 39.0
+    eff_min_temp = min_temp if min_temp else 35.0
+
+    hr_alert_high   = int(eff_max_hr * 0.85)
+    hr_alert_low    = int(eff_min_hr * 1.20)
+    temp_alert_high = eff_max_temp - 0.5
 
     # --- ML prediction ---
     sensor_columns = ["ax", "ay", "az", "gx", "gy", "gz"]
@@ -150,7 +226,7 @@ def analyze_patient_data(
     proba = model.predict_proba(input_features)[0]
     model_confidence = float(np.max(proba)) * 100
 
-    # --- Penalize ML when it violates clear medical rules ---
+    # Penalize ML when it violates clear medical rules
     if spo2 < 90 and predicted_state_model != "CRITICAL":
         predicted_state_model = "CRITICAL"
         model_confidence = 100.0
@@ -162,11 +238,9 @@ def analyze_patient_data(
     for i, cls in enumerate(label_encoder.classes_):
         probabilities[cls] = round(float(proba[i]), 4)
 
-    # Override probabilities when ML contradicts clear medical rules
     if spo2 < 90:
         probabilities = {"CRITICAL": 1.0, "ALERT": 0.0, "NORMAL": 0.0}
     elif spo2 < 95:
-        # SpO2 < 95 is never NORMAL — redistribute probability
         normal_prob = probabilities.get("NORMAL", 0.0)
         probabilities["NORMAL"] = 0.0
         probabilities["ALERT"] = min(1.0, round(probabilities.get("ALERT", 0.0) + normal_prob * 0.7, 4))
@@ -179,21 +253,21 @@ def analyze_patient_data(
     if data["spo2"] < 95:
         base_score += 1
         reasons.append(f"SpO2 ({data['spo2']:.1f}%) is below optimal level (<95%).")
-    if data["hr"] > 130:
+    if data["hr"] > hr_alert_high + 20:
         base_score += 3
-        reasons.append(f"Heart rate ({data['hr']:.0f} bpm) is very high (>130 bpm), indicating severe tachycardia.")
-    elif data["hr"] > 110:
+        reasons.append(f"Heart rate ({data['hr']:.0f} bpm) is critically high.")
+    elif data["hr"] > hr_alert_high:
         base_score += 1
-        reasons.append(f"Heart rate ({data['hr']:.0f} bpm) is high (>110 bpm), indicating tachycardia.")
-    if data["temp"] > 39:
+        reasons.append(f"Heart rate ({data['hr']:.0f} bpm) is elevated.")
+    if data["temp"] > eff_max_temp:
         base_score += 2
-        reasons.append(f"Temperature ({data['temp']:.1f}°C) is severely high (>39°C), indicating high fever.")
-    elif data["temp"] > 38:
+        reasons.append(f"Temperature ({data['temp']:.1f}°C) exceeds patient threshold ({eff_max_temp}°C).")
+    elif data["temp"] > temp_alert_high:
         base_score += 1
-        reasons.append(f"Temperature ({data['temp']:.1f}°C) is high (>38°C), indicating fever.")
-    if data["acc"] < 0.2 and data["hr"] < 50 and data["spo2"] < 95:
+        reasons.append(f"Temperature ({data['temp']:.1f}°C) is elevated.")
+    if data["acc"] < 0.2 and data["hr"] < eff_min_hr and data["spo2"] < 95:
         base_score += 1
-        reasons.append(f"Low acceleration ({data['acc']:.2f}g), low heart rate ({data['hr']:.0f} bpm), and low SpO2 ({data['spo2']:.1f}%) indicate potential prolonged immobility/fall with hypoxemia.")
+        reasons.append(f"Low acceleration, low heart rate and low SpO2 indicate potential immobility/fall.")
 
     if base_score >= 4:
         combined_rule_state = "CRITICAL"
@@ -202,11 +276,12 @@ def analyze_patient_data(
     else:
         combined_rule_state = "NORMAL"
 
-        # --- Health score (lightweight, inference-safe) ---
-    # 0 = best, 100 = worst (matches UI usage where higher means worse)
-    # We avoid importing ai-service/model.py because it contains training / Colab-only code.
-    health_score = compute_health_score(temp=temp, hr=hr, spo2=spo2, acc=data["acc"])
-
+    health_score = compute_health_score(
+        temp=temp, hr=hr, spo2=spo2, acc=data["acc"],
+        conditions=conds,
+        max_hr=max_hr, min_hr=min_hr,
+        max_temp=max_temp, min_temp=min_temp,
+    )
 
     system_confidence_combined: int = 0
     if combined_rule_state == "CRITICAL":
@@ -218,46 +293,77 @@ def analyze_patient_data(
     else:
         system_confidence_combined = max(0, min(100, int(50 + (3.0 - base_score) * 15)))
 
-    # --- Final state: medical rules override ---
+    # --- Final state: medical rules (patient-threshold-aware) ---
     final_state = ""
     explanation = ""
     system_confidence = 0
 
     if spo2 < 90:
         final_state = "CRITICAL"
-        explanation = f"Critical state: SpO2 ({data['spo2']:.1f}%) is dangerously low (below 90%). This is an absolute medical rule and requires immediate attention."
+        explanation = f"Critical: SpO2 ({data['spo2']:.1f}%) is dangerously low (<90%). Requires immediate attention."
         system_confidence = 100
-    elif spo2 < 95 and (hr > 120 or temp >= 39):
+    elif spo2 < 95 and (hr > eff_max_hr or temp >= eff_max_temp):
         final_state = "CRITICAL"
-        explanation = "Critical combination: low SpO2 with severe physiological stress (high heart rate or high fever)."
+        explanation = "Critical combination: low SpO2 with severe physiological stress (high HR or high fever)."
         system_confidence = 98
-    elif temp >= 38.5:
+    elif temp >= temp_alert_high:
         final_state = "ALERT"
-        explanation = f"ALERT: High temperature ({data['temp']:.1f}°C) is detected (>= 38.5°C). This could indicate fever or infection and warrants attention."
+        explanation = f"ALERT: Temperature ({data['temp']:.1f}°C) exceeds patient alert threshold ({temp_alert_high:.1f}°C)."
         system_confidence = 85
     elif spo2 < 95:
         final_state = "ALERT"
-        explanation = f"ALERT: SpO2 ({data['spo2']:.1f}%) is low (between 90% and 95%). This indicates a potential respiratory issue and requires monitoring."
+        explanation = f"ALERT: SpO2 ({data['spo2']:.1f}%) is low (90–95%). Potential respiratory issue."
         system_confidence = 90
-    elif hr > 120:
+    elif hr > hr_alert_high:
         final_state = "ALERT"
-        explanation = f"ALERT: Heart rate ({data['hr']:.0f} bpm) is high (>120 bpm). This may suggest tachycardia or stress and requires assessment."
+        explanation = f"ALERT: Heart rate ({data['hr']:.0f} bpm) exceeds patient alert threshold ({hr_alert_high} bpm)."
+        system_confidence = 80
+    elif 0 < hr < hr_alert_low:
+        final_state = "ALERT"
+        explanation = f"ALERT: Heart rate ({data['hr']:.0f} bpm) is below patient alert threshold ({hr_alert_low} bpm)."
         system_confidence = 80
     else:
         final_state = "NORMAL"
-        explanation = "All vital signs are stable and within physiological norms. "
+        explanation = "All vital signs are stable and within the patient's defined thresholds. "
         if combined_rule_state != "NORMAL":
-            explanation += f"However, the system's combined rule-based analysis suggests a '{combined_rule_state}' tendency due to factors like: " + "; ".join(reasons) + "."
+            explanation += f"Combined rule analysis suggests '{combined_rule_state}' tendency: " + "; ".join(reasons) + "."
             system_confidence = system_confidence_combined
         else:
-            explanation += "No significant risks identified from any analysis."
+            explanation += "No significant risks identified."
             system_confidence = 100
 
+    # --- Condition-specific final-state overrides ---
+    condition_notes: List[str] = []
+    for cond in conds:
+        if cond == "heart_failure" and 90 <= spo2 < 93 and final_state == "NORMAL":
+            final_state = "ALERT"
+            system_confidence = max(system_confidence, 88)
+            condition_notes.append(f"[heart_failure] SpO2 ({spo2:.1f}%) below safe threshold for heart failure patients (<93%).")
+        elif cond == "copd" and 86 <= spo2 < 91 and final_state != "CRITICAL":
+            final_state = "ALERT"
+            system_confidence = max(system_confidence, 88)
+            condition_notes.append(f"[COPD] SpO2 ({spo2:.1f}%) is below optimal COPD threshold (<91%).")
+        elif cond == "asthma" and 88 <= spo2 < 93 and final_state == "NORMAL":
+            final_state = "ALERT"
+            system_confidence = max(system_confidence, 82)
+            condition_notes.append(f"[asthma] SpO2 ({spo2:.1f}%) warrants monitoring in asthma patients.")
+        elif cond == "arrhythmia" and (hr > 110 or (0 < hr < 52)) and final_state == "NORMAL":
+            final_state = "ALERT"
+            system_confidence = max(system_confidence, 80)
+            condition_notes.append(f"[arrhythmia] Heart rate ({hr:.0f} bpm) is abnormal for this patient.")
+        elif cond == "mi_risk" and hr > 110 and temp > 37.8 and final_state != "CRITICAL":
+            final_state = "ALERT"
+            system_confidence = max(system_confidence, 85)
+            condition_notes.append(f"[mi_risk] Cardiac stress markers detected (HR {hr:.0f} bpm, Temp {temp:.1f}°C).")
+
+    if condition_notes:
+        explanation += " " + " ".join(condition_notes)
+
     if predicted_state_model != final_state and model_confidence > 70:
-        explanation += f" AI model suggests '{predicted_state_model}' which differs from rule-based decision."
+        explanation += f" AI model suggests '{predicted_state_model}' (differs from rule-based decision)."
 
     if final_state == "NORMAL" and 60 <= hr <= 90 and spo2 >= 96:
-        explanation += " Vital signs are stable and consistent with a healthy baseline."
+        explanation += " Vital signs are consistent with a healthy baseline."
 
     return {
         "prediction": final_state,
@@ -279,6 +385,11 @@ class PredictionRequest(BaseModel):
     gyro_x: Optional[float] = 0.0
     gyro_y: Optional[float] = 0.0
     gyro_z: Optional[float] = 0.0
+    conditions: Optional[List[str]] = []
+    max_heart_rate: Optional[int] = None
+    min_heart_rate: Optional[int] = None
+    max_temperature: Optional[float] = None
+    min_temperature: Optional[float] = None
 
 
 class PredictionResponse(BaseModel):
@@ -335,6 +446,11 @@ async def predict(request: PredictionRequest):
             gx=request.gyro_x or 0.0,
             gy=request.gyro_y or 0.0,
             gz=request.gyro_z or 0.0,
+            conditions=request.conditions or [],
+            max_hr=request.max_heart_rate,
+            min_hr=request.min_heart_rate,
+            max_temp=request.max_temperature,
+            min_temp=request.min_temperature,
         )
 
         return PredictionResponse(**result)

@@ -25,6 +25,10 @@ namespace LifeAlertPlus.Application.Services
                 Gender = monitoredPersonDto.Gender,
                 Address = monitoredPersonDto.Address,
                 DeviceSerialNumber = monitoredPersonDto.DeviceSerialNumber,
+                MinHeartRate  = 60,
+                MaxHeartRate  = 100,
+                MinTemperature = 36.0,
+                MaxTemperature = 37.5,
                 CreatedAt = DateTime.UtcNow
             };
 

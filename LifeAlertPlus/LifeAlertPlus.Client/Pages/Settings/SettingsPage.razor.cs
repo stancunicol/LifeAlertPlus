@@ -43,6 +43,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
             GlucoseMax = 140,
             TemperatureMin = 36.0,
             TemperatureMax = 37.5,
+            SpO2Min = 95,
+            SpO2Max = 100,
 
             NotificationSound = true,
             NotificationVibration = true,
@@ -93,6 +95,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 MaxHeartRate = Settings.HeartRateMax,
                 MinTemperature = (float)Settings.TemperatureMin,
                 MaxTemperature = (float)Settings.TemperatureMax,
+                MinSpO2 = Settings.SpO2Min,
+                MaxSpO2 = Settings.SpO2Max,
                 UpdateFrequency = Settings.UpdateFrequency,
                 DataRetentionDays = int.TryParse(Settings.HistoryRetention, out var ret) ? ret : 0,
                 NotifyByEmail = Settings.NotifyByEmail,
@@ -176,13 +180,14 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 Lang.SetLanguage(userFromApi.Language);
                 await JSRuntime.InvokeVoidAsync("setLanguage", userFromApi.Language);
             }
-            if (!string.IsNullOrEmpty(userFromApi.ThemeColor))
             if (!string.IsNullOrEmpty(userFromApi.FontSize))
                 Settings.FontSize = userFromApi.FontSize;
-            Settings.HeartRateMin = userFromApi.MinHeartRate;
-            Settings.HeartRateMax = userFromApi.MaxHeartRate;
-            Settings.TemperatureMin = userFromApi.MinTemperature;
-            Settings.TemperatureMax = userFromApi.MaxTemperature;
+            if (userFromApi.MinHeartRate > 0) Settings.HeartRateMin = userFromApi.MinHeartRate;
+            if (userFromApi.MaxHeartRate > 0) Settings.HeartRateMax = userFromApi.MaxHeartRate;
+            if (userFromApi.MinTemperature > 0) Settings.TemperatureMin = userFromApi.MinTemperature;
+            if (userFromApi.MaxTemperature > 0) Settings.TemperatureMax = userFromApi.MaxTemperature;
+            if (userFromApi.MinSpO2 > 0) Settings.SpO2Min = userFromApi.MinSpO2;
+            if (userFromApi.MaxSpO2 > 0) Settings.SpO2Max = userFromApi.MaxSpO2;
             if (userFromApi.UpdateFrequency > 0)
                 Settings.UpdateFrequency = userFromApi.UpdateFrequency;
             Settings.HistoryRetention = userFromApi.DataRetentionDays > 0 ? userFromApi.DataRetentionDays.ToString() : "365";
@@ -219,6 +224,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Settings.GlucoseMax = 140;
             Settings.TemperatureMin = 36.0;
             Settings.TemperatureMax = 37.5;
+            Settings.SpO2Min = 95;
+            Settings.SpO2Max = 100;
         }
 
         private void ResetAllSettings()
@@ -239,6 +246,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 GlucoseMax = 140,
                 TemperatureMin = 36.0,
                 TemperatureMax = 37.5,
+                SpO2Min = 95,
+                SpO2Max = 100,
                 NotificationSound = true,
                 NotificationVibration = true,
                 DesktopNotifications = true,
@@ -274,6 +283,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
             public int GlucoseMax { get; set; }
             public double TemperatureMin { get; set; }
             public double TemperatureMax { get; set; }
+            public int SpO2Min { get; set; }
+            public int SpO2Max { get; set; }
 
             // Notifications
             public bool NotificationSound { get; set; }

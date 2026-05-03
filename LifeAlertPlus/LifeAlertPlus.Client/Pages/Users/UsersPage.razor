@@ -63,7 +63,7 @@
 				<div class="section-header">
 					<div>
 						<h2>@T("users.usersTitle")</h2>
-						<span class="section-note">@ActiveUsers active • @ConfirmedUsers email confirmed</span>
+						<span class="section-note">@ActiveUsers @T("users.active") • @ConfirmedUsers @T("users.emailConfirmed")</span>
 					</div>
 					<div class="section-actions">
 						<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="@T("users.searchPh")" />

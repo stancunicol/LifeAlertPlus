@@ -32,6 +32,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
             // Ensure the Invitations table exists even when the DB was created without EF migrations.
             // (EnsureCreated doesn't evolve schema, so older DBs might miss newer tables.)
             await EnsureInvitationsTableAsync(context);
+            await EnsureUserSpO2ColumnsAsync(context);
 
             var hasUsers = await context.Users.AnyAsync();
             if (!hasUsers)
@@ -75,7 +76,18 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     IsEmailConfirmed = true,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
                     Provider = "Local",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    MinHeartRate = 60,
+                    MaxHeartRate = 100,
+                    MinTemperature = 36.0,
+                    MaxTemperature = 37.5,
+                    MinSpO2 = 95,
+                    MaxSpO2 = 100,
+                    Language = "ro",
+                    FontSize = "medium",
+                    UpdateFrequency = 30,
+                    NotifyByEmail = true,
+                    NotifyByPush = true
                 };
 
                 var user = new User
@@ -90,7 +102,18 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     Provider = "Local",
                     PhoneNumber = "+40746512348",
                     NotifyBySms = true,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    MinHeartRate = 60,
+                    MaxHeartRate = 100,
+                    MinTemperature = 36.0,
+                    MaxTemperature = 37.5,
+                    MinSpO2 = 95,
+                    MaxSpO2 = 100,
+                    Language = "ro",
+                    FontSize = "medium",
+                    UpdateFrequency = 30,
+                    NotifyByEmail = true,
+                    NotifyByPush = true
                 };
 
                 context.Users.Add(admin);
@@ -225,6 +248,12 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 await context.SaveChangesAsync();
             }
                 }
+
+        private static async Task EnsureUserSpO2ColumnsAsync(LifeAlertPlusDbContext context)
+        {
+            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN MinSpO2 INTEGER;"); } catch { }
+            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN MaxSpO2 INTEGER;"); } catch { }
+        }
 
         private static async Task EnsureInvitationsTableAsync(LifeAlertPlusDbContext context)
         {

@@ -69,6 +69,8 @@ namespace LifeAlertPlus.API.Controllers
             user.MaxHeartRate = updatedUser.MaxHeartRate ?? user.MaxHeartRate;
             user.MinTemperature = updatedUser.MinTemperature ?? user.MinTemperature;
             user.MaxTemperature = updatedUser.MaxTemperature ?? user.MaxTemperature;
+            user.MinSpO2 = updatedUser.MinSpO2 ?? user.MinSpO2;
+            user.MaxSpO2 = updatedUser.MaxSpO2 ?? user.MaxSpO2;
             user.UpdateFrequency = updatedUser.UpdateFrequency ?? user.UpdateFrequency;
             user.DataRetentionDays = updatedUser.DataRetentionDays ?? user.DataRetentionDays;
             user.NotifyByEmail = updatedUser.NotifyByEmail ?? user.NotifyByEmail;
@@ -293,6 +295,8 @@ namespace LifeAlertPlus.API.Controllers
                 MaxHeartRate = user.MaxHeartRate ?? 0,
                 MinTemperature = (float)(user.MinTemperature ?? 0),
                 MaxTemperature = (float)(user.MaxTemperature ?? 0),
+                MinSpO2 = user.MinSpO2 ?? 0,
+                MaxSpO2 = user.MaxSpO2 ?? 0,
                 UpdateFrequency = user.UpdateFrequency ?? 30,
                 DataRetentionDays = user.DataRetentionDays ?? 0,
                 NotifyByEmail = user.NotifyByEmail,
@@ -332,6 +336,8 @@ namespace LifeAlertPlus.API.Controllers
                 MaxHeartRate = user.MaxHeartRate ?? 0,
                 MinTemperature = (float)(user.MinTemperature ?? 0),
                 MaxTemperature = (float)(user.MaxTemperature ?? 0),
+                MinSpO2 = user.MinSpO2 ?? 0,
+                MaxSpO2 = user.MaxSpO2 ?? 0,
                 UpdateFrequency = user.UpdateFrequency ?? 30,
                 DataRetentionDays = user.DataRetentionDays ?? 0,
                 NotifyByEmail = user.NotifyByEmail,

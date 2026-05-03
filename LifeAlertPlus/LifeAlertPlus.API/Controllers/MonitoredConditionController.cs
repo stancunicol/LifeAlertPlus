@@ -16,12 +16,18 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IMonitoredConditionRepository _repo;
         private readonly LifeAlertPlusDbContext _db;
         private readonly ConditionRuleEngine _conditionRuleEngine;
+        private readonly AlertMonitorService _alertMonitor;
 
-        public MonitoredConditionController(IMonitoredConditionRepository repo, LifeAlertPlusDbContext db, ConditionRuleEngine conditionRuleEngine)
+        public MonitoredConditionController(
+            IMonitoredConditionRepository repo,
+            LifeAlertPlusDbContext db,
+            ConditionRuleEngine conditionRuleEngine,
+            AlertMonitorService alertMonitor)
         {
             _repo = repo;
             _db = db;
             _conditionRuleEngine = conditionRuleEngine;
+            _alertMonitor = alertMonitor;
         }
 
         [HttpGet("{monitoredId}")]
@@ -41,11 +47,32 @@ namespace LifeAlertPlus.API.Controllers
             var valid = conditionKeys
                 .Where(k => !string.IsNullOrWhiteSpace(k))
                 .Select(k => k.Trim().ToLowerInvariant())
-                .Distinct();
+                .Distinct()
+                .ToList();
 
             await _repo.ReplaceAllAsync(monitoredId, valid);
             _conditionRuleEngine.InvalidateCache(monitoredId);
-            return NoContent();
+
+            var monitored = await _db.Monitoreds.FindAsync(monitoredId);
+            if (monitored != null)
+            {
+                var (minHr, maxHr, minTemp, maxTemp) = ConditionThresholdAdjuster.Calculate(valid);
+                monitored.MinHeartRate   = minHr;
+                monitored.MaxHeartRate   = maxHr;
+                monitored.MinTemperature = minTemp;
+                monitored.MaxTemperature = maxTemp;
+                monitored.UpdatedAt      = DateTime.UtcNow;
+                await _db.SaveChangesAsync();
+                _alertMonitor.InvalidateThresholdCache(monitoredId);
+            }
+
+            return Ok(new
+            {
+                MinHeartRate   = monitored?.MinHeartRate,
+                MaxHeartRate   = monitored?.MaxHeartRate,
+                MinTemperature = monitored?.MinTemperature,
+                MaxTemperature = monitored?.MaxTemperature
+            });
         }
 
         private async Task<bool> HasAccess(Guid monitoredId)

@@ -105,7 +105,7 @@
                 </div>
                 <div class="stat-card-large blood-oxygen @(CurrentMeasurement?.SpO2 > 0 ? "" : "no-data")">
                     <div class="stat-content">
-                        <h3>SpO2</h3>
+                        <h3>@T("meas.spo2")</h3>
                         @if (CurrentMeasurement?.SpO2 > 0)
                         {
                             <div class="stat-value-huge">@CurrentMeasurement.SpO2.ToString("F0") <span class="stat-unit">%</span></div>
@@ -385,7 +385,7 @@
                                     <th>@T("export.date")</th>
                                     <th>@T("selected.heartRate")</th>
                                     <th>@T("selected.temperature")</th>
-                                    <th>SpO2</th>
+                                    <th>@T("meas.spo2")</th>
                                     <th>@T("export.activity")</th>
                                     <th>@T("export.fall")</th>
                                     <th>@Ui("Status", "Status")</th>
