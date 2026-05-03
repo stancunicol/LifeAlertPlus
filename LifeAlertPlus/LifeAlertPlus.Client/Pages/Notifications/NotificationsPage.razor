@@ -1,4 +1,5 @@
 @page "/notifications"
+@page "/monitored/{PersonId:guid}/alerts"
 @using LifeAlertPlus.Shared.DTOs.Responses.Notification
 @using LifeAlertPlus.Client.Components.Header
 @layout MainLayout
@@ -10,7 +11,18 @@
     <!-- Header -->
     <div class="notif-header">
         <div>
-            <h1 class="notif-title">@T("notifications.title")</h1>
+            @if (PersonId != Guid.Empty)
+            {
+                <a href="/monitored/@PersonId" class="notif-back-link">← @T("notifications.backToPatient")</a>
+            }
+            <h1 class="notif-title">
+                @if (PersonId != Guid.Empty && !string.IsNullOrEmpty(_patientName))
+                {
+                    @_patientName
+                    <span class="notif-title-sep">—</span>
+                }
+                @T("notifications.title")
+            </h1>
             <p class="notif-subtitle">@T("notifications.subtitle")</p>
         </div>
         <button class="btn-mark-all" @onclick="MarkAllAsReadAsync" disabled="@(_markingAll || (_paged?.UnreadCount ?? 0) == 0)">

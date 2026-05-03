@@ -395,7 +395,7 @@ namespace LifeAlertPlus.API.Services
                         IdUser = user.Id,
                         IdMonitored = monitoredId,
                         NotificationType = notifType,
-                        Message = BuildNotificationMessage(state, patientName, user.Language ?? "ro", aiContext, false, false),
+                        Message = BuildNotificationMessage(state, patientName, user.Language ?? "en", aiContext, false, false),
                         CreatedAt = createdAt
                     };
                     dbContext.Notifications.Add(notification);
@@ -406,7 +406,7 @@ namespace LifeAlertPlus.API.Services
                     {
                         try
                         {
-                            var userLang = user.Language ?? "ro";
+                            var userLang = user.Language ?? "en";
                             await emailService.SendAlertNotificationEmailAsync(
                                 user.Email,
                                 $"{user.FirstName} {user.LastName}".Trim(),
@@ -437,7 +437,7 @@ namespace LifeAlertPlus.API.Services
                             {
                                 await twilioService.SendSmsAsync(
                                     user.PhoneNumber,
-                                    BuildNotificationMessage(state, patientName, user.Language ?? "ro", aiContext, true, false));
+                                    BuildNotificationMessage(state, patientName, user.Language ?? "en", aiContext, true, false));
                             }
                             catch (Exception ex)
                             {
@@ -450,7 +450,7 @@ namespace LifeAlertPlus.API.Services
                     {
                         try
                         {
-                            var pushMsg = BuildNotificationMessage(state, patientName, user.Language ?? "ro", aiContext, false, true);
+                            var pushMsg = BuildNotificationMessage(state, patientName, user.Language ?? "en", aiContext, false, true);
                             await _pushNotificationService.SendPushNotificationAsync(user.Id, pushMsg, state.Severity == AlertSeverity.Critical ? "Critical" : state.Severity.ToString());
                             _logger.LogInformation("Push notification sent for user {UserId} about monitored {MonitoredId}: {Severity}", user.Id, monitoredId, state.Severity);
                         }
@@ -580,11 +580,11 @@ namespace LifeAlertPlus.API.Services
         {
             try
             {
-                var (hasAnomaly, message, type) = await _activityProfileService.CheckAnomalyAsync(monitoredId, activity, pulse, now);
-                if (hasAnomaly && !string.IsNullOrEmpty(message))
+                var (hasAnomaly, messageRo, messageEn, type) = await _activityProfileService.CheckAnomalyAsync(monitoredId, activity, pulse, now);
+                if (hasAnomaly && !string.IsNullOrEmpty(messageRo))
                 {
-                    _logger.LogInformation("Behavioral anomaly for {MonitoredId} [{Type}]: {Message}", monitoredId, type, message);
-                    await SendBehavioralNotificationsAsync(monitoredId, message, now);
+                    _logger.LogInformation("Behavioral anomaly for {MonitoredId} [{Type}]: {Message}", monitoredId, type, messageRo);
+                    await SendBehavioralNotificationsAsync(monitoredId, messageRo, messageEn!, now);
                 }
             }
             catch (Exception ex)
@@ -593,7 +593,7 @@ namespace LifeAlertPlus.API.Services
             }
         }
 
-        private async Task SendBehavioralNotificationsAsync(Guid monitoredId, string message, DateTime now)
+        private async Task SendBehavioralNotificationsAsync(Guid monitoredId, string messageRo, string messageEn, DateTime now)
         {
             try
             {
@@ -612,6 +612,9 @@ namespace LifeAlertPlus.API.Services
                 {
                     var user = um.User;
                     if (user == null || user.DeletedAt.HasValue) continue;
+
+                    bool isEn = string.Equals(user.Language, "en", StringComparison.OrdinalIgnoreCase);
+                    string message = isEn ? messageEn : messageRo;
 
                     dbContext.Notifications.Add(new Domain.Entities.Notification
                     {

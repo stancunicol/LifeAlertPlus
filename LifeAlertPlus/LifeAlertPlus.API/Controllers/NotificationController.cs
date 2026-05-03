@@ -24,7 +24,8 @@ namespace LifeAlertPlus.API.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] string? type = null,
-            [FromQuery] bool unreadOnly = false)
+            [FromQuery] bool unreadOnly = false,
+            [FromQuery] Guid? monitoredId = null)
         {
             var userId = GetCallerId();
             if (userId == null) return Forbid();
@@ -34,6 +35,9 @@ namespace LifeAlertPlus.API.Controllers
 
             var baseQuery = _dbContext.Notifications
                 .Where(n => n.IdUser == userId.Value && n.DeletedAt == null);
+
+            if (monitoredId.HasValue)
+                baseQuery = baseQuery.Where(n => n.IdMonitored == monitoredId.Value);
 
             var criticalCount = await baseQuery.CountAsync(n => n.NotificationType == "Critical");
             var alertCount    = await baseQuery.CountAsync(n => n.NotificationType == "Alert");

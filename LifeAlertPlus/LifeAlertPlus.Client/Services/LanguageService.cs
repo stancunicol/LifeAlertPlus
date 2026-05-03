@@ -221,6 +221,7 @@ namespace LifeAlertPlus.Client.Services
             // Notifications
             ["notifications.title"] = "Notifications",
             ["notifications.subtitle"] = "Stay updated with all health alerts and updates",
+            ["notifications.backToPatient"] = "Back to patient",
             ["notifications.criticalAlerts"] = "Critical Alerts",
             ["notifications.warnings"] = "Warnings",
             ["notifications.infoMessages"] = "Info Messages",
@@ -318,6 +319,8 @@ namespace LifeAlertPlus.Client.Services
             ["support.autoNote"] = "This address is not monitored for incoming messages.",
             ["support.noticeTitle"] = "Service Notice",
             ["support.noticeText"] = "LifeAlertPlus is designed to assist monitoring and alerting but does not guarantee prevention of incidents. Always rely on emergency services in critical situations.",
+            ["support.deviceTitle"] = "Device Interface",
+            ["support.deviceCaption"] = "The LifeAlertPlus IoT device continuously collects vital signs (pulse, SpO2, temperature, movement) and transmits them in real time to the monitoring platform.",
 
             // Profile (extended)
             ["profile.changePicture"] = "Change Picture",
@@ -1024,6 +1027,7 @@ namespace LifeAlertPlus.Client.Services
             // Notifications
             ["notifications.title"] = "Notificări",
             ["notifications.subtitle"] = "Fii la curent cu toate alertele și actualizările de sănătate",
+            ["notifications.backToPatient"] = "Înapoi la pacient",
             ["notifications.criticalAlerts"] = "Alerte critice",
             ["notifications.warnings"] = "Avertismente",
             ["notifications.infoMessages"] = "Mesaje informative",
@@ -1121,6 +1125,8 @@ namespace LifeAlertPlus.Client.Services
             ["support.autoNote"] = "Această adresă nu este monitorizată pentru mesaje primite.",
             ["support.noticeTitle"] = "Aviz de serviciu",
             ["support.noticeText"] = "LifeAlertPlus este conceput pentru a asista monitorizarea și alertarea, dar nu garantează prevenirea incidentelor. Bazați-vă întotdeauna pe serviciile de urgență în situații critice.",
+            ["support.deviceTitle"] = "Interfața dispozitivului",
+            ["support.deviceCaption"] = "Dispozitivul IoT LifeAlertPlus colectează continuu semne vitale (puls, SpO2, temperatură, mișcare) și le transmite în timp real către platforma de monitorizare.",
 
             // Profile (extended)
             ["profile.changePicture"] = "Schimbă poza",

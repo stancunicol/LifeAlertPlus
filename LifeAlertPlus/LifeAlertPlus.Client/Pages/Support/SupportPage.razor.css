@@ -68,6 +68,40 @@
     border: none;
 }
 
+/* ── Device Preview ───────────────────────────────────── */
+.device-section {
+    background: #fff;
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(165, 214, 167, 0.25);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.device-preview-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #f4f6f9;
+}
+
+.device-preview-img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 14px;
+}
+
+.device-caption {
+    font-size: 0.9rem !important;
+    color: #777 !important;
+    text-align: center;
+    margin: 0 !important;
+    line-height: 1.6;
+}
+
 /* ── Contact Card ─────────────────────────────────────── */
 .contact-card {
     display: flex;

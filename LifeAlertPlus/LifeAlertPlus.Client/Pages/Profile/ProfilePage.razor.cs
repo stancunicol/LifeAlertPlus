@@ -3,7 +3,6 @@ using Microsoft.JSInterop;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
 using LifeAlertPlus.Client.Services;
-using Microsoft.AspNetCore.Components.Forms;
 using System.Globalization;
 
 namespace LifeAlertPlus.Client.Pages.Profile
@@ -465,32 +464,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             ShowDeleteInfoModal = true;
         }
 
-        private void CloseDeleteInfoModal()
-        {
-            ShowDeleteInfoModal = false;
-        }
 
-        private async Task OnProfileImageSelected(InputFileChangeEventArgs e)
-        {
-            var file = e.File;
-            if (file == null)
-                return;
-
-            using var stream = file.OpenReadStream(5 * 1024 * 1024); // max 5MB
-            var imageUrl = await UserService.UploadProfilePictureAsync(CurrentUser.Id, stream, file.Name);
-            if (!string.IsNullOrEmpty(imageUrl))
-            {
-                CurrentUser.ProfilePictureUrl = imageUrl;
-                await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "profilePictureUrl", imageUrl);
-                ProfilePictureService.SetUrl(imageUrl);
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-
-        private async Task TriggerProfileImageInput()
-        {
-            await JSRuntime.InvokeVoidAsync("triggerProfileImageInput", "profileImageInput");
-        }
 
         private class NotificationPreferences
         {

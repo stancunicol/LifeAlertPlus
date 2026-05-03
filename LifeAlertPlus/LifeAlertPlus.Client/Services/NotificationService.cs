@@ -14,11 +14,13 @@ namespace LifeAlertPlus.Client.Services
         }
 
         public async Task<NotificationPagedResponseDTO?> GetPagedAsync(
-            int page = 1, int pageSize = 10, string? type = null, bool unreadOnly = false)
+            int page = 1, int pageSize = 10, string? type = null, bool unreadOnly = false, Guid? monitoredId = null)
         {
             var url = $"api/notification?page={page}&pageSize={pageSize}&unreadOnly={unreadOnly}";
             if (!string.IsNullOrWhiteSpace(type))
                 url += $"&type={Uri.EscapeDataString(type)}";
+            if (monitoredId.HasValue)
+                url += $"&monitoredId={monitoredId.Value}";
 
             return await _httpClient.GetFromJsonAsync<NotificationPagedResponseDTO>(url);
         }

@@ -46,8 +46,8 @@ namespace LifeAlertPlus.API.Services
         private static bool IsMoving(string activity) =>
             !string.IsNullOrWhiteSpace(activity) && !SedentaryLabels.Contains(activity.Trim());
 
-        // Returns (hasAnomaly, message, anomalyType) — called on every new measurement
-        public async Task<(bool HasAnomaly, string? Message, string? AnomalyType)> CheckAnomalyAsync(
+        // Returns (hasAnomaly, messageRo, messageEn, anomalyType) — called on every new measurement
+        public async Task<(bool HasAnomaly, string? MessageRo, string? MessageEn, string? AnomalyType)> CheckAnomalyAsync(
             Guid monitoredId, string activity, double pulse, DateTime now)
         {
             bool moving = IsMoving(activity);
@@ -59,14 +59,14 @@ namespace LifeAlertPlus.API.Services
 
             if (_anomalyCooldowns.TryGetValue(monitoredId, out var lastAnomaly) &&
                 (now - lastAnomaly) < AnomalyCooldown)
-                return (false, null, null);
+                return (false, null, null, null);
 
             var profile = await GetCachedProfileAsync(monitoredId, now);
-            if (profile == null) return (false, null, null);
+            if (profile == null) return (false, null, null, null);
 
             var hourProfile = profile[now.Hour];
             if (hourProfile == null || hourProfile.DataPoints < MinDataPoints)
-                return (false, null, null);
+                return (false, null, null, null);
 
             // Person usually active at this hour but hasn't moved in 15 minutes
             if (hourProfile.MovementRate > ActiveHourThreshold)
@@ -75,8 +75,10 @@ namespace LifeAlertPlus.API.Services
                 if (recentReadings.Length >= MinInactiveReadings && recentReadings.All(m => !m))
                 {
                     _anomalyCooldowns[monitoredId] = now;
+                    int minutes = (int)ActivityWindow.TotalMinutes;
                     return (true,
-                        $"Persoana nu s-a mișcat de {(int)ActivityWindow.TotalMinutes} minute, deși la ora {now.Hour:00}:00 este de obicei activă ({hourProfile.MovementRate:P0} din timp).",
+                        $"Persoana nu s-a mișcat de {minutes} minute, deși la ora {now.Hour:00}:00 este de obicei activă ({hourProfile.MovementRate:P0} din timp).",
+                        $"No movement detected for {minutes} minutes, even though the person is usually active at {now.Hour:00}:00 ({hourProfile.MovementRate:P0} of the time).",
                         "InactivityAnomaly");
                 }
             }
@@ -87,10 +89,11 @@ namespace LifeAlertPlus.API.Services
                 _anomalyCooldowns[monitoredId] = now;
                 return (true,
                     $"Activitate detectată la ora {now.Hour:00}:00, oră la care persoana doarme de obicei ({hourProfile.SleepProbability:P0} din timp).",
+                    $"Activity detected at {now.Hour:00}:00, an hour when the person is usually asleep ({hourProfile.SleepProbability:P0} of the time).",
                     "NightActivity");
             }
 
-            return (false, null, null);
+            return (false, null, null, null);
         }
 
         // Builds or rebuilds the hourly profile from the last 14 days of measurements

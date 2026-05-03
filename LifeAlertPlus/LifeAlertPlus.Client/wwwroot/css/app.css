@@ -1,11 +1,11 @@
 /* wwwroot/css/app.css */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
 
 /* ── Design Tokens ── */
 :root {
-    --font-heading:      'Nunito', sans-serif;
-    --font-body:         'Inter', sans-serif;
+    --font-heading:      'Jua', sans-serif;
+    --font-body:         'Jua', sans-serif;
 
     --color-primary:     #2E7D32;
     --color-primary-mid: #4CAF50;
@@ -25,6 +25,21 @@
     --color-critical-bg: #FEE2E2;
     --color-offline:     #6B7280;
     --color-offline-bg:  #F3F4F6;
+
+    --color-blue:        #93C5FD;
+    --color-blue-bg:     #DBEAFE;
+    --color-purple:      #C4B5FD;
+    --color-purple-bg:   #EDE9FE;
+    --color-teal:        #6EE7B7;
+    --color-teal-bg:     #CCFBF1;
+    --color-coral:       #FCA5A5;
+    --color-coral-bg:    #FFE4E6;
+    --color-amber:       #FCD34D;
+    --color-amber-bg:    #FEF3C7;
+    --color-indigo:      #A5B4FC;
+    --color-indigo-bg:   #E0E7FF;
+    --color-pink:        #F9A8D4;
+    --color-pink-bg:     #FCE7F3;
 
     --radius-sm:         8px;
     --radius-md:         12px;

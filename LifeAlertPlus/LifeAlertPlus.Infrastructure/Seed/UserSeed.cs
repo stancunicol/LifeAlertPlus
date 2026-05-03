@@ -48,8 +48,8 @@ namespace LifeAlertPlus.Infrastructure.Seed
 
             var roles = new List<Role>
             {
-                new Role { Id = Guid.NewGuid(), Name = "Admin", CreatedAt = DateTime.UtcNow },
-                new Role { Id = Guid.NewGuid(), Name = "User", CreatedAt = DateTime.UtcNow }
+                new() { Id = Guid.NewGuid(), Name = "Admin", CreatedAt = DateTime.UtcNow },
+                new() { Id = Guid.NewGuid(), Name = "User", CreatedAt = DateTime.UtcNow }
             };
 
             foreach (var role in roles)
@@ -180,6 +180,48 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     }
                 }
                 context.Set<Measurement>().AddRange(measurements);
+                await context.SaveChangesAsync();
+
+                // Seed ActivityProfile: rutina zilnica a Mariei Popescu (72 ani)
+                // Valori realiste pentru o persoana varstnica: somn 22-06, siesta 13-15
+                var activityProfiles = new List<ActivityProfile>
+                {
+                    // Somn profund (00-05)
+                    new() { IdMonitored = monitored.Id, HourOfDay =  0, AveragePulse = 58, MovementRate = 0.05, SleepProbability = 0.92, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay =  1, AveragePulse = 57, MovementRate = 0.04, SleepProbability = 0.94, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay =  2, AveragePulse = 57, MovementRate = 0.04, SleepProbability = 0.95, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay =  3, AveragePulse = 58, MovementRate = 0.05, SleepProbability = 0.94, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay =  4, AveragePulse = 59, MovementRate = 0.06, SleepProbability = 0.90, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay =  5, AveragePulse = 60, MovementRate = 0.08, SleepProbability = 0.85, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    // Trezire (06)
+                    new() { IdMonitored = monitored.Id, HourOfDay =  6, AveragePulse = 63, MovementRate = 0.22, SleepProbability = 0.55, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    // Rutina matinala - mic dejun (07-08)
+                    new() { IdMonitored = monitored.Id, HourOfDay =  7, AveragePulse = 68, MovementRate = 0.48, SleepProbability = 0.08, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay =  8, AveragePulse = 72, MovementRate = 0.55, SleepProbability = 0.05, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    // Activitate matinala (09-11)
+                    new() { IdMonitored = monitored.Id, HourOfDay =  9, AveragePulse = 74, MovementRate = 0.58, SleepProbability = 0.04, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay = 10, AveragePulse = 73, MovementRate = 0.56, SleepProbability = 0.04, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay = 11, AveragePulse = 71, MovementRate = 0.50, SleepProbability = 0.05, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    // Pranz (12)
+                    new() { IdMonitored = monitored.Id, HourOfDay = 12, AveragePulse = 70, MovementRate = 0.42, SleepProbability = 0.07, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    // Siesta post-pranz (13-14)
+                    new() { IdMonitored = monitored.Id, HourOfDay = 13, AveragePulse = 66, MovementRate = 0.22, SleepProbability = 0.45, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay = 14, AveragePulse = 63, MovementRate = 0.14, SleepProbability = 0.60, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    // Activitate dupa-amiaza (15-17)
+                    new() { IdMonitored = monitored.Id, HourOfDay = 15, AveragePulse = 68, MovementRate = 0.38, SleepProbability = 0.25, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay = 16, AveragePulse = 70, MovementRate = 0.45, SleepProbability = 0.08, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay = 17, AveragePulse = 69, MovementRate = 0.40, SleepProbability = 0.09, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    // Seara (18-20)
+                    new() { IdMonitored = monitored.Id, HourOfDay = 18, AveragePulse = 67, MovementRate = 0.30, SleepProbability = 0.12, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay = 19, AveragePulse = 66, MovementRate = 0.22, SleepProbability = 0.15, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay = 20, AveragePulse = 65, MovementRate = 0.18, SleepProbability = 0.22, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    // Pre-somn (21)
+                    new() { IdMonitored = monitored.Id, HourOfDay = 21, AveragePulse = 63, MovementRate = 0.10, SleepProbability = 0.48, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    // Adormire (22-23)
+                    new() { IdMonitored = monitored.Id, HourOfDay = 22, AveragePulse = 61, MovementRate = 0.07, SleepProbability = 0.78, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                    new() { IdMonitored = monitored.Id, HourOfDay = 23, AveragePulse = 59, MovementRate = 0.06, SleepProbability = 0.88, DataPoints = 14, LastUpdated = DateTime.UtcNow },
+                };
+                context.ActivityProfiles.AddRange(activityProfiles);
                 await context.SaveChangesAsync();
             }
                 }

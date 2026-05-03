@@ -177,7 +177,7 @@
                         </div>
                         <div class="ai-health-score">
                             <span class="ai-health-label">@T("selected.aiHealthScore")</span>
-                            <span class="ai-health-value @(AIPrediction.HealthScore >= 80 ? "critical" : AIPrediction.HealthScore >= 40 ? "alert" : "normal")">@AIPrediction.HealthScore / 100</span>
+                            <span class="ai-health-value @(AIPrediction.HealthScore >= 80 ? "critical" : AIPrediction.HealthScore >= 40 ? "alert" : "normal")">@(100 - AIPrediction.HealthScore) / 100</span>
                         </div>
                     </div>
                     <div class="ai-details">
@@ -185,21 +185,27 @@
                     </div>
                     @if (AIPrediction.AllProbabilities != null && AIPrediction.AllProbabilities.Count > 1)
                     {
-                        <div class="ai-probabilities">
-                            <span class="ai-prob-title">@T("selected.aiProbabilities")</span>
-                            <div class="ai-prob-bars">
-                                @foreach (var prob in AIPrediction.AllProbabilities.OrderByDescending(p => p.Value))
-                                {
-                                    <div class="ai-prob-item">
-                                        <span class="ai-prob-label">@prob.Key</span>
-                                        <div class="ai-prob-bar">
-                                            <div class="ai-prob-fill" style="width: @((prob.Value * 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                        <button class="ai-prob-toggle" @onclick="() => _showProbabilities = !_showProbabilities">
+                            @T("selected.aiProbabilities")
+                            <span class="ai-prob-toggle-icon @(_showProbabilities ? "expanded" : "")">▾</span>
+                        </button>
+                        @if (_showProbabilities)
+                        {
+                            <div class="ai-probabilities">
+                                <div class="ai-prob-bars">
+                                    @foreach (var prob in AIPrediction.AllProbabilities.OrderByDescending(p => p.Value))
+                                    {
+                                        <div class="ai-prob-item">
+                                            <span class="ai-prob-label">@prob.Key</span>
+                                            <div class="ai-prob-bar">
+                                                <div class="ai-prob-fill" style="width: @((prob.Value * 100).ToString("F0", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                            </div>
+                                            <span class="ai-prob-value">@((prob.Value * 100).ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%</span>
                                         </div>
-                                        <span class="ai-prob-value">@((prob.Value * 100).ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%</span>
-                                    </div>
-                                }
+                                    }
+                                </div>
                             </div>
-                        </div>
+                        }
                     }
                 </div>
             }
@@ -535,7 +541,7 @@
                 <div class="section-card">
                     <div class="section-header">
                         <h2>🔔 @T("selected.recentAlerts")</h2>
-                        <a class="view-all-link" href="/monitored/@PersonId/measurements">→</a>
+                        <a class="view-all-link" href="/monitored/@PersonId/alerts">→</a>
                     </div>
                     <div class="alerts-list">
                         @foreach (var alert in RecentAlerts)

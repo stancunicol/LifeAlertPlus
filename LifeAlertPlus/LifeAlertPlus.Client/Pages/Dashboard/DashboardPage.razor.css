@@ -4,6 +4,27 @@
     margin: 0 auto;
 }
 
+.dashboard-header {
+    background: linear-gradient(135deg, #A5D6A7 0%, #C8E6C9 100%);
+    border-radius: var(--radius-lg);
+    padding: 2rem 2.5rem;
+    margin-bottom: 2rem;
+    color: white;
+    box-shadow: 0 5px 20px rgba(165,214,167,0.3);
+}
+
+.dashboard-header h1 {
+    font-size: 2rem;
+    margin: 0 0 4px;
+    color: white;
+}
+
+.dashboard-subtitle {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.85);
+    margin: 0;
+}
+
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -19,14 +40,20 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    border-left: 4px solid transparent;
-    transition: box-shadow 0.22s ease, border-color 0.22s ease;
+    border-left: 4px solid var(--color-primary-accent);
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
 }
 
-    .stat-card:hover {
-        box-shadow: var(--shadow-md);
-        border-left-color: var(--color-primary-accent);
-    }
+.stat-card:nth-child(1) { border-left-color: var(--color-pink); }
+.stat-card:nth-child(2) { border-left-color: var(--color-coral); }
+.stat-card:nth-child(3) { border-left-color: var(--color-teal); }
+.stat-card:nth-child(4) { border-left-color: #D1D5DB; }
+.stat-card:nth-child(5) { border-left-color: var(--color-blue); }
+
+.stat-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
 
 .stat-icon {
     font-size: 2rem;
@@ -41,10 +68,10 @@
 }
 
 .stat-icon.heart  { background: #fce4ec; }
-.stat-icon.alert  { background: #FEF3C7; }
-.stat-icon.check  { background: #d4f4dd; color: var(--color-ok); font-size: 1.5rem; font-weight: 700; }
+.stat-icon.alert  { background: var(--color-coral-bg); }
+.stat-icon.check  { background: var(--color-teal-bg); color: var(--color-teal); font-size: 1.5rem; font-weight: 700; }
 .stat-icon.off    { background: var(--color-offline-bg); color: var(--color-offline); }
-.stat-icon.chart  { background: #e8f4fd; }
+.stat-icon.chart  { background: var(--color-blue-bg); }
 
 .stat-info {
     flex: 1;
@@ -90,6 +117,7 @@
     border-radius: 15px;
     padding: 1.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-top: 3px solid var(--color-primary-accent);
 }
 
     .section.full-width {

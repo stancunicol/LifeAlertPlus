@@ -1,6 +1,7 @@
 @page "/register"
 @layout EmptyLayout
 
+<div class="auth-bg"></div>
 <div class="login-rect">
     <div class="login-left">
         <div class="login-logo">@T("login.title")</div>
@@ -55,7 +56,10 @@
                            @bind="Password"
                            @bind:event="oninput"
                            @onkeydown="HandleKeyDown" />
-                    <button type="button" class="password-toggle" @onclick="ToggleShowPassword" aria-label="Toggle password visibility">👁</button>
+                    @if (!string.IsNullOrEmpty(Password) || !string.IsNullOrEmpty(ConfirmPassword))
+                    {
+                        <button type="button" class="password-toggle" @onclick="ToggleShowPassword" aria-label="Toggle password visibility">👁</button>
+                    }
                 </div>
             </div>
         </div>
@@ -70,7 +74,6 @@
                            @bind="ConfirmPassword"
                            @bind:event="oninput"
                            @onkeydown="HandleKeyDown" />
-                    <button type="button" class="password-toggle" @onclick="ToggleShowPassword" aria-label="Toggle confirm password visibility">👁</button>
                 </div>
             </div>
         </div>

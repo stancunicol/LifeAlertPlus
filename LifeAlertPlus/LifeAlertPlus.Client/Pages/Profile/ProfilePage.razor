@@ -17,8 +17,6 @@
                     @GetUserInitials($"{CurrentUser.FirstName} {CurrentUser.LastName}")
                 }
             </div>
-            <InputFile id="profileImageInput" style="display:none" OnChange="OnProfileImageSelected" />
-            <button class="btn-change-photo" @onclick="TriggerProfileImageInput">📸 @T("profile.changePicture")</button>
         </div>
         <div class="profile-info">
             <h1>@CurrentUser.FirstName @CurrentUser.LastName</h1>

@@ -14,8 +14,11 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
 
     private string T(string key) => Lang.T(key);
 
+    [Parameter] public Guid PersonId { get; set; }
+
     private string UserFullName = "";
     private string ProfilePictureUrl = "";
+    private string _patientName = "";
 
     private NotificationPagedResponseDTO? _paged;
     private bool _loading;
@@ -67,7 +70,11 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         _paged = await NotificationService.GetPagedAsync(
             _page, PageSize,
             string.IsNullOrEmpty(_activeFilter) ? null : _activeFilter,
-            _unreadOnly);
+            _unreadOnly,
+            PersonId != Guid.Empty ? PersonId : null);
+
+        if (string.IsNullOrEmpty(_patientName) && PersonId != Guid.Empty)
+            _patientName = _paged?.Items.FirstOrDefault()?.MonitoredName ?? "";
 
         _loading = false;
         StateHasChanged();
@@ -179,5 +186,6 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
             PushService.OnNotificationReceived -= OnPushNotificationReceived;
             _subscribed = false;
         }
+        GC.SuppressFinalize(this);
     }
 }

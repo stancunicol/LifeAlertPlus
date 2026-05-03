@@ -67,6 +67,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private List<Measurement> RecentMeasurements { get; set; } = new();
         private AIPredictionResponseDTO? AIPrediction { get; set; }
         private bool AIPredictionLoading { get; set; }
+        private bool _showProbabilities = false;
         private LifeAlertPlus.Shared.DTOs.Responses.Monitoring.TrendPredictionResponseDTO? TrendPredictions { get; set; }
         private bool TrendPredictionsLoading { get; set; }
         private ActivityProfileResponseDTO? ActivityProfile { get; set; }
