@@ -23,6 +23,7 @@ namespace LifeAlertPlus.Shared.DTOs.Responses.User
         public int DataRetentionDays { get; set; }
         public bool NotifyByEmail { get; set; } = true;
         public bool NotifyByPush { get; set; } = true;
+        public bool NotifyBySms { get; set; } = false;
         public DateTime? LastChangedPasswordAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

@@ -300,7 +300,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
         if (string.IsNullOrEmpty(newPerson.FirstName) || string.IsNullOrEmpty(newPerson.LastName) ||
             string.IsNullOrEmpty(newPerson.DeviceSerialNumber) || string.IsNullOrEmpty(newPerson.Address)
-             || string.IsNullOrEmpty(newPerson.Gender) || string.IsNullOrEmpty(newPerson.Relationship))
+             || string.IsNullOrEmpty(newPerson.Gender))
         {
             ErrorMessage = "All fields are required.";
             return;

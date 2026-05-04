@@ -22,6 +22,7 @@ namespace LifeAlertPlus.Client.Pages.Register
         private string FirstName { get; set; } = string.Empty;
         private string LastName { get; set; } = string.Empty;
         private string Email { get; set; } = string.Empty;
+        private string PhoneNumber { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
         private string ConfirmPassword { get; set; } = string.Empty;
         private bool _showPassword = false;
@@ -73,6 +74,7 @@ namespace LifeAlertPlus.Client.Pages.Register
                     FirstName = FirstName,
                     LastName = LastName,
                     Email = Email,
+                    PhoneNumber = string.IsNullOrWhiteSpace(PhoneNumber) ? null : PhoneNumber.Trim(),
                     Password = Password
                 };
 

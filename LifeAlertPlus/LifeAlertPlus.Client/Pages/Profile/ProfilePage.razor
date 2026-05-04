@@ -113,54 +113,6 @@
             </div>
         </div>
 
-        <div class="profile-section">
-            <div class="section-header">
-                <h2>🔔 @T("profile.notifPrefs")</h2>
-            </div>
-            <div class="section-content">
-                <div class="preference-item">
-                    <div class="preference-info">
-                        <h3>@T("profile.emailNotif")</h3>
-                        <p>@T("profile.emailNotifDesc")</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" checked="@Preferences.EmailNotifications" @onchange="@(e => OnEmailNotifChanged(e))" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="preference-item">
-                    <div class="preference-info">
-                        <h3>@T("profile.pushNotif")</h3>
-                        <p>@T("profile.pushNotifDesc")</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" checked="@Preferences.PushNotifications" @onchange="@(e => OnPushNotifChanged(e))" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="preference-item">
-                    <div class="preference-info">
-                        <h3>@T("profile.criticalAlerts")</h3>
-                        <p>@T("profile.criticalAlertsDesc")</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" @bind="Preferences.CriticalAlerts" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                <div class="preference-item">
-                    <div class="preference-info">
-                        <h3>@T("profile.dailySummary")</h3>
-                        <p>@T("profile.dailySummaryDesc")</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" @bind="Preferences.DailySummary" />
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-        </div>
-
         <div class="profile-section danger-section">
             <div class="section-header">
                 <h2>⚠️ @T("profile.dangerZone")</h2>

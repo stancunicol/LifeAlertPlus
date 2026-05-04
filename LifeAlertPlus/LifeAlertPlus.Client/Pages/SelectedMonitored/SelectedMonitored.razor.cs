@@ -449,11 +449,11 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             _ => "slot-nodata"
         };
 
-        private static string GetSlotTooltip(HourlyProfileDTO? slot, int hour)
+        private string GetSlotTooltip(HourlyProfileDTO? slot, int hour)
         {
             if (slot == null || slot.DataPoints < 10)
-                return $"{hour:00}:00 – date insuficiente";
-            return $"{hour:00}:00 | {slot.Label} | Puls mediu: {slot.AveragePulse:F0} bpm | Mișcare: {slot.MovementRate:P0} | Somn: {slot.SleepProbability:P0}";
+                return $"{hour:00}:00 – {T("selected.activityNoData")}";
+            return $"{hour:00}:00 | {slot.Label} | {T("selected.slotAvgPulse")}: {slot.AveragePulse:F0} bpm | {T("selected.slotMovement")}: {slot.MovementRate:P0} | {T("selected.activitySleep")}: {slot.SleepProbability:P0}";
         }
 
         private List<ChartDataPoint> HeartRateHistoryFiltered =>
@@ -1290,6 +1290,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
         private string GetVitalStatus(int value, int min, int max)
         {
+            if (min <= 0 || max <= 0) return "normal";
             if (value < min || value > max)
                 return "warning";
             return "normal";
@@ -1297,15 +1298,17 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
         private string GetVitalStatusText(int value, int min, int max)
         {
+            if (min <= 0 || max <= 0) return T("vital.normal");
             if (value < min)
-                return "Sub normal";
+                return T("vital.belowNormal");
             if (value > max)
-                return "Peste normal";
-            return "Normal";
+                return T("vital.aboveNormal");
+            return T("vital.normal");
         }
 
         private string GetTempStatus(double temp, double min, double max)
         {
+            if (min <= 0 || max <= 0) return "normal";
             if (temp < min || temp > max)
                 return "warning";
             return "normal";
@@ -1313,11 +1316,12 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
         private string GetTempStatusText(double temp, double min, double max)
         {
+            if (min <= 0 || max <= 0) return T("vital.normal");
             if (temp < min)
-                return "Below normal";
+                return T("vital.belowNormal");
             if (temp > max)
-                return "Above normal";
-            return "Normal";
+                return T("vital.aboveNormal");
+            return T("vital.normal");
         }
 
         private string GetSpO2Status(int spO2)

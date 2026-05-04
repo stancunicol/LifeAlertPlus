@@ -4,6 +4,7 @@
 @inject LifeAlertPlus.Client.Services.TokenParserService TokenParser
 @inject LifeAlertPlus.Client.Services.ProfilePictureService ProfilePictureService
 @inject LifeAlertPlus.Client.Services.LanguageService Lang
+@inject LifeAlertPlus.Client.Services.UserService UserService
 
 <Router AppAssembly="@typeof(App).Assembly" OnNavigateAsync="HandleNavigationAsync">
     <Found Context="routeData">
@@ -74,6 +75,21 @@
             {
                 Lang.SetLanguage(savedLang);
                 StateHasChanged();
+            }
+            else
+            {
+                // localStorage is empty — load language preference from DB
+                var claims = await TokenParser.GetClaimsAsync();
+                if (claims != null && claims.UserId != Guid.Empty)
+                {
+                    var user = await UserService.GetUserByIdAsync(claims.UserId);
+                    if (!string.IsNullOrEmpty(user?.Language))
+                    {
+                        Lang.SetLanguage(user.Language);
+                        await JSRuntime.InvokeVoidAsync("setLanguage", user.Language);
+                        StateHasChanged();
+                    }
+                }
             }
         }
     }

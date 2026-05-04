@@ -62,9 +62,9 @@ namespace LifeAlertPlus.API.Controllers
 
             user.FirstName = updatedUser.FirstName ?? user.FirstName;
             user.LastName = updatedUser.LastName ?? user.LastName;
-            user.FirstDayOfTheWeek = updatedUser.FirstDayOfTheWeek ?? user.FirstDayOfTheWeek;
-            user.Language = updatedUser.Language ?? user.Language;
-            user.FontSize = updatedUser.FontSize ?? user.FontSize;
+            if (!string.IsNullOrEmpty(updatedUser.FirstDayOfTheWeek)) user.FirstDayOfTheWeek = updatedUser.FirstDayOfTheWeek;
+            if (!string.IsNullOrEmpty(updatedUser.Language)) user.Language = updatedUser.Language;
+            if (!string.IsNullOrEmpty(updatedUser.FontSize)) user.FontSize = updatedUser.FontSize;
             user.MinHeartRate = updatedUser.MinHeartRate ?? user.MinHeartRate;
             user.MaxHeartRate = updatedUser.MaxHeartRate ?? user.MaxHeartRate;
             user.MinTemperature = updatedUser.MinTemperature ?? user.MinTemperature;
@@ -75,6 +75,7 @@ namespace LifeAlertPlus.API.Controllers
             user.DataRetentionDays = updatedUser.DataRetentionDays ?? user.DataRetentionDays;
             user.NotifyByEmail = updatedUser.NotifyByEmail ?? user.NotifyByEmail;
             user.NotifyByPush = updatedUser.NotifyByPush ?? user.NotifyByPush;
+            user.NotifyBySms = updatedUser.NotifyBySms ?? user.NotifyBySms;
             user.EnableDailyReport = updatedUser.EnableDailyReport ?? user.EnableDailyReport;
             user.UpdatedAt = DateTime.UtcNow;
 
@@ -301,6 +302,7 @@ namespace LifeAlertPlus.API.Controllers
                 DataRetentionDays = user.DataRetentionDays ?? 0,
                 NotifyByEmail = user.NotifyByEmail,
                 NotifyByPush = user.NotifyByPush,
+                NotifyBySms = user.NotifyBySms,
                 LastChangedPasswordAt = user.LastChangedPasswordAt,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -342,11 +344,12 @@ namespace LifeAlertPlus.API.Controllers
                 DataRetentionDays = user.DataRetentionDays ?? 0,
                 NotifyByEmail = user.NotifyByEmail,
                 NotifyByPush = user.NotifyByPush,
+                NotifyBySms = user.NotifyBySms,
                 LastChangedPasswordAt = user.LastChangedPasswordAt,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
-        } 
+        }
 
         [HttpGet]
         [Authorize(Roles = "Admin")]

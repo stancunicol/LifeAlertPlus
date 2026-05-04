@@ -100,7 +100,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 UpdateFrequency = Settings.UpdateFrequency,
                 DataRetentionDays = int.TryParse(Settings.HistoryRetention, out var ret) ? ret : 0,
                 NotifyByEmail = Settings.NotifyByEmail,
-                NotifyByPush = Settings.NotifyByPush
+                NotifyByPush = Settings.NotifyByPush,
+                NotifyBySms = Settings.NotifyBySms
             };
 
             var request = await UserService.UpdateUserAsync(UserId, settings);
@@ -193,6 +194,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Settings.HistoryRetention = userFromApi.DataRetentionDays > 0 ? userFromApi.DataRetentionDays.ToString() : "365";
             Settings.NotifyByEmail = userFromApi.NotifyByEmail;
             Settings.NotifyByPush = userFromApi.NotifyByPush;
+            Settings.NotifyBySms = userFromApi.NotifyBySms;
 
             if (_lastUpdatedDate.HasValue)
             {
@@ -254,6 +256,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 CheckInterval = "60",
                 NotifyByEmail = true,
                 NotifyByPush = true,
+                NotifyBySms = false,
                 AutoSave = true,
                 AutoBackup = true,
                 HistoryRetention = "365",
@@ -293,6 +296,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             public string CheckInterval { get; set; } = string.Empty;
             public bool NotifyByEmail { get; set; } = true;
             public bool NotifyByPush { get; set; } = true;
+            public bool NotifyBySms { get; set; } = false;
 
             // Data Management
             public bool AutoSave { get; set; }

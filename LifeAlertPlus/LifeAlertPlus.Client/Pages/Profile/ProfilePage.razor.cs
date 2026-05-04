@@ -46,14 +46,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private int MonitoredCount { get; set; } = 0;
         private int AlertsCount { get; set; } = 0;
 
-        private NotificationPreferences Preferences { get; set; } = new NotificationPreferences
-        {
-            EmailNotifications = true,
-            PushNotifications = true,
-            CriticalAlerts = true,
-            DailySummary = false
-        };
-
         private bool ShowChangePasswordModal { get; set; } = false;
         private UserChangePasswordRequestDTO PasswordChange { get; set; } = new UserChangePasswordRequestDTO();
         private string PasswordError { get; set; } = string.Empty;
@@ -112,34 +104,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 ProfilePictureService.SetUrl(null);
             }
 
-            // Sync notification preferences from backend
-            Preferences.EmailNotifications = CurrentUser.NotifyByEmail;
-            Preferences.PushNotifications = CurrentUser.NotifyByPush;
-
             // Load monitored people count
             await LoadMonitoredDataAsync();
-        }
-
-        private async Task SaveNotificationPreferencesAsync()
-        {
-            var updateRequest = new UserUpdateRequestDTO
-            {
-                NotifyByEmail = Preferences.EmailNotifications,
-                NotifyByPush = Preferences.PushNotifications
-            };
-            await UserService.UpdateUserAsync(CurrentUser.Id, updateRequest);
-        }
-
-        private async Task OnEmailNotifChanged(ChangeEventArgs e)
-        {
-            Preferences.EmailNotifications = e.Value is bool b && b;
-            await SaveNotificationPreferencesAsync();
-        }
-
-        private async Task OnPushNotifChanged(ChangeEventArgs e)
-        {
-            Preferences.PushNotifications = e.Value is bool b && b;
-            await SaveNotificationPreferencesAsync();
         }
 
         private async Task LoadMonitoredDataAsync()
@@ -462,16 +428,6 @@ namespace LifeAlertPlus.Client.Pages.Profile
         {
             ShowDeleteConfirmModalBool = false;
             ShowDeleteInfoModal = true;
-        }
-
-
-
-        private class NotificationPreferences
-        {
-            public bool EmailNotifications { get; set; }
-            public bool PushNotifications { get; set; }
-            public bool CriticalAlerts { get; set; }
-            public bool DailySummary { get; set; }
         }
     }
 }

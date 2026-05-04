@@ -83,13 +83,18 @@ namespace LifeAlertPlus.API.Services
             // Build HTML report
             var html = GenerateReportHtml(user, yesterday, monitored, measurements, alerts);
 
+            bool isEn = string.Equals(user.Language, "en", StringComparison.OrdinalIgnoreCase);
+            string reportTitle = isEn ? "Daily Health Report" : "Raport zilnic de sănătate";
+            string lang = isEn ? "en" : "ro";
+
             // Send email
             await _emailService.SendAlertNotificationEmailAsync(
                 user.Email,
                 user.FirstName,
-                "Raport zilnic de sănătate",
+                reportTitle,
                 "Report",
-                html);
+                html,
+                lang);
 
             _logger.LogInformation("Sent daily report to {Email} for {Date}", user.Email, yesterday.ToString("yyyy-MM-dd"));
         }
@@ -101,6 +106,24 @@ namespace LifeAlertPlus.API.Services
             List<Domain.Entities.Measurement> measurements,
             List<Domain.Entities.Notification> alerts)
         {
+            bool isEn = string.Equals(user.Language, "en", StringComparison.OrdinalIgnoreCase);
+            var culture = isEn ? new System.Globalization.CultureInfo("en-US") : new System.Globalization.CultureInfo("ro-RO");
+
+            string title          = isEn ? "Daily Health Report"      : "Raport zilnic de sănătate";
+            string sectionSummary = isEn ? "📈 Summary"               : "📈 Rezumat";
+            string lblMonitored   = isEn ? "Monitored People:"        : "Persoane monitorizate:";
+            string lblMeasure     = isEn ? "Measurements Recorded:"   : "Măsurători înregistrate:";
+            string lblAlerts      = isEn ? "Alerts Triggered:"        : "Alerte declanșate:";
+            string sectionAlerts  = isEn ? "🚨 Alerts"                : "🚨 Alerte";
+            string sectionPeople  = isEn ? "👥 Monitored People"      : "👥 Persoane monitorizate";
+            string lblAvgPulse    = isEn ? "Avg Pulse:"               : "Puls mediu:";
+            string lblAvgTemp     = isEn ? "Avg Temperature:"         : "Temperatură medie:";
+            string lblAvgSpO2     = isEn ? "Avg SpO₂:"               : "SpO₂ mediu:";
+            string lblMeasCount   = isEn ? "measurements recorded"    : "măsurători înregistrate";
+            string footer         = isEn
+                ? "This is an automated daily report. You can disable these emails in your account settings."
+                : "Acesta este un raport zilnic automat. Puteți dezactiva aceste emailuri din setările contului.";
+
             var sb = new StringBuilder();
             sb.AppendLine("<!DOCTYPE html>");
             sb.AppendLine("<html>");
@@ -127,23 +150,23 @@ namespace LifeAlertPlus.API.Services
 
             sb.AppendLine("<div class='container'>");
             sb.AppendLine("<div class='header'>");
-            sb.AppendLine($"<h1>📊 Daily Health Report</h1>");
-            sb.AppendLine($"<p>{date:MMMM dd, yyyy}</p>");
+            sb.AppendLine($"<h1>📊 {title}</h1>");
+            sb.AppendLine($"<p>{date.ToString("dd MMMM yyyy", culture)}</p>");
             sb.AppendLine("</div>");
 
             // Summary section
             sb.AppendLine("<div class='section'>");
-            sb.AppendLine("<div class='section-title'>📈 Summary</div>");
+            sb.AppendLine($"<div class='section-title'>{sectionSummary}</div>");
             sb.AppendLine("<div class='stat-row'>");
-            sb.AppendLine($"<span class='stat-label'>Monitored People:</span>");
+            sb.AppendLine($"<span class='stat-label'>{lblMonitored}</span>");
             sb.AppendLine($"<span class='stat-value'>{monitoredPeople.Count}</span>");
             sb.AppendLine("</div>");
             sb.AppendLine("<div class='stat-row'>");
-            sb.AppendLine($"<span class='stat-label'>Measurements Recorded:</span>");
+            sb.AppendLine($"<span class='stat-label'>{lblMeasure}</span>");
             sb.AppendLine($"<span class='stat-value'>{measurements.Count}</span>");
             sb.AppendLine("</div>");
             sb.AppendLine("<div class='stat-row'>");
-            sb.AppendLine($"<span class='stat-label'>Alerts Triggered:</span>");
+            sb.AppendLine($"<span class='stat-label'>{lblAlerts}</span>");
             sb.AppendLine($"<span class='stat-value' style='color: {(alerts.Count > 0 ? "#e53935" : "#4caf50")}'>{alerts.Count}</span>");
             sb.AppendLine("</div>");
             sb.AppendLine("</div>");
@@ -152,7 +175,7 @@ namespace LifeAlertPlus.API.Services
             if (alerts.Any())
             {
                 sb.AppendLine("<div class='section'>");
-                sb.AppendLine("<div class='section-title'>🚨 Alerts</div>");
+                sb.AppendLine($"<div class='section-title'>{sectionAlerts}</div>");
                 foreach (var alert in alerts.OrderByDescending(a => a.CreatedAt))
                 {
                     var monitored = monitoredPeople.FirstOrDefault(m => m.Id == alert.IdMonitored);
@@ -167,7 +190,7 @@ namespace LifeAlertPlus.API.Services
 
             // People section
             sb.AppendLine("<div class='section'>");
-            sb.AppendLine("<div class='section-title'>👥 Monitored People</div>");
+            sb.AppendLine($"<div class='section-title'>{sectionPeople}</div>");
             foreach (var person in monitoredPeople)
             {
                 var personMeasurements = measurements.Where(m => m.IdMonitored == person.Id).ToList();
@@ -180,22 +203,22 @@ namespace LifeAlertPlus.API.Services
                     sb.AppendLine("<div style='margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f5f5f5;'>");
                     sb.AppendLine($"<strong>{person.FirstName} {person.LastName}</strong><br/>");
                     sb.AppendLine("<div class='stat-row'>");
-                    sb.AppendLine($"<span class='stat-label'>Avg Pulse:</span>");
+                    sb.AppendLine($"<span class='stat-label'>{lblAvgPulse}</span>");
                     sb.AppendLine($"<span class='stat-value'>{avgPulse:F0} bpm</span>");
                     sb.AppendLine("</div>");
                     sb.AppendLine("<div class='stat-row'>");
-                    sb.AppendLine($"<span class='stat-label'>Avg Temperature:</span>");
+                    sb.AppendLine($"<span class='stat-label'>{lblAvgTemp}</span>");
                     sb.AppendLine($"<span class='stat-value'>{avgTemp:F1}°C</span>");
                     sb.AppendLine("</div>");
                     if (avgSpO2 > 0)
                     {
                         sb.AppendLine("<div class='stat-row'>");
-                        sb.AppendLine($"<span class='stat-label'>Avg SpO₂:</span>");
+                        sb.AppendLine($"<span class='stat-label'>{lblAvgSpO2}</span>");
                         sb.AppendLine($"<span class='stat-value'>{avgSpO2:F0}%</span>");
                         sb.AppendLine("</div>");
                     }
                     sb.AppendLine("<div style='font-size: 12px; color: #999; margin-top: 6px;'>");
-                    sb.AppendLine($"{personMeasurements.Count} measurements recorded");
+                    sb.AppendLine($"{personMeasurements.Count} {lblMeasCount}");
                     sb.AppendLine("</div>");
                     sb.AppendLine("</div>");
                 }
@@ -203,7 +226,7 @@ namespace LifeAlertPlus.API.Services
             sb.AppendLine("</div>");
 
             sb.AppendLine("<div class='footer'>");
-            sb.AppendLine("This is an automated daily report. You can disable these emails in your profile settings.");
+            sb.AppendLine(footer);
             sb.AppendLine("</div>");
 
             sb.AppendLine("</div>");

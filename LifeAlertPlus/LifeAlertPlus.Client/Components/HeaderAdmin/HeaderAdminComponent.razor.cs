@@ -24,6 +24,9 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
         private ProfilePictureService ProfilePictureService { get; set; } = default!;
 
         [Inject]
+        private UserStateService UserStateService { get; set; } = default!;
+
+        [Inject]
         private LanguageService Lang { get; set; } = default!;
 
         private string T(string key) => Lang.T(key);
@@ -31,6 +34,12 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
         private bool ShowProfileMenu { get; set; } = false;
         private bool ShowMobileMenu { get; set; } = false;
         private string Version { get; set; } = string.Empty;
+
+        private string DisplayedName =>
+            !string.IsNullOrWhiteSpace(UserName) ? UserName
+            : !string.IsNullOrWhiteSpace(UserStateService.DisplayName) ? UserStateService.DisplayName
+            : string.Empty;
+
         protected override Task OnInitializedAsync()
         {
             Version = AppVersion.Version;
@@ -40,7 +49,14 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
                 if (!string.IsNullOrEmpty(ProfilePictureService.Url))
                     ProfilePictureUrl = ProfilePictureService.Url;
             }
+            UserStateService.OnChange += HandleUserNameChanged;
             return Task.CompletedTask;
+        }
+
+        protected override void OnParametersSet()
+        {
+            if (!string.IsNullOrWhiteSpace(UserName))
+                UserStateService.SetDisplayName(UserName);
         }
 
         private async void HandleProfilePictureChanged(string? url)
@@ -49,10 +65,16 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
             await InvokeAsync(StateHasChanged);
         }
 
+        private async void HandleUserNameChanged(string? name)
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+
         public void Dispose()
         {
             if (ProfilePictureService != null)
                 ProfilePictureService.OnChange -= HandleProfilePictureChanged;
+            UserStateService.OnChange -= HandleUserNameChanged;
         }
 
         private bool IsActive(string path)
@@ -63,10 +85,11 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
 
         private string GetUserInitials()
         {
-            if (string.IsNullOrWhiteSpace(UserName))
+            var name = DisplayedName;
+            if (string.IsNullOrWhiteSpace(name))
                 return "GU";
 
-            var parts = UserName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
                 return $"{parts[0][0]}{parts[1][0]}".ToUpper();
             if (parts.Length == 1 && parts[0].Length >= 2)

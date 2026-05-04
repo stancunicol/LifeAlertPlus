@@ -16,39 +16,6 @@
     <div class="settings-content">
         <div class="settings-section">
             <div class="section-header">
-                <h2>@T("settings.appearance")</h2>
-            </div>
-            <div class="section-content">
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <h3>@T("settings.firstDay")</h3>
-                    </div>
-                    <select @bind="Settings.FirstDayOfWeek" class="select-input">
-                        <option value="monday">@T("settings.monday")</option>
-                        <option value="tuesday">@T("settings.tuesday")</option>
-                        <option value="wednesday">@T("settings.wednesday")</option>
-                        <option value="thursday">@T("settings.thursday")</option>
-                        <option value="friday">@T("settings.friday")</option>
-                        <option value="saturday">@T("settings.saturday")</option>
-                        <option value="sunday">@T("settings.sunday")</option>
-                    </select>
-                </div>
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <h3>@T("settings.fontSize")</h3>
-                        <p>@T("settings.fontSizeDesc")</p>
-                    </div>
-                    <select @bind="Settings.FontSize" class="select-input">
-                        <option value="small">@T("settings.small")</option>
-                        <option value="medium">@T("settings.medium")</option>
-                        <option value="large">@T("settings.large")</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="settings-section">
-            <div class="section-header">
                 <h2>@T("settings.alertThresholds")</h2>
             </div>
             <div class="section-content">
@@ -129,6 +96,16 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>@T("settings.notifySms")</h3>
+                        <p>@T("settings.notifySmsDesc")</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="Settings.NotifyBySms" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -179,6 +156,20 @@
                     <select @bind="Settings.Language" class="select-input">
                         <option value="ro">Română</option>
                         <option value="en">English</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>@T("settings.firstDay")</h3>
+                    </div>
+                    <select @bind="Settings.FirstDayOfWeek" class="select-input">
+                        <option value="monday">@T("settings.monday")</option>
+                        <option value="tuesday">@T("settings.tuesday")</option>
+                        <option value="wednesday">@T("settings.wednesday")</option>
+                        <option value="thursday">@T("settings.thursday")</option>
+                        <option value="friday">@T("settings.friday")</option>
+                        <option value="saturday">@T("settings.saturday")</option>
+                        <option value="sunday">@T("settings.sunday")</option>
                     </select>
                 </div>
                 <div class="system-info">

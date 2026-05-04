@@ -9,7 +9,7 @@ namespace LifeAlertPlus.Client.Components.Header
         private NavigationManager Navigation { get; set; } = default!;
 
         [Parameter]
-        public string UserName { get; set; } = "Guest User";
+        public string UserName { get; set; } = string.Empty;
 
         [Parameter]
         public string? ProfilePictureUrl { get; set; }
@@ -24,6 +24,9 @@ namespace LifeAlertPlus.Client.Components.Header
         private ProfilePictureService ProfilePictureService { get; set; } = default!;
 
         [Inject]
+        private UserStateService UserStateService { get; set; } = default!;
+
+        [Inject]
         private LanguageService Lang { get; set; } = default!;
 
         private bool ShowProfileMenu { get; set; } = false;
@@ -31,9 +34,15 @@ namespace LifeAlertPlus.Client.Components.Header
         private string Version { get; set; } = string.Empty;
         private string T(string key) => Lang.T(key);
 
+        // Shows the parameter name if non-empty, otherwise falls back to the cached value
+        // from a previous page load so the header never flickers to empty during navigation.
+        private string DisplayedName =>
+            !string.IsNullOrWhiteSpace(UserName) ? UserName
+            : !string.IsNullOrWhiteSpace(UserStateService.DisplayName) ? UserStateService.DisplayName
+            : string.Empty;
+
         protected override Task OnInitializedAsync()
         {
-            // Use embedded VERSION when available; avoids relying on static file serving.
             Version = AppVersion.Version;
             if (ProfilePictureService != null)
             {
@@ -41,8 +50,16 @@ namespace LifeAlertPlus.Client.Components.Header
                 if (!string.IsNullOrEmpty(ProfilePictureService.Url))
                     ProfilePictureUrl = ProfilePictureService.Url;
             }
+            UserStateService.OnChange += HandleUserNameChanged;
             Lang.OnLanguageChanged += HandleLanguageChanged;
             return Task.CompletedTask;
+        }
+
+        protected override void OnParametersSet()
+        {
+            // Cache the name whenever the page passes a valid one.
+            if (!string.IsNullOrWhiteSpace(UserName))
+                UserStateService.SetDisplayName(UserName);
         }
 
         private async void HandleLanguageChanged()
@@ -56,10 +73,16 @@ namespace LifeAlertPlus.Client.Components.Header
             await InvokeAsync(StateHasChanged);
         }
 
+        private async void HandleUserNameChanged(string? name)
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+
         public void Dispose()
         {
             if (ProfilePictureService != null)
                 ProfilePictureService.OnChange -= HandleProfilePictureChanged;
+            UserStateService.OnChange -= HandleUserNameChanged;
             Lang.OnLanguageChanged -= HandleLanguageChanged;
         }
 
@@ -71,10 +94,11 @@ namespace LifeAlertPlus.Client.Components.Header
 
         private string GetUserInitials()
         {
-            if (string.IsNullOrWhiteSpace(UserName))
+            var name = DisplayedName;
+            if (string.IsNullOrWhiteSpace(name))
                 return "GU";
 
-            var parts = UserName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2)
                 return $"{parts[0][0]}{parts[1][0]}".ToUpper();
             if (parts.Length == 1 && parts[0].Length >= 2)
