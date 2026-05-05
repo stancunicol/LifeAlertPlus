@@ -71,12 +71,12 @@ def compute_health_score(
     min_hr: Optional[int] = None,
     max_temp: Optional[float] = None,
     min_temp: Optional[float] = None,
+    min_spo2: Optional[int] = None,
 ) -> int:
     """Compute a 0..100 danger score where higher = worse.
 
     Uses patient-specific thresholds when available, falling back to
-    evidence-based clinical defaults. Applies extra penalty points for
-    conditions whose physiology makes a given reading more dangerous.
+    evidence-based clinical defaults.
     """
     score = 0.0
     conds = conditions or []
@@ -86,17 +86,19 @@ def compute_health_score(
     eff_min_hr   = min_hr   if min_hr   else 50
     eff_max_temp = max_temp if max_temp else 39.0
     eff_min_temp = min_temp if min_temp else 35.0
+    eff_min_spo2 = min_spo2 if min_spo2 else 95
+    eff_crit_spo2 = max(70, eff_min_spo2 - 5)
 
-    hr_warn_high   = int(eff_max_hr  * 0.85)   # e.g. 130→110, custom 100→85
-    hr_warn_low    = int(eff_min_hr  * 1.20)   # e.g.  50→60,  custom  55→66
-    temp_warn_high = eff_max_temp - 1.0        # e.g. 39→38,   custom 38.5→37.5
-    temp_warn_low  = eff_min_temp + 1.0        # e.g. 35→36,   custom 34→35
+    hr_warn_high   = int(eff_max_hr  * 0.85)
+    hr_warn_low    = int(eff_min_hr  * 1.20)
+    temp_warn_high = eff_max_temp - 1.0
+    temp_warn_low  = eff_min_temp + 1.0
 
-    # --- SpO2 (universal clinical priority, not threshold-adjusted) ---
-    if spo2 < 90:
+    # --- SpO2 (personalized thresholds) ---
+    if spo2 < eff_crit_spo2:
         score += 60
-    elif spo2 < 95:
-        score += 30 + (95 - spo2) * 3
+    elif spo2 < eff_min_spo2:
+        score += 30 + (eff_min_spo2 - spo2) * 3
 
     # --- Heart rate (relative to patient thresholds) ---
     if hr > eff_max_hr:
@@ -122,38 +124,21 @@ def compute_health_score(
     if acc < 0.2:
         score += 8
 
-    # --- Condition-specific penalty modifiers ---
+    # --- Condition-specific penalty modifiers (non-SpO2; SpO2 handled via personalized thresholds) ---
     for cond in conds:
-        if cond == "heart_failure":
-            # Safe SpO2 threshold is 93% (not 90%) for decompensated heart failure
-            if 90 <= spo2 < 93:
-                score += 15
-        elif cond == "copd":
-            # COPD patients: SpO2 86-91% is already a serious desaturation
-            if 86 <= spo2 < 91:
-                score += 15
-        elif cond == "asthma":
-            # Asthma: SpO2 88-93% warrants early intervention
-            if 88 <= spo2 < 93:
-                score += 10
-        elif cond == "hypertension":
-            # High HR is more dangerous for hypertensive patients
+        if cond == "hypertension":
             if hr > 100:
                 score += 8
         elif cond == "arrhythmia":
-            # Any extreme HR is significantly more dangerous
             if hr > 110 or (0 < hr < 52):
                 score += 10
         elif cond == "mi_risk":
-            # Cardiac stress markers combined are high-risk
             if hr > 110 and temp > 37.8:
                 score += 12
         elif cond == "diabetes":
-            # Fever in diabetics greatly raises infection risk
             if temp > 38.0:
                 score += 8
         elif cond in ("parkinson", "epilepsy"):
-            # Near-immobility is more concerning (potential fall/seizure)
             if acc < 0.5:
                 score += 5
 
@@ -169,6 +154,8 @@ def analyze_patient_data(
     min_hr: Optional[int] = None,
     max_temp: Optional[float] = None,
     min_temp: Optional[float] = None,
+    min_spo2: Optional[int] = None,
+    max_spo2: Optional[int] = None,
 ) -> Dict:
     """
     Analyzes patient data using both ML model and rule-based logic.
@@ -196,10 +183,12 @@ def analyze_patient_data(
     data["acc"] = calculate_acceleration_magnitude(ax, ay, az)
 
     # --- Effective patient thresholds ---
-    eff_max_hr   = max_hr   if max_hr   else 130
-    eff_min_hr   = min_hr   if min_hr   else 50
-    eff_max_temp = max_temp if max_temp else 39.0
-    eff_min_temp = min_temp if min_temp else 35.0
+    eff_max_hr    = max_hr   if max_hr   else 130
+    eff_min_hr    = min_hr   if min_hr   else 50
+    eff_max_temp  = max_temp if max_temp else 39.0
+    eff_min_temp  = min_temp if min_temp else 35.0
+    eff_min_spo2  = min_spo2 if min_spo2 else 95
+    eff_crit_spo2 = max(70, eff_min_spo2 - 5)
 
     hr_alert_high   = int(eff_max_hr * 0.85)
     hr_alert_low    = int(eff_min_hr * 1.20)
@@ -227,10 +216,10 @@ def analyze_patient_data(
     model_confidence = float(np.max(proba)) * 100
 
     # Penalize ML when it violates clear medical rules
-    if spo2 < 90 and predicted_state_model != "CRITICAL":
+    if spo2 < eff_crit_spo2 and predicted_state_model != "CRITICAL":
         predicted_state_model = "CRITICAL"
         model_confidence = 100.0
-    elif spo2 < 95 and predicted_state_model == "NORMAL":
+    elif spo2 < eff_min_spo2 and predicted_state_model == "NORMAL":
         predicted_state_model = "ALERT"
         model_confidence *= 0.5
 
@@ -238,9 +227,9 @@ def analyze_patient_data(
     for i, cls in enumerate(label_encoder.classes_):
         probabilities[cls] = round(float(proba[i]), 4)
 
-    if spo2 < 90:
+    if spo2 < eff_crit_spo2:
         probabilities = {"CRITICAL": 1.0, "ALERT": 0.0, "NORMAL": 0.0}
-    elif spo2 < 95:
+    elif spo2 < eff_min_spo2:
         normal_prob = probabilities.get("NORMAL", 0.0)
         probabilities["NORMAL"] = 0.0
         probabilities["ALERT"] = min(1.0, round(probabilities.get("ALERT", 0.0) + normal_prob * 0.7, 4))
@@ -250,9 +239,9 @@ def analyze_patient_data(
     reasons: List[str] = []
     base_score: int = 0
 
-    if data["spo2"] < 95:
+    if data["spo2"] < eff_min_spo2:
         base_score += 1
-        reasons.append(f"SpO2 ({data['spo2']:.1f}%) is below optimal level (<95%).")
+        reasons.append(f"SpO2 ({data['spo2']:.1f}%) is below patient threshold (<{eff_min_spo2:.0f}%).")
     if data["hr"] > hr_alert_high + 20:
         base_score += 3
         reasons.append(f"Heart rate ({data['hr']:.0f} bpm) is critically high.")
@@ -265,7 +254,7 @@ def analyze_patient_data(
     elif data["temp"] > temp_alert_high:
         base_score += 1
         reasons.append(f"Temperature ({data['temp']:.1f}°C) is elevated.")
-    if data["acc"] < 0.2 and data["hr"] < eff_min_hr and data["spo2"] < 95:
+    if data["acc"] < 0.2 and data["hr"] < eff_min_hr and data["spo2"] < eff_min_spo2:
         base_score += 1
         reasons.append(f"Low acceleration, low heart rate and low SpO2 indicate potential immobility/fall.")
 
@@ -281,6 +270,7 @@ def analyze_patient_data(
         conditions=conds,
         max_hr=max_hr, min_hr=min_hr,
         max_temp=max_temp, min_temp=min_temp,
+        min_spo2=min_spo2,
     )
 
     system_confidence_combined: int = 0
@@ -298,21 +288,21 @@ def analyze_patient_data(
     explanation = ""
     system_confidence = 0
 
-    if spo2 < 90:
+    if spo2 < eff_crit_spo2:
         final_state = "CRITICAL"
-        explanation = f"Critical: SpO2 ({data['spo2']:.1f}%) is dangerously low (<90%). Requires immediate attention."
+        explanation = f"Critical: SpO2 ({data['spo2']:.1f}%) is dangerously low (threshold: <{eff_crit_spo2:.0f}%). Requires immediate attention."
         system_confidence = 100
-    elif spo2 < 95 and (hr > eff_max_hr or temp >= eff_max_temp):
+    elif spo2 < eff_min_spo2 and (hr > eff_max_hr or temp >= eff_max_temp):
         final_state = "CRITICAL"
-        explanation = "Critical combination: low SpO2 with severe physiological stress (high HR or high fever)."
+        explanation = f"Critical combination: SpO2 ({data['spo2']:.1f}%) below patient threshold with severe physiological stress (high HR or high fever)."
         system_confidence = 98
     elif temp >= temp_alert_high:
         final_state = "ALERT"
         explanation = f"ALERT: Temperature ({data['temp']:.1f}°C) exceeds patient alert threshold ({temp_alert_high:.1f}°C)."
         system_confidence = 85
-    elif spo2 < 95:
+    elif spo2 < eff_min_spo2:
         final_state = "ALERT"
-        explanation = f"ALERT: SpO2 ({data['spo2']:.1f}%) is low (90–95%). Potential respiratory issue."
+        explanation = f"ALERT: SpO2 ({data['spo2']:.1f}%) is below patient threshold ({eff_crit_spo2:.0f}–{eff_min_spo2:.0f}%). Potential respiratory issue."
         system_confidence = 90
     elif hr > hr_alert_high:
         final_state = "ALERT"
@@ -332,22 +322,10 @@ def analyze_patient_data(
             explanation += "No significant risks identified."
             system_confidence = 100
 
-    # --- Condition-specific final-state overrides ---
+    # --- Condition-specific final-state overrides (HR/temp; SpO2 handled by personalized thresholds) ---
     condition_notes: List[str] = []
     for cond in conds:
-        if cond == "heart_failure" and 90 <= spo2 < 93 and final_state == "NORMAL":
-            final_state = "ALERT"
-            system_confidence = max(system_confidence, 88)
-            condition_notes.append(f"[heart_failure] SpO2 ({spo2:.1f}%) below safe threshold for heart failure patients (<93%).")
-        elif cond == "copd" and 86 <= spo2 < 91 and final_state != "CRITICAL":
-            final_state = "ALERT"
-            system_confidence = max(system_confidence, 88)
-            condition_notes.append(f"[COPD] SpO2 ({spo2:.1f}%) is below optimal COPD threshold (<91%).")
-        elif cond == "asthma" and 88 <= spo2 < 93 and final_state == "NORMAL":
-            final_state = "ALERT"
-            system_confidence = max(system_confidence, 82)
-            condition_notes.append(f"[asthma] SpO2 ({spo2:.1f}%) warrants monitoring in asthma patients.")
-        elif cond == "arrhythmia" and (hr > 110 or (0 < hr < 52)) and final_state == "NORMAL":
+        if cond == "arrhythmia" and (hr > 110 or (0 < hr < 52)) and final_state == "NORMAL":
             final_state = "ALERT"
             system_confidence = max(system_confidence, 80)
             condition_notes.append(f"[arrhythmia] Heart rate ({hr:.0f} bpm) is abnormal for this patient.")
@@ -390,6 +368,8 @@ class PredictionRequest(BaseModel):
     min_heart_rate: Optional[int] = None
     max_temperature: Optional[float] = None
     min_temperature: Optional[float] = None
+    min_spo2: Optional[int] = None
+    max_spo2: Optional[int] = None
 
 
 class PredictionResponse(BaseModel):
@@ -451,6 +431,8 @@ async def predict(request: PredictionRequest):
             min_hr=request.min_heart_rate,
             max_temp=request.max_temperature,
             min_temp=request.min_temperature,
+            min_spo2=request.min_spo2,
+            max_spo2=request.max_spo2,
         )
 
         return PredictionResponse(**result)

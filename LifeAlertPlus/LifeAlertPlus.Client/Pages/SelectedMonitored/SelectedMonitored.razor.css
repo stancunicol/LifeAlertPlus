@@ -1779,3 +1779,43 @@
 .condition-checkbox-text {
     line-height: 1.3;
 }
+
+.condition-threshold-preview {
+    margin-top: 1.25rem;
+    padding: 0.875rem 1rem;
+    background: var(--bg-secondary, #f8f9fa);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+}
+
+.condition-threshold-preview h4 {
+    margin: 0 0 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.threshold-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem 0.75rem;
+}
+
+.threshold-preview-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.threshold-label {
+    font-size: 0.75rem;
+    color: var(--text-muted, #94a3b8);
+}
+
+.threshold-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary, #1e293b);
+}

@@ -48,6 +48,7 @@ namespace LifeAlertPlus.API.Controllers
             List<string> conditions = new();
             int? maxHr = null, minHr = null;
             double? maxTemp = null, minTemp = null;
+            int? minSpO2 = null, maxSpO2 = null;
 
             if (request.MonitoredId.HasValue && request.MonitoredId != Guid.Empty)
             {
@@ -64,6 +65,8 @@ namespace LifeAlertPlus.API.Controllers
                         minHr   = monitored.MinHeartRate;
                         maxTemp = monitored.MaxTemperature;
                         minTemp = monitored.MinTemperature;
+                        minSpO2 = monitored.MinSpO2;
+                        maxSpO2 = monitored.MaxSpO2;
                     }
 
                     var conds = await condRepo.GetByMonitoredIdAsync(request.MonitoredId.Value);
@@ -94,6 +97,8 @@ namespace LifeAlertPlus.API.Controllers
                     min_heart_rate   = minHr,
                     max_temperature  = maxTemp,
                     min_temperature  = minTemp,
+                    min_spo2         = minSpO2,
+                    max_spo2         = maxSpO2,
                 };
 
                 var response = await client.PostAsJsonAsync($"{aiBaseUrl}/predict", payload);

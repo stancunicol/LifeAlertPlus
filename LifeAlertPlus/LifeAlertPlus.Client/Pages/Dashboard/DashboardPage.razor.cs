@@ -250,11 +250,11 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                 var status = GetStatus(heartRate, spO2Value, espData?.Temperature, isOnline);
                 var lastUpdate = GetLastUpdateText(card.LastUpdatedUtc);
 
-                var gps = espData?.Neo6m ?? "No data";
-                var fallDetection = !isOnline ? "N/A" : (espData?.Mpu6050 != null ? "Stable" : "No data");
-                var lastUpdateFull = card.LastUpdatedUtc != DateTime.MinValue 
-                    ? card.LastUpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm") 
-                    : "No data";
+                var gps = espData?.Neo6m ?? T("card.noData");
+                var fallDetection = !isOnline ? T("card.na") : (espData?.Mpu6050 != null ? T("card.fallStable") : T("card.noData"));
+                var lastUpdateFull = card.LastUpdatedUtc != DateTime.MinValue
+                    ? card.LastUpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
+                    : T("card.noData");
                 var spO2 = spO2Value > 0 ? $"{spO2Value}%" : "N/A";
 
                 return new MonitoredSample(
@@ -312,18 +312,18 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     private string GetLastUpdateText(DateTime lastUpdate)
     {
         if (lastUpdate == DateTime.MinValue)
-            return "No data";
-        
+            return T("card.noData");
+
         var timeAgo = DateTime.UtcNow - lastUpdate;
-        
+
         if (timeAgo.TotalMinutes < 1)
-            return "Updated just now";
+            return T("card.updatedJustNow");
         if (timeAgo.TotalMinutes < 60)
-            return $"Updated {(int)timeAgo.TotalMinutes} min ago";
+            return string.Format(T("card.updatedMin"), (int)timeAgo.TotalMinutes);
         if (timeAgo.TotalHours < 24)
-            return $"Updated {(int)timeAgo.TotalHours} hours ago";
-        
-        return $"Updated {(int)timeAgo.TotalDays} days ago";
+            return string.Format(T("card.updatedHours"), (int)timeAgo.TotalHours);
+
+        return string.Format(T("card.updatedDays"), (int)timeAgo.TotalDays);
     }
 
     private string GetInitials(string name)
@@ -347,12 +347,12 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
 
     protected string GetStatusText(string status, bool online)
     {
-        if (!online) return "Offline";
+        if (!online) return T("card.statusOffline");
         return status.ToLower() switch
         {
-            "critical" => "Critical",
-            "warning" => "Warning",
-            _ => "OK"
+            "critical" => T("card.statusAlert"),
+            "warning" => T("card.statusCheckNeeded"),
+            _ => T("card.statusStable")
         };
     }
 

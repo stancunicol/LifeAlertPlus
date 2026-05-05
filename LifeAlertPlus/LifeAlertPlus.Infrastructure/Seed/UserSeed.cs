@@ -33,6 +33,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
             // (EnsureCreated doesn't evolve schema, so older DBs might miss newer tables.)
             await EnsureInvitationsTableAsync(context);
             await EnsureUserSpO2ColumnsAsync(context);
+            await EnsureMonitoredSpO2ColumnsAsync(context);
 
             var hasUsers = await context.Users.AnyAsync();
             if (!hasUsers)
@@ -253,6 +254,12 @@ namespace LifeAlertPlus.Infrastructure.Seed
         {
             try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN MinSpO2 INTEGER;"); } catch { }
             try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN MaxSpO2 INTEGER;"); } catch { }
+        }
+
+        private static async Task EnsureMonitoredSpO2ColumnsAsync(LifeAlertPlusDbContext context)
+        {
+            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Monitoreds ADD COLUMN MinSpO2 INTEGER;"); } catch { }
+            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Monitoreds ADD COLUMN MaxSpO2 INTEGER;"); } catch { }
         }
 
         private static async Task EnsureInvitationsTableAsync(LifeAlertPlusDbContext context)

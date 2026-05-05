@@ -272,11 +272,11 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     {
         return status.ToLower() switch
         {
-            "critical" => "Alert",
-            "warning" => "Check needed",
-            "ok" => "Stable",
-            "nodata" => "No ESP data",
-            _ => "Unknown"
+            "critical" => T("card.statusAlert"),
+            "warning" => T("card.statusCheckNeeded"),
+            "ok" => T("card.statusStable"),
+            "nodata" => T("card.statusNoEsp"),
+            _ => T("card.noData")
         };
     }
 
@@ -402,15 +402,11 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private string FormatGpsStatus(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
-        {
-            return "GPS: fără date";
-        }
+            return T("card.gpsNoData");
 
         var lines = raw.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (lines.Any(l => l.Contains(",V,", StringComparison.OrdinalIgnoreCase)))
-        {
-            return "GPS: fără fix (semnal slab)";
-        }
+            return T("card.gpsNoFix");
 
         var gprmc = lines.FirstOrDefault(l => l.StartsWith("$GPRMC", StringComparison.OrdinalIgnoreCase));
         if (!string.IsNullOrWhiteSpace(gprmc))
@@ -420,7 +416,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             {
                 var lat = parts[3] + parts.ElementAtOrDefault(4);
                 var lon = parts[5] + parts.ElementAtOrDefault(6);
-                return $"Coordonate: {lat} {lon}";
+                return $"{T("card.gpsCoordinates")}: {lat} {lon}";
             }
         }
 
@@ -432,40 +428,31 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             {
                 var lat = parts[1] + parts.ElementAtOrDefault(2);
                 var lon = parts[3] + parts.ElementAtOrDefault(4);
-                return $"Coordonate: {lat} {lon}";
+                return $"{T("card.gpsCoordinates")}: {lat} {lon}";
             }
         }
 
-        return "GPS activ: date în curs";
+        return T("card.gpsActive");
     }
 
-    private string FormatFallRisk(MonitoredCard card)
+    private bool IsFallEvent(MonitoredCard card)
     {
         var mpu = card.LastData?.Mpu6050;
         var gyro = card.LastData?.Gyro;
 
         double accelScore = 0;
         if (mpu != null && mpu.Count >= 3)
-        {
             accelScore = Math.Sqrt(mpu[0] * (double)mpu[0] + mpu[1] * (double)mpu[1] + mpu[2] * (double)mpu[2]);
-        }
 
         double gyroScore = 0;
         if (gyro != null && gyro.Count >= 3)
-        {
             gyroScore = Math.Sqrt(gyro[0] * (double)gyro[0] + gyro[1] * (double)gyro[1] + gyro[2] * (double)gyro[2]);
-        }
 
-        var highAccel = accelScore > 35000; // heuristic threshold
-        var highGyro = gyroScore > 4000;    // heuristic threshold
-
-        if (highAccel || highGyro)
-        {
-            return "Posibil eveniment (cădere/impact)";
-        }
-
-        return "Stabil";
+        return accelScore > 35000 || gyroScore > 4000;
     }
+
+    private string FormatFallRisk(MonitoredCard card)
+        => IsFallEvent(card) ? T("card.fallPossible") : T("card.fallStable");
 
     private string GetCardStatus(MonitoredCard card)
     {
@@ -476,9 +463,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
         var pulse = card.LastData?.Max30100?.ElementAtOrDefault(0) ?? 0;
         var spo2 = card.LastData?.Max30100?.ElementAtOrDefault(1) ?? 0;
-        var fallRisk = FormatFallRisk(card);
 
-        if (fallRisk.Contains("Posibil eveniment") || pulse > 100 || pulse < 50 || spo2 < 90)
+        if (IsFallEvent(card) || pulse > 100 || pulse < 50 || spo2 < 90)
         {
             return "Critical";
         }

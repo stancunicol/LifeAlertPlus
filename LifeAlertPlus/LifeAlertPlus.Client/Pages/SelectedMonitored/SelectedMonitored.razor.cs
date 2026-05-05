@@ -107,7 +107,17 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private int? _editMaxHr;
         private double? _editMinTemp;
         private double? _editMaxTemp;
+        private int? _editMinSpO2;
+        private int? _editMaxSpO2;
         private int? _editUpdateFrequency;
+
+        // Condition threshold preview (client-side mirror of ConditionThresholdAdjuster)
+        private int _previewMinHr = 60;
+        private int _previewMaxHr = 100;
+        private double _previewMinTemp = 36.0;
+        private double _previewMaxTemp = 37.5;
+        private int _previewMinSpO2 = 95;
+        private int _previewMaxSpO2 = 100;
 
         // Export modal state
         private bool _showExportModal;
@@ -244,6 +254,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     MaxHeartRate = monitored.MaxHeartRate ?? _userMaxHr,
                     MinTemperature = monitored.MinTemperature ?? _userMinTemp,
                     MaxTemperature = monitored.MaxTemperature ?? _userMaxTemp,
+                    MinSpO2 = monitored.MinSpO2 ?? 95,
+                    MaxSpO2 = monitored.MaxSpO2 ?? 100,
                     UpdateFrequency = monitored.UpdateFrequency ?? _userUpdateFrequency
                 };
 
@@ -285,25 +297,48 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private async Task LoadAIPredictionAsync(LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO espData)
         {
+            var request = new AIPredictionRequestDTO
+            {
+                MonitoredId = PersonId,
+                Pulse = espData.Max30100 != null && espData.Max30100.Count >= 1 ? espData.Max30100[0] : 0,
+                Temperature = espData.Temperature ?? 0,
+                Spo2 = espData.Max30100 != null && espData.Max30100.Count >= 2 ? espData.Max30100[1] : 97.0,
+                AccelX = espData.Mpu6050 != null && espData.Mpu6050.Count >= 1 ? espData.Mpu6050[0] : 0,
+                AccelY = espData.Mpu6050 != null && espData.Mpu6050.Count >= 2 ? espData.Mpu6050[1] : 0,
+                AccelZ = espData.Mpu6050 != null && espData.Mpu6050.Count >= 3 ? espData.Mpu6050[2] : 0,
+                GyroX = espData.Gyro != null && espData.Gyro.Count >= 1 ? espData.Gyro[0] : 0,
+                GyroY = espData.Gyro != null && espData.Gyro.Count >= 2 ? espData.Gyro[1] : 0,
+                GyroZ = espData.Gyro != null && espData.Gyro.Count >= 3 ? espData.Gyro[2] : 0,
+            };
+            await RunAIPredictionAsync(request);
+        }
+
+        private async Task LoadAIPredictionFromLastMeasurementAsync()
+        {
             try
             {
-                AIPredictionLoading = true;
-                await InvokeAsync(StateHasChanged);
+                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 1);
+                var last = measurements?.FirstOrDefault();
+                if (last == null) return;
 
                 var request = new AIPredictionRequestDTO
                 {
                     MonitoredId = PersonId,
-                    Pulse = espData.Max30100 != null && espData.Max30100.Count >= 1 ? espData.Max30100[0] : 0,
-                    Temperature = espData.Temperature ?? 0,
-                    Spo2 = espData.Max30100 != null && espData.Max30100.Count >= 2 ? espData.Max30100[1] : 97.0,
-                    AccelX = espData.Mpu6050 != null && espData.Mpu6050.Count >= 1 ? espData.Mpu6050[0] : 0,
-                    AccelY = espData.Mpu6050 != null && espData.Mpu6050.Count >= 2 ? espData.Mpu6050[1] : 0,
-                    AccelZ = espData.Mpu6050 != null && espData.Mpu6050.Count >= 3 ? espData.Mpu6050[2] : 0,
-                    GyroX = espData.Gyro != null && espData.Gyro.Count >= 1 ? espData.Gyro[0] : 0,
-                    GyroY = espData.Gyro != null && espData.Gyro.Count >= 2 ? espData.Gyro[1] : 0,
-                    GyroZ = espData.Gyro != null && espData.Gyro.Count >= 3 ? espData.Gyro[2] : 0,
+                    Pulse = last.Pulse,
+                    Temperature = last.Temperature,
+                    Spo2 = last.SpO2 > 0 ? last.SpO2 : 97.0,
                 };
+                await RunAIPredictionAsync(request);
+            }
+            catch { }
+        }
 
+        private async Task RunAIPredictionAsync(AIPredictionRequestDTO request)
+        {
+            try
+            {
+                AIPredictionLoading = true;
+                await InvokeAsync(StateHasChanged);
                 AIPrediction = await AIPredictionService.GetPredictionAsync(request);
             }
             catch
@@ -404,6 +439,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private void OpenConditionsModal()
         {
             _editConditions = new List<string>(_conditions);
+            CalculateConditionThresholds();
             _showConditionsModal = true;
         }
 
@@ -415,6 +451,45 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 _editConditions.Add(key);
             else if (!isChecked)
                 _editConditions.Remove(key);
+            CalculateConditionThresholds();
+        }
+
+        // Client-side mirror of ConditionThresholdAdjuster.Calculate
+        private static readonly Dictionary<string, (int MinHr, int MaxHr, double MinTemp, double MaxTemp, int MinSpO2, int MaxSpO2)> _conditionProfiles = new()
+        {
+            ["heart_failure"] = (55, 110, 36.0, 37.5, 92, 100),
+            ["arrhythmia"]    = (40, 130, 36.0, 37.5, 95, 100),
+            ["copd"]          = (60, 110, 36.0, 37.5, 88, 100),
+            ["asthma"]        = (60, 110, 36.0, 37.5, 90, 100),
+            ["hypertension"]  = (60, 100, 36.0, 37.5, 95, 100),
+            ["diabetes"]      = (60, 100, 36.0, 37.2, 95, 100),
+            ["parkinson"]     = (55, 105, 36.0, 37.5, 95, 100),
+            ["mi_risk"]       = (60, 100, 36.0, 37.5, 93, 100),
+            ["epilepsy"]      = (60, 120, 36.0, 37.5, 95, 100),
+        };
+
+        private void CalculateConditionThresholds()
+        {
+            int minHr = 60; int maxHr = 100;
+            double minTemp = 36.0; double maxTemp = 37.5;
+            int minSpO2 = 95; int maxSpO2 = 100;
+
+            foreach (var key in _editConditions)
+            {
+                if (!_conditionProfiles.TryGetValue(key, out var p)) continue;
+                if (p.MinHr   < minHr)   minHr   = p.MinHr;
+                if (p.MaxHr   > maxHr)   maxHr   = p.MaxHr;
+                if (p.MinTemp < minTemp) minTemp = p.MinTemp;
+                if (p.MaxTemp < maxTemp) maxTemp = p.MaxTemp;
+                if (p.MinSpO2 < minSpO2) minSpO2 = p.MinSpO2;
+            }
+
+            _previewMinHr   = minHr;
+            _previewMaxHr   = maxHr;
+            _previewMinTemp = minTemp;
+            _previewMaxTemp = maxTemp;
+            _previewMinSpO2 = minSpO2;
+            _previewMaxSpO2 = maxSpO2;
         }
 
         private async Task SaveConditionsAsync()
@@ -428,8 +503,36 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 {
                     _conditions = new List<string>(_editConditions);
                     _showConditionsModal = false;
-                    // Reload person so edit modal reflects auto-adjusted thresholds
+
+                    // Read auto-adjusted thresholds from response and sync edit modal fields
+                    try
+                    {
+                        var thresholds = await response.Content.ReadFromJsonAsync<ConditionThresholdResponseDTO>();
+                        if (thresholds != null)
+                        {
+                            _editMinHr   = thresholds.MinHeartRate;
+                            _editMaxHr   = thresholds.MaxHeartRate;
+                            _editMinTemp = thresholds.MinTemperature;
+                            _editMaxTemp = thresholds.MaxTemperature;
+                            _editMinSpO2 = thresholds.MinSpO2;
+                            _editMaxSpO2 = thresholds.MaxSpO2;
+                        }
+                    }
+                    catch { /* threshold sync is best-effort */ }
+
+                    // Reload person data so vitals/status use updated thresholds
                     await LoadPersonDataAsync();
+
+                    // Re-run AI with updated thresholds: live ESP first, last measurement as fallback
+                    try
+                    {
+                        var espData = await MonitoredService.GetEspDataAsync(Person?.DeviceSerial ?? "");
+                        if (espData?.IsAvailable == true)
+                            _ = LoadAIPredictionAsync(espData);
+                        else
+                            _ = LoadAIPredictionFromLastMeasurementAsync();
+                    }
+                    catch { _ = LoadAIPredictionFromLastMeasurementAsync(); }
                 }
             }
             catch { }
@@ -438,6 +541,16 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 _isSavingConditions = false;
                 StateHasChanged();
             }
+        }
+
+        private sealed class ConditionThresholdResponseDTO
+        {
+            public int? MinHeartRate   { get; set; }
+            public int? MaxHeartRate   { get; set; }
+            public double? MinTemperature { get; set; }
+            public double? MaxTemperature { get; set; }
+            public int? MinSpO2        { get; set; }
+            public int? MaxSpO2        { get; set; }
         }
 
         private static string GetActivitySlotClass(string label) => label switch
@@ -1324,22 +1437,20 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return T("vital.normal");
         }
 
-        private string GetSpO2Status(int spO2)
+        private string GetSpO2Status(int spO2, int minSpO2 = 95)
         {
-            if (spO2 < 90)
-                return "critical";
-            if (spO2 < 95)
-                return "warning";
+            int critSpO2 = Math.Max(70, minSpO2 - 5);
+            if (spO2 > 0 && spO2 < critSpO2) return "critical";
+            if (spO2 > 0 && spO2 < minSpO2)  return "warning";
             return "normal";
         }
 
-        private string GetSpO2StatusText(int spO2)
+        private string GetSpO2StatusText(int spO2, int minSpO2 = 95)
         {
-            if (spO2 < 90)
-                return "Critical - Low";
-            if (spO2 < 95)
-                return "Below normal";
-            return "Normal";
+            int critSpO2 = Math.Max(70, minSpO2 - 5);
+            if (spO2 > 0 && spO2 < critSpO2) return T("vital.criticalLow");
+            if (spO2 > 0 && spO2 < minSpO2)  return T("vital.belowNormal");
+            return T("vital.normal");
         }
 
         private string GetGPSStatus(string gps)
@@ -1434,6 +1545,20 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             if (seconds >= 60)
                 return $"~{seconds / 60} {minLabel} {seconds % 60} {secLabel}";
             return $"~{seconds} {secLabel}";
+        }
+
+        private string GetTrendLabel(LifeAlertPlus.Shared.DTOs.Responses.Monitoring.TrendPredictionItemDTO pred)
+        {
+            var key = $"trend.{pred.Metric}.{pred.Direction}.{pred.Severity}";
+            var translated = T(key);
+            return translated == key ? pred.Label : translated;
+        }
+
+        private string GetTrendThreshold(LifeAlertPlus.Shared.DTOs.Responses.Monitoring.TrendPredictionItemDTO pred)
+        {
+            var key = $"trend.threshold.{pred.Metric}.{pred.Direction}";
+            var translated = T(key);
+            return translated == key ? (pred.ThresholdDescription ?? string.Empty) : translated;
         }
 
         private void GoBack()
@@ -2158,6 +2283,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 _editMaxHr = monitored.MaxHeartRate;
                 _editMinTemp = monitored.MinTemperature;
                 _editMaxTemp = monitored.MaxTemperature;
+                _editMinSpO2 = monitored.MinSpO2;
+                _editMaxSpO2 = monitored.MaxSpO2;
                 _editUpdateFrequency = monitored.UpdateFrequency;
             }
             _showEditModal = true;
@@ -2199,6 +2326,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     MaxHeartRate = _editMaxHr,
                     MinTemperature = _editMinTemp,
                     MaxTemperature = _editMaxTemp,
+                    MinSpO2 = _editMinSpO2,
+                    MaxSpO2 = _editMaxSpO2,
                     UpdateFrequency = _editUpdateFrequency
                 };
 
@@ -2244,6 +2373,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             public int MaxHeartRate { get; set; } = 100;
             public double MinTemperature { get; set; } = 36.0;
             public double MaxTemperature { get; set; } = 37.5;
+            public int MinSpO2 { get; set; } = 95;
+            public int MaxSpO2 { get; set; } = 100;
             public int UpdateFrequency { get; set; } = 30;
         }
 

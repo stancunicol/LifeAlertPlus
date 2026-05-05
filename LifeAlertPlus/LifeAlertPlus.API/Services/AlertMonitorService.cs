@@ -26,8 +26,8 @@ namespace LifeAlertPlus.API.Services
         private readonly ConditionRuleEngine _conditionRuleEngine;
         private readonly NearestHospitalService _nearestHospitalService;
 
-        // Per-person threshold cache: patient-specific HR and temperature limits
-        private readonly ConcurrentDictionary<Guid, (DateTime CachedAt, int? MaxHr, int? MinHr, double? MaxTemp, double? MinTemp)> _thresholdCache = new();
+        // Per-person threshold cache: patient-specific HR, temperature and SpO2 limits
+        private readonly ConcurrentDictionary<Guid, (DateTime CachedAt, int? MaxHr, int? MinHr, double? MaxTemp, double? MinTemp, int? MinSpO2, int? MaxSpO2)> _thresholdCache = new();
         private static readonly TimeSpan ThresholdCacheDuration = TimeSpan.FromHours(4);
 
         // Per-person metric buffer for last 120 seconds (2 minutes)
@@ -61,27 +61,30 @@ namespace LifeAlertPlus.API.Services
 
         public void InvalidateThresholdCache(Guid monitoredId) => _thresholdCache.TryRemove(monitoredId, out _);
 
-        private async Task<(int? MaxHr, int? MinHr, double? MaxTemp, double? MinTemp)> GetPatientThresholdsAsync(Guid monitoredId)
+        private async Task<(int? MaxHr, int? MinHr, double? MaxTemp, double? MinTemp, int? MinSpO2, int? MaxSpO2)> GetPatientThresholdsAsync(Guid monitoredId)
         {
             if (_thresholdCache.TryGetValue(monitoredId, out var cached) &&
                 (DateTime.UtcNow - cached.CachedAt) < ThresholdCacheDuration)
-                return (cached.MaxHr, cached.MinHr, cached.MaxTemp, cached.MinTemp);
+                return (cached.MaxHr, cached.MinHr, cached.MaxTemp, cached.MinTemp, cached.MinSpO2, cached.MaxSpO2);
 
             try
             {
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
                 var monitored = await db.Monitoreds.FindAsync(monitoredId);
-                var t = monitored != null
-                    ? (monitored.MaxHeartRate, monitored.MinHeartRate, monitored.MaxTemperature, monitored.MinTemperature)
-                    : ((int?)null, (int?)null, (double?)null, (double?)null);
-                _thresholdCache[monitoredId] = (DateTime.UtcNow, t.Item1, t.Item2, t.Item3, t.Item4);
-                return t;
+                int? maxHr    = monitored?.MaxHeartRate;
+                int? minHr    = monitored?.MinHeartRate;
+                double? maxT  = monitored?.MaxTemperature;
+                double? minT  = monitored?.MinTemperature;
+                int? minSpO2  = monitored?.MinSpO2;
+                int? maxSpO2  = monitored?.MaxSpO2;
+                _thresholdCache[monitoredId] = (DateTime.UtcNow, maxHr, minHr, maxT, minT, minSpO2, maxSpO2);
+                return (maxHr, minHr, maxT, minT, minSpO2, maxSpO2);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to load thresholds for {MonitoredId}. Using global defaults.", monitoredId);
-                return (null, null, null, null);
+                return (null, null, null, null, null, null);
             }
         }
 
@@ -122,12 +125,14 @@ namespace LifeAlertPlus.API.Services
             var (tempAvg, tempSlope) = ComputeStats(buf.Temp);
             var (spo2Avg, spo2Slope) = ComputeStats(buf.SpO2);
 
-            bool pulseRising = pulseSlope > 0.05 && pulseAvg > 100;
-            bool tempRising = tempSlope > 0.01 && tempAvg > 37.5;
-            bool spo2Dropping = spo2Slope < -0.02 && spo2Avg < 95;
+            var (maxHr, minHr, maxTemp, minTemp, minSpO2, maxSpO2) = await GetPatientThresholdsAsync(monitoredId);
+            int effectiveMinSpO2 = minSpO2 ?? 95;
 
-            var (maxHr, minHr, maxTemp, minTemp) = await GetPatientThresholdsAsync(monitoredId);
-            var severity = EvaluateSeverity(pulse, temperature, spo2, isFall, maxHr, minHr, maxTemp, minTemp);
+            bool pulseRising  = pulseSlope > 0.05 && pulseAvg > 100;
+            bool tempRising   = tempSlope  > 0.01 && tempAvg  > 37.5;
+            bool spo2Dropping = spo2Slope  < -0.02 && spo2Avg < effectiveMinSpO2;
+
+            var severity = EvaluateSeverity(pulse, temperature, spo2, isFall, maxHr, minHr, maxTemp, minTemp, minSpO2);
             if (pulseRising || tempRising || spo2Dropping)
             {
                 _logger.LogWarning("Trend alert for {MonitoredId}: pulseRising={PulseRising}, tempRising={TempRising}, spo2Dropping={Spo2Dropping}", monitoredId, pulseRising, tempRising, spo2Dropping);
@@ -172,6 +177,7 @@ namespace LifeAlertPlus.API.Services
             state.LastTemperature = temperature;
             state.LastSpO2 = spo2;
             state.IsFall = isFall;
+            state.MinSpO2 = minSpO2;
             state.ConditionRecommendations = conditionRecommendations;
             state.ImmediateAction = immediateAction;
             if (!string.IsNullOrWhiteSpace(coordinates))
@@ -370,9 +376,13 @@ namespace LifeAlertPlus.API.Services
                 var (spo2Avg, spo2Slope) = ComputeStats(buf.SpO2);
                 double lastSpo2 = spo2Arr.Last().Value;
 
-                if (spo2Slope < -0.01 && spo2Avg < 98 && spo2Avg > 0)
+                int? cachedMinSpO2 = null;
+                if (_thresholdCache.TryGetValue(monitoredId, out var cachedT))
+                    cachedMinSpO2 = cachedT.MinSpO2;
+                double hypoxiaThreshold = cachedMinSpO2 ?? 95;
+
+                if (spo2Slope < -0.01 && spo2Avg < hypoxiaThreshold + 3 && spo2Avg > 0)
                 {
-                    const double hypoxiaThreshold = 95;
                     int? secs = spo2Slope < 0 && lastSpo2 > hypoxiaThreshold
                         ? (int)Math.Min(3600, Math.Max(0, (lastSpo2 - hypoxiaThreshold) / Math.Abs(spo2Slope)))
                         : null;
@@ -381,13 +391,13 @@ namespace LifeAlertPlus.API.Services
                     {
                         Metric = "spo2",
                         Direction = "falling",
-                        Label = spo2Avg < 95 ? "Hipoxie în evoluție" : "Risc de hipoxie",
-                        Severity = spo2Avg < 95 ? "danger" : "warning",
+                        Label = spo2Avg < hypoxiaThreshold ? "Hipoxie în evoluție" : "Risc de hipoxie",
+                        Severity = spo2Avg < hypoxiaThreshold ? "danger" : "warning",
                         CurrentValue = Math.Round(lastSpo2, 1),
                         AverageValue = Math.Round(spo2Avg, 1),
                         ChangeRatePerMinute = Math.Round(spo2Slope * 60, 2),
                         SecondsToThreshold = secs,
-                        ThresholdDescription = "95% SpO2 (hipoxie)"
+                        ThresholdDescription = $"{hypoxiaThreshold}% SpO2 (hipoxie)"
                     });
                 }
             }
@@ -516,7 +526,8 @@ namespace LifeAlertPlus.API.Services
 
         private static AlertSeverity EvaluateSeverity(
             double pulse, double temperature, double spo2, bool isFall,
-            int? maxHr = null, int? minHr = null, double? maxTemp = null, double? minTemp = null)
+            int? maxHr = null, int? minHr = null, double? maxTemp = null, double? minTemp = null,
+            int? minSpO2 = null)
         {
             // Global defaults (clinical evidence-based)
             int critMaxHr   = maxHr   ?? 150;
@@ -524,18 +535,22 @@ namespace LifeAlertPlus.API.Services
             double critMaxT = maxTemp ?? 39.5;
             double critMinT = minTemp ?? 34.5;
 
+            // SpO2: alert at patient's min, critical 5pp below that
+            int alertSpO2 = minSpO2 ?? 95;
+            int critSpO2  = Math.Max(70, alertSpO2 - 5);
+
             // Alert thresholds: 85% of critical HR range, 1°C below critical temperature
-            int alertMaxHr   = (int)(critMaxHr * 0.80);   // 150→120, custom 100→80
-            int alertMinHr   = (int)(critMinHr * 1.25);   //  40→50,  custom  55→69
-            double alertMaxT = critMaxT - 1.0;            // 39.5→38.5
-            double alertMinT = critMinT + 1.0;            // 34.5→35.5
+            int alertMaxHr   = (int)(critMaxHr * 0.80);
+            int alertMinHr   = (int)(critMinHr * 1.25);
+            double alertMaxT = critMaxT - 1.0;
+            double alertMinT = critMinT + 1.0;
 
             if (isFall) return AlertSeverity.Critical;
-            if (spo2 > 0 && spo2 < 90) return AlertSeverity.Critical;
+            if (spo2 > 0 && spo2 < critSpO2) return AlertSeverity.Critical;
             if (pulse > critMaxHr || (pulse > 0 && pulse < critMinHr)) return AlertSeverity.Critical;
             if (temperature > critMaxT || (temperature > 0 && temperature < critMinT)) return AlertSeverity.Critical;
 
-            if (spo2 > 0 && spo2 < 95) return AlertSeverity.Alert;
+            if (spo2 > 0 && spo2 < alertSpO2) return AlertSeverity.Alert;
             if (pulse > alertMaxHr || (pulse > 0 && pulse < alertMinHr)) return AlertSeverity.Alert;
             if (temperature > alertMaxT || (temperature > 0 && temperature < alertMinT)) return AlertSeverity.Alert;
 
@@ -549,7 +564,8 @@ namespace LifeAlertPlus.API.Services
 
             if (isSms)
             {
-                string arrowSpo2  = state.LastSpO2  > 0 && state.LastSpO2  < 95 ? "↓" : "";
+                int spo2AlertThreshold = state.MinSpO2 ?? 95;
+                string arrowSpo2  = state.LastSpO2  > 0 && state.LastSpO2  < spo2AlertThreshold ? "↓" : "";
                 string arrowPulse = state.LastPulse > 120 ? "↑" : "";
                 string prefix = state.Severity == AlertSeverity.Critical
                     ? (isRo ? "🚨 CRITIC" : "🚨 CRITICAL")
@@ -599,8 +615,8 @@ namespace LifeAlertPlus.API.Services
             lines.Add("");
             if (state.LastSpO2 > 0)
                 lines.Add(isRo
-                    ? $"⚠️ SpO2: {state.LastSpO2:F0}%{(state.LastSpO2 < 95 ? " (scăzut)" : "")}"
-                    : $"⚠️ SpO2: {state.LastSpO2:F0}%{(state.LastSpO2 < 95 ? " (low)" : "")}");
+                    ? $"⚠️ SpO2: {state.LastSpO2:F0}%{(state.LastSpO2 < (state.MinSpO2 ?? 95) ? " (scăzut)" : "")}"
+                    : $"⚠️ SpO2: {state.LastSpO2:F0}%{(state.LastSpO2 < (state.MinSpO2 ?? 95) ? " (low)" : "")}");
             if (state.LastPulse > 0)
                 lines.Add(isRo
                     ? $"⚠️ Puls: {state.LastPulse:F0} bpm{(state.LastPulse > 120 ? " (crescut)" : state.LastPulse < 50 ? " (scăzut)" : "")}"
@@ -662,6 +678,7 @@ namespace LifeAlertPlus.API.Services
             public double LastTemperature { get; set; }
             public double LastSpO2 { get; set; }
             public bool IsFall { get; set; }
+            public int? MinSpO2 { get; set; }
             public List<string> ConditionRecommendations { get; set; } = new();
             public bool ImmediateAction { get; set; }
             public string LastCoordinates { get; set; } = string.Empty;

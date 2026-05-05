@@ -19,6 +19,8 @@ namespace LifeAlertPlus.Shared.DTOs.Requests.Monitored
         public int? MaxHeartRate { get; set; }
         public double? MinTemperature { get; set; }
         public double? MaxTemperature { get; set; }
+        public int? MinSpO2 { get; set; }
+        public int? MaxSpO2 { get; set; }
         public int? UpdateFrequency { get; set; }
     }
 }

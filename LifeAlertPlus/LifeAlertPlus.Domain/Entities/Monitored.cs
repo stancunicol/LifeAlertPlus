@@ -16,6 +16,8 @@ namespace LifeAlertPlus.Domain.Entities
         public int? MaxHeartRate { get; set; }
         public double? MinTemperature { get; set; }
         public double? MaxTemperature { get; set; }
+        public int? MinSpO2 { get; set; }
+        public int? MaxSpO2 { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

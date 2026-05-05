@@ -56,11 +56,13 @@ namespace LifeAlertPlus.API.Controllers
             var monitored = await _db.Monitoreds.FindAsync(monitoredId);
             if (monitored != null)
             {
-                var (minHr, maxHr, minTemp, maxTemp) = ConditionThresholdAdjuster.Calculate(valid);
+                var (minHr, maxHr, minTemp, maxTemp, minSpO2, maxSpO2) = ConditionThresholdAdjuster.Calculate(valid);
                 monitored.MinHeartRate   = minHr;
                 monitored.MaxHeartRate   = maxHr;
                 monitored.MinTemperature = minTemp;
                 monitored.MaxTemperature = maxTemp;
+                monitored.MinSpO2        = minSpO2;
+                monitored.MaxSpO2        = maxSpO2;
                 monitored.UpdatedAt      = DateTime.UtcNow;
                 await _db.SaveChangesAsync();
                 _alertMonitor.InvalidateThresholdCache(monitoredId);
@@ -71,7 +73,9 @@ namespace LifeAlertPlus.API.Controllers
                 MinHeartRate   = monitored?.MinHeartRate,
                 MaxHeartRate   = monitored?.MaxHeartRate,
                 MinTemperature = monitored?.MinTemperature,
-                MaxTemperature = monitored?.MaxTemperature
+                MaxTemperature = monitored?.MaxTemperature,
+                MinSpO2        = monitored?.MinSpO2,
+                MaxSpO2        = monitored?.MaxSpO2
             });
         }
 
