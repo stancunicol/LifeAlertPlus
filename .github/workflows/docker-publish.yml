@@ -14,6 +14,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Read version
+        id: version
+        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -28,6 +32,7 @@ jobs:
           push: true
           tags: |
             stancunicol/lifealertplus:api-latest
+            stancunicol/lifealertplus:api-${{ steps.version.outputs.version }}
 
       - name: Build and push Client image
         uses: docker/build-push-action@v6
@@ -37,3 +42,4 @@ jobs:
           push: true
           tags: |
             stancunicol/lifealertplus:client-latest
+            stancunicol/lifealertplus:client-${{ steps.version.outputs.version }}

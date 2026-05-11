@@ -66,13 +66,6 @@ jobs:
       - name: Write files
         run: |
           echo "${{ steps.new.outputs.version }}" > VERSION
-
-          if [ -f LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json ]; then
-            echo "{\"version\":\"${{ steps.new.outputs.version }}\"}" \
-              > LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json
-            git add LifeAlertPlus/LifeAlertPlus.Client/src/assets/version.json
-          fi
-
           git add VERSION
 
       - name: Commit & tag

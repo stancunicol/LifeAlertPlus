@@ -22,8 +22,11 @@ jobs:
       - name: Restore solution
         run: dotnet restore LifeAlertPlus/LifeAlertPlus.sln
 
+      - name: Run tests
+        run: dotnet test LifeAlertPlus/LifeAlertPlus.Tests/LifeAlertPlus.Tests.csproj --no-restore --configuration Release --logger "trx;LogFileName=test-results.trx"
+
       - name: Publish client
-        run: dotnet publish LifeAlertPlus/LifeAlertPlus.Client/LifeAlertPlus.Client.csproj -c Release -o publish
+        run: dotnet publish LifeAlertPlus/LifeAlertPlus.Client/LifeAlertPlus.Client.csproj --no-restore -c Release -o publish
 
       - name: Deploy to Azure Web App (Client)
         uses: azure/webapps-deploy@v2

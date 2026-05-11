@@ -7,11 +7,14 @@ services:
       - "8000:8000"
     environment:
       - MODEL_DIR=/app/models
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
+
   api:
     build:
       context: .
@@ -20,6 +23,7 @@ services:
       - "8080:8080"
       - "8443:8443"
     environment:
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=https://+:8443;http://+:8080
       - ConnectionStrings__Default=Data Source=/data/lifealert.db
       - Urls__ApiBaseUrl=https://localhost:8443
@@ -30,14 +34,22 @@ services:
     volumes:
       - lifealert-data:/data
       - ./certs:/https:ro
+    restart: unless-stopped
     depends_on:
-      - ai-service
+      ai-service:
+        condition: service_healthy
+
   client:
     build:
       context: .
       dockerfile: .github/workflows/Dockerfile.client
+      args:
+        # Development → appsettings.json (ApiBaseUrl: https://localhost:8443)
+        # so the browser-side WASM app connects to the local Docker API.
+        BLAZOR_ENV: Development
     ports:
       - "8081:8081"
+    restart: unless-stopped
     depends_on:
       - api
 
