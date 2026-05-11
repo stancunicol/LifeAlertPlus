@@ -26,6 +26,13 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6641CA3C8C84418B96932A6DC45DB23A }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9285ADF2D81E4588B58C973974B6ABF1 }}
 
+      - name: Delete existing AI container (if any)
+        run: |
+          az container delete \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --name lifealertplus-ai \
+            --yes 2>/dev/null || true
+
       - name: Deploy AI container to Azure Container Instances
         run: |
           az container create \
