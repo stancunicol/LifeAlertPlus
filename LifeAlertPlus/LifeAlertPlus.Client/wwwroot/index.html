@@ -62,9 +62,10 @@
                 // try relative path first (works when client is hosted by the API)
                 let data = await tryFetch('/api/config/maps');
 
-                // fallback to known dev API origins if needed
+                // fallback to known API origins if needed
                 if (!data) {
                     const candidates = [
+                        'https://api-lifealertplusiot-gqf3crdrenfgd9bw.germanywestcentral-01.azurewebsites.net',
                         'http://localhost:5176'
                     ];
                     for (const base of candidates) {

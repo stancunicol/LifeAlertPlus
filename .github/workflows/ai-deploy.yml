@@ -40,8 +40,12 @@ jobs:
 
       - name: Show AI service URL
         run: |
-          echo "AI Service URL: http://lifealertplus-ai.germanywestcentral.azurecontainer.io:8000"
+          FQDN=$(az container show \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --name lifealertplus-ai \
+            --query "ipAddress.fqdn" -o tsv)
+          echo "AI Service URL: http://${FQDN}:8000"
           echo ""
           echo "Set this in Azure App Settings (API App Service):"
           echo "  Name:  Urls__AiServiceUrl"
-          echo "  Value: http://lifealertplus-ai.germanywestcentral.azurecontainer.io:8000"
+          echo "  Value: http://${FQDN}:8000"
