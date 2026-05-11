@@ -14,12 +14,17 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_CCB4448BF0CD45859D73CB664A9AC4D5 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6641CA3C8C84418B96932A6DC45DB23A }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9285ADF2D81E4588B58C973974B6ABF1 }}
 
       - name: Deploy AI container to Azure Container Instances
         run: |
