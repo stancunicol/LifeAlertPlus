@@ -6,6 +6,8 @@ using LifeAlertPlus.Domain.IRepositories;
 using LifeAlertPlus.Infrastructure.Context;
 using LifeAlertPlus.Infrastructure.Repositories;
 using LifeAlertPlus.Infrastructure.Seed;
+using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -133,6 +135,32 @@ var app = builder.Build();
 
 await UserSeed.SeedAsync(app.Services);
 
+// Must be first: catches unhandled exceptions and re-applies CORS so the browser
+// can read the error body instead of seeing an opaque CORS failure on top of a 500.
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var corsService    = context.RequestServices.GetRequiredService<ICorsService>();
+        var policyProvider = context.RequestServices.GetRequiredService<ICorsPolicyProvider>();
+        var policy         = await policyProvider.GetPolicyAsync(context, "AllowBlazorClient");
+        if (policy is not null)
+        {
+            var corsResult = corsService.EvaluatePolicy(context, policy);
+            corsService.ApplyResult(corsResult, context.Response);
+        }
+
+        context.Response.StatusCode  = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+
+        var ex     = context.Features.Get<IExceptionHandlerPathFeature>()?.Error;
+        var logger = context.RequestServices.GetService<ILogger<Program>>();
+        logger?.LogError(ex, "Unhandled exception");
+
+        await context.Response.WriteAsync("{\"success\":false,\"message\":\"An internal server error occurred.\"}");
+    });
+});
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -144,7 +172,6 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 
 app.MapControllers();
 // SignalR NotificationHub
