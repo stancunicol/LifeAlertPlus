@@ -28,8 +28,22 @@ namespace LifeAlertPlus.Infrastructure.Context
                     }
                     else
                     {
-                        // Production / Azure: use current directory
-                        connectionString = $"Data Source={Path.Combine(Directory.GetCurrentDirectory(), dbFileName)}";
+                        // Azure App Service: WEBSITE_SITE_NAME is always set on App Service.
+                        // Use /home/data/ — the only path that is both writable and persistent
+                        // regardless of WEBSITE_RUN_FROM_PACKAGE mode.
+                        var siteName = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME");
+                        string baseDir;
+                        if (!string.IsNullOrEmpty(siteName))
+                        {
+                            var home = Environment.GetEnvironmentVariable("HOME") ?? "/home";
+                            baseDir = Path.Combine(home, "data");
+                        }
+                        else
+                        {
+                            baseDir = Directory.GetCurrentDirectory();
+                        }
+                        Directory.CreateDirectory(baseDir);
+                        connectionString = $"Data Source={Path.Combine(baseDir, dbFileName)}";
                     }
                 }
             }

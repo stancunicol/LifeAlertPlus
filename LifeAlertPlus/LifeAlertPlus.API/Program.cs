@@ -180,4 +180,36 @@ app.MapControllers();
 // SignalR NotificationHub
 app.MapHub<LifeAlertPlus.API.Hubs.NotificationHub>("/notificationhub");
 
+// Temporary diagnostic endpoint — remove after confirming production works
+app.MapGet("/api/diag", (IConfiguration cfg, LifeAlertPlusDbContext db) =>
+{
+    var cs   = cfg.GetConnectionString("Default") ?? "(null)";
+    var site = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME") ?? "(not azure)";
+    var home = Environment.GetEnvironmentVariable("HOME") ?? "(no HOME)";
+    var cwd  = Directory.GetCurrentDirectory();
+    var base64 = AppContext.BaseDirectory;
+
+    // Extract file path from "Data Source=..."
+    var dbPath = cs.Replace("Data Source=", "", StringComparison.OrdinalIgnoreCase).Trim();
+    var dbExists = File.Exists(dbPath);
+
+    bool canQuery = false;
+    string queryError = "";
+    try { canQuery = db.Roles.Any(); }
+    catch (Exception ex) { queryError = ex.Message; }
+
+    return Results.Ok(new
+    {
+        connectionString = cs,
+        dbPath,
+        dbExists,
+        canQuery,
+        queryError,
+        cwd,
+        baseDir = base64,
+        site,
+        home
+    });
+});
+
 app.Run();
