@@ -11,38 +11,22 @@ namespace LifeAlertPlus.API.Controllers
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
-    public class AIController : ControllerBase
+    public class AIController(
+        IHttpClientFactory httpClientFactory,
+        ILogger<AIController> logger,
+        IServiceScopeFactory scopeFactory) : ControllerBase
     {
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<AIController> _logger;
-        private readonly IServiceScopeFactory _scopeFactory;
-
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
 
-        public AIController(
-            IHttpClientFactory httpClientFactory,
-            IConfiguration configuration,
-            ILogger<AIController> logger,
-            IServiceScopeFactory scopeFactory)
-        {
-            _httpClientFactory = httpClientFactory;
-            _configuration = configuration;
-            _logger = logger;
-            _scopeFactory = scopeFactory;
-        }
-
         [HttpPost("predict")]
         public async Task<IActionResult> Predict([FromBody] AIPredictionRequestDTO request)
         {
             if (request == null)
                 return BadRequest(new { Message = "Invalid prediction request." });
-
-            var aiBaseUrl = _configuration["Urls:AiServiceUrl"] ?? "http://localhost:8000";
 
             // Load patient-specific conditions and thresholds when MonitoredId is provided
             List<string> conditions = new();
@@ -54,7 +38,7 @@ namespace LifeAlertPlus.API.Controllers
             {
                 try
                 {
-                    using var scope = _scopeFactory.CreateScope();
+                    using var scope = scopeFactory.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
                     var condRepo = scope.ServiceProvider.GetRequiredService<IMonitoredConditionRepository>();
 
@@ -74,13 +58,13 @@ namespace LifeAlertPlus.API.Controllers
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to load conditions/thresholds for MonitoredId {MonitoredId}. Using defaults.", request.MonitoredId);
+                    logger.LogWarning(ex, "Failed to load conditions/thresholds for MonitoredId {MonitoredId}. Using defaults.", request.MonitoredId);
                 }
             }
 
             try
             {
-                var client = _httpClientFactory.CreateClient();
+                var client = httpClientFactory.CreateClient("AiService");
                 var payload = new
                 {
                     pulse            = request.Pulse,
@@ -101,11 +85,11 @@ namespace LifeAlertPlus.API.Controllers
                     max_spo2         = maxSpO2,
                 };
 
-                var response = await client.PostAsJsonAsync($"{aiBaseUrl}/predict", payload);
+                var response = await client.PostAsJsonAsync("/predict", payload);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogWarning("AI service returned {StatusCode}", (int)response.StatusCode);
+                    logger.LogWarning("AI service returned {StatusCode}", (int)response.StatusCode);
                     return StatusCode(502, new { Message = "AI service unavailable." });
                 }
 
@@ -119,12 +103,12 @@ namespace LifeAlertPlus.API.Controllers
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogWarning(ex, "AI service connection failed");
+                logger.LogWarning(ex, "AI service connection failed");
                 return StatusCode(502, new { Message = "AI service unreachable." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calling AI service");
+                logger.LogError(ex, "Error calling AI service");
                 return StatusCode(500, new { Message = "Error processing AI prediction." });
             }
         }
@@ -133,18 +117,16 @@ namespace LifeAlertPlus.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Health()
         {
-            var aiBaseUrl = _configuration["Urls:AiServiceUrl"] ?? "http://localhost:8000";
-
             try
             {
-                var client = _httpClientFactory.CreateClient();
-                var response = await client.GetAsync($"{aiBaseUrl}/health");
+                var client = httpClientFactory.CreateClient("AiService");
+                var response = await client.GetAsync("/health");
                 var json = await response.Content.ReadAsStringAsync();
                 return Content(json, "application/json");
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "AI health check failed");
+                logger.LogWarning(ex, "AI health check failed");
                 return Ok(new { status = "unavailable", error = ex.Message });
             }
         }
