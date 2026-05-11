@@ -1,0 +1,47 @@
+name: Deploy AI Service to Azure Container Instances
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Images"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy AI container to Azure Container Instances
+        run: |
+          az container create \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --name lifealertplus-ai \
+            --image stancunicol/lifealertplus:ai-latest \
+            --ports 8000 \
+            --cpu 1 \
+            --memory 1.5 \
+            --dns-name-label lifealertplus-ai \
+            --location germanywestcentral \
+            --registry-login-server docker.io \
+            --registry-username "${{ secrets.DOCKER_USERNAME }}" \
+            --registry-password "${{ secrets.DOCKER_TOKEN }}" \
+            --os-type Linux \
+            --restart-policy Always
+
+      - name: Show AI service URL
+        run: |
+          echo "AI Service URL: http://lifealertplus-ai.germanywestcentral.azurecontainer.io:8000"
+          echo ""
+          echo "Set this in Azure App Settings (API App Service):"
+          echo "  Name:  Urls__AiServiceUrl"
+          echo "  Value: http://lifealertplus-ai.germanywestcentral.azurecontainer.io:8000"

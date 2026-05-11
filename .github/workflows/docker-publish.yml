@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -43,3 +46,13 @@ jobs:
           tags: |
             stancunicol/lifealertplus:client-latest
             stancunicol/lifealertplus:client-${{ steps.version.outputs.version }}
+
+      - name: Build and push AI service image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ai-service/Dockerfile
+          push: true
+          tags: |
+            stancunicol/lifealertplus:ai-latest
+            stancunicol/lifealertplus:ai-${{ steps.version.outputs.version }}

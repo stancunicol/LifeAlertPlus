@@ -24,7 +24,7 @@ builder.Services.AddHttpClient("AiService", client =>
 {
     var aiBaseUrl = builder.Configuration["Urls:AiServiceUrl"] ?? "http://localhost:8000";
     client.BaseAddress = new Uri(aiBaseUrl);
-    client.Timeout = TimeSpan.FromSeconds(15);
+    client.Timeout = TimeSpan.FromSeconds(3);
 });
 builder.Services.AddHttpClient("Anthropic", client =>
 {
@@ -157,10 +157,7 @@ app.UseExceptionHandler(errorApp =>
         var logger = context.RequestServices.GetService<ILogger<Program>>();
         logger?.LogError(ex, "Unhandled exception");
 
-        var msg = ex?.Message ?? "Unknown error";
-        var typ = ex?.GetType().Name ?? "Exception";
-        await context.Response.WriteAsync(
-            $"{{\"success\":false,\"message\":\"{msg}\",\"type\":\"{typ}\"}}");
+        await context.Response.WriteAsync("{\"success\":false,\"message\":\"An internal server error occurred.\"}");
     });
 });
 
@@ -179,37 +176,5 @@ app.UseAuthorization();
 app.MapControllers();
 // SignalR NotificationHub
 app.MapHub<LifeAlertPlus.API.Hubs.NotificationHub>("/notificationhub");
-
-// Temporary diagnostic endpoint — remove after confirming production works
-app.MapGet("/api/diag", (IConfiguration cfg, LifeAlertPlusDbContext db) =>
-{
-    var cs   = cfg.GetConnectionString("Default") ?? "(null)";
-    var site = Environment.GetEnvironmentVariable("WEBSITE_SITE_NAME") ?? "(not azure)";
-    var home = Environment.GetEnvironmentVariable("HOME") ?? "(no HOME)";
-    var cwd  = Directory.GetCurrentDirectory();
-    var base64 = AppContext.BaseDirectory;
-
-    // Extract file path from "Data Source=..."
-    var dbPath = cs.Replace("Data Source=", "", StringComparison.OrdinalIgnoreCase).Trim();
-    var dbExists = File.Exists(dbPath);
-
-    bool canQuery = false;
-    string queryError = "";
-    try { canQuery = db.Roles.Any(); }
-    catch (Exception ex) { queryError = ex.Message; }
-
-    return Results.Ok(new
-    {
-        connectionString = cs,
-        dbPath,
-        dbExists,
-        canQuery,
-        queryError,
-        cwd,
-        baseDir = base64,
-        site,
-        home
-    });
-});
 
 app.Run();
