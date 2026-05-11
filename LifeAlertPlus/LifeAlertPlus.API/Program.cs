@@ -157,7 +157,10 @@ app.UseExceptionHandler(errorApp =>
         var logger = context.RequestServices.GetService<ILogger<Program>>();
         logger?.LogError(ex, "Unhandled exception");
 
-        await context.Response.WriteAsync("{\"success\":false,\"message\":\"An internal server error occurred.\"}");
+        var msg = ex?.Message ?? "Unknown error";
+        var typ = ex?.GetType().Name ?? "Exception";
+        await context.Response.WriteAsync(
+            $"{{\"success\":false,\"message\":\"{msg}\",\"type\":\"{typ}\"}}");
     });
 });
 
