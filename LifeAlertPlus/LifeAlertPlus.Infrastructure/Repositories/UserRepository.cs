@@ -18,6 +18,12 @@ namespace LifeAlertPlus.Infrastructure.Repositories
                 .FirstOrDefaultAsync(u => u.Email == email);
         }
 
+        public async Task<User?> GetUserByPhoneNumberAsync(string phoneNumber)
+        {
+            return await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+        }
+
         public async Task<User?> GetUserByIdAsync(Guid id)
         {
             return await _dbContext.Users

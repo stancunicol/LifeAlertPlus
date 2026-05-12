@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using LifeAlertPlus.API.Services;
 using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Application.Services;
@@ -8,6 +9,7 @@ using LifeAlertPlus.Infrastructure.Repositories;
 using LifeAlertPlus.Infrastructure.Seed;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -42,6 +44,18 @@ builder.Services.AddHostedService<DailyReportBackgroundService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.PermitLimit = 10;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
@@ -55,7 +69,7 @@ builder.Services.AddCors(options =>
                   "https://client-lifealertplusiot-gqf3crdrenfgd9bw.germanywestcentral-01.azurewebsites.net",
                   "https://client-lifealertplusiot-dxgkd5emgacba2h6.germanywestcentral-01.azurewebsites.net")
               .AllowAnyHeader()
-              .AllowAnyMethod()
+              .WithMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
               .AllowCredentials();
     });
 });
@@ -161,9 +175,22 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
-app.UseSwagger();
-app.UseSwaggerUI();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    await next();
+});
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseRateLimiter();
 app.UseHttpsRedirection();
 
 app.UseCors("AllowBlazorClient");

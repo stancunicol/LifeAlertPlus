@@ -52,6 +52,10 @@
     --shadow-focus:      0 0 0 3px rgba(46, 125, 50, 0.18);
 }
 
+html {
+    font-size: 16px;
+}
+
 * {
     margin: 0;
     padding: 0;

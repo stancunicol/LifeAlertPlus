@@ -88,7 +88,7 @@ namespace LifeAlertPlus.Client.Pages.Login
 
                     else
                     {
-                        ErrorMessage = response.Message ?? T("login.error.failed");
+                        ErrorMessage = MapLoginError(response.Message);
                     }
                 }
                 else
@@ -101,6 +101,14 @@ namespace LifeAlertPlus.Client.Pages.Login
                 IsLoading = false;
             }
         }
+
+        private string MapLoginError(string? apiMessage) => apiMessage switch
+        {
+            "No account found with this email address." => T("login.error.noAccount"),
+            "Incorrect password." => T("login.error.wrongPassword"),
+            "Please verify your email before logging in." => T("login.error.emailNotConfirmed"),
+            _ => apiMessage ?? T("login.error.failed")
+        };
 
         private async Task HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
         {

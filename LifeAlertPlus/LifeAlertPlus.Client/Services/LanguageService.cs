@@ -62,7 +62,10 @@ namespace LifeAlertPlus.Client.Services
             ["login.close"] = "Close",
 
             // Login errors
-            ["login.error.failed"] = "Login failed.",
+            ["login.error.failed"] = "Login failed. Please check your credentials and try again.",
+            ["login.error.noAccount"] = "No account found with this email address.",
+            ["login.error.wrongPassword"] = "Incorrect password. Please try again.",
+            ["login.error.emailNotConfirmed"] = "Please verify your email before logging in. Check your inbox for the confirmation link.",
             ["login.error.generic"] = "An error occurred during login.",
             ["login.error.enterEmail"] = "Please enter your email address.",
             ["login.error.validEmail"] = "Please enter a valid email address.",
@@ -85,7 +88,9 @@ namespace LifeAlertPlus.Client.Services
 
             // Register errors
             ["register.error.allRequired"] = "All fields are required.",
-            ["register.error.passwordMismatch"] = "Passwords do not match.",
+            ["register.error.passwordMismatch"] = "Passwords do not match. Please make sure both passwords are identical.",
+            ["register.error.emailInUse"] = "An account with this email address already exists.",
+            ["register.error.phoneInUse"] = "This phone number is already associated with another account.",
             ["register.error.failed"] = "Registration failed. Please try again.",
 
             // Password validation
@@ -916,7 +921,10 @@ namespace LifeAlertPlus.Client.Services
             ["login.close"] = "Închide",
 
             // Login errors
-            ["login.error.failed"] = "Autentificare eșuată.",
+            ["login.error.failed"] = "Autentificare eșuată. Verifică datele introduse și încearcă din nou.",
+            ["login.error.noAccount"] = "Nu există niciun cont asociat acestei adrese de email.",
+            ["login.error.wrongPassword"] = "Parolă incorectă. Te rugăm să încerci din nou.",
+            ["login.error.emailNotConfirmed"] = "Trebuie să îți verifici emailul înainte de a te autentifica. Verifică inbox-ul pentru linkul de confirmare.",
             ["login.error.generic"] = "A apărut o eroare la autentificare.",
             ["login.error.enterEmail"] = "Te rugăm să introduci adresa de email.",
             ["login.error.validEmail"] = "Te rugăm să introduci o adresă de email validă.",
@@ -939,7 +947,9 @@ namespace LifeAlertPlus.Client.Services
 
             // Register errors
             ["register.error.allRequired"] = "Toate câmpurile sunt obligatorii.",
-            ["register.error.passwordMismatch"] = "Parolele nu coincid.",
+            ["register.error.passwordMismatch"] = "Parolele nu coincid. Asigură-te că ambele parole sunt identice.",
+            ["register.error.emailInUse"] = "Există deja un cont cu această adresă de email.",
+            ["register.error.phoneInUse"] = "Acest număr de telefon este deja asociat unui alt cont.",
             ["register.error.failed"] = "Înregistrarea a eșuat. Te rugăm să încerci din nou.",
 
             // Password validation

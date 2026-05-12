@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Mvc;
@@ -5,6 +6,7 @@ using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using Microsoft.AspNetCore.Authorization;
 using LifeAlertPlus.Infrastructure.Context;
 using LifeAlertPlus.Domain.Entities;
+using LifeAlertPlus.Application.IServices;
 using Microsoft.EntityFrameworkCore;
 
 namespace LifeAlertPlus.API.Controllers
@@ -19,6 +21,8 @@ namespace LifeAlertPlus.API.Controllers
         private readonly ILogger<ESPController> _logger;
         private readonly LifeAlertPlusDbContext _dbContext;
         private readonly Services.SimulationManager _simulationManager;
+        private readonly IMonitoredService _monitoredService;
+        private readonly IUserMonitoredService _userMonitoredService;
 
         private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -27,18 +31,35 @@ namespace LifeAlertPlus.API.Controllers
             IConfiguration configuration,
             ILogger<ESPController> logger,
             LifeAlertPlusDbContext dbContext,
-            Services.SimulationManager simulationManager)
+            Services.SimulationManager simulationManager,
+            IMonitoredService monitoredService,
+            IUserMonitoredService userMonitoredService)
         {
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _logger = logger;
             _dbContext = dbContext;
             _simulationManager = simulationManager;
+            _monitoredService = monitoredService;
+            _userMonitoredService = userMonitoredService;
         }
 
         [HttpGet("data/{serial}")]
         public async Task<IActionResult> GetESPData(string serial, CancellationToken cancellationToken)
         {
+            // Verify the caller owns the monitored person linked to this serial
+            var callerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(callerIdStr, out var callerId))
+                return Unauthorized();
+
+            var monitored = await _monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(serial);
+            if (monitored == null)
+                return NotFound(new { Message = "Device not found." });
+
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            if (!owned.Any(m => m.Id == monitored.Id))
+                return Forbid();
+
             var simulated = _simulationManager.GetData(serial);
             if (simulated != null)
             {

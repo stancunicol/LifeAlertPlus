@@ -6,6 +6,7 @@ namespace LifeAlertPlus.Application.IServices
     public interface IUserService
     {
         Task<User?> GetUserByEmailAsync(string email);
+        Task<User?> GetUserByPhoneNumberAsync(string phoneNumber);
         Task<User?> GetUserByIdAsync(Guid id);
         Task<User?> GetUserByResetTokenAsync(string token);
         Task<User?> GetUserByEmailChangeTokenAsync(string token);

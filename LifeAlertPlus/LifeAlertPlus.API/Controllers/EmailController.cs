@@ -107,7 +107,7 @@ namespace LifeAlertPlus.API.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send doctor invitation to {DoctorEmail} for patient {PatientId}", request.DoctorEmail, request.PatientId);
-                return StatusCode(500, $"Trimiterea invitației a eșuat: {ex.Message}");
+                return StatusCode(500, new { Message = "Failed to send invitation email. Please try again later." });
             }
         }
 
@@ -129,7 +129,8 @@ namespace LifeAlertPlus.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Failed to send email: {ex.Message}");
+                _logger.LogError(ex, "Failed to send report email to {DoctorEmail}", request.DoctorEmail);
+                return StatusCode(500, new { Message = "Failed to send report email. Please try again later." });
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using LifeAlertPlus.Application.IServices;
+﻿using System.ComponentModel.DataAnnotations;
+using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
 
@@ -64,7 +65,7 @@ namespace LifeAlertPlus.Application.Services
                 return Task.FromResult(new UserResponseDTO { Success = false, Message = "Current email and new email are required." });
             }
 
-            if (!request.NewEmail.Contains('@') || !request.NewEmail.Contains('.'))
+            if (!new EmailAddressAttribute().IsValid(request.NewEmail))
                 return Task.FromResult(new UserResponseDTO { Success = false, Message = "Invalid email format." });
 
             return Task.FromResult(new UserResponseDTO { Success = true, Message = "Email change is valid." });

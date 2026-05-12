@@ -1,7 +1,9 @@
 using LifeAlertPlus.API.Services;
+using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Shared.DTOs.Responses.ActivityProfile;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -11,10 +13,20 @@ namespace LifeAlertPlus.API.Controllers
     public class ActivityProfileController : ControllerBase
     {
         private readonly ActivityProfileService _activityProfileService;
+        private readonly IUserMonitoredService _userMonitoredService;
 
-        public ActivityProfileController(ActivityProfileService activityProfileService)
+        public ActivityProfileController(ActivityProfileService activityProfileService, IUserMonitoredService userMonitoredService)
         {
             _activityProfileService = activityProfileService;
+            _userMonitoredService = userMonitoredService;
+        }
+
+        private async Task<bool> UserOwnsMonitoredAsync(Guid monitoredId)
+        {
+            var callerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(callerIdStr, out var callerId)) return false;
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            return owned.Any(m => m.Id == monitoredId);
         }
 
         [HttpGet("{monitoredId}")]
@@ -22,6 +34,9 @@ namespace LifeAlertPlus.API.Controllers
         {
             if (monitoredId == Guid.Empty)
                 return BadRequest(new { Message = "Invalid monitored ID." });
+
+            if (!await UserOwnsMonitoredAsync(monitoredId))
+                return Forbid();
 
             var profiles = await _activityProfileService.GetProfileAsync(monitoredId);
 
@@ -47,10 +62,13 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         [HttpPost("{monitoredId}/build")]
-        public IActionResult TriggerBuild(Guid monitoredId)
+        public async Task<IActionResult> TriggerBuild(Guid monitoredId)
         {
             if (monitoredId == Guid.Empty)
                 return BadRequest(new { Message = "Invalid monitored ID." });
+
+            if (!await UserOwnsMonitoredAsync(monitoredId))
+                return Forbid();
 
             _ = Task.Run(() => _activityProfileService.BuildProfileAsync(monitoredId));
 

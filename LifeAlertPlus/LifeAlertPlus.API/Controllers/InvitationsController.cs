@@ -81,16 +81,15 @@ namespace LifeAlertPlus.API.Controllers
         public async Task<IActionResult> GetPatientMeasurementsByToken(
             [FromQuery] string token,
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 200)
+            [FromQuery] int pageSize = 50)
         {
             var invitation = await GetValidInvitationOrNullAsync(token);
             if (invitation == null)
                 return NotFound(new { Message = "Invitation not found or expired." });
 
             // clamp paging to avoid abuse
-            if (pageNumber < 1) pageNumber = 1;
-            if (pageSize < 1) pageSize = 1;
-            if (pageSize > 1000) pageSize = 1000;
+            pageNumber = Math.Max(1, pageNumber);
+            pageSize = Math.Clamp(pageSize, 1, 200);
 
             var measurements = await _measurementService.GetMeasurementsByMonitoredIdAsync(invitation.PatientId, pageNumber, pageSize);
             return Ok(measurements ?? Enumerable.Empty<LifeAlertPlus.Shared.DTOs.Responses.Measurement.MeasurementResponseDTO>());

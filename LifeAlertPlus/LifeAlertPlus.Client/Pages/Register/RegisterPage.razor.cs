@@ -86,7 +86,7 @@ namespace LifeAlertPlus.Client.Pages.Register
                 }
                 else
                 {
-                    ErrorMessage = response?.Message ?? T("register.error.failed");
+                    ErrorMessage = MapApiError(response?.Message);
                 }
             }
             finally
@@ -113,6 +113,13 @@ namespace LifeAlertPlus.Client.Pages.Register
         {
             _showPassword = !_showPassword;
         }
+
+        private string MapApiError(string? apiMessage) => apiMessage switch
+        {
+            "An account with this email address already exists." => T("register.error.emailInUse"),
+            "This phone number is already associated with another account." => T("register.error.phoneInUse"),
+            _ => apiMessage ?? T("register.error.failed")
+        };
 
         private (bool IsValid, string ErrorMessage) ValidatePassword(string password)
         {

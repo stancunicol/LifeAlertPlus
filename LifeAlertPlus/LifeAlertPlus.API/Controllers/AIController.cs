@@ -127,7 +127,7 @@ namespace LifeAlertPlus.API.Controllers
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "AI health check failed");
-                return Ok(new { status = "unavailable", error = ex.Message });
+                return Ok(new { status = "unavailable" });
             }
         }
     }

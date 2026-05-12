@@ -17,7 +17,13 @@
             <nav class="header-nav">
                 <a href="/dashboard" class="nav-link @(IsActive("/dashboard") ? "active" : "")">@T("nav.dashboard")</a>
                 <a href="/monitored" class="nav-link @(IsActive("/monitored") ? "active" : "")">@T("nav.monitored")</a>
-                <a href="/notifications" class="nav-link @(IsActive("/notifications") ? "active" : "")">@T("nav.notifications")</a>
+                <a href="/notifications" class="nav-link @(IsActive("/notifications") ? "active" : "")">
+                    @T("nav.notifications")
+                    @if (_unreadCount > 0)
+                    {
+                        <span class="notif-badge">@(_unreadCount > 9 ? "9+" : _unreadCount.ToString())</span>
+                    }
+                </a>
             </nav>
         </div>
         
@@ -66,7 +72,13 @@
         </div>
         <a href="/dashboard" class="mobile-nav-link @(IsActive("/dashboard") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.dashboard")</a>
         <a href="/monitored" class="mobile-nav-link @(IsActive("/monitored") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.monitored")</a>
-        <a href="/notifications" class="mobile-nav-link @(IsActive("/notifications") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.notifications")</a>
+        <a href="/notifications" class="mobile-nav-link @(IsActive("/notifications") ? "active" : "")" @onclick="CloseMobileMenu">
+            @T("nav.notifications")
+            @if (_unreadCount > 0)
+            {
+                <span class="notif-badge notif-badge--mobile">@(_unreadCount > 9 ? "9+" : _unreadCount.ToString())</span>
+            }
+        </a>
         <div class="mobile-nav-divider"></div>
         <a href="/profile" class="mobile-nav-link @(IsActive("/profile") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.profile")</a>
         <a href="/settings" class="mobile-nav-link @(IsActive("/settings") ? "active" : "")" @onclick="CloseMobileMenu">@T("nav.settings")</a>

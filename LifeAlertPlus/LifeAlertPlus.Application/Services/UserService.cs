@@ -23,6 +23,11 @@ namespace LifeAlertPlus.Application.Services
             return await _userRepository.GetUserByEmailAsync(email);
         }
 
+        public async Task<User?> GetUserByPhoneNumberAsync(string phoneNumber)
+        {
+            return await _userRepository.GetUserByPhoneNumberAsync(phoneNumber);
+        }
+
         public async Task<User?> GetUserByIdAsync(Guid id)
         {
             return await _userRepository.GetUserByIdAsync(id);

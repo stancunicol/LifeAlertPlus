@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
@@ -34,17 +35,22 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Login([FromBody] UserLoginRequestDTO request)
         {
             var user = await _userService.GetUserByEmailAsync(request.Email);
-            if (user == null || string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(user.PasswordHash) || 
-            !_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
+            if (user == null)
             {
-                return Unauthorized(new UserLoginResponseDTO { Success = false, Message = "Login failed.", Token = string.Empty });
+                return Unauthorized(new UserLoginResponseDTO { Success = false, Message = "No account found with this email address.", Token = string.Empty });
             }
-            if(!user.IsEmailConfirmed)
+            if (string.IsNullOrEmpty(request.Password) || string.IsNullOrEmpty(user.PasswordHash) ||
+                !_authenticationService.VerifyPassword(request.Password, user.PasswordHash))
             {
-                return Unauthorized(new UserLoginResponseDTO { Success = false, Message = "Email not confirmed.", Token = string.Empty });
+                return Unauthorized(new UserLoginResponseDTO { Success = false, Message = "Incorrect password.", Token = string.Empty });
+            }
+            if (!user.IsEmailConfirmed)
+            {
+                return Unauthorized(new UserLoginResponseDTO { Success = false, Message = "Please verify your email before logging in.", Token = string.Empty });
             }
             if(user.DeletedAt != null)
             {
@@ -68,12 +74,22 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         [HttpPost("register")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> Register([FromBody] UserRegisterRequestDTO request)
         {
             var existingUser = await _userService.GetUserByEmailAsync(request.Email);
             if (existingUser != null)
             {
-                return Conflict(new UserResponseDTO { Success = false, Message = "Email already in use." });
+                return Conflict(new UserResponseDTO { Success = false, Message = "An account with this email address already exists." });
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+            {
+                var existingPhone = await _userService.GetUserByPhoneNumberAsync(request.PhoneNumber.Trim());
+                if (existingPhone != null)
+                {
+                    return Conflict(new UserResponseDTO { Success = false, Message = "This phone number is already associated with another account." });
+                }
             }
 
             var passwordValidation = await _authenticationService.VerifyPassword(request.Password);
@@ -153,6 +169,7 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         [HttpPost("forgot-password")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ForgotPassword([FromBody] UserForgotPasswordRequestDTO request)
         {
             if (string.IsNullOrEmpty(request.Email))

@@ -29,9 +29,13 @@ namespace LifeAlertPlus.Client.Components.Header
         [Inject]
         private LanguageService Lang { get; set; } = default!;
 
+        [Inject]
+        private NotificationService NotificationService { get; set; } = default!;
+
         private bool ShowProfileMenu { get; set; } = false;
         private bool ShowMobileMenu { get; set; } = false;
         private string Version { get; set; } = string.Empty;
+        private int _unreadCount = 0;
         private string T(string key) => Lang.T(key);
 
         // Shows the parameter name if non-empty, otherwise falls back to the cached value
@@ -41,7 +45,7 @@ namespace LifeAlertPlus.Client.Components.Header
             : !string.IsNullOrWhiteSpace(UserStateService.DisplayName) ? UserStateService.DisplayName
             : string.Empty;
 
-        protected override Task OnInitializedAsync()
+        protected override async Task OnInitializedAsync()
         {
             Version = AppVersion.Version;
             if (ProfilePictureService != null)
@@ -52,7 +56,24 @@ namespace LifeAlertPlus.Client.Components.Header
             }
             UserStateService.OnChange += HandleUserNameChanged;
             Lang.OnLanguageChanged += HandleLanguageChanged;
-            return Task.CompletedTask;
+            Navigation.LocationChanged += HandleLocationChanged;
+            await RefreshUnreadCountAsync();
+        }
+
+        private async void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+        {
+            await RefreshUnreadCountAsync();
+        }
+
+        private async Task RefreshUnreadCountAsync()
+        {
+            try
+            {
+                var result = await NotificationService.GetPagedAsync(page: 1, pageSize: 1);
+                _unreadCount = result?.UnreadCount ?? 0;
+                await InvokeAsync(StateHasChanged);
+            }
+            catch { }
         }
 
         protected override void OnParametersSet()
@@ -84,6 +105,7 @@ namespace LifeAlertPlus.Client.Components.Header
                 ProfilePictureService.OnChange -= HandleProfilePictureChanged;
             UserStateService.OnChange -= HandleUserNameChanged;
             Lang.OnLanguageChanged -= HandleLanguageChanged;
+            Navigation.LocationChanged -= HandleLocationChanged;
         }
 
         private bool IsActive(string path)

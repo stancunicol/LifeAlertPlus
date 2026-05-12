@@ -24,6 +24,9 @@ namespace LifeAlertPlus.Application.Services
             if (string.IsNullOrWhiteSpace(jwtKey))
                 throw new InvalidOperationException("Missing Jwt:Key configuration.");
 
+            if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+                throw new InvalidOperationException("Jwt:Key must be at least 32 bytes for HS256.");
+
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

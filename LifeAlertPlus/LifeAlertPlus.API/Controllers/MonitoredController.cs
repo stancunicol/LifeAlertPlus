@@ -3,6 +3,7 @@ using LifeAlertPlus.Application.IServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -13,11 +14,13 @@ namespace LifeAlertPlus.API.Controllers
     {
         private readonly IMonitoredService _monitoredService;
         private readonly IUserMonitoredService _userMonitoredService;
+        private readonly ILogger<MonitoredController> _logger;
 
-        public MonitoredController(IMonitoredService monitoredService, IUserMonitoredService userMonitoredService)
+        public MonitoredController(IMonitoredService monitoredService, IUserMonitoredService userMonitoredService, ILogger<MonitoredController> logger)
         {
             _monitoredService = monitoredService;
             _userMonitoredService = userMonitoredService;
+            _logger = logger;
         }
 
         [HttpPost("add")]
@@ -62,9 +65,8 @@ namespace LifeAlertPlus.API.Controllers
             }
             catch (Exception ex)
             {
-                // Log the error details
-                Console.WriteLine($"Error adding monitored person: {ex.Message}");
-                return StatusCode(500, new { Message = "An error occurred while adding monitored person.", Details = ex.Message });
+                _logger.LogError(ex, "Error adding monitored person for user {UserId}", callerId);
+                return StatusCode(500, new { Message = "An error occurred while adding monitored person." });
             }
         }
 
