@@ -1,11 +1,11 @@
 /* wwwroot/css/app.css */
 
-@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Inter:wght@400;500;600&display=swap');
 
 /* ── Design Tokens ── */
 :root {
     --font-heading:      'Jua', sans-serif;
-    --font-body:         'Jua', sans-serif;
+    --font-body:         'Inter', system-ui, sans-serif;
 
     --color-primary:     #2E7D32;
     --color-primary-mid: #4CAF50;
