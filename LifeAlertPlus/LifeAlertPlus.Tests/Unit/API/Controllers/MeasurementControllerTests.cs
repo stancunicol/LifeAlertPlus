@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using FluentAssertions;
 using LifeAlertPlus.API.Controllers;
 using LifeAlertPlus.API.Services;
@@ -6,31 +7,49 @@ using LifeAlertPlus.Domain.Entities;
 using LifeAlertPlus.Shared.DTOs.Requests.Measurement;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
 using LifeAlertPlus.Tests.Helpers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.API.Controllers;
 
 public class MeasurementControllerTests
 {
-    private readonly Mock<IMeasurementService> _measurementSvc = new();
-    private readonly MeasurementController     _sut;
+    private readonly Mock<IMeasurementService>   _measurementSvc   = new();
+    private readonly Mock<IUserMonitoredService> _userMonitoredSvc = new();
+    private readonly Guid                        _callerId         = Guid.NewGuid();
+    private readonly MeasurementController       _sut;
 
     public MeasurementControllerTests()
     {
-        _sut = new MeasurementController(_measurementSvc.Object, BuildAlertMonitor());
+        _sut = new MeasurementController(_measurementSvc.Object, BuildAlertMonitor(), _userMonitoredSvc.Object);
+
+        // Provide an authenticated user so UserOwnsMonitoredAsync can read the caller id
+        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, _callerId.ToString()) };
+        _sut.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Test"))
+            }
+        };
+    }
+
+    // Makes _callerId the owner of the given monitored person
+    private void SetupOwnership(Guid monitoredId)
+    {
+        _userMonitoredSvc
+            .Setup(s => s.GetMonitoredPeopleByUserIdAsync(_callerId))
+            .ReturnsAsync([new Monitored { Id = monitoredId }]);
     }
 
     private static AlertMonitorService BuildAlertMonitor()
     {
-        // Scope factory throws, so GetPatientThresholdsAsync and GetConditionsAsync
-        // will catch the exception and return safe defaults.
         var scopeFactory = new Mock<IServiceScopeFactory>();
         scopeFactory.Setup(f => f.CreateScope()).Throws<InvalidOperationException>();
 
-        var conditionEngine   = new ConditionRuleEngine(scopeFactory.Object, TestDataFactory.CreateLogger<ConditionRuleEngine>());
+        var conditionEngine    = new ConditionRuleEngine(scopeFactory.Object, TestDataFactory.CreateLogger<ConditionRuleEngine>());
         var activityProfileSvc = new ActivityProfileService(scopeFactory.Object, TestDataFactory.CreateLogger<ActivityProfileService>());
         var nearestHospitalSvc = new NearestHospitalService(TestDataFactory.CreateLogger<NearestHospitalService>());
 
@@ -98,29 +117,29 @@ public class MeasurementControllerTests
     [Fact]
     public async Task AddMeasurement_Returns400_WhenMonitoredIdEmpty()
     {
-        var dto = ValidDto(Guid.Empty);
-
-        var result = await _sut.AddMeasurement(dto);
+        var result = await _sut.AddMeasurement(ValidDto(Guid.Empty));
         result.Should().BeOfType<BadRequestObjectResult>();
     }
 
     [Fact]
     public async Task AddMeasurement_Returns200_WhenValid()
     {
-        _measurementSvc.Setup(s => s.AddMeasurementAsync(It.IsAny<Measurement>()))
-                       .Returns(Task.CompletedTask);
+        var dto = ValidDto();
+        SetupOwnership(dto.IdMonitored);
+        _measurementSvc.Setup(s => s.AddMeasurementAsync(It.IsAny<Measurement>())).Returns(Task.CompletedTask);
 
-        var result = await _sut.AddMeasurement(ValidDto());
+        var result = await _sut.AddMeasurement(dto);
         result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
     public async Task AddMeasurement_CallsRepository_WhenValid()
     {
-        _measurementSvc.Setup(s => s.AddMeasurementAsync(It.IsAny<Measurement>()))
-                       .Returns(Task.CompletedTask);
+        var dto = ValidDto();
+        SetupOwnership(dto.IdMonitored);
+        _measurementSvc.Setup(s => s.AddMeasurementAsync(It.IsAny<Measurement>())).Returns(Task.CompletedTask);
 
-        await _sut.AddMeasurement(ValidDto());
+        await _sut.AddMeasurement(dto);
 
         _measurementSvc.Verify(s => s.AddMeasurementAsync(It.IsAny<Measurement>()), Times.Once);
     }
@@ -138,15 +157,15 @@ public class MeasurementControllerTests
     public async Task GetByMonitoredId_Returns200_WithData()
     {
         var monitoredId = Guid.NewGuid();
+        SetupOwnership(monitoredId);
+
         var list = new List<MeasurementResponseDTO>
         {
             new() { Pulse = 75, Temperature = 36.8, SpO2 = 98 }
         };
-        _measurementSvc.Setup(s => s.GetMeasurementsByMonitoredIdAsync(monitoredId, 1, 10))
-                       .ReturnsAsync(list);
+        _measurementSvc.Setup(s => s.GetMeasurementsByMonitoredIdAsync(monitoredId, 1, 10)).ReturnsAsync(list);
 
         var result = await _sut.GetMeasurementsByMonitoredId(monitoredId, 1, 10);
-
         result.Should().BeOfType<OkObjectResult>();
     }
 
@@ -173,8 +192,11 @@ public class MeasurementControllerTests
     [Fact]
     public async Task GetById_Returns200_WhenFound()
     {
-        var id  = Guid.NewGuid();
-        var dto = new MeasurementResponseDTO { Pulse = 75, Temperature = 36.8, SpO2 = 98 };
+        var id          = Guid.NewGuid();
+        var monitoredId = Guid.NewGuid();
+        SetupOwnership(monitoredId);
+
+        var dto = new MeasurementResponseDTO { IdMonitored = monitoredId, Pulse = 75, Temperature = 36.8, SpO2 = 98 };
         _measurementSvc.Setup(s => s.GetMeasurementByIdAsync(id)).ReturnsAsync(dto);
 
         var result = await _sut.GetMeasurementById(id);

@@ -71,7 +71,7 @@ public class AuthenticationControllerTests
 
         result.Should().BeOfType<UnauthorizedObjectResult>();
         var body = ((UnauthorizedObjectResult)result).Value as UserLoginResponseDTO;
-        body!.Message.Should().Contain("confirmed");
+        body!.Message.Should().Contain("verify");
     }
 
     [Fact]
