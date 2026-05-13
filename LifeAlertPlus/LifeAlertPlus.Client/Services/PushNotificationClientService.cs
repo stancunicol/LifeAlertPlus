@@ -3,6 +3,7 @@ using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 namespace LifeAlertPlus.Client.Services
 {
     public class PushNotificationClientService : IAsyncDisposable
@@ -13,12 +14,14 @@ namespace LifeAlertPlus.Client.Services
         public event Action<string, string>? OnNotificationReceived;
 
         private readonly string _notificationHubUrl;
+        private readonly IJSRuntime _jsRuntime;
 
-        public PushNotificationClientService(IConfiguration config)
+        public PushNotificationClientService(IConfiguration config, IJSRuntime jsRuntime)
         {
             var apiBaseUrl = config["ApiBaseUrl"] ?? config["Urls:ApiBaseUrl"] ?? "http://localhost:5176";
             apiBaseUrl = apiBaseUrl.TrimEnd('/');
             _notificationHubUrl = apiBaseUrl + "/notificationhub";
+            _jsRuntime = jsRuntime;
         }
 
         public async Task StartAsync(Guid userId)
@@ -27,7 +30,14 @@ namespace LifeAlertPlus.Client.Services
                 return;
 
             _hubConnection = new HubConnectionBuilder()
-                .WithUrl(_notificationHubUrl)
+                .WithUrl(_notificationHubUrl, options =>
+                {
+                    options.AccessTokenProvider = async () =>
+                    {
+                        try { return await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", "authToken"); }
+                        catch { return null; }
+                    };
+                })
                 .WithAutomaticReconnect()
                 .Build();
 

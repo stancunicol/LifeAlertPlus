@@ -5,7 +5,7 @@
 /* ── Design Tokens ── */
 :root {
     --font-heading:      'Jua', sans-serif;
-    --font-body:         'Inter', system-ui, sans-serif;
+    --font-body:         'Jua', sans-serif;
 
     --color-primary:     #2E7D32;
     --color-primary-mid: #4CAF50;
@@ -53,7 +53,7 @@
 }
 
 html {
-    font-size: 16px;
+    font-size: 14px;
 }
 
 * {

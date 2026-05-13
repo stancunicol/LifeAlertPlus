@@ -109,7 +109,6 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(measurement);
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpGet("today/count")]
         public async Task<IActionResult> GetTodayMeasurementsCount()
         {

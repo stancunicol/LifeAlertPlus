@@ -35,6 +35,8 @@ builder.Services.AddScoped<ChatbotClientService>();
 
 builder.Services.AddSingleton<LanguageService>();
 builder.Services.AddScoped<PushNotificationClientService>(sp =>
-    new PushNotificationClientService(sp.GetRequiredService<IConfiguration>()));
+    new PushNotificationClientService(
+        sp.GetRequiredService<IConfiguration>(),
+        sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>()));
 
 await builder.Build().RunAsync();
