@@ -9,6 +9,7 @@ using LifeAlertPlus.Infrastructure.Repositories;
 using LifeAlertPlus.Infrastructure.Seed;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 
@@ -148,6 +149,14 @@ builder.Services
 var app = builder.Build();
 
 await UserSeed.SeedAsync(app.Services);
+
+// Must run before any other middleware so that X-Forwarded-Proto / X-Forwarded-For
+// from Azure's reverse proxy are honoured. Without this the OAuth middleware generates
+// http:// callback URIs that don't match the https:// URI registered in Google Console.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 // Must be first: catches unhandled exceptions and re-applies CORS so the browser
 // can read the error body instead of seeing an opaque CORS failure on top of a 500.

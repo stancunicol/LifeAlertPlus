@@ -15,20 +15,19 @@ namespace LifeAlertPlus.Client.Pages.Login
         protected override async Task OnInitializedAsync()
         {
             var uri = new Uri(Navigation.Uri);
-            var query = uri.Query;
-            string? code = null;
+            string? code      = null;
+            string? returnUrl = null;
 
-            if (!string.IsNullOrWhiteSpace(query))
+            foreach (var part in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
             {
-                foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
-                {
-                    var kv = part.Split('=', 2);
-                    if (kv.Length == 2 && kv[0].Equals("code", StringComparison.OrdinalIgnoreCase))
-                    {
-                        code = Uri.UnescapeDataString(kv[1]);
-                        break;
-                    }
-                }
+                var kv = part.Split('=', 2);
+                if (kv.Length != 2) continue;
+
+                var key = kv[0];
+                var val = Uri.UnescapeDataString(kv[1]);
+
+                if (key.Equals("code",      StringComparison.OrdinalIgnoreCase)) code      = val;
+                if (key.Equals("returnUrl", StringComparison.OrdinalIgnoreCase)) returnUrl = val;
             }
 
             if (string.IsNullOrWhiteSpace(code))
@@ -39,13 +38,21 @@ namespace LifeAlertPlus.Client.Pages.Login
                 return;
             }
 
+            // Validate returnUrl — only allow local relative paths.
+            if (string.IsNullOrWhiteSpace(returnUrl) ||
+                !returnUrl.StartsWith('/') ||
+                returnUrl.StartsWith("//"))
+            {
+                returnUrl = "/dashboard";
+            }
+
             try
             {
                 var response = await Http.GetFromJsonAsync<TokenResponse>($"api/auth/exchange-token?code={Uri.EscapeDataString(code)}");
                 if (response?.Token is not null)
                 {
                     await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
-                    Navigation.NavigateTo("/dashboard");
+                    Navigation.NavigateTo(returnUrl);
                 }
                 else
                 {
