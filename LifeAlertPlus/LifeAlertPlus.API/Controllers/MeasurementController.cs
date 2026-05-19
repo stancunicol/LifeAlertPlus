@@ -3,14 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Domain.Entities;
-using System.Security.Claims;
-
 namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
-    public class MeasurementController : ControllerBase
+    public class MeasurementController : BaseApiController
     {
         private readonly IMeasurementService _measurementService;
         private readonly Services.AlertMonitorService _alertMonitor;
@@ -25,9 +23,10 @@ namespace LifeAlertPlus.API.Controllers
 
         private async Task<bool> UserOwnsMonitoredAsync(Guid monitoredId)
         {
-            var callerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(callerIdStr, out var callerId)) return false;
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            if (IsAdminRole()) return true;
+            var callerId = GetCallerId();
+            if (callerId == null) return false;
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
             return owned.Any(m => m.Id == monitoredId);
         }
 

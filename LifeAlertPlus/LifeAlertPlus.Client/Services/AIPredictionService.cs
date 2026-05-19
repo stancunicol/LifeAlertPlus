@@ -24,8 +24,9 @@ namespace LifeAlertPlus.Client.Services
                 }
                 return null;
             }
-            catch
+            catch (Exception)
             {
+                // Network or deserialization failure — caller treats null as unavailable, so swallow.
                 return null;
             }
         }

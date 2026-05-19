@@ -137,7 +137,8 @@ namespace LifeAlertPlus.API.Services
                         await measurementService.AddMeasurementAsync(measurement);
 
                         // Feed data to the alert monitor so notifications can trigger
-                        await _alertMonitor.ProcessMeasurementAsync(personId, pulse, temp, spo2, false);
+                        await _alertMonitor.ProcessMeasurementAsync(personId, pulse, temp, spo2, false,
+                            coordinates: payload.Neo6m ?? string.Empty);
                         
                         _logger.LogDebug("Saved measurement to database for person {PersonId}", personId);
                     }
@@ -213,7 +214,7 @@ namespace LifeAlertPlus.API.Services
             // Cleanup
             foreach (var kvp in entries)
             {
-                try { kvp.Value.Cts.Dispose(); } catch { }
+                try { kvp.Value.Cts.Dispose(); } catch (Exception) { } // Best-effort dispose.
                 _runs.TryRemove(kvp.Key, out _);
             }
 

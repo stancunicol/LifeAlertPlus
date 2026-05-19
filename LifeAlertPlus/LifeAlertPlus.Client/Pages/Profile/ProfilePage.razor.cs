@@ -10,10 +10,10 @@ namespace LifeAlertPlus.Client.Pages.Profile
     public partial class ProfilePage : ComponentBase
     {
         [Inject]
-        private AuthenticationService AuthenticationService { get; set; } = null!;
+        private AuthApiClient AuthApiClient { get; set; } = null!;
 
         [Inject]
-        private UserService UserService { get; set; } = null!;
+        private UserApiClient UserApiClient { get; set; } = null!;
 
         [Inject]
         private IJSRuntime JSRuntime { get; set; } = null!;
@@ -33,10 +33,10 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private string T(string key) => Lang.T(key);
 
         [Inject]
-        private UserMonitoredService UserMonitoredService { get; set; } = null!;
+        private UserMonitoredApiClient UserMonitoredApiClient { get; set; } = null!;
 
         [Inject]
-        private MonitoredService MonitoredService { get; set; } = null!;
+        private MonitoredApiClient MonitoredApiClient { get; set; } = null!;
 
         private UserProfileDTO CurrentUser { get; set; } = new UserProfileDTO();
 
@@ -49,10 +49,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private bool ShowChangePasswordModal { get; set; } = false;
         private UserChangePasswordRequestDTO PasswordChange { get; set; } = new UserChangePasswordRequestDTO();
         private string PasswordError { get; set; } = string.Empty;
-        // Password visibility toggles (for mobile/desktop)
-        private string CurrentPasswordFieldType { get; set; } = "password";
-        private string NewPasswordFieldType { get; set; } = "password";
-        private string ConfirmPasswordFieldType { get; set; } = "password";
+        private bool _showPasswords = false;
         private string EmailCurrentPasswordFieldType { get; set; } = "password";
 
         private bool ShowChangeEmailModal { get; set; } = false;
@@ -76,16 +73,16 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
             if (CurrentUser.Id == Guid.Empty)
             {
-                await AuthenticationService.LogoutAsync();
+                await AuthApiClient.LogoutAsync();
                 Navigation.NavigateTo("/login");
                 return;
             }
 
-            var userFromApi = await UserService.GetUserByIdAsync(CurrentUser.Id);
+            var userFromApi = await UserApiClient.GetUserByIdAsync(CurrentUser.Id);
             if (userFromApi == null)
             {
                 // User no longer exists in DB (e.g. after DB reset) — clear all client state
-                await AuthenticationService.LogoutAsync();
+                await AuthApiClient.LogoutAsync();
                 Navigation.NavigateTo("/login");
                 return;
             }
@@ -113,7 +110,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             try
             {
                 // Get monitored people count
-                var monitoredPeople = await UserMonitoredService.GetMonitoredPeopleAsync(CurrentUser.Id);
+                var monitoredPeople = await UserMonitoredApiClient.GetMonitoredPeopleAsync(CurrentUser.Id);
                 MonitoredCount = monitoredPeople.Count;
 
                 // Count alerts (people with critical status)
@@ -122,7 +119,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 {
                     try
                     {
-                        var espData = await MonitoredService.GetEspDataAsync(person.DeviceSerialNumber);
+                        var espData = await MonitoredApiClient.GetEspDataAsync(person.DeviceSerialNumber);
                         if (espData?.IsAvailable == true && espData.Max30100 != null && espData.Max30100.Count >= 2)
                         {
                             var pulse = espData.Max30100.ElementAtOrDefault(0);
@@ -143,10 +140,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
                 await InvokeAsync(StateHasChanged);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error loading monitored data: {ex.Message}");
-            }
+            catch (Exception) { }
         }
 
         private async Task LoadCurrentUserAsync()
@@ -198,7 +192,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 LastName = CurrentUser.LastName
             };
 
-            var request = await UserService.UpdateUserAsync(CurrentUser.Id, updateRequest);
+            var request = await UserApiClient.UpdateUserAsync(CurrentUser.Id, updateRequest);
 
             if(request == false)
             {
@@ -222,19 +216,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
             PasswordError = string.Empty;
         }
 
-        private void ToggleCurrentPasswordVisibility()
+        private void TogglePasswordsVisibility()
         {
-            CurrentPasswordFieldType = CurrentPasswordFieldType == "password" ? "text" : "password";
-        }
-
-        private void ToggleNewPasswordVisibility()
-        {
-            NewPasswordFieldType = NewPasswordFieldType == "password" ? "text" : "password";
-        }
-
-        private void ToggleConfirmPasswordVisibility()
-        {
-            ConfirmPasswordFieldType = ConfirmPasswordFieldType == "password" ? "text" : "password";
+            _showPasswords = !_showPasswords;
         }
 
         private void ToggleEmailCurrentPasswordVisibility()
@@ -247,6 +231,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             ShowChangePasswordModal = false;
             PasswordChange = new UserChangePasswordRequestDTO();
             PasswordError = string.Empty;
+            _showPasswords = false;
         }
 
         private async Task ChangePassword()
@@ -285,7 +270,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 ConfirmPassword = PasswordChange.ConfirmPassword
             };
 
-            var result = await AuthenticationService.UpdatePasswordAsync(request);
+            var result = await AuthApiClient.UpdatePasswordAsync(request);
 
             if (!result)
             {
@@ -356,7 +341,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 CurrentPassword = EmailChange.CurrentPassword
             };
 
-            var result = await AuthenticationService.UpdateEmailAsync(request);
+            var result = await AuthApiClient.UpdateEmailAsync(request);
 
             if (result != null)
             {
@@ -386,7 +371,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private async Task CloseEmailChangeSuccessModal()
         {
             ShowEmailChangeSuccess = false;
-            await AuthenticationService.LogoutAsync();
+            await AuthApiClient.LogoutAsync();
             Navigation.NavigateTo("/login");
         }
 
@@ -406,10 +391,10 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private async Task DeleteAccount()
         {
             ShowDeleteInfoModal = false;
-            var result = await UserService.DeleteUserAsync(CurrentUser.Id);
+            var result = await UserApiClient.DeleteUserAsync(CurrentUser.Id);
             if (result)
             {
-                await AuthenticationService.LogoutAsync();
+                await AuthApiClient.LogoutAsync();
                 Navigation.NavigateTo("/login");
             }
         }

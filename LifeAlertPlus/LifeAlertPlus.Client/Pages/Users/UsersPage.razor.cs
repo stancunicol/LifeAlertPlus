@@ -13,7 +13,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 	public partial class UsersPage : ComponentBase
 	{
 		[Inject]
-		private UserService UserService { get; set; } = default!;
+		private UserApiClient UserApiClient { get; set; } = default!;
 
 		[Inject]
 		private NavigationManager NavigationManager { get; set; } = default!;
@@ -22,7 +22,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 		private TokenParserService TokenParser { get; set; } = default!;
 
 		[Inject]
-		private UserMonitoredService UserMonitoredService { get; set; } = default!;
+		private UserMonitoredApiClient UserMonitoredApiClient { get; set; } = default!;
 
 		[Inject]
 		private IJSRuntime JSRuntime { get; set; } = default!;
@@ -76,7 +76,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 
 			try
 			{
-				var users = await UserService.GetAllUsersAsync();
+				var users = await UserApiClient.GetAllUsersAsync();
 				Users = users
 					.Where(u => !IsAdminRole(u.Role))
 					.ToList();
@@ -99,7 +99,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			// Use admin-level aggregated endpoint to get monitored counts for all users in one call
 			try
 			{
-				var all = await UserMonitoredService.GetAllMonitoredUsersAsync();
+				var all = await UserMonitoredApiClient.GetAllMonitoredUsersAsync();
 				var dict = new Dictionary<Guid, int>();
 				foreach (var mu in all)
 				{
@@ -126,7 +126,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			var ok = await JSRuntime.InvokeAsync<bool>("confirm", $"Deactivate user {user.Email}? This will disable the account.");
 			if (!ok) return;
 
-			var success = await UserService.DeactivateUserAsync(user.Id);
+			var success = await UserApiClient.DeactivateUserAsync(user.Id);
 			if (success)
 			{
 				user.DeletedAt = DateTime.UtcNow;
@@ -139,7 +139,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 
 		protected async Task ActivateUser(UserListItemDTO user)
 		{
-			var success = await UserService.ActivateUserAsync(user.Id);
+			var success = await UserApiClient.ActivateUserAsync(user.Id);
 			if (success)
 			{
 				user.DeletedAt = null;
@@ -159,7 +159,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 
 		protected async Task DeleteUser(UserListItemDTO user)
 		{
-			var success = await UserService.DeleteUserAsync(user.Id);
+			var success = await UserApiClient.DeleteUserAsync(user.Id);
 			if (success)
 			{
 				Users.Remove(user);

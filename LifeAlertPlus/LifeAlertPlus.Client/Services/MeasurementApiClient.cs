@@ -4,11 +4,11 @@ using LifeAlertPlus.Shared.DTOs.Requests.Measurement;
 
 namespace LifeAlertPlus.Client.Services
 {
-    public class MeasurementService
+    public class MeasurementApiClient
     {
         private readonly HttpClient _httpClient;
 
-        public MeasurementService(HttpClient httpClient)
+        public MeasurementApiClient(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }

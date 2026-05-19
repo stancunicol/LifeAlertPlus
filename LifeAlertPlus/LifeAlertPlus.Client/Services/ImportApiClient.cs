@@ -4,10 +4,10 @@ using System.Threading.Tasks;
 
 namespace LifeAlertPlus.Client.Services
 {
-    public class ImportService
+    public class ImportApiClient
     {
         private readonly HttpClient _httpClient;
-        public ImportService(HttpClient httpClient)
+        public ImportApiClient(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }

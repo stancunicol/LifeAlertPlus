@@ -7,11 +7,11 @@ using LifeAlertPlus.Shared.DTOs.Responses.UserMonitored;
 
 namespace LifeAlertPlus.Client.Services
 {
-    public class UserMonitoredService
+    public class UserMonitoredApiClient
     {
         private readonly HttpClient _httpClient;
 
-        public UserMonitoredService(HttpClient httpClient)
+        public UserMonitoredApiClient(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }

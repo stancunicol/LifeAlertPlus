@@ -10,6 +10,7 @@ using LifeAlertPlus.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http;
 using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.API.Controllers;
@@ -51,7 +52,7 @@ public class MeasurementControllerTests
 
         var conditionEngine    = new ConditionRuleEngine(scopeFactory.Object, TestDataFactory.CreateLogger<ConditionRuleEngine>());
         var activityProfileSvc = new ActivityProfileService(scopeFactory.Object, TestDataFactory.CreateLogger<ActivityProfileService>());
-        var nearestHospitalSvc = new NearestHospitalService(TestDataFactory.CreateLogger<NearestHospitalService>());
+        var nearestHospitalSvc = new NearestHospitalService(Mock.Of<IHttpClientFactory>(), TestDataFactory.CreateLogger<NearestHospitalService>());
 
         return new AlertMonitorService(
             scopeFactory.Object,

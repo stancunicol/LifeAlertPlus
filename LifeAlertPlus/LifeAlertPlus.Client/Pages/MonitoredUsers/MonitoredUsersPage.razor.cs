@@ -12,20 +12,19 @@ using Microsoft.AspNetCore.Components.Forms;
 using System.Text.Json;
 using Microsoft.JSInterop;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components;
 
 namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 {
 	public partial class MonitoredUsersPage : ComponentBase
 	{
 		[Inject]
-		private UserMonitoredService UserMonitoredService { get; set; } = default!;
+		private UserMonitoredApiClient UserMonitoredApiClient { get; set; } = default!;
 
 		[Inject]
-		private MonitoredService MonitoredService { get; set; } = default!;
+		private MonitoredApiClient MonitoredApiClient { get; set; } = default!;
 
 		[Inject]
-		private MeasurementService MeasurementService { get; set; } = default!;
+		private MeasurementApiClient MeasurementApiClient { get; set; } = default!;
 
 		[Inject]
 		private TokenParserService TokenParser { get; set; } = default!;
@@ -90,7 +89,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 
 			try
 			{
-				var data = await UserMonitoredService.GetAllMonitoredUsersAsync();
+				var data = await UserMonitoredApiClient.GetAllMonitoredUsersAsync();
 				Users = data
 					.Where(u => !IsAdminRole(u.Role))
 					.ToList();
@@ -258,7 +257,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 						bool hasAlert = false;
 						try
 						{
-							var esp = await MonitoredService.GetEspDataAsync(device);
+							var esp = await MonitoredApiClient.GetEspDataAsync(device);
 							online = esp?.IsAvailable == true;
 						}
 						catch { online = false; }
@@ -266,7 +265,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 						MeasurementResponseDTO? last = null;
 						try
 						{
-							var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(personId, 1, 1);
+							var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(personId, 1, 1);
 							last = measurements.FirstOrDefault();
 							if (last != null)
 							{

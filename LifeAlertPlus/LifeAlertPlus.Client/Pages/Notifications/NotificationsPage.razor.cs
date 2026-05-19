@@ -7,7 +7,7 @@ namespace LifeAlertPlus.Client.Pages.Notifications;
 public partial class NotificationsPage : ComponentBase, IAsyncDisposable
 {
     [Inject] private TokenParserService TokenParserService { get; set; } = default!;
-    [Inject] private UserService UserService { get; set; } = default!;
+    [Inject] private UserApiClient UserApiClient { get; set; } = default!;
     [Inject] private NotificationService NotificationService { get; set; } = default!;
     [Inject] private PushNotificationClientService PushService { get; set; } = default!;
     [Inject] private LanguageService Lang { get; set; } = default!;
@@ -39,7 +39,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
             UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
             ProfilePictureUrl = claims.ProfilePictureUrl;
 
-            var userProfile = await UserService.GetUserByIdAsync(claims.UserId);
+            var userProfile = await UserApiClient.GetUserByIdAsync(claims.UserId);
             if (userProfile != null)
             {
                 var apiName = $"{userProfile.FirstName} {userProfile.LastName}".Trim();

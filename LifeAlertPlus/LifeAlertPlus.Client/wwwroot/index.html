@@ -7,6 +7,7 @@
     <title>Life Alert +</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Inter:wght@400;500;600&display=swap" />
     <base href="/" />
     <link href="LifeAlertPlus.Client.styles.css" rel="stylesheet" />
     <link rel="stylesheet" href="css/app.css" />
@@ -19,6 +20,7 @@
     
     <!-- Theme color pentru mobile -->
     <meta name="theme-color" content="#A5D6A7" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="#A5D6A7" />
     <meta name="application-name" content="LifeAlert +" />
@@ -46,57 +48,24 @@
         An error has occurred. <a href="" class="reload">Refresh</a>
         <a class="dismiss">✕</a>
     </div>
-    <script src="js/profile.js"></script>
-    <script src="js/chartTooltip.js"></script>
-    <script src="js/pdfExport.js"></script>
-    <!-- Google Maps will be loaded dynamically from the API config endpoint to avoid embedding the key in source control -->
+    <script src="js/profile.js" defer></script>
+    <script src="js/chartTooltip.js" defer></script>
+    <script src="js/pdfExport.js" defer></script>
+    <!-- Google Maps is initialized from Blazor after auth: JSRuntime.InvokeVoidAsync("initGoogleMaps", apiKey) -->
     <script>
         (function () {
-            async function loadMaps() {
-                const tryFetch = async (url) => {
-                    try {
-                        const r = await fetch(url, { credentials: 'include' });
-                        if (!r.ok) return null;
-                        return await r.json();
-                    } catch { return null; }
-                };
-
-                // try relative path first (works when client is hosted by the API)
-                let data = await tryFetch('/api/config/maps');
-
-                // fallback to known API origins if needed
-                if (!data) {
-                    const candidates = [
-                        'https://api-lifealertplusiot-gqf3crdrenfgd9bw.germanywestcentral-01.azurewebsites.net',
-                        'http://localhost:5176'
-                    ];
-                    for (const base of candidates) {
-                        data = await tryFetch(base + '/api/config/maps');
-                        if (data) break;
-                    }
-                }
-
-                if (!data) {
-                    console.warn('Maps API key not found on server (tried relative and common dev hosts)');
-                    return;
-                }
-
-                const key = data && (data.apiKey || data.ApiKey || data.key);
-                if (!key) {
-                    console.warn('Maps API key missing from config response');
-                    return;
-                }
-
-                const s = document.createElement('script');
-                s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key);
+            var _mapsLoaded = false;
+            window.initGoogleMaps = function (key) {
+                if (_mapsLoaded || !key) return;
+                _mapsLoaded = true;
+                var s = document.createElement('script');
+                s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&loading=async';
                 s.async = true; s.defer = true;
                 document.head.appendChild(s);
-            }
-            // load but don't block app startup
-            loadMaps();
+            };
         })();
     </script>
-    <script src="js/googleMapsInterop.js"></script>
+    <script src="js/googleMapsInterop.js" defer></script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script>
         // expose simple getter for the app version (read from meta)

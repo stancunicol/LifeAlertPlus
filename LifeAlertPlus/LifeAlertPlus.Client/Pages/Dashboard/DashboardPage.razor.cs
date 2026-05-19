@@ -17,19 +17,19 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     private TokenParserService TokenParser { get; set; } = default!;
 
     [Inject]
-    private UserService UserService { get; set; } = default!;
+    private UserApiClient UserApiClient { get; set; } = default!;
 
     [Inject]
-    private AuthenticationService AuthenticationService { get; set; } = default!;
+    private AuthApiClient AuthApiClient { get; set; } = default!;
 
     [Inject]
-    private UserMonitoredService UserMonitoredService { get; set; } = default!;
+    private UserMonitoredApiClient UserMonitoredApiClient { get; set; } = default!;
 
     [Inject]
-    private MonitoredService MonitoredService { get; set; } = default!;
+    private MonitoredApiClient MonitoredApiClient { get; set; } = default!;
 
     [Inject]
-    private MeasurementService MeasurementService { get; set; } = default!;
+    private MeasurementApiClient MeasurementApiClient { get; set; } = default!;
 
     [Inject]
     private LanguageService Lang { get; set; } = default!;
@@ -70,10 +70,10 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
         ProfilePictureUrl = claims.ProfilePictureUrl ?? string.Empty;
 
-        var userFromApi = await UserService.GetUserByIdAsync(claims.UserId);
+        var userFromApi = await UserApiClient.GetUserByIdAsync(claims.UserId);
         if (userFromApi == null)
         {
-            await AuthenticationService.LogoutAsync();
+            await AuthApiClient.LogoutAsync();
             Navigation.NavigateTo("/login");
             return;
         }
@@ -160,12 +160,11 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     {
         try
         {
-            TodayMeasurements = await MeasurementService.GetTodayMeasurementsCountAsync();
+            TodayMeasurements = await MeasurementApiClient.GetTodayMeasurementsCountAsync();
             await InvokeAsync(StateHasChanged);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Error loading today's measurements count: {ex.Message}");
             TodayMeasurements = 0;
         }
     }
@@ -180,7 +179,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                 return;
             }
 
-            var monitoredPeople = await UserMonitoredService.GetMonitoredPeopleAsync(_currentUserId);
+            var monitoredPeople = await UserMonitoredApiClient.GetMonitoredPeopleAsync(_currentUserId);
             if (!monitoredPeople.Any())
             {
                 MonitoredSamples = Array.Empty<MonitoredSample>();
@@ -202,7 +201,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                 
                 try
                 {
-                    espData = await MonitoredService.GetEspDataAsync(person.DeviceSerialNumber);
+                    espData = await MonitoredApiClient.GetEspDataAsync(person.DeviceSerialNumber);
                 }
                 catch
                 {
@@ -212,7 +211,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                 // Get the last measurement for this person
                 try
                 {
-                    var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(person.Id, 1, 1);
+                    var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(person.Id, 1, 1);
                     var lastMeasurement = measurements?.FirstOrDefault();
                     if (lastMeasurement != null)
                     {
@@ -279,9 +278,8 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
 
             await InvokeAsync(StateHasChanged);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Error loading monitored people: {ex.Message}");
             MonitoredSamples = Array.Empty<MonitoredSample>();
         }
     }

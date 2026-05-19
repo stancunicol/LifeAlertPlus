@@ -1,16 +1,16 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using Microsoft.JSInterop;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
 
 namespace LifeAlertPlus.Client.Services
 {
-    public class AuthenticationService
+    public class AuthApiClient
     {
         private readonly HttpClient _httpClient;
         private readonly IJSRuntime _jsRuntime;
-        
-        public AuthenticationService(HttpClient httpClient, IJSRuntime jsRuntime)
+
+        public AuthApiClient(HttpClient httpClient, IJSRuntime jsRuntime)
         {
             _httpClient = httpClient;
             _jsRuntime = jsRuntime;
@@ -58,7 +58,7 @@ namespace LifeAlertPlus.Client.Services
 
             return response.IsSuccessStatusCode;
         }
-        
+
         public async Task LogoutAsync()
         {
             await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");

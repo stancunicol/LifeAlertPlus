@@ -110,7 +110,7 @@ namespace LifeAlertPlus.Client.Services
             ["dashboard.usersOffline"] = "Users Offline",
             ["dashboard.measurementsToday"] = "Total Measurements Today",
             ["dashboard.monitoredPeople"] = "Monitored People",
-            ["dashboard.viewAll"] = "View All →",
+            ["dashboard.viewAll"] = "View All",
 
             // Shared card labels
             ["card.pulse"] = "Pulse (bpm)",
@@ -969,7 +969,7 @@ namespace LifeAlertPlus.Client.Services
             ["dashboard.usersOffline"] = "Utilizatori offline",
             ["dashboard.measurementsToday"] = "Măsurători totale azi",
             ["dashboard.monitoredPeople"] = "Persoane monitorizate",
-            ["dashboard.viewAll"] = "Vezi toate →",
+            ["dashboard.viewAll"] = "Vezi toate",
 
             // Shared card labels
             ["card.pulse"] = "Puls (bpm)",

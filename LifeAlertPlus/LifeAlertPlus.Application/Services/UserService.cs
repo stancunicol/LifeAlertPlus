@@ -38,10 +38,10 @@ namespace LifeAlertPlus.Application.Services
             return await _userRepository.GetAllUsersAsync();
         }
 
-        public string GenerateEmailVerificationToken()
-        {
-            return Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-        }
+        public string GenerateEmailVerificationToken() => GenerateToken();
+
+        private static string GenerateToken() =>
+            Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
 
         public async Task<User?> VerifyEmailAsync(string token)
         {
@@ -112,15 +112,9 @@ namespace LifeAlertPlus.Application.Services
             return await _userRepository.GetUserByPasswordResetTokenAsync(token);
         }
 
-        public string GeneratePasswordResetToken()
-        {
-            return Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-        }
+        public string GeneratePasswordResetToken() => GenerateToken();
 
-        public string GenerateEmailChangeCancelToken()
-        {
-            return Convert.ToBase64String(Guid.NewGuid().ToByteArray()) + Convert.ToBase64String(Guid.NewGuid().ToByteArray());
-        }
+        public string GenerateEmailChangeCancelToken() => GenerateToken();
 
         public async Task<User?> GetUserByEmailChangeCancelTokenAsync(string token)
         {

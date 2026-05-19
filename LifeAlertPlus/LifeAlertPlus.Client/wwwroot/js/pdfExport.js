@@ -26,6 +26,25 @@ window.pdfExport = {
     generateMedicalReport: async function (data) {
         await this._loadLibraries();
 
+        function normalizeRo(val) {
+            if (typeof val === 'string') {
+                return val
+                    .replace(/[ăÃ¤]/g, 'a').replace(/[ĂÃ]/g, 'A')
+                    .replace(/[â]/g, 'a').replace(/[Â]/g, 'A')
+                    .replace(/[î]/g, 'i').replace(/[Î]/g, 'I')
+                    .replace(/[șş]/g, 's').replace(/[ȘŞ]/g, 'S')
+                    .replace(/[țţ]/g, 't').replace(/[ȚŢ]/g, 'T');
+            }
+            if (Array.isArray(val)) return val.map(normalizeRo);
+            if (val && typeof val === 'object') {
+                const out = {};
+                for (const k of Object.keys(val)) out[k] = normalizeRo(val[k]);
+                return out;
+            }
+            return val;
+        }
+        data = normalizeRo(data);
+
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
         const pw = doc.internal.pageSize.getWidth();   // 210
@@ -708,5 +727,3 @@ window.pdfExport = {
     }
 };
 
-// Preload libraries eagerly so they're ready when user clicks export
-try { window.pdfExport._loadLibraries(); } catch(e) { console.warn('PDF lib preload failed:', e); }

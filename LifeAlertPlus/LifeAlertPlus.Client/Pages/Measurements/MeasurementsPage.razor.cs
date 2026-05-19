@@ -10,8 +10,8 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 		[Parameter]
 		public Guid PersonId { get; set; }
 
-		[Inject] private MeasurementService MeasurementService { get; set; } = default!;
-		[Inject] private MonitoredService MonitoredService { get; set; } = default!;
+		[Inject] private MeasurementApiClient MeasurementApiClient { get; set; } = default!;
+		[Inject] private MonitoredApiClient MonitoredApiClient { get; set; } = default!;
 		[Inject] private TokenParserService TokenParser { get; set; } = default!;
 		[Inject] private NavigationManager NavigationManager { get; set; } = default!;
 		[Inject] private LanguageService Lang { get; set; } = default!;
@@ -134,7 +134,7 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 		{
 			try
 			{
-				var monitored = await MonitoredService.GetMonitoredPersonByIdAsync(PersonId);
+				var monitored = await MonitoredApiClient.GetMonitoredPersonByIdAsync(PersonId);
 				if (monitored != null)
 				{
 					PersonName = $"{monitored.FirstName} {monitored.LastName}".Trim();
@@ -160,7 +160,7 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 				bool hasMore = true;
 				while (hasMore)
 				{
-					var batch = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, page, 200);
+					var batch = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, page, 200);
 					var list = batch.ToList();
 					AllMeasurements.AddRange(list);
 					hasMore = list.Count >= 200;

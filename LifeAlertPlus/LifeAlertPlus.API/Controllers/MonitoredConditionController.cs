@@ -4,14 +4,12 @@ using LifeAlertPlus.Infrastructure.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-
 namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
-    public class MonitoredConditionController : ControllerBase
+    public class MonitoredConditionController : BaseApiController
     {
         private readonly IMonitoredConditionRepository _repo;
         private readonly LifeAlertPlusDbContext _db;
@@ -81,15 +79,10 @@ namespace LifeAlertPlus.API.Controllers
 
         private async Task<bool> HasAccess(Guid monitoredId)
         {
-            var idStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("sub")?.Value
-                ?? User.FindFirst("nameid")?.Value;
-
-            if (idStr == null || !Guid.TryParse(idStr, out var userId))
-                return false;
-
+            var userId = GetCallerId();
+            if (userId == null) return false;
             return await _db.UserMonitoreds
-                .AnyAsync(um => um.IdUser == userId && um.IdMonitored == monitoredId);
+                .AnyAsync(um => um.IdUser == userId.Value && um.IdMonitored == monitoredId);
         }
     }
 }

@@ -18,18 +18,18 @@ builder.Services.AddScoped(sp =>
     return new HttpClient(handler) { BaseAddress = new Uri(apiBaseUrl) };
 });
 
-builder.Services.AddScoped<AuthenticationService>();
+builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<NotificationService>();
-builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<MonitoredService>();
-builder.Services.AddScoped<UserMonitoredService>();
+builder.Services.AddScoped<UserApiClient>();
+builder.Services.AddScoped<MonitoredApiClient>();
+builder.Services.AddScoped<UserMonitoredApiClient>();
 builder.Services.AddScoped<SimulationService>();
 builder.Services.AddScoped<SimulationBackgroundService>();
 builder.Services.AddScoped<TokenParserService>();
 builder.Services.AddScoped<ProfilePictureService>();
 builder.Services.AddScoped<UserStateService>();
-builder.Services.AddScoped<ImportService>();
-builder.Services.AddScoped<MeasurementService>();
+builder.Services.AddScoped<ImportApiClient>();
+builder.Services.AddScoped<MeasurementApiClient>();
 builder.Services.AddScoped<AIPredictionService>();
 builder.Services.AddScoped<ChatbotClientService>();
 

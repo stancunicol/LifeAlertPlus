@@ -1,7 +1,7 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
+using LifeAlertPlus.API.Helpers;
 using LifeAlertPlus.API.Services;
 using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Domain.Entities;
@@ -17,7 +17,7 @@ namespace LifeAlertPlus.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class EmailController : ControllerBase
+    public class EmailController : BaseApiController
     {
         private readonly IEmailService _emailService;
         private readonly IInvitationRepository _invitationRepository;
@@ -46,7 +46,7 @@ namespace LifeAlertPlus.API.Controllers
         public async Task<IActionResult> SendDoctorInvitation([FromBody] SendDoctorInvitationRequestDTO request)
         {
             if (request.PatientId == Guid.Empty || string.IsNullOrWhiteSpace(request.PatientName) || string.IsNullOrWhiteSpace(request.DoctorEmail))
-                return BadRequest("Doctor email, patient ID și numele pacientului sunt necesare.");
+                return BadRequest(new { Message = "Doctor email, patient ID și numele pacientului sunt necesare." });
 
             // Authorization: user must own that monitored person, unless admin.
             var callerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -54,10 +54,9 @@ namespace LifeAlertPlus.API.Controllers
                 ?? User.FindFirstValue("nameid");
 
             if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
-                return Unauthorized(new { Message = "Invalid token." });
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
 
-            var roleClaim = User.FindFirstValue(ClaimTypes.Role) ?? User.FindFirstValue("role") ?? string.Empty;
-            var isAdmin = IsAdminRole(roleClaim);
+            var isAdmin = IsAdminRole();
 
             if (!isAdmin)
             {
@@ -69,12 +68,12 @@ namespace LifeAlertPlus.API.Controllers
             // Ensure patient exists.
             var patient = await _monitoredService.GetMonitoredPersonByIdAsync(request.PatientId);
             if (patient == null)
-                return NotFound(new { Message = "Monitored person not found." });
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
             try
             {
                 var rawToken = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
-                var tokenHash = ComputeTokenHash(rawToken);
+                var tokenHash = TokenHashHelper.ComputeSha256(rawToken);
 
                 var invitation = new Invitation
                 {
@@ -115,7 +114,7 @@ namespace LifeAlertPlus.API.Controllers
         public async Task<IActionResult> SendReport([FromBody] SendReportEmailRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.DoctorEmail) || string.IsNullOrWhiteSpace(request.PdfBase64))
-                return BadRequest("Doctor email and PDF are required.");
+                return BadRequest(new { Message = "Doctor email and PDF are required." });
 
             try
             {
@@ -125,7 +124,7 @@ namespace LifeAlertPlus.API.Controllers
             }
             catch (FormatException)
             {
-                return BadRequest("Invalid PDF data.");
+                return BadRequest(new { Message = "Invalid PDF data." });
             }
             catch (Exception ex)
             {
@@ -134,17 +133,5 @@ namespace LifeAlertPlus.API.Controllers
             }
         }
 
-        private static bool IsAdminRole(string? role)
-        {
-            return !string.IsNullOrWhiteSpace(role)
-                && role.IndexOf("admin", StringComparison.OrdinalIgnoreCase) >= 0;
-        }
-
-        private static string ComputeTokenHash(string rawToken)
-        {
-            var bytes = Encoding.UTF8.GetBytes(rawToken);
-            var hash = SHA256.HashData(bytes);
-            return Convert.ToHexString(hash);
-        }
     }
 }

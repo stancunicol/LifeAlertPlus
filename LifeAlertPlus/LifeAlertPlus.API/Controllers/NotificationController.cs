@@ -3,14 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using LifeAlertPlus.Infrastructure.Context;
 using LifeAlertPlus.Shared.DTOs.Responses.Notification;
-using System.Security.Claims;
-
 namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
-    public class NotificationController : ControllerBase
+    public class NotificationController : BaseApiController
     {
         private readonly LifeAlertPlusDbContext _dbContext;
 
@@ -39,9 +37,18 @@ namespace LifeAlertPlus.API.Controllers
             if (monitoredId.HasValue)
                 baseQuery = baseQuery.Where(n => n.IdMonitored == monitoredId.Value);
 
-            var criticalCount = await baseQuery.CountAsync(n => n.NotificationType == "Critical");
-            var alertCount    = await baseQuery.CountAsync(n => n.NotificationType == "Alert");
-            var unreadCount   = await baseQuery.CountAsync(n => !n.IsRead);
+            var counts = await baseQuery
+                .GroupBy(_ => 1)
+                .Select(g => new
+                {
+                    CriticalCount = g.Count(n => n.NotificationType == "Critical"),
+                    AlertCount    = g.Count(n => n.NotificationType == "Alert"),
+                    UnreadCount   = g.Count(n => !n.IsRead)
+                })
+                .FirstOrDefaultAsync();
+            var criticalCount = counts?.CriticalCount ?? 0;
+            var alertCount    = counts?.AlertCount    ?? 0;
+            var unreadCount   = counts?.UnreadCount   ?? 0;
 
             var filtered = baseQuery;
             if (!string.IsNullOrWhiteSpace(type))
@@ -150,12 +157,5 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { Count = count });
         }
 
-        private Guid? GetCallerId()
-        {
-            var idStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("sub")?.Value
-                ?? User.FindFirst("nameid")?.Value;
-            return idStr != null && Guid.TryParse(idStr, out var id) ? id : null;
-        }
     }
 }

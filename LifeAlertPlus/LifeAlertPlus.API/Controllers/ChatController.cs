@@ -8,7 +8,7 @@ namespace LifeAlertPlus.API.Controllers
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
-    public class ChatController : ControllerBase
+    public class ChatController : BaseApiController
     {
         private readonly ChatbotService _chatbotService;
 
@@ -21,7 +21,7 @@ namespace LifeAlertPlus.API.Controllers
         public async Task<IActionResult> Chat([FromBody] ChatRequest request)
         {
             if (request.Messages.Count == 0)
-                return BadRequest("No messages provided.");
+                return BadRequest(new { Message = "No messages provided." });
 
             // Max 20 messages to avoid excessive token usage
             if (request.Messages.Count > 20)

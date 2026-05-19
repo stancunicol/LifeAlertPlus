@@ -35,7 +35,7 @@ namespace LifeAlertPlus.Client.Components.Chatbot
         private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
         {
             UpdateVisibility(e.Location);
-            InvokeAsync(StateHasChanged);
+            _ = InvokeAsync(StateHasChanged);
         }
 
         private void UpdateVisibility(string url)
@@ -46,7 +46,7 @@ namespace LifeAlertPlus.Client.Components.Chatbot
                  && !lower.Contains("/verify");
         }
 
-        private void OnLangChanged() => InvokeAsync(StateHasChanged);
+        private void OnLangChanged() => _ = InvokeAsync(StateHasChanged);
 
         private async Task Toggle()
         {

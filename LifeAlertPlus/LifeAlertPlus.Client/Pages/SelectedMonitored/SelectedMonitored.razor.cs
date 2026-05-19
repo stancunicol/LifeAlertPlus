@@ -9,6 +9,7 @@ using LifeAlertPlus.Shared.DTOs.Responses.AI;
 using LifeAlertPlus.Shared.DTOs.Requests.Email;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Shared.DTOs.Responses.ActivityProfile;
+using LifeAlertPlus.Shared.DTOs.Responses.Monitoring;
 
 namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 {
@@ -21,16 +22,16 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private NavigationManager NavigationManager { get; set; } = default!;
 
         [Inject]
-        private MonitoredService MonitoredService { get; set; } = default!;
+        private MonitoredApiClient MonitoredApiClient { get; set; } = default!;
 
         [Inject]
         private TokenParserService TokenParserService { get; set; } = default!;
 
         [Inject]
-        private MeasurementService MeasurementService { get; set; } = default!;
+        private MeasurementApiClient MeasurementApiClient { get; set; } = default!;
 
         [Inject]
-        private UserService UserService { get; set; } = default!;
+        private UserApiClient UserApiClient { get; set; } = default!;
 
         [Inject]
         private AIPredictionService AIPredictionService { get; set; } = default!;
@@ -158,7 +159,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
             try
             {
-                var monitored = await MonitoredService.GetMonitoredPersonByIdAsync(PersonId);
+                var monitored = await MonitoredApiClient.GetMonitoredPersonByIdAsync(PersonId);
                 if (monitored == null)
                 {
                     Person = null;
@@ -168,7 +169,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 }
 
                 // Get ESP data
-                var espData = await MonitoredService.GetEspDataAsync(monitored.DeviceSerialNumber);
+                var espData = await MonitoredApiClient.GetEspDataAsync(monitored.DeviceSerialNumber);
                 
                 int heartRate = 0;
                 int spO2 = 0;
@@ -212,7 +213,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 {
                     try
                     {
-                        await MeasurementService.AddMeasurementAsync(new LifeAlertPlus.Shared.DTOs.Requests.Measurement.MeasurementRequestDTO
+                        await MeasurementApiClient.AddMeasurementAsync(new LifeAlertPlus.Shared.DTOs.Requests.Measurement.MeasurementRequestDTO
                         {
                             Name = "Auto",
                             Activity = "Monitoring",
@@ -228,7 +229,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 }
 
                 // Get last measurement time
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(monitored.Id, 1, 1);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(monitored.Id, 1, 1);
                 var lastMeasurement = measurements?.FirstOrDefault();
                 string lastUpdate = lastMeasurement != null 
                     ? lastMeasurement.CreatedAt.ToLocalTime().ToString("MMMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture)
@@ -317,7 +318,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         {
             try
             {
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 1);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 1);
                 var last = measurements?.FirstOrDefault();
                 if (last == null) return;
 
@@ -526,7 +527,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     // Re-run AI with updated thresholds: live ESP first, last measurement as fallback
                     try
                     {
-                        var espData = await MonitoredService.GetEspDataAsync(Person?.DeviceSerial ?? "");
+                        var espData = await MonitoredApiClient.GetEspDataAsync(Person?.DeviceSerial ?? "");
                         if (espData?.IsAvailable == true)
                             _ = LoadAIPredictionAsync(espData);
                         else
@@ -579,7 +580,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             try
             {
                 int fetchSize = CurrentChartView == ChartViewMode.Weekly ? 10000 : 1000;
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, fetchSize);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, fetchSize);
                 if (measurements == null || !measurements.Any())
                 {
                     LoadEmptyChartData();
@@ -597,7 +598,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     LoadWeeklyChartData(measurementsList);
                 }
 
-                HeartRatePoints = ComputePointsWithRange(HeartRateHistory, 40, 120);
+                HeartRatePoints = ComputePointsWithRange(HeartRateHistory, 40, 140);
                 TemperaturePoints = ComputePointsWithRange(TemperatureHistory, 35, 39);
                 HrTooltipData = ComputeTooltipData(HeartRateHistory, 40, 120);
                 TempTooltipData = ComputeTooltipData(TemperatureHistory, 35, 39);
@@ -1036,7 +1037,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         {
             try
             {
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 50);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 50);
                 if (measurements == null || !measurements.Any())
                 {
                     RecentAlerts = new List<Alert>();
@@ -1094,7 +1095,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         {
             try
             {
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 4);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 4);
                 if (measurements == null || !measurements.Any())
                 {
                     RecentMeasurements = new List<Measurement>();
@@ -1188,7 +1189,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
                 ProfilePictureUrl = claims.ProfilePictureUrl;
 
-                var userProfile = await UserService.GetUserByIdAsync(claims.UserId);
+                var userProfile = await UserApiClient.GetUserByIdAsync(claims.UserId);
                 if (userProfile != null)
                 {
                     var apiName = $"{userProfile.FirstName} {userProfile.LastName}".Trim();
@@ -1209,13 +1210,10 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 UserFullName = "User";
             }
 
-            await LoadPersonDataAsync();
-            await LoadChartDataAsync();
-            await LoadRecentAlertsAsync();
-            await LoadRecentMeasurementsAsync();
+            await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
 
             // Start auto-refresh timer (uses user-configured update frequency)
-            _refreshTimer = new System.Threading.Timer(async _ => await RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
+            _refreshTimer = new System.Threading.Timer(_ => _ = RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
         }
 
         private async Task RefreshDataAsync()
@@ -1226,10 +1224,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             {
                 await InvokeAsync(async () =>
                 {
-                    await LoadPersonDataAsync();
-                    await LoadChartDataAsync();
-                    await LoadRecentAlertsAsync();
-                    await LoadRecentMeasurementsAsync();
+                    await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
                     // Reset map so it re-initializes with fresh GPS coordinates
                     _mapInitialized = false;
                     _ = LoadTrendPredictionsAsync(PersonId);
@@ -1361,6 +1356,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 lat = 0; lon = 0; return false;
             }
         }
+
 
         private async Task InitTooltipsAsync()
         {
@@ -1573,7 +1569,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             try
             {
                 // Fetch all measurements to determine date range
-                var allMeasurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 10000);
+                var allMeasurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 10000);
                 var list = (allMeasurements ?? Enumerable.Empty<MeasurementResponseDTO>()).ToList();
 
                 if (list.Count == 0)
@@ -1594,10 +1590,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 _showExportModal = true;
                 StateHasChanged();
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Export modal error: {ex.Message}");
-            }
+            catch (Exception) { }
         }
 
         private void CloseExportModal()
@@ -1676,9 +1669,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     _inviteSuccess = false;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Invite send error: {ex.Message}");
                 _inviteStatusMessage = T("invite.invitationSendError");
                 _inviteSuccess = false;
             }
@@ -1725,9 +1717,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     _emailSuccess = false;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Email send error: {ex.Message}");
                 _emailStatusMessage = T("email.sendError");
                 _emailSuccess = false;
             }
@@ -1746,7 +1737,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
             try
             {
-                var allMeasurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 10000);
+                var allMeasurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 10000);
                 var filtered = (allMeasurements ?? Enumerable.Empty<MeasurementResponseDTO>())
                     .Where(m =>
                     {
@@ -2249,7 +2240,6 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"PDF export error: {ex.Message}");
                 await JSRuntime.InvokeVoidAsync("alert", $"Export failed: {ex.Message}");
             }
             finally
@@ -2270,7 +2260,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         private async void OpenEditModal()
         {
             _editError = null;
-            var monitored = await MonitoredService.GetMonitoredPersonByIdAsync(PersonId);
+            var monitored = await MonitoredApiClient.GetMonitoredPersonByIdAsync(PersonId);
             if (monitored != null)
             {
                 _editFirstName = monitored.FirstName;
@@ -2331,7 +2321,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     UpdateFrequency = _editUpdateFrequency
                 };
 
-                var success = await MonitoredService.UpdateMonitoredPersonAsync(PersonId, dto);
+                var success = await MonitoredApiClient.UpdateMonitoredPersonAsync(PersonId, dto);
                 if (success)
                 {
                     _showEditModal = false;

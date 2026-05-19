@@ -9,7 +9,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
     public partial class SettingsPage : ComponentBase
     {
         [Inject]
-        private UserService UserService { get; set; } = default!;
+        private UserApiClient UserApiClient { get; set; } = default!;
 
         [Inject]
         private IJSRuntime JSRuntime { get; set; } = default!;
@@ -104,7 +104,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 NotifyBySms = Settings.NotifyBySms
             };
 
-            var request = await UserService.UpdateUserAsync(UserId, settings);
+            var request = await UserApiClient.UpdateUserAsync(UserId, settings);
 
             if(request == false)
             {
@@ -163,7 +163,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             ProfilePictureUrl = claims.ProfilePictureUrl;
             UserId = claims.UserId;
 
-            var userFromApi = await UserService.GetUserByIdAsync(UserId);
+            var userFromApi = await UserApiClient.GetUserByIdAsync(UserId);
             if (userFromApi == null)
             {
                 // User no longer exists in DB (e.g. after DB reset) — clear all client state

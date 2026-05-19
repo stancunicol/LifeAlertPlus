@@ -70,10 +70,7 @@
                                @bind="Password"
                                @bind:event="oninput"
                                @onkeydown="HandleKeyDown" />
-                        @if (!string.IsNullOrEmpty(Password) || !string.IsNullOrEmpty(ConfirmPassword))
-                        {
-                            <button type="button" class="password-toggle" @onclick="ToggleShowPassword" aria-label="Toggle password visibility">👁</button>
-                        }
+                        <button type="button" class="password-toggle" @onclick="ToggleShowPassword" aria-label="Toggle password visibility">👁</button>
                     </div>
                 </div>
             </div>

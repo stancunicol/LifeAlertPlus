@@ -143,8 +143,12 @@ namespace LifeAlertPlus.Client.Pages.Invite
                     return;
                 }
 
-                // 2) Patient data
-                var patientResp = await Http.GetAsync($"api/invitations/patient?token={Uri.EscapeDataString(_token)}");
+                // 2+3) Patient data and measurements in parallel
+                var patientTask = Http.GetAsync($"api/invitations/patient?token={Uri.EscapeDataString(_token)}");
+                var measTask    = Http.GetAsync($"api/invitations/measurements?token={Uri.EscapeDataString(_token)}&pageNumber=1&pageSize=1000");
+                await Task.WhenAll(patientTask, measTask);
+
+                var patientResp = await patientTask;
                 if (!patientResp.IsSuccessStatusCode)
                 {
                     ErrorMessage = T("invite.invalid");
@@ -153,8 +157,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
 
                 Patient = await patientResp.Content.ReadFromJsonAsync<LifeAlertPlus.Domain.Entities.Monitored>();
 
-                // 3) Measurements
-                var measResp = await Http.GetAsync($"api/invitations/measurements?token={Uri.EscapeDataString(_token)}&pageNumber=1&pageSize=1000");
+                var measResp = await measTask;
                 if (measResp.IsSuccessStatusCode)
                 {
                     var list = await measResp.Content.ReadFromJsonAsync<List<MeasurementResponseDTO>>();

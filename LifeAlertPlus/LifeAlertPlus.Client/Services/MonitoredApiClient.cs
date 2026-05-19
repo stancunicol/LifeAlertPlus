@@ -5,11 +5,11 @@ using LifeAlertPlus.Domain.Entities;
 
 namespace LifeAlertPlus.Client.Services
 {
-    public class MonitoredService
+    public class MonitoredApiClient
     {
         private readonly HttpClient _httpClient;
 
-        public MonitoredService(HttpClient httpClient)
+        public MonitoredApiClient(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }

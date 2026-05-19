@@ -62,8 +62,8 @@
     }
 </div>
 
-@inject LifeAlertPlus.Client.Services.UserService UserService
-@inject LifeAlertPlus.Client.Services.UserMonitoredService UserMonitoredService
+@inject LifeAlertPlus.Client.Services.UserApiClient UserApiClient
+@inject LifeAlertPlus.Client.Services.UserMonitoredApiClient UserMonitoredApiClient
 @inject LifeAlertPlus.Client.Services.TokenParserService TokenParser
 @inject NavigationManager NavigationManager
 
@@ -98,8 +98,8 @@
         LoadError = null;
         try
         {
-            User = await UserService.GetUserByIdAsync(UserId);
-            Monitored = await UserMonitoredService.GetMonitoredPeopleAsync(UserId);
+            User = await UserApiClient.GetUserByIdAsync(UserId);
+            Monitored = await UserMonitoredApiClient.GetMonitoredPeopleAsync(UserId);
         }
         catch (Exception ex)
         {

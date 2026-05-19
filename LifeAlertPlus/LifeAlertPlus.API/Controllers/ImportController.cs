@@ -2,14 +2,12 @@ using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-
 namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
-    public class ImportController : ControllerBase
+    public class ImportController : BaseApiController
     {
         private readonly IImportService _importService;
         private readonly IMonitoredService _monitoredService;
@@ -31,11 +29,11 @@ namespace LifeAlertPlus.API.Controllers
                 return BadRequest(new { Errors = result.Errors });
 
             // Verify caller owns every monitored person referenced by serial in the payload
-            var callerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(callerIdStr, out var callerId))
+            var callerId = GetCallerId();
+            if (callerId == null)
                 return Unauthorized();
 
-            var ownedMonitoreds = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            var ownedMonitoreds = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
             var ownedSerials = new HashSet<string>(
                 ownedMonitoreds.Select(m => m.DeviceSerialNumber),
                 StringComparer.OrdinalIgnoreCase);

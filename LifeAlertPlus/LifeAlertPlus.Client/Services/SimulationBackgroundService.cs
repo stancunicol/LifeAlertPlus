@@ -30,8 +30,9 @@ namespace LifeAlertPlus.Client.Services
 						var ok = await sendAsync(payload);
 						onResult?.Invoke(ok);
 					}
-					catch
+					catch (Exception)
 					{
+						// Payload generation or send failure — report as failed tick, keep loop alive.
 						onResult?.Invoke(false);
 					}
 
@@ -54,7 +55,7 @@ namespace LifeAlertPlus.Client.Services
 					{
 						existing.Cts.Cancel();
 					}
-					catch { }
+					catch (Exception) { } // Cancel may throw if already disposed; safe to ignore.
 				}
 				_runs[personId] = (cts, runningTask);
 			}
@@ -70,19 +71,19 @@ namespace LifeAlertPlus.Client.Services
 				{
 					entry.Cts.Cancel();
 				}
-				catch { }
+				catch (Exception) { } // May already be cancelled/disposed.
 
 				try
 				{
 					await Task.WhenAny(entry.RunningTask, Task.Delay(5000));
 				}
-				catch { }
+				catch (Exception) { } // Task may have faulted; we just want to wait briefly.
 
 				try
 				{
 					entry.Cts.Dispose();
 				}
-				catch { }
+				catch (Exception) { } // Dispose is best-effort.
 			}
 		}
 
@@ -91,7 +92,7 @@ namespace LifeAlertPlus.Client.Services
 			var entries = _runs.ToArray();
 			foreach (var kvp in entries)
 			{
-				try { kvp.Value.Cts.Cancel(); } catch { }
+				try { kvp.Value.Cts.Cancel(); } catch (Exception) { } // Best-effort cancel.
 			}
 
 			var tasks = entries.Select(e => e.Value.RunningTask).ToArray();
@@ -99,11 +100,11 @@ namespace LifeAlertPlus.Client.Services
 			{
 				await Task.WhenAny(Task.WhenAll(tasks), Task.Delay(5000));
 			}
-			catch { }
+			catch (Exception) { } // Faulted tasks are acceptable here; we're shutting down.
 
 			foreach (var kvp in entries)
 			{
-				try { kvp.Value.Cts.Dispose(); } catch { }
+				try { kvp.Value.Cts.Dispose(); } catch (Exception) { } // Best-effort dispose.
 				_runs.TryRemove(kvp.Key, out _);
 			}
 		}

@@ -9,7 +9,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 	public partial class SimulationPage
 	{
 		[Inject]
-		private UserMonitoredService UserMonitoredService { get; set; } = default!;
+		private UserMonitoredApiClient UserMonitoredApiClient { get; set; } = default!;
 
 		[Inject]
 		private SimulationService SimulationService { get; set; } = default!;
@@ -18,7 +18,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		private TokenParserService TokenParser { get; set; } = default!;
 
 		[Inject]
-		private MeasurementService MeasurementService { get; set; } = default!;
+		private MeasurementApiClient MeasurementApiClient { get; set; } = default!;
 
 		[Inject]
 		private LanguageService Lang { get; set; } = default!;
@@ -97,7 +97,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 
 			try
 			{
-				var users = await UserMonitoredService.GetAllMonitoredUsersAsync();
+				var users = await UserMonitoredApiClient.GetAllMonitoredUsersAsync();
 				foreach (var user in users)
 				{
 					if (user.MonitoredPeople == null)
@@ -191,15 +191,18 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			{
 				var request = new MeasurementRequestDTO
 				{
-					Name = "Simulated",
+					Name        = "Simulated",
+					Activity    = "simulation",
 					IdMonitored = person.PersonId,
-					Pulse = payload.Max30100?[0] ?? 0,
-					SpO2 = payload.Max30100?[1] ?? 0
+					Pulse       = payload.Max30100?[0] ?? 0,
+					SpO2        = payload.Max30100?[1] ?? 0,
+					Temperature = payload.Temperature ?? 36.6,
+					Coordinates = payload.Neo6m ?? "44.4268,26.1025",
 				};
 
 				try
 				{
-					await MeasurementService.AddMeasurementAsync(request);
+					await MeasurementApiClient.AddMeasurementAsync(request);
 					person.LastStatus = SimStatus.Ok("Sent & Saved");
 				}
 				catch

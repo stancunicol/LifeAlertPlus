@@ -3,14 +3,12 @@ using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Shared.DTOs.Responses.ActivityProfile;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-
 namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class ActivityProfileController : ControllerBase
+    public class ActivityProfileController : BaseApiController
     {
         private readonly ActivityProfileService _activityProfileService;
         private readonly IUserMonitoredService _userMonitoredService;
@@ -23,9 +21,9 @@ namespace LifeAlertPlus.API.Controllers
 
         private async Task<bool> UserOwnsMonitoredAsync(Guid monitoredId)
         {
-            var callerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(callerIdStr, out var callerId)) return false;
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            var callerId = GetCallerId();
+            if (callerId == null) return false;
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
             return owned.Any(m => m.Id == monitoredId);
         }
 

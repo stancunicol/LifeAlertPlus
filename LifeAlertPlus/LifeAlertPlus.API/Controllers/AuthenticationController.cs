@@ -144,28 +144,28 @@ namespace LifeAlertPlus.API.Controllers
         {
             if (string.IsNullOrEmpty(request.Token) || string.IsNullOrEmpty(request.NewPassword) || string.IsNullOrEmpty(request.ConfirmPassword))
             {
-                return BadRequest("Invalid token or password.");
+                return BadRequest(new { Message = "Invalid token or password." });
             }
 
             var user = await _userService.GetUserByResetTokenAsync(request.Token);
             if (user == null || user.PasswordResetExpires == null || user.PasswordResetExpires < DateTime.UtcNow)
             {
-                return BadRequest("Invalid or expired token.");
+                return BadRequest(new { Message = "Invalid or expired token." });
             }
 
             if(request.NewPassword != request.ConfirmPassword)
             {
-                return BadRequest("Passwords do not match.");
+                return BadRequest(new { Message = "Passwords do not match." });
             }
 
             if(!user.IsEmailConfirmed)
             {
-                return BadRequest("Email not confirmed.");
+                return BadRequest(new { Message = "Email not confirmed." });
             }
 
             await _userService.PasswordChangeAsync(user, request.NewPassword);
 
-            return Ok("Password has been reset successfully.");
+            return Ok(new { Message = "Password has been reset successfully." });
         }
 
         [HttpPost("forgot-password")]
@@ -174,7 +174,7 @@ namespace LifeAlertPlus.API.Controllers
         {
             if (string.IsNullOrEmpty(request.Email))
             {
-                return BadRequest("Email is required.");
+                return BadRequest(new { Message = "Email is required." });
             }
 
             var user = await _userService.GetUserByEmailAsync(request.Email);

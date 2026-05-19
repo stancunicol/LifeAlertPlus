@@ -22,6 +22,8 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
         private string ConfirmPassword { get; set; } = string.Empty;
         private bool _showPassword = false;
         private string Version { get; set; } = string.Empty;
+
+        private void ToggleShowPassword() => _showPassword = !_showPassword;
         private string ErrorMessage { get; set; } = string.Empty;
         private string SuccessMessage { get; set; } = string.Empty;
         private string ResetToken { get; set; } = string.Empty;
@@ -97,10 +99,9 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
                         : T("reset.error.failed");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 ErrorMessage = T("reset.error.generic");
-                Console.WriteLine($"Reset password error: {ex.Message}");
             }
         }
 

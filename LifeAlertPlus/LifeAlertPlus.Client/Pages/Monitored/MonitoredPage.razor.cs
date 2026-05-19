@@ -13,13 +13,13 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private IJSRuntime JSRuntime { get; set; } = default!;
 
     [Inject]
-    private MonitoredService MonitoredService { get; set; } = default!;
+    private MonitoredApiClient MonitoredApiClient { get; set; } = default!;
 
     [Inject]
-    private UserMonitoredService UserMonitoredService { get; set; } = default!;
+    private UserMonitoredApiClient UserMonitoredApiClient { get; set; } = default!;
 
     [Inject]
-    private UserService UserService { get; set; } = default!;
+    private UserApiClient UserApiClient { get; set; } = default!;
 
     [Inject]
     private NavigationManager NavigationManager { get; set; } = default!;
@@ -28,7 +28,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private TokenParserService TokenParser { get; set; } = default!;
 
     [Inject]
-    private MeasurementService MeasurementService { get; set; } = default!;
+    private MeasurementApiClient MeasurementApiClient { get; set; } = default!;
 
     [Inject]
     private LanguageService Lang { get; set; } = default!;
@@ -115,7 +115,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
         ProfilePictureUrl = claims.ProfilePictureUrl;
 
-        var userProfile = await UserService.GetUserByIdAsync(claims.UserId);
+        var userProfile = await UserApiClient.GetUserByIdAsync(claims.UserId);
         if (userProfile != null)
         {
             var apiName = $"{userProfile.FirstName} {userProfile.LastName}".Trim();
@@ -140,8 +140,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
                 return;
             }
 
-            _monitoredPeople = await UserMonitoredService.GetMonitoredPeopleAsync(_currentUserId);
-            //await RefreshEspDataAsync(_pollingCts?.Token ?? CancellationToken.None);
+            _monitoredPeople = await UserMonitoredApiClient.GetMonitoredPeopleAsync(_currentUserId);
+            await RefreshEspDataAsync(CancellationToken.None);
         }
         catch (Exception ex)
         {
@@ -207,7 +207,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             
             try
             {
-                latestData = await MonitoredService.GetEspDataAsync(person.DeviceSerialNumber, token);
+                latestData = await MonitoredApiClient.GetEspDataAsync(person.DeviceSerialNumber, token);
             }
             catch (TaskCanceledException)
             {
@@ -221,7 +221,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             // Get the last measurement for this person
             try
             {
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(person.Id, 1, 1);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(person.Id, 1, 1);
                 var lastMeasurement = measurements?.FirstOrDefault();
                 if (lastMeasurement != null)
                 {
@@ -312,7 +312,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             CurrentUserEmail = CurrentUserEmail ?? string.Empty
         };
 
-        var request = await MonitoredService.AddMonitoredPersonAsync(dto);
+        var request = await MonitoredApiClient.AddMonitoredPersonAsync(dto);
 
         if (!request)
         {

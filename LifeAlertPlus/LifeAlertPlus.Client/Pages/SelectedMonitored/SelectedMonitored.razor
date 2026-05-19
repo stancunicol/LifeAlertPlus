@@ -442,6 +442,7 @@
                                 </button>
                             }
                         </div>
+                        <div class="charts-scroll-outer">
                         <!-- Heart Rate -->
                         <div class="chart-item">
                             <div class="chart-item-title">
@@ -452,10 +453,11 @@
                             <svg @ref="_hrSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="hrGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="#A5D6A7" stop-opacity="0.3" />
-                                        <stop offset="100%" stop-color="#A5D6A7" stop-opacity="0.02" />
+                                        <stop offset="0%" stop-color="#66BB6A" stop-opacity="0.35" />
+                                        <stop offset="100%" stop-color="#66BB6A" stop-opacity="0.03" />
                                     </linearGradient>
                                 </defs>
+                                <rect x="90" y="15" width="695" height="145" rx="3" class="chart-bg" />
                                 <line x1="90" y1="15" x2="785" y2="15" class="grid-line" />
                                 <line x1="90" y1="51" x2="785" y2="51" class="grid-line" />
                                 <line x1="90" y1="88" x2="785" y2="88" class="grid-line" />
@@ -463,10 +465,10 @@
                                 <line x1="90" y1="160" x2="785" y2="160" class="grid-line" />
                                 <line x1="90" y1="15" x2="90" y2="160" class="axis-line" />
                                 <line x1="90" y1="160" x2="785" y2="160" class="axis-line" />
-                                <g>@((MarkupString)"<text x=\"58\" y=\"19\" class=\"chart-y-label\">120</text>")</g>
-                                <g>@((MarkupString)"<text x=\"58\" y=\"55\" class=\"chart-y-label\">100</text>")</g>
-                                <g>@((MarkupString)"<text x=\"58\" y=\"92\" class=\"chart-y-label\">80</text>")</g>
-                                <g>@((MarkupString)"<text x=\"58\" y=\"128\" class=\"chart-y-label\">60</text>")</g>
+                                <g>@((MarkupString)"<text x=\"58\" y=\"19\" class=\"chart-y-label\">140</text>")</g>
+                                <g>@((MarkupString)"<text x=\"58\" y=\"55\" class=\"chart-y-label\">115</text>")</g>
+                                <g>@((MarkupString)"<text x=\"58\" y=\"92\" class=\"chart-y-label\">90</text>")</g>
+                                <g>@((MarkupString)"<text x=\"58\" y=\"128\" class=\"chart-y-label\">65</text>")</g>
                                 <g>@((MarkupString)"<text x=\"58\" y=\"164\" class=\"chart-y-label\">40</text>")</g>
                                 @if (HeartRatePoints.Count >= 1)
                                 {
@@ -498,10 +500,11 @@
                             <svg @ref="_tempSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="#FF9A6C" stop-opacity="0.3" />
-                                        <stop offset="100%" stop-color="#FF9A6C" stop-opacity="0.02" />
+                                        <stop offset="0%" stop-color="#FF7043" stop-opacity="0.35" />
+                                        <stop offset="100%" stop-color="#FF7043" stop-opacity="0.03" />
                                     </linearGradient>
                                 </defs>
+                                <rect x="90" y="15" width="695" height="145" rx="3" class="chart-bg" />
                                 <line x1="90" y1="15" x2="785" y2="15" class="grid-line" />
                                 <line x1="90" y1="51" x2="785" y2="51" class="grid-line" />
                                 <line x1="90" y1="88" x2="785" y2="88" class="grid-line" />
@@ -532,6 +535,7 @@
                                     <g>@((MarkupString)$"<text x=\"{lx}\" y=\"180\" class=\"chart-x-label\" text-anchor=\"middle\">{lbl.Label}</text>")</g>
                                 }
                             </svg>
+                        </div>
                         </div>
                     </div>
                 </div>

@@ -51,22 +51,28 @@
 }
 
 .invite-export-btn {
-    min-height: 40px;
     display: inline-flex;
     align-items: center;
-    border: 1px solid #cfe6d2;
+    gap: 7px;
+    min-height: 40px;
+    padding: 0 20px;
+    background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+    color: #fff;
+    border: none;
     border-radius: 999px;
-    background: #fff;
-    color: #4f8f54;
-    padding: 9px 17px;
-    box-shadow: none;
     font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
     line-height: 1;
 }
 
 .invite-export-btn:hover {
-    background: #f5fbf6;
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, #43A047 0%, #2E7D32 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(76, 175, 80, 0.4);
 }
 
 .invite-report-heading h1 {

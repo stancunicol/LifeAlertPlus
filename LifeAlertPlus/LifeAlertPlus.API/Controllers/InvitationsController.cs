@@ -1,7 +1,6 @@
 using System.Linq;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
+using LifeAlertPlus.API.Helpers;
 using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Domain.Entities;
 using LifeAlertPlus.Domain.IRepositories;
@@ -42,7 +41,7 @@ namespace LifeAlertPlus.API.Controllers
         {
             var invitation = await GetInvitationOrNullAsync(token);
             if (invitation == null)
-                return NotFound(new { Message = "Invitation not found." });
+                return NotFound(new { Message = ResponseMessages.InvitationNotFound });
 
             var monitored = await _monitoredService.GetMonitoredPersonByIdAsync(invitation.PatientId);
             var patientName = monitored != null ? $"{monitored.FirstName} {monitored.LastName}".Trim() : string.Empty;
@@ -71,7 +70,7 @@ namespace LifeAlertPlus.API.Controllers
 
             var monitored = await _monitoredService.GetMonitoredPersonByIdAsync(invitation.PatientId);
             if (monitored == null)
-                return NotFound(new { Message = "Monitored person not found." });
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
             return Ok(monitored);
         }
@@ -107,7 +106,7 @@ namespace LifeAlertPlus.API.Controllers
                 ?? User.FindFirstValue("nameid");
 
             if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
-                return Unauthorized(new { Message = "Invalid token." });
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
 
             var callerEmail = User.FindFirstValue(ClaimTypes.Email)
                 ?? User.FindFirstValue("email")
@@ -116,9 +115,9 @@ namespace LifeAlertPlus.API.Controllers
             if (string.IsNullOrWhiteSpace(callerEmail))
                 return Unauthorized(new { Message = "Unable to determine authenticated email." });
 
-            var invitation = await _invitationRepository.GetByTokenAsync(ComputeTokenHash(request.Token));
+            var invitation = await _invitationRepository.GetByTokenAsync(TokenHashHelper.ComputeSha256(request.Token));
             if (invitation == null)
-                return NotFound(new { Message = "Invitation not found." });
+                return NotFound(new { Message = ResponseMessages.InvitationNotFound });
 
             if (invitation.IsAccepted)
                 return BadRequest(new { Message = "Invitation already accepted." });
@@ -134,7 +133,7 @@ namespace LifeAlertPlus.API.Controllers
                 // Ensure patient still exists
                 var monitored = await _monitoredService.GetMonitoredPersonByIdAsync(invitation.PatientId);
                 if (monitored == null)
-                    return NotFound(new { Message = "Monitored person not found." });
+                    return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
                 // Grant access
                 await _userMonitoredService.AddMonitoredPersonToUserAsync(callerId, invitation.PatientId);
@@ -157,7 +156,7 @@ namespace LifeAlertPlus.API.Controllers
             if (string.IsNullOrWhiteSpace(token))
                 return null;
 
-            return await _invitationRepository.GetByTokenAsync(ComputeTokenHash(token));
+            return await _invitationRepository.GetByTokenAsync(TokenHashHelper.ComputeSha256(token));
         }
 
         private async Task<Invitation?> GetValidInvitationOrNullAsync(string token)
@@ -172,11 +171,5 @@ namespace LifeAlertPlus.API.Controllers
             return invitation;
         }
 
-        private static string ComputeTokenHash(string rawToken)
-        {
-            var bytes = Encoding.UTF8.GetBytes(rawToken);
-            var hash = SHA256.HashData(bytes);
-            return Convert.ToHexString(hash);
-        }
     }
 }

@@ -2,7 +2,6 @@ using LifeAlertPlus.Application.IServices;
 using LifeAlertPlus.Shared.DTOs.Responses.UserMonitored;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 using System.Collections.Generic;
 using System.Linq;
 using System;
@@ -12,7 +11,7 @@ namespace LifeAlertPlus.API.Controllers
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
-    public class UserMonitoredController : ControllerBase
+    public class UserMonitoredController : BaseApiController
     {
         private readonly IUserMonitoredService _userMonitoredService;
         private readonly IRoleService _roleService;
@@ -23,17 +22,10 @@ namespace LifeAlertPlus.API.Controllers
             _roleService = roleService;
         }
 
-        private bool CallerOwns(Guid userId)
-        {
-            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return callerIdStr != null && Guid.TryParse(callerIdStr, out var callerGuid) && callerGuid == userId;
-        }
-
         [HttpGet("{userId}/monitored")]
         public async Task<IActionResult> GetMonitoredPeopleByUserId(Guid userId)
         {
-            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
-            if (!CallerOwns(userId) && !IsAdminRole(roleClaim))
+            if (GetCallerId() != userId && !IsAdminRole())
                 return Forbid();
 
             var monitoredPeople = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(userId);
@@ -44,8 +36,7 @@ namespace LifeAlertPlus.API.Controllers
         [HttpPost("{userId}/monitored/{monitoredPersonId}")]
         public async Task<IActionResult> AddMonitoredPersonToUser(Guid userId, Guid monitoredPersonId)
         {
-            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
-            if (!CallerOwns(userId) && !IsAdminRole(roleClaim))
+            if (GetCallerId() != userId && !IsAdminRole())
                 return Forbid();
 
             await _userMonitoredService.AddMonitoredPersonToUserAsync(userId, monitoredPersonId);
@@ -101,12 +92,5 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(response);
         }
 
-        private static bool IsAdminRole(string? roleName)
-        {
-            if (string.IsNullOrWhiteSpace(roleName))
-                return false;
-
-            return roleName.Contains("admin", StringComparison.OrdinalIgnoreCase);
-        }
     }
 }

@@ -63,31 +63,29 @@ namespace LifeAlertPlus.Infrastructure.Repositories
             var monitoredIds = userMonitoreds.Select(um => um.IdMonitored).Distinct().ToList();
             _dbContext.UserMonitoreds.RemoveRange(userMonitoreds);
 
-            foreach (var monitoredId in monitoredIds)
+            if (monitoredIds.Count > 0)
             {
-                // Only delete the monitored person and their data if no other user also monitors them
-                var hasOtherMonitors = await _dbContext.UserMonitoreds
-                    .AnyAsync(um => um.IdMonitored == monitoredId && um.IdUser != id);
+                // Exclude monitored people shared with other users — one batched query instead of N
+                var sharedIds = await _dbContext.UserMonitoreds
+                    .Where(um => um.IdUser != id && monitoredIds.Contains(um.IdMonitored))
+                    .Select(um => um.IdMonitored)
+                    .Distinct()
+                    .ToListAsync();
 
-                if (hasOtherMonitors)
-                    continue;
+                var exclusiveIds = monitoredIds.Except(sharedIds).ToList();
 
-                var measurements = await _dbContext.Measurements.Where(m => m.IdMonitored == monitoredId).ToListAsync();
-                _dbContext.Measurements.RemoveRange(measurements);
-
-                var notifications = await _dbContext.Notifications.Where(n => n.IdMonitored == monitoredId).ToListAsync();
-                _dbContext.Notifications.RemoveRange(notifications);
-
-                var dailyHistories = await _dbContext.DailyHistories.Where(d => d.IdMonitored == monitoredId).ToListAsync();
-                _dbContext.DailyHistories.RemoveRange(dailyHistories);
-
-                var weeklyHistories = await _dbContext.WeeklyHistories.Where(w => w.IdMonitored == monitoredId).ToListAsync();
-                _dbContext.WeeklyHistories.RemoveRange(weeklyHistories);
-
-                var monitored = await _dbContext.Monitoreds.FindAsync(monitoredId);
-                if (monitored != null)
+                if (exclusiveIds.Count > 0)
                 {
-                    _dbContext.Monitoreds.Remove(monitored);
+                    _dbContext.Measurements.RemoveRange(
+                        await _dbContext.Measurements.Where(m => exclusiveIds.Contains(m.IdMonitored)).ToListAsync());
+                    _dbContext.Notifications.RemoveRange(
+                        await _dbContext.Notifications.Where(n => exclusiveIds.Contains(n.IdMonitored)).ToListAsync());
+                    _dbContext.DailyHistories.RemoveRange(
+                        await _dbContext.DailyHistories.Where(d => exclusiveIds.Contains(d.IdMonitored)).ToListAsync());
+                    _dbContext.WeeklyHistories.RemoveRange(
+                        await _dbContext.WeeklyHistories.Where(w => exclusiveIds.Contains(w.IdMonitored)).ToListAsync());
+                    _dbContext.Monitoreds.RemoveRange(
+                        await _dbContext.Monitoreds.Where(m => exclusiveIds.Contains(m.Id)).ToListAsync());
                 }
             }
 

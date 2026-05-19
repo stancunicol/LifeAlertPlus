@@ -16,16 +16,16 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         private NavigationManager NavigationManager { get; set; } = default!;
 
         [Inject]
-        private MonitoredService MonitoredService { get; set; } = default!;
+        private MonitoredApiClient MonitoredApiClient { get; set; } = default!;
 
         [Inject]
         private TokenParserService TokenParserService { get; set; } = default!;
 
         [Inject]
-        private MeasurementService MeasurementService { get; set; } = default!;
+        private MeasurementApiClient MeasurementApiClient { get; set; } = default!;
 
         [Inject]
-        private UserService UserService { get; set; } = default!;
+        private UserApiClient UserApiClient { get; set; } = default!;
 
         [Inject]
         private IJSRuntime JSRuntime { get; set; } = default!;
@@ -80,7 +80,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
             try
             {
-                var monitored = await MonitoredService.GetMonitoredPersonByIdAsync(PersonId);
+                var monitored = await MonitoredApiClient.GetMonitoredPersonByIdAsync(PersonId);
                 if (monitored == null)
                 {
                     Person = null;
@@ -90,7 +90,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 }
 
                 // Get ESP data
-                var espData = await MonitoredService.GetEspDataAsync(monitored.DeviceSerialNumber);
+                var espData = await MonitoredApiClient.GetEspDataAsync(monitored.DeviceSerialNumber);
                 
                 int heartRate = 0;
                 int spO2 = 0;
@@ -130,7 +130,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 }
 
                 // Get last measurement time
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(monitored.Id, 1, 1);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(monitored.Id, 1, 1);
                 var lastMeasurement = measurements?.FirstOrDefault();
                 string lastUpdate = lastMeasurement != null 
                     ? lastMeasurement.CreatedAt.ToLocalTime().ToString("MMMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture)
@@ -188,7 +188,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             try
             {
                 int fetchSize = CurrentChartView == ChartViewMode.Weekly ? 10000 : 1000;
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, fetchSize);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, fetchSize);
                 if (measurements == null || !measurements.Any())
                 {
                     LoadEmptyChartData();
@@ -537,7 +537,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         {
             try
             {
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 50);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 50);
                 if (measurements == null || !measurements.Any())
                 {
                     RecentAlerts = new List<Alert>();
@@ -594,7 +594,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         {
             try
             {
-                var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 4);
+                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 4);
                 if (measurements == null || !measurements.Any())
                 {
                     RecentMeasurements = new List<Measurement>();
@@ -658,7 +658,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
                 ProfilePictureUrl = claims.ProfilePictureUrl;
 
-                var userProfile = await UserService.GetUserByIdAsync(claims.UserId);
+                var userProfile = await UserApiClient.GetUserByIdAsync(claims.UserId);
                 if (userProfile != null)
                 {
                     var apiName = $"{userProfile.FirstName} {userProfile.LastName}".Trim();
@@ -679,12 +679,9 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 UserFullName = "User";
             }
 
-            await LoadPersonDataAsync();
-            await LoadChartDataAsync();
-            await LoadRecentAlertsAsync();
-            await LoadRecentMeasurementsAsync();
+            await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
 
-            _refreshTimer = new System.Threading.Timer(async _ => await RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
+            _refreshTimer = new System.Threading.Timer(_ => _ = RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
         }
 
         private async Task RefreshDataAsync()
@@ -695,10 +692,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             {
                 await InvokeAsync(async () =>
                 {
-                    await LoadPersonDataAsync();
-                    await LoadChartDataAsync();
-                    await LoadRecentAlertsAsync();
-                    await LoadRecentMeasurementsAsync();
+                    await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
                     // Reset map so it re-initializes with fresh GPS coordinates
                     _mapInitialized = false;
                     StateHasChanged();

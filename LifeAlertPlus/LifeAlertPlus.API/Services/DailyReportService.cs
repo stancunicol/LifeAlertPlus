@@ -68,15 +68,17 @@ namespace LifeAlertPlus.API.Services
                 .Where(m => monitoredIds.Contains(m.Id))
                 .ToListAsync();
 
+            var yesterdayEnd = yesterday.AddDays(1);
+
             // Get yesterday's measurements and notifications
             var measurements = await db.Measurements
                 .Where(m => monitoredIds.Contains(m.IdMonitored) &&
-                            m.CreatedAt.Date == yesterday)
+                            m.CreatedAt >= yesterday && m.CreatedAt < yesterdayEnd)
                 .ToListAsync();
 
             var alerts = await db.Notifications
                 .Where(n => monitoredIds.Contains(n.IdMonitored) &&
-                            n.CreatedAt.Date == yesterday &&
+                            n.CreatedAt >= yesterday && n.CreatedAt < yesterdayEnd &&
                             n.DeletedAt == null)
                 .ToListAsync();
 

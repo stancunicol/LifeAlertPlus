@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifealertplus-cache-v1';
+const CACHE_NAME = 'lifealertplus-cache-v3';
 const PRECACHE_URLS = [
   '/',
   'index.html',
@@ -7,8 +7,7 @@ const PRECACHE_URLS = [
   'LifeAlertPlus.Client.styles.css',
   'favicon.png',
   'icon-192.png',
-  'logo.png',
-  'logo_rounded.png',
+  'logo_final.png',
   'VERSION'
 ];
 
@@ -34,11 +33,15 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
+  // Blazor framework assets (_framework/) carry their own SRI integrity hashes managed
+  // by blazor.boot.json. Caching them here causes SRI mismatches after every build.
+  // Let the browser fetch them directly so Blazor's own integrity checks always pass.
+  if (event.request.url.includes('/_framework/')) return;
+
   // Navigation requests: network-first then fallback to cache/offline
   if (event.request.mode === 'navigate' || (event.request.headers.get('accept') || '').includes('text/html')) {
     event.respondWith(
       fetch(event.request).then(response => {
-        // Put a copy in cache
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
@@ -53,7 +56,8 @@ self.addEventListener('fetch', event => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
         if (!response || response.status !== 200 || response.type === 'opaque') return response;
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
       }).catch(() => caches.match(event.request));
     })

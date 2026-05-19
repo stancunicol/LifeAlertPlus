@@ -21,7 +21,7 @@
                     @T("nav.notifications")
                     @if (_unreadCount > 0)
                     {
-                        <span class="notif-badge">@(_unreadCount > 9 ? "9+" : _unreadCount.ToString())</span>
+                        <span class="notif-badge"></span>
                     }
                 </a>
             </nav>
@@ -76,7 +76,7 @@
             @T("nav.notifications")
             @if (_unreadCount > 0)
             {
-                <span class="notif-badge notif-badge--mobile">@(_unreadCount > 9 ? "9+" : _unreadCount.ToString())</span>
+                <span class="notif-badge notif-badge--mobile"></span>
             }
         </a>
         <div class="mobile-nav-divider"></div>

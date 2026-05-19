@@ -1,4 +1,6 @@
+using System.IO.Compression;
 using System.Text;
+using Microsoft.AspNetCore.ResponseCompression;
 using System.Threading.RateLimiting;
 using LifeAlertPlus.API.Services;
 using LifeAlertPlus.Application.IServices;
@@ -14,6 +16,15 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddResponseCompression(opts =>
+{
+    opts.EnableForHttps = true;
+    opts.Providers.Add<BrotliCompressionProvider>();
+    opts.Providers.Add<GzipCompressionProvider>();
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(opts => opts.Level = CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(opts => opts.Level = CompressionLevel.Fastest);
 
 builder.Services.AddSingleton<IPushNotificationService, PushNotificationService>();
 // SignalR
@@ -33,6 +44,10 @@ builder.Services.AddHttpClient("Anthropic", client =>
 {
     client.BaseAddress = new Uri("https://api.anthropic.com/");
     client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddHttpClient("Overpass", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
 });
 builder.Services.AddScoped<ChatbotService>();
 builder.Services.AddSingleton<SimulationManager>();
@@ -57,18 +72,12 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
     {
-        policy.WithOrigins(
-                  "http://localhost:5254",
-                  "https://localhost:5254",
-                  "http://localhost:8081",
-                  "https://localhost:8081",
-                  "https://localhost:8444",
-                  "https://client-lifealertplusiot-gqf3crdrenfgd9bw.germanywestcentral-01.azurewebsites.net",
-                  "https://client-lifealertplusiot-dxgkd5emgacba2h6.germanywestcentral-01.azurewebsites.net")
+        policy.WithOrigins(corsOrigins)
               .AllowAnyHeader()
               .WithMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
               .AllowCredentials();
@@ -128,6 +137,17 @@ builder.Services
         };
         options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
         {
+            // SignalR WebSocket connections carry the token in the query string, not the header.
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    context.HttpContext.Request.Path.StartsWithSegments("/notificationhub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
             OnChallenge = context =>
             {
                 context.HandleResponse();
@@ -199,6 +219,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseResponseCompression();
 app.UseRateLimiter();
 app.UseHttpsRedirection();
 

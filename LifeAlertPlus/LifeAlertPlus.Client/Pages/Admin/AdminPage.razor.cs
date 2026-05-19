@@ -14,16 +14,16 @@ public partial class AdminPage : ComponentBase
 	private TokenParserService TokenParser { get; set; } = default!;
 
 	[Inject]
-	private UserMonitoredService UserMonitoredService { get; set; } = default!;
+	private UserMonitoredApiClient UserMonitoredApiClient { get; set; } = default!;
 
 	[Inject]
 	private NavigationManager Navigation { get; set; } = default!;
 
 	[Inject]
-	private MonitoredService MonitoredService { get; set; } = default!;
+	private MonitoredApiClient MonitoredApiClient { get; set; } = default!;
 
 	[Inject]
-	private MeasurementService MeasurementService { get; set; } = default!;
+	private MeasurementApiClient MeasurementApiClient { get; set; } = default!;
 
 	[Inject]
 	private LanguageService Lang { get; set; } = default!;
@@ -94,7 +94,7 @@ public partial class AdminPage : ComponentBase
 
 		try
 		{
-			var monitoredUsers = await UserMonitoredService.GetAllMonitoredUsersAsync();
+			var monitoredUsers = await UserMonitoredApiClient.GetAllMonitoredUsersAsync();
 			AdminUsers = monitoredUsers.ToList();
 			// Reset computed status
 			PersonStatuses = new Dictionary<Guid, PersonStatus>();
@@ -115,13 +115,13 @@ public partial class AdminPage : ComponentBase
 						bool online = false;
 						try
 						{
-							var esp = await MonitoredService.GetEspDataAsync(person.DeviceSerialNumber);
+							var esp = await MonitoredApiClient.GetEspDataAsync(person.DeviceSerialNumber);
 							online = esp?.IsAvailable == true;
 						}
 						catch { online = false; }
 
 						// Fetch last measurement (page 1, size 1)
-						var measurements = await MeasurementService.GetMeasurementsByMonitoredIdAsync(person.Id, 1, 1);
+						var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(person.Id, 1, 1);
 						var last = measurements.FirstOrDefault();
 
 						string measurementStatus;
@@ -173,7 +173,7 @@ public partial class AdminPage : ComponentBase
 			// Total measurements taken today (global)
 			try
 			{
-				MeasurementsTodayCount = await MeasurementService.GetTodayMeasurementsCountAsync();
+				MeasurementsTodayCount = await MeasurementApiClient.GetTodayMeasurementsCountAsync();
 			}
 			catch
 			{

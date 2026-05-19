@@ -9,7 +9,7 @@ public partial class SupportPage : ComponentBase
     private TokenParserService TokenParserService { get; set; } = default!;
 
     [Inject]
-    private UserService UserService { get; set; } = default!;
+    private UserApiClient UserApiClient { get; set; } = default!;
 
     [Inject]
     private LanguageService Lang { get; set; } = default!;
@@ -27,7 +27,7 @@ public partial class SupportPage : ComponentBase
             UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
             ProfilePictureUrl = claims.ProfilePictureUrl;
 
-            var userProfile = await UserService.GetUserByIdAsync(claims.UserId);
+            var userProfile = await UserApiClient.GetUserByIdAsync(claims.UserId);
             if (userProfile != null)
             {
                 var apiName = $"{userProfile.FirstName} {userProfile.LastName}".Trim();

@@ -33,7 +33,13 @@
             <div class="invite-report-heading">
                 <div class="invite-heading-actions">
                     <span>@Ui("Doctor invitation", "Invitatie doctor")</span>
-                    <button class="btn-action-main invite-export-btn" @onclick="ExportPdfAsync">
+                    <button class="invite-export-btn" @onclick="ExportPdfAsync">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="12" y1="18" x2="12" y2="12"/>
+                            <line x1="9" y1="15" x2="15" y2="15"/>
+                        </svg>
                         <span>@T("selected.export") PDF</span>
                     </button>
                 </div>
@@ -87,69 +93,6 @@
                 </div>
             </div>
 
-            <div class="stats-overview invite-stats">
-                <div class="stat-card-large heart-rate @(CurrentMeasurement?.Pulse > 0 ? "" : "no-data")">
-                    <div class="stat-content">
-                        <h3>@T("selected.heartRate")</h3>
-                        @if (CurrentMeasurement?.Pulse > 0)
-                        {
-                            <div class="stat-value-huge">@CurrentMeasurement.Pulse.ToString("F0") <span class="stat-unit">bpm</span></div>
-                            <p class="stat-status @GetCellClass(CurrentMeasurement, "hr")">@GetVitalStatusText(CurrentMeasurement, "hr")</p>
-                        }
-                        else
-                        {
-                            <div class="stat-value-huge no-data-value">@Ui("No current data", "Nu exista date curente")</div>
-                            <p class="stat-status no-data-status">@Ui("No measurement exists for the current day.", "Nu exista masuratori pentru ziua curenta.")</p>
-                        }
-                    </div>
-                </div>
-                <div class="stat-card-large blood-oxygen @(CurrentMeasurement?.SpO2 > 0 ? "" : "no-data")">
-                    <div class="stat-content">
-                        <h3>@T("meas.spo2")</h3>
-                        @if (CurrentMeasurement?.SpO2 > 0)
-                        {
-                            <div class="stat-value-huge">@CurrentMeasurement.SpO2.ToString("F0") <span class="stat-unit">%</span></div>
-                            <p class="stat-status @GetCellClass(CurrentMeasurement, "spo2")">@GetVitalStatusText(CurrentMeasurement, "spo2")</p>
-                        }
-                        else
-                        {
-                            <div class="stat-value-huge no-data-value">@Ui("No current data", "Nu exista date curente")</div>
-                            <p class="stat-status no-data-status">@Ui("No measurement exists for the current day.", "Nu exista masuratori pentru ziua curenta.")</p>
-                        }
-                    </div>
-                </div>
-                <div class="stat-card-large temperature @(CurrentMeasurement?.Temperature > 0 ? "" : "no-data")">
-                    <div class="stat-content">
-                        <h3>@T("selected.temperature")</h3>
-                        @if (CurrentMeasurement?.Temperature > 0)
-                        {
-                            <div class="stat-value-huge">@CurrentMeasurement.Temperature.ToString("F1") <span class="stat-unit">C</span></div>
-                            <p class="stat-status @GetCellClass(CurrentMeasurement, "temp")">@GetVitalStatusText(CurrentMeasurement, "temp")</p>
-                        }
-                        else
-                        {
-                            <div class="stat-value-huge no-data-value">@Ui("No current data", "Nu exista date curente")</div>
-                            <p class="stat-status no-data-status">@Ui("No measurement exists for the current day.", "Nu exista masuratori pentru ziua curenta.")</p>
-                        }
-                    </div>
-                </div>
-                <div class="stat-card-large summary-status @(CurrentMeasurement == null ? "no-data" : GetStatus(CurrentMeasurement))">
-                    <div class="stat-content">
-                        <h3>@Ui("Current status", "Status curent")</h3>
-                        @if (CurrentMeasurement != null)
-                        {
-                            var currentStatus = GetStatus(CurrentMeasurement);
-                            <div class="stat-value-huge">@GetStatusLabel(currentStatus)</div>
-                            <p class="stat-status @currentStatus">@GetCurrentStatusText(CurrentMeasurement)</p>
-                        }
-                        else
-                        {
-                            <div class="stat-value-huge no-data-value">@Ui("No current data", "Nu exista date curente")</div>
-                            <p class="stat-status no-data-status">@Ui("The latest available measurement is not from today.", "Ultima masuratoare disponibila nu este de astazi.")</p>
-                        }
-                    </div>
-                </div>
-            </div>
 
             <div class="content-grid invite-content-grid">
                 <div class="chart-section">
@@ -351,16 +294,6 @@
                         }
                     </div>
 
-                    <div class="section-card compact-card">
-                        <div class="section-header">
-                            <h2>@Ui("Data quality", "Calitatea datelor")</h2>
-                        </div>
-                        <div class="quality-list">
-                            <div><span>@Ui("Falls", "Caderi")</span><strong>@FallCount</strong></div>
-                            <div><span>@Ui("Avg. temperature", "Temperatura medie")</span><strong>@AverageTemperature.ToString("F1") C</strong></div>
-                            <div><span>@Ui("Avg. pulse", "Puls mediu")</span><strong>@AveragePulse.ToString("F0") bpm</strong></div>
-                        </div>
-                    </div>
                 </div>
             </div>
 

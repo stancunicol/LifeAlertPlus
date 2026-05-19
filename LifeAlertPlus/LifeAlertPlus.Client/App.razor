@@ -1,10 +1,11 @@
 @using LifeAlertPlus.Client.Services
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject HttpClient Http
 @inject LifeAlertPlus.Client.Services.TokenParserService TokenParser
 @inject LifeAlertPlus.Client.Services.ProfilePictureService ProfilePictureService
 @inject LifeAlertPlus.Client.Services.LanguageService Lang
-@inject LifeAlertPlus.Client.Services.UserService UserService
+@inject LifeAlertPlus.Client.Services.UserApiClient UserApiClient
 
 <Router AppAssembly="@typeof(App).Assembly" OnNavigateAsync="HandleNavigationAsync">
     <Found Context="routeData">
@@ -61,6 +62,8 @@
         "support"
     };
 
+    private bool _mapsLoaded;
+
     protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
@@ -82,7 +85,7 @@
                 var claims = await TokenParser.GetClaimsAsync();
                 if (claims != null && claims.UserId != Guid.Empty)
                 {
-                    var user = await UserService.GetUserByIdAsync(claims.UserId);
+                    var user = await UserApiClient.GetUserByIdAsync(claims.UserId);
                     if (!string.IsNullOrEmpty(user?.Language))
                     {
                         Lang.SetLanguage(user.Language);
@@ -127,6 +130,19 @@
 
         // Seed profile picture service so shared components update without a full reload
         ProfilePictureService.SetUrl(claims.ProfilePictureUrl);
+
+        // Fetch Maps API key via authenticated HttpClient, then hand key to JS (no auth in JS fetch).
+        if (!_mapsLoaded)
+        {
+            _mapsLoaded = true;
+            try
+            {
+                var data = await Http.GetFromJsonAsync<Dictionary<string, string>>("api/config/maps");
+                if (data != null && data.TryGetValue("apiKey", out var key) && !string.IsNullOrEmpty(key))
+                    await JSRuntime.InvokeVoidAsync("initGoogleMaps", key);
+            }
+            catch { }
+        }
 
         EnforceRoleAccess(path, claims);
     }

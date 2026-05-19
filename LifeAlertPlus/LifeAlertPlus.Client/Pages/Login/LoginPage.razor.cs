@@ -14,7 +14,7 @@ namespace LifeAlertPlus.Client.Pages.Login
         private NavigationManager Navigation { get; set; } = default!;
 
         [Inject]
-        private AuthenticationService AuthenticationService { get; set; } = default!;
+        private AuthApiClient AuthApiClient { get; set; } = default!;
         
         [Inject]
         private IJSRuntime JSRuntime { get; set; } = default!;
@@ -62,7 +62,7 @@ namespace LifeAlertPlus.Client.Pages.Login
                     Password = Password
                 };
 
-                var response = await AuthenticationService.LoginAsync(request);
+                var response = await AuthApiClient.LoginAsync(request);
                 
                 if(response != null)
                 {
@@ -158,7 +158,6 @@ namespace LifeAlertPlus.Client.Pages.Login
             {
                 var response = await Http.PostAsJsonAsync("api/authentication/forgot-password", new { Email = ForgotPasswordEmail });
                 var content = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[ForgotPassword API raw response]: {content}");
                 string? message = null;
                 bool? success = false;
                 try

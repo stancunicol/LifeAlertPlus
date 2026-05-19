@@ -252,14 +252,16 @@ namespace LifeAlertPlus.Infrastructure.Seed
 
         private static async Task EnsureUserSpO2ColumnsAsync(LifeAlertPlusDbContext context)
         {
-            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN MinSpO2 INTEGER;"); } catch { }
-            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN MaxSpO2 INTEGER;"); } catch { }
+            // SQLite ALTER TABLE ADD COLUMN fails if the column already exists; swallow that expected error.
+            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN MinSpO2 INTEGER;"); } catch (Exception) { }
+            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN MaxSpO2 INTEGER;"); } catch (Exception) { }
         }
 
         private static async Task EnsureMonitoredSpO2ColumnsAsync(LifeAlertPlusDbContext context)
         {
-            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Monitoreds ADD COLUMN MinSpO2 INTEGER;"); } catch { }
-            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Monitoreds ADD COLUMN MaxSpO2 INTEGER;"); } catch { }
+            // SQLite ALTER TABLE ADD COLUMN fails if the column already exists; swallow that expected error.
+            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Monitoreds ADD COLUMN MinSpO2 INTEGER;"); } catch (Exception) { }
+            try { await context.Database.ExecuteSqlRawAsync("ALTER TABLE Monitoreds ADD COLUMN MaxSpO2 INTEGER;"); } catch (Exception) { }
         }
 
         private static async Task EnsureInvitationsTableAsync(LifeAlertPlusDbContext context)

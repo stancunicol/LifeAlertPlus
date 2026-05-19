@@ -1,3 +1,4 @@
+using LifeAlertPlus.API.Helpers;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Application.IServices;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ namespace LifeAlertPlus.API.Controllers
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
-    public class MonitoredController : ControllerBase
+    public class MonitoredController : BaseApiController
     {
         private readonly IMonitoredService _monitoredService;
         private readonly IUserMonitoredService _userMonitoredService;
@@ -28,7 +29,7 @@ namespace LifeAlertPlus.API.Controllers
         {
             var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
-                return Unauthorized(new { Message = "Invalid token." });
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
 
             var newPerson = newMonitored.MonitoredPerson;
 
@@ -76,14 +77,13 @@ namespace LifeAlertPlus.API.Controllers
         {
             var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
-                return Unauthorized(new { Message = "Invalid token." });
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
 
             var monitoredPerson = await _monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(deviceSerialNumber);
             if (monitoredPerson == null)
-                return NotFound(new { Message = "Monitored person not found." });
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
             var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
-            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
             if (!owned.Any(m => m.Id == monitoredPerson.Id))
                 return Forbid();
 
@@ -95,15 +95,14 @@ namespace LifeAlertPlus.API.Controllers
         {
             var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
-                return Unauthorized(new { Message = "Invalid token." });
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
 
             var monitoredPerson = await _monitoredService.GetMonitoredPersonByIdAsync(id);
             if (monitoredPerson == null)
-                return NotFound(new { Message = "Monitored person not found." });
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
             var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
-            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
-            if (!owned.Any(m => m.Id == id) && !IsAdminRole(roleClaim))
+            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
                 return Forbid();
 
             return Ok(monitoredPerson);
@@ -114,15 +113,14 @@ namespace LifeAlertPlus.API.Controllers
         {
             var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
-                return Unauthorized(new { Message = "Invalid token." });
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
 
             var existing = await _monitoredService.GetMonitoredPersonByIdAsync(id);
             if (existing == null)
-                return NotFound(new { Message = "Monitored person not found." });
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
             var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
-            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? string.Empty;
-            if (!owned.Any(m => m.Id == id) && !IsAdminRole(roleClaim))
+            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
                 return Forbid();
 
             if (dto.DeviceSerialNumber != existing.DeviceSerialNumber)
@@ -152,9 +150,5 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { Message = "Monitored person updated successfully.", MonitoredPerson = existing });
         }
 
-        private static bool IsAdminRole(string? role)
-        {
-            return !string.IsNullOrWhiteSpace(role) && role.IndexOf("admin", StringComparison.OrdinalIgnoreCase) >= 0;
-        }
     }
 }

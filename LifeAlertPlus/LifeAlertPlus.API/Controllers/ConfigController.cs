@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 namespace LifeAlertPlus.API.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/[controller]")]
-    public class ConfigController : ControllerBase
+    public class ConfigController : BaseApiController
     {
         private readonly IConfiguration _configuration;
 
@@ -15,7 +16,6 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         [HttpGet("maps")]
-        [AllowAnonymous]
         public IActionResult GetMapsKey()
         {
             var key = _configuration["GoogleMaps:ApiKey"];

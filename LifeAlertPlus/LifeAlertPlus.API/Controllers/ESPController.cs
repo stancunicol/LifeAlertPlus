@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using Microsoft.AspNetCore.Authorization;
@@ -14,20 +13,20 @@ namespace LifeAlertPlus.API.Controllers
         ILogger<ESPController> logger,
         Services.SimulationManager simulationManager,
         IMonitoredService monitoredService,
-        IUserMonitoredService userMonitoredService) : ControllerBase
+        IUserMonitoredService userMonitoredService) : BaseApiController
     {
         [HttpGet("data/{serial}")]
         public async Task<IActionResult> GetESPData(string serial)
         {
-            var callerIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!Guid.TryParse(callerIdStr, out var callerId))
+            var callerId = GetCallerId();
+            if (callerId == null)
                 return Unauthorized();
 
             var monitored = await monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(serial);
             if (monitored == null)
                 return NotFound(new { Message = "Device not found." });
 
-            var owned = await userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
+            var owned = await userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
             if (!owned.Any(m => m.Id == monitored.Id))
                 return Forbid();
 
@@ -71,7 +70,7 @@ namespace LifeAlertPlus.API.Controllers
         public IActionResult Simulate([FromBody] ESPDataResponseDTO payload)
         {
             if (string.IsNullOrWhiteSpace(payload.Serial))
-                return BadRequest("Serial is required.");
+                return BadRequest(new { Message = "Serial is required." });
 
             payload.Serial = payload.Serial.Trim();
             if (payload.Date == 0) payload.Date = DateTimeOffset.UtcNow.ToUnixTimeSeconds();

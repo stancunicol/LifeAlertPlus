@@ -5,10 +5,10 @@ using LifeAlertPlus.Shared.DTOs.Responses.User;
 
 namespace LifeAlertPlus.Client.Services
 {
-    public class UserService
+    public class UserApiClient
     {
         private readonly HttpClient _httpClient;
-        public UserService(HttpClient httpClient)
+        public UserApiClient(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }

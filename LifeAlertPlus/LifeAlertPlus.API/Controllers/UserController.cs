@@ -10,7 +10,7 @@ namespace LifeAlertPlus.API.Controllers
     [ApiController]
     [Authorize]
     [Route("api/[controller]")]
-    public class UserController : ControllerBase
+    public class UserController : BaseApiController
     {
         private readonly IUserService _userService;
         private readonly IMeasurementService _measurementService;
@@ -25,13 +25,7 @@ namespace LifeAlertPlus.API.Controllers
             _logger = logger;
         }
 
-        private bool CallerOwns(Guid id)
-        {
-            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? User.FindFirst("sub")?.Value
-                ?? User.FindFirst("nameid")?.Value;
-            return callerIdStr != null && Guid.TryParse(callerIdStr, out var callerGuid) && callerGuid == id;
-        }
+        private bool CallerOwns(Guid id) => GetCallerId() == id;
 
         private bool CallerOwn(string email)
         {
@@ -267,11 +261,7 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUserById(Guid id)
         {
-            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value
-                ?? User.FindFirst("role")?.Value
-                ?? string.Empty;
-
-            if (!CallerOwns(id) && !IsAdminRole(roleClaim))
+            if (!CallerOwns(id) && !IsAdminRole())
                 return Forbid();
 
             var user = await _userService.GetUserByIdAsync(id);
@@ -399,10 +389,5 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { EnableDailyReport = request.Enabled });
         }
 
-        private static bool IsAdminRole(string? role)
-        {
-            return !string.IsNullOrWhiteSpace(role)
-                && role.IndexOf("Admin", StringComparison.OrdinalIgnoreCase) >= 0;
-        }
     }
 }

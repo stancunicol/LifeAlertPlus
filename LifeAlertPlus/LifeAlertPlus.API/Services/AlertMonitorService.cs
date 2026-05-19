@@ -181,7 +181,22 @@ namespace LifeAlertPlus.API.Services
             state.ConditionRecommendations = conditionRecommendations;
             state.ImmediateAction = immediateAction;
             if (!string.IsNullOrWhiteSpace(coordinates))
+            {
                 state.LastCoordinates = coordinates;
+                // Pre-fetch the nearest hospital in background as soon as alert/critical starts.
+                // This gives the Overpass API the full alert persistence window (~1-2 min) to respond
+                // and cache the result before the notification is actually sent.
+                if (severity >= AlertSeverity.Alert && state.NearestHospital == null)
+                {
+                    var (hLat, hLon) = ParseCoordinates(coordinates);
+                    if (hLat != 0 || hLon != 0)
+                        _ = Task.Run(async () =>
+                        {
+                            try { state.NearestHospital = await _nearestHospitalService.FindNearestAsync(hLat, hLon); }
+                            catch { }
+                        });
+                }
+            }
 
             if (immediateAction && severity == AlertSeverity.Critical)
             {
@@ -423,14 +438,23 @@ namespace LifeAlertPlus.API.Services
                 var monitored = await dbContext.Monitoreds.FindAsync(monitoredId);
                 var patientName = monitored != null ? $"{monitored.FirstName} {monitored.LastName}".Trim() : "Unknown";
 
-                // Find nearest hospital when fall or critical and coordinates are available
-                if ((state.IsFall || state.Severity == AlertSeverity.Critical)
-                    && state.NearestHospital == null
-                    && !string.IsNullOrWhiteSpace(state.LastCoordinates))
+                // Nearest hospital: should already be in state from the background pre-fetch started at
+                // alert onset. This fallback covers the rare case where the pre-fetch didn't complete.
+                if (state.NearestHospital == null && !string.IsNullOrWhiteSpace(state.LastCoordinates))
                 {
                     var (lat, lon) = ParseCoordinates(state.LastCoordinates);
                     if (lat != 0 || lon != 0)
-                        state.NearestHospital = _nearestHospitalService.FindNearest(lat, lon);
+                    {
+                        try
+                        {
+                            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                            state.NearestHospital = await _nearestHospitalService.FindNearestAsync(lat, lon, cts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            _logger.LogWarning("NearestHospital fallback lookup timed out for monitored {MonitoredId} — sending notification without hospital info.", monitoredId);
+                        }
+                    }
                 }
 
                 string? aiContext = null;
@@ -472,7 +496,7 @@ namespace LifeAlertPlus.API.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogWarning(ex, "Failed to send alert email to {Email} for monitored {MonitoredId}", user.Email, monitoredId);
+                            _logger.LogError(ex, "Failed to send alert email to {Email} for monitored {MonitoredId}", user.Email, monitoredId);
                         }
                     }
 
@@ -496,7 +520,7 @@ namespace LifeAlertPlus.API.Services
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogWarning(ex, "Failed to send SMS to {Phone} for monitored {MonitoredId}", user.PhoneNumber, monitoredId);
+                                _logger.LogError(ex, "Failed to send SMS to {Phone} for monitored {MonitoredId}", user.PhoneNumber, monitoredId);
                             }
                         }
                     }
@@ -578,7 +602,7 @@ namespace LifeAlertPlus.API.Services
                 if (state.ConditionRecommendations.Count > 0)
                     sms += $"\n{state.ConditionRecommendations[0]}";
                 if (h != null)
-                    sms += $"\n🏥 {h.HospitalName}, {h.City} (~{h.EstimatedMinutes} min)";
+                    sms += $"\n🏥 {h.HospitalName} (~{h.EstimatedMinutes} min, {h.DistanceKm} km)";
                 return sms;
             }
 
@@ -640,11 +664,7 @@ namespace LifeAlertPlus.API.Services
             {
                 lines.Add("");
                 lines.Add(isRo ? "🏥 Cel mai apropiat spital de urgență:" : "🏥 Nearest emergency hospital:");
-                lines.Add($"  {h.HospitalName}, {h.City} (~{h.EstimatedMinutes} min)");
-                if (h.Route.Count > 0)
-                    lines.Add(isRo
-                        ? $"  Rută: {string.Join(" → ", h.Route)}"
-                        : $"  Route: {string.Join(" → ", h.Route)}");
+                lines.Add($"  {h.HospitalName} (~{h.EstimatedMinutes} min, {h.DistanceKm} km)");
             }
 
             lines.Add("");
