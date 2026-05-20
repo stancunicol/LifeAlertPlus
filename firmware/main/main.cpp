@@ -7,15 +7,14 @@
  *
  * GPIO map (ESP32-C3 Mini):
  *   GPIO 0  — DS18B20 (1-Wire)
- *   GPIO 1  — Buzzer
- *   GPIO 2  — GPS RX  (UART1)
- *   GPIO 3  — GPS TX  (UART1)
- *   GPIO 4  — Button 1 (alarm)
- *   GPIO 5  — Button 2 (reset)
- *   GPIO 6  — LED 2
- *   GPIO 7  — LED 1
- *   GPIO 8  — I2C SDA
- *   GPIO 9  — I2C SCL
+ *   GPIO 1  — GPS TX (NEO-6M)    → ESP RX  (UART1 RX)
+ *   GPIO 2  — GPS RX (NEO-6M)    → ESP TX  (UART1 TX)
+ *   GPIO 3  — Button 1 (panic alert)
+ *   GPIO 4  — Button 2 (sleep toggle)
+ *   GPIO 5  — LED yellow (problem / offline / sleep)
+ *   GPIO 6  — LED green  (system on)
+ *   GPIO 7  — I2C SDA (TCA9548)
+ *   GPIO 8  — I2C SCL (TCA9548)
  */
 
 #include <stdio.h>
@@ -31,41 +30,54 @@
 #include "esp_rom_sys.h"
 #include "esp_system.h"
 #include "esp_efuse.h"
+#include "esp_mac.h"
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_crt_bundle.h"
 #include "esp_http_client.h"
 #include "nvs_flash.h"
+#include "nvs.h"
+#include "esp_timer.h"
 #include "lwip/inet.h"
 
 // ─── WiFi / API ───────────────────────────────────────────────────────────────
-#define WIFI_SSID        "YOUR_SSID"
-#define WIFI_PASS        "YOUR_PASSWORD"
-#define WIFI_MAX_RETRY   5
+// Fallback credentials used only when NVS has no stored networks
+#define WIFI_SSID_DEFAULT  "Nicole"
+#define WIFI_PASS_DEFAULT  "20042005"
+#define WIFI_MAX_RETRY     5
 
 // Must match Urls:EspDeviceKey in API appsettings
-#define API_BASE_URL     "https://your-api.azurewebsites.net"
-#define API_INGEST_PATH  "/api/ESP/ingest"
-#define API_DEVICE_KEY   "change-me-to-a-strong-random-key"
+#define API_BASE_URL       "https://api-lifealertplusiot-gqf3crdrenfgd9bw.germanywestcentral-01.azurewebsites.net/"
+#define API_INGEST_PATH    "/api/ESP/ingest"
+#define API_PANIC_PATH     "/api/ESP/panic"
+#define API_HEARTBEAT_PATH "/api/ESP/heartbeat"
+#define API_DEVICE_KEY     "idontknowwhattoputhere"
+#define FIRMWARE_VERSION   "1.1.0"
 
 // ─── Timing ───────────────────────────────────────────────────────────────────
-#define SENSOR_READ_MS   500     // inner loop period
-#define API_POST_MS      2000    // how often to POST (must be >= SENSOR_READ_MS)
+#define SENSOR_READ_MS     500      // inner loop period
+#define API_POST_MS        10000    // how often to POST measurements
+#define HEARTBEAT_MS       300000   // heartbeat every 5 minutes
+#define SLEEP_POST_MS      10000    // POST interval in power-save mode
+
+// ─── Offline queue (NVS) ──────────────────────────────────────────────────────
+#define QUEUE_NS           "offl_q"
+#define QUEUE_MAX          50
 
 // ─── I2C ──────────────────────────────────────────────────────────────────────
-#define I2C_SDA_PIN      8
-#define I2C_SCL_PIN      9
+#define I2C_SDA_PIN      7
+#define I2C_SCL_PIN      8
 #define I2C_PORT         I2C_NUM_0
 #define I2C_FREQ_HZ      100000
 #define I2C_TIMEOUT_MS   50
 
-// ─── PCA9548 multiplexer ──────────────────────────────────────────────────────
+// ─── TCA9548 multiplexer ──────────────────────────────────────────────────────
 #define MUX_ADDR_MIN     0x70
 #define MUX_ADDR_MAX     0x77
-#define MUX_CH_MPU6050   2
-#define MUX_CH_MAX30100  0
-#define MUX_CH_OLED      1
+#define MUX_CH_MAX30100  0    // SD0 / SC0
+#define MUX_CH_OLED      1    // SD1 / SC1
+#define MUX_CH_MPU6050   2    // SD2 / SC2
 
 // ─── MPU6050 ──────────────────────────────────────────────────────────────────
 #define MPU_ADDR         0x68
@@ -92,16 +104,15 @@
 
 // ─── GPS NEO-6M ───────────────────────────────────────────────────────────────
 #define GPS_UART_NUM     UART_NUM_1
-#define GPS_TX_PIN       3
-#define GPS_RX_PIN       2
+#define GPS_TX_PIN       2    // ESP TX → NEO-6M RX
+#define GPS_RX_PIN       1    // ESP RX ← NEO-6M TX
 #define GPS_RX_BUF       1024
 
 // ─── GPIO ─────────────────────────────────────────────────────────────────────
-#define BUZZER_PIN       1
-#define BUTTON1_PIN      4
-#define BUTTON2_PIN      5
-#define LED1_PIN         7
-#define LED2_PIN         6
+#define BUTTON1_PIN      3    // panic alert
+#define BUTTON2_PIN      4    // sleep toggle
+#define LED_YELLOW_PIN   5    // problem / offline / sleep indicator
+#define LED_GREEN_PIN    6    // system on indicator
 
 // =============================================================================
 // Global state
@@ -132,6 +143,15 @@ static uint8_t     g_gps_rx[GPS_RX_BUF];
 
 // Buttons
 static QueueHandle_t s_btn_q = NULL;
+
+// Power-save mode (Button 2 toggle)
+static volatile bool g_sleep_mode = false;
+
+// Heartbeat
+static esp_timer_handle_t s_hb_timer = NULL;
+
+// OLED availability (set once in app_main)
+static bool g_oled_ok = false;
 
 // =============================================================================
 // I2C
@@ -262,6 +282,23 @@ static bool max_read(uint16_t *ir, uint16_t *red)
     return true;
 }
 
+static void max_sleep(void)
+{
+    mux_open(MUX_CH_MAX30100);
+    uint8_t d[2] = { M30_MODE_CFG, 0x00 };   // power-down
+    i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+    mux_close();
+}
+
+static void max_wake(void)
+{
+    mux_open(MUX_CH_MAX30100);
+    uint8_t d[2] = { M30_MODE_CFG, 0x03 };   // SpO2 mode
+    i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+    mux_close();
+    vTaskDelay(pdMS_TO_TICKS(20));            // stabilizare ADC
+}
+
 // =============================================================================
 // OLED SSD1306
 // =============================================================================
@@ -336,6 +373,119 @@ static void oled_show_title(void)
         }
     }
     mux_close();
+}
+
+// 5×7 font — ASCII 32-127, 5 bytes per glyph (column-major, LSB=top)
+static const uint8_t g_font5x7[][5] = {
+    {0x00,0x00,0x00,0x00,0x00},{0x00,0x00,0x5F,0x00,0x00},{0x00,0x07,0x00,0x07,0x00},
+    {0x14,0x7F,0x14,0x7F,0x14},{0x24,0x2A,0x7F,0x2A,0x12},{0x23,0x13,0x08,0x64,0x62},
+    {0x36,0x49,0x55,0x22,0x50},{0x00,0x05,0x03,0x00,0x00},{0x00,0x1C,0x22,0x41,0x00},
+    {0x00,0x41,0x22,0x1C,0x00},{0x14,0x08,0x3E,0x08,0x14},{0x08,0x08,0x3E,0x08,0x08},
+    {0x00,0x50,0x30,0x00,0x00},{0x08,0x08,0x08,0x08,0x08},{0x00,0x60,0x60,0x00,0x00},
+    {0x20,0x10,0x08,0x04,0x02},{0x3E,0x51,0x49,0x45,0x3E},{0x00,0x42,0x7F,0x40,0x00},
+    {0x42,0x61,0x51,0x49,0x46},{0x21,0x41,0x45,0x4B,0x31},{0x18,0x14,0x12,0x7F,0x10},
+    {0x27,0x45,0x45,0x45,0x39},{0x3C,0x4A,0x49,0x49,0x30},{0x01,0x71,0x09,0x05,0x03},
+    {0x36,0x49,0x49,0x49,0x36},{0x06,0x49,0x49,0x29,0x1E},{0x00,0x36,0x36,0x00,0x00},
+    {0x00,0x56,0x36,0x00,0x00},{0x08,0x14,0x22,0x41,0x00},{0x14,0x14,0x14,0x14,0x14},
+    {0x00,0x41,0x22,0x14,0x08},{0x02,0x01,0x51,0x09,0x06},{0x32,0x49,0x79,0x41,0x3E},
+    {0x7E,0x11,0x11,0x11,0x7E},{0x7F,0x49,0x49,0x49,0x36},{0x3E,0x41,0x41,0x41,0x22},
+    {0x7F,0x41,0x41,0x22,0x1C},{0x7F,0x49,0x49,0x49,0x41},{0x7F,0x09,0x09,0x09,0x01},
+    {0x3E,0x41,0x49,0x49,0x7A},{0x7F,0x08,0x08,0x08,0x7F},{0x00,0x41,0x7F,0x41,0x00},
+    {0x20,0x40,0x41,0x3F,0x01},{0x7F,0x08,0x14,0x22,0x41},{0x7F,0x40,0x40,0x40,0x40},
+    {0x7F,0x02,0x0C,0x02,0x7F},{0x7F,0x04,0x08,0x10,0x7F},{0x3E,0x41,0x41,0x41,0x3E},
+    {0x7F,0x09,0x09,0x09,0x06},{0x3E,0x41,0x51,0x21,0x5E},{0x7F,0x09,0x19,0x29,0x46},
+    {0x46,0x49,0x49,0x49,0x31},{0x01,0x01,0x7F,0x01,0x01},{0x3F,0x40,0x40,0x40,0x3F},
+    {0x1F,0x20,0x40,0x20,0x1F},{0x3F,0x40,0x38,0x40,0x3F},{0x63,0x14,0x08,0x14,0x63},
+    {0x07,0x08,0x70,0x08,0x07},{0x61,0x51,0x49,0x45,0x43},{0x00,0x7F,0x41,0x41,0x00},
+    {0x02,0x04,0x08,0x10,0x20},{0x00,0x41,0x41,0x7F,0x00},{0x04,0x02,0x01,0x02,0x04},
+    {0x40,0x40,0x40,0x40,0x40},{0x00,0x01,0x02,0x04,0x00},{0x20,0x54,0x54,0x54,0x78},
+    {0x7F,0x48,0x44,0x44,0x38},{0x38,0x44,0x44,0x44,0x20},{0x38,0x44,0x44,0x48,0x7F},
+    {0x38,0x54,0x54,0x54,0x18},{0x08,0x7E,0x09,0x01,0x02},{0x0C,0x52,0x52,0x52,0x3E},
+    {0x7F,0x08,0x04,0x04,0x78},{0x00,0x44,0x7D,0x40,0x00},{0x20,0x40,0x44,0x3D,0x00},
+    {0x7F,0x10,0x28,0x44,0x00},{0x00,0x41,0x7F,0x40,0x00},{0x7C,0x04,0x18,0x04,0x78},
+    {0x7C,0x08,0x04,0x04,0x78},{0x38,0x44,0x44,0x44,0x38},{0x7C,0x14,0x14,0x14,0x08},
+    {0x08,0x14,0x14,0x18,0x7C},{0x7C,0x08,0x04,0x04,0x08},{0x48,0x54,0x54,0x54,0x20},
+    {0x04,0x3F,0x44,0x40,0x20},{0x3C,0x40,0x40,0x40,0x3C},{0x1C,0x20,0x40,0x20,0x1C},
+    {0x3C,0x40,0x30,0x40,0x3C},{0x44,0x28,0x10,0x28,0x44},{0x0C,0x50,0x50,0x50,0x3C},
+    {0x44,0x64,0x54,0x4C,0x44},{0x00,0x08,0x36,0x41,0x00},{0x00,0x00,0x7F,0x00,0x00},
+    {0x00,0x41,0x36,0x08,0x00},{0x10,0x08,0x08,0x10,0x08},{0x78,0x46,0x41,0x46,0x78},
+};
+
+// Scrie un string pe OLED la pagina şi coloana date (6px per caracter)
+static void oled_write_str(uint8_t page, uint8_t col, const char *s)
+{
+    mux_open(MUX_CH_OLED);
+    oled_cmd((uint8_t)(0xB0 + page));
+    oled_cmd((uint8_t)(col & 0x0F));
+    oled_cmd((uint8_t)(0x10 | (col >> 4)));
+    while (*s && col < 128) {
+        uint8_t c = (uint8_t)*s++;
+        if (c < 0x20 || c > 0x7F) c = 0x20;
+        const uint8_t *g = g_font5x7[c - 0x20];
+        for (int i = 0; i < 5; i++) {
+            uint8_t b[2] = { OLED_DATA_BYTE, g[i] };
+            i2c_master_write_to_device(I2C_PORT, OLED_ADDR, b, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+        }
+        uint8_t gap[2] = { OLED_DATA_BYTE, 0x00 };
+        i2c_master_write_to_device(I2C_PORT, OLED_ADDR, gap, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+        col += 6;
+    }
+    mux_close();
+}
+
+// Afişează ultimele date citite pe OLED (apelat la fiecare POST)
+static void oled_show_data(
+    bool ds_ok,  float ds_temp,
+    bool max_ok, uint16_t ir, uint16_t red,
+    bool mpu_ok, const int16_t *accel)
+{
+    if (!g_oled_ok) return;
+
+    char line[22];
+
+    // Page 0: titlu centrat (10 chars × 6px = 60px → start col 34)
+    oled_write_str(0, 34, "LifeAlert+");
+
+    // Page 2: temperatură (evitam %f — folosim aritmetică pe int)
+    if (ds_ok) {
+        bool neg = (ds_temp < 0.0f);
+        int ti = (int)(fabsf(ds_temp) * 10.0f + 0.5f);
+        snprintf(line, sizeof(line), "Temp:%s%d.%dC        ",
+                 neg ? "-" : " ", ti / 10, ti % 10);
+    } else {
+        snprintf(line, sizeof(line), "Temp: --.-C        ");
+    }
+    oled_write_str(2, 0, line);
+
+    // Page 3: MAX30100
+    if (max_ok) {
+        snprintf(line, sizeof(line), "IR:%-5u  R:%-5u  ", ir, red);
+    } else {
+        snprintf(line, sizeof(line), "IR:-----  R:-----  ");
+    }
+    oled_write_str(3, 0, line);
+
+    // Page 4: accelerometru X/Y
+    if (mpu_ok) {
+        snprintf(line, sizeof(line), "AX:%-6d AY:%-5d", (int)accel[0], (int)accel[1]);
+    } else {
+        snprintf(line, sizeof(line), "AX:------  AY:-----");
+    }
+    oled_write_str(4, 0, line);
+
+    // Page 5: accelerometru Z
+    if (mpu_ok) {
+        snprintf(line, sizeof(line), "AZ:%-6d           ", (int)accel[2]);
+    } else {
+        snprintf(line, sizeof(line), "AZ:------           ");
+    }
+    oled_write_str(5, 0, line);
+
+    // Page 6: WiFi + coadă offline
+    snprintf(line, sizeof(line), "WiFi:%-3s  Q:%-6lu  ",
+             s_wifi_ok ? "OK" : "---",
+             (unsigned long)s_q_count);
+    oled_write_str(6, 0, line);
 }
 
 // =============================================================================
@@ -553,7 +703,7 @@ static void on_wifi_event(void *, esp_event_base_t base, int32_t id, void *data)
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
         s_wifi_ok = false;
-        gpio_set_level((gpio_num_t)LED2_PIN, 0);
+        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);  // yellow on = offline
         if (s_wifi_retry < WIFI_MAX_RETRY) {
             esp_wifi_connect();
             printf("[WiFi] Reconnecting (%d/%d)...\n", ++s_wifi_retry, WIFI_MAX_RETRY);
@@ -569,6 +719,59 @@ static void on_wifi_event(void *, esp_event_base_t base, int32_t id, void *data)
     }
 }
 
+// Load up to 3 WiFi networks from NVS namespace "wifi_cfg".
+// Falls back to compile-time defaults if nothing is stored.
+static uint8_t s_wifi_net_count = 0;
+static char    s_wifi_ssids[3][33];
+static char    s_wifi_passes[3][65];
+
+static void wifi_load_credentials(void)
+{
+    nvs_handle_t h;
+    if (nvs_open("wifi_cfg", NVS_READONLY, &h) == ESP_OK) {
+        uint8_t n = 0;
+        nvs_get_u8(h, "n", &n);
+        s_wifi_net_count = 0;
+        for (uint8_t i = 0; i < n && i < 3; i++) {
+            char sk[8], pk[8];
+            snprintf(sk, sizeof(sk), "s%u", i);
+            snprintf(pk, sizeof(pk), "p%u", i);
+            size_t sl = sizeof(s_wifi_ssids[i]);
+            size_t pl = sizeof(s_wifi_passes[i]);
+            if (nvs_get_str(h, sk, s_wifi_ssids[i], &sl) == ESP_OK &&
+                nvs_get_str(h, pk, s_wifi_passes[i], &pl) == ESP_OK)
+                s_wifi_net_count++;
+        }
+        nvs_close(h);
+    }
+    if (s_wifi_net_count == 0) {
+        strncpy(s_wifi_ssids[0],  WIFI_SSID_DEFAULT, 32);
+        strncpy(s_wifi_passes[0], WIFI_PASS_DEFAULT, 64);
+        s_wifi_net_count = 1;
+    }
+    printf("[WiFi] %u network(s) configured\n", s_wifi_net_count);
+}
+
+static bool wifi_try_connect(uint8_t idx)
+{
+    s_wifi_retry = 0;
+    xEventGroupClearBits(s_wifi_eg, WIFI_OK_BIT | WIFI_FAIL_BIT);
+
+    wifi_config_t wc = {};
+    strncpy((char *)wc.sta.ssid,     s_wifi_ssids[idx],  sizeof(wc.sta.ssid)  - 1);
+    strncpy((char *)wc.sta.password, s_wifi_passes[idx], sizeof(wc.sta.password) - 1);
+    wc.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+
+    esp_wifi_disconnect();
+    esp_wifi_set_config(WIFI_IF_STA, &wc);
+    esp_wifi_connect();
+
+    printf("[WiFi] Trying \"%s\"...\n", s_wifi_ssids[idx]);
+    EventBits_t bits = xEventGroupWaitBits(
+        s_wifi_eg, WIFI_OK_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, pdMS_TO_TICKS(12000));
+    return (bits & WIFI_OK_BIT) != 0;
+}
+
 static bool wifi_setup(void)
 {
     s_wifi_eg = xEventGroupCreate();
@@ -580,6 +783,8 @@ static bool wifi_setup(void)
     }
     ESP_ERROR_CHECK(ret);
 
+    wifi_load_credentials();
+
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
@@ -590,68 +795,163 @@ static bool wifi_setup(void)
     esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,    on_wifi_event, NULL, NULL);
     esp_event_handler_instance_register(IP_EVENT,   IP_EVENT_STA_GOT_IP, on_wifi_event, NULL, NULL);
 
-    wifi_config_t wc = {};
-    strncpy((char *)wc.sta.ssid,     WIFI_SSID, sizeof(wc.sta.ssid)     - 1);
-    strncpy((char *)wc.sta.password, WIFI_PASS, sizeof(wc.sta.password) - 1);
-    wc.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wc));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    EventBits_t bits = xEventGroupWaitBits(
-        s_wifi_eg, WIFI_OK_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, pdMS_TO_TICKS(15000));
-    return (bits & WIFI_OK_BIT) != 0;
+    // Try each stored network in sequence
+    for (uint8_t i = 0; i < s_wifi_net_count; i++) {
+        if (wifi_try_connect(i)) return true;
+        printf("[WiFi] \"%s\" failed, trying next...\n", s_wifi_ssids[i]);
+    }
+    return false;
 }
 
 // =============================================================================
-// HTTP POST — sends JSON matching ESPDataResponseDTO
+// HTTP POST — generic helper
 // =============================================================================
-static void http_post(const char *json)
+static bool http_post_to(const char *path, const char *json)
 {
-    if (!s_wifi_ok) return;
+    if (!s_wifi_ok) return false;
+
+    char url[128];
+    snprintf(url, sizeof(url), "%s%s", API_BASE_URL, path);
 
     esp_http_client_config_t cfg = {};
-    cfg.url               = API_BASE_URL API_INGEST_PATH;
+    cfg.url               = url;
     cfg.method            = HTTP_METHOD_POST;
     cfg.timeout_ms        = 5000;
-    cfg.crt_bundle_attach = esp_crt_bundle_attach;  // verifies Azure TLS cert
+    cfg.crt_bundle_attach = esp_crt_bundle_attach;
 
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
-    if (!client) return;
+    if (!client) return false;
 
     esp_http_client_set_header(client, "Content-Type", "application/json");
     esp_http_client_set_header(client, "X-Device-Key", API_DEVICE_KEY);
     esp_http_client_set_post_field(client, json, (int)strlen(json));
 
     esp_err_t err = esp_http_client_perform(client);
-    if (err == ESP_OK) {
+    bool ok = false;
+    if (err == ESP_OK || err == ESP_ERR_NOT_SUPPORTED) {
+        // ESP_ERR_NOT_SUPPORTED is returned when the server sends 401 with a
+        // non-Basic/Digest WWW-Authenticate scheme; the status code is still valid.
         int code = esp_http_client_get_status_code(client);
-        if (code != 200) printf("[HTTP] Status %d\n", code);
+        ok = (code == 200);
+        if (!ok) printf("[HTTP] %s → %d\n", path, code);
     } else {
-        printf("[HTTP] %s\n", esp_err_to_name(err));
+        printf("[HTTP] %s → %s\n", path, esp_err_to_name(err));
     }
     esp_http_client_cleanup(client);
+    return ok;
+}
+
+static void http_post(const char *json) { http_post_to(API_INGEST_PATH, json); }
+
+// =============================================================================
+// Offline queue — NVS ring buffer, max QUEUE_MAX measurements
+// =============================================================================
+static nvs_handle_t s_q_nvs = 0;
+static uint32_t     s_q_head = 0, s_q_tail = 0, s_q_count = 0;
+
+static void queue_init(void)
+{
+    esp_err_t e = nvs_open(QUEUE_NS, NVS_READWRITE, &s_q_nvs);
+    if (e != ESP_OK) { printf("[Q] NVS open failed\n"); return; }
+    nvs_get_u32(s_q_nvs, "head",  &s_q_head);
+    nvs_get_u32(s_q_nvs, "tail",  &s_q_tail);
+    nvs_get_u32(s_q_nvs, "count", &s_q_count);
+    printf("[Q] Loaded: %lu queued measurements\n", (unsigned long)s_q_count);
+}
+
+static void queue_push(const char *json)
+{
+    if (!s_q_nvs || s_q_count >= QUEUE_MAX) {
+        if (s_q_count >= QUEUE_MAX) printf("[Q] Full — dropping oldest\n");
+        // Drop oldest to make room
+        s_q_head = (s_q_head + 1) % QUEUE_MAX;
+        s_q_count--;
+    }
+    char key[8];
+    snprintf(key, sizeof(key), "%lu", (unsigned long)s_q_tail);
+    nvs_set_str(s_q_nvs, key, json);
+    s_q_tail = (s_q_tail + 1) % QUEUE_MAX;
+    s_q_count++;
+    nvs_set_u32(s_q_nvs, "head",  s_q_head);
+    nvs_set_u32(s_q_nvs, "tail",  s_q_tail);
+    nvs_set_u32(s_q_nvs, "count", s_q_count);
+    nvs_commit(s_q_nvs);
+    printf("[Q] Enqueued (%lu total)\n", (unsigned long)s_q_count);
+}
+
+static void queue_flush(void)
+{
+    if (!s_q_nvs || s_q_count == 0) return;
+    printf("[Q] Flushing %lu measurements...\n", (unsigned long)s_q_count);
+    while (s_q_count > 0 && s_wifi_ok) {
+        char key[8];
+        snprintf(key, sizeof(key), "%lu", (unsigned long)s_q_head);
+        char json[512] = {};
+        size_t len = sizeof(json);
+        if (nvs_get_str(s_q_nvs, key, json, &len) != ESP_OK) {
+            // corrupt entry — skip
+            s_q_head = (s_q_head + 1) % QUEUE_MAX;
+            s_q_count--;
+            continue;
+        }
+        if (!http_post_to(API_INGEST_PATH, json)) break; // stop on failure
+        nvs_erase_key(s_q_nvs, key);
+        s_q_head = (s_q_head + 1) % QUEUE_MAX;
+        s_q_count--;
+        nvs_set_u32(s_q_nvs, "head",  s_q_head);
+        nvs_set_u32(s_q_nvs, "count", s_q_count);
+        nvs_commit(s_q_nvs);
+    }
+    if (s_q_count == 0) printf("[Q] Flush complete\n");
 }
 
 // =============================================================================
-// Buzzer
+// Heartbeat
 // =============================================================================
-static void buzzer_setup(void)
+
+static void heartbeat_send(void *)
 {
-    gpio_config_t c = {};
-    c.pin_bit_mask = (1ULL << BUZZER_PIN);
-    c.mode         = GPIO_MODE_OUTPUT;
-    c.intr_type    = GPIO_INTR_DISABLE;
-    gpio_config(&c);
-    gpio_set_level((gpio_num_t)BUZZER_PIN, 0);
+    if (!s_wifi_ok) return;
+    int rssi = 0;
+    esp_wifi_sta_get_rssi(&rssi);
+
+    char json[256];
+    snprintf(json, sizeof(json),
+        "{\"serial\":\"%s\",\"rssiDbm\":%d,\"freeHeapBytes\":%lu,"
+        "\"uptimeSeconds\":%llu,\"queuedMeasurements\":%lu,"
+        "\"batteryVoltage\":0.0,\"sensorFlags\":15,"
+        "\"firmwareVersion\":\"%s\"}",
+        g_serial, rssi,
+        (unsigned long)esp_get_free_heap_size(),
+        (unsigned long long)(xTaskGetTickCount() * portTICK_PERIOD_MS / 1000ULL),
+        (unsigned long)s_q_count,
+        FIRMWARE_VERSION);
+
+    http_post_to(API_HEARTBEAT_PATH, json);
+    printf("[HB] RSSI=%d heap=%lu queue=%lu\n",
+           rssi, (unsigned long)esp_get_free_heap_size(), (unsigned long)s_q_count);
 }
 
-static void buzzer_beep(int ms)
+// =============================================================================
+// Panic alert
+// =============================================================================
+static void panic_send(void)
 {
-    gpio_set_level((gpio_num_t)BUZZER_PIN, 1);
-    vTaskDelay(pdMS_TO_TICKS(ms));
-    gpio_set_level((gpio_num_t)BUZZER_PIN, 0);
+    char json[128];
+    const char *coords = (g_gps.valid)
+        ? (snprintf(json, sizeof(json),
+               "{\"serial\":\"%s\",\"coordinates\":\"%.6f,%.6f\"}",
+               g_serial, g_gps.lat, g_gps.lon), json)
+        : (snprintf(json, sizeof(json),
+               "{\"serial\":\"%s\",\"coordinates\":null}", g_serial), json);
+    (void)coords;
+    if (http_post_to(API_PANIC_PATH, json))
+        printf("[BTN] Panic sent\n");
+    else
+        printf("[BTN] Panic send FAILED\n");
 }
 
 // =============================================================================
@@ -671,9 +971,29 @@ static void btn_task(void *)
         if (xQueueReceive(s_btn_q, &event, portMAX_DELAY)) {
             int pin   = (event >> 8) & 0xFF;
             int level = event & 1;
-            if (level == 0) {  // pressed
-                if (pin == BUTTON1_PIN) { printf("[BTN] Alarm\n"); buzzer_beep(1000); }
-                else                    { printf("[BTN] Reset\n"); }
+            if (level == 0) {  // pressed (active-low)
+                if (pin == BUTTON1_PIN) {
+                    printf("[BTN] Panic!\n");
+                    // Flash yellow LED twice as visual feedback
+                    for (int i = 0; i < 2; i++) {
+                        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);
+                        vTaskDelay(pdMS_TO_TICKS(150));
+                        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);
+                        vTaskDelay(pdMS_TO_TICKS(100));
+                    }
+                    panic_send();
+                } else {
+                    g_sleep_mode = !g_sleep_mode;
+                    if (g_sleep_mode) {
+                        esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+                        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);
+                        printf("[BTN] Sleep mode ON  (POST every %d ms)\n", SLEEP_POST_MS);
+                    } else {
+                        esp_wifi_set_ps(WIFI_PS_NONE);
+                        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);
+                        printf("[BTN] Sleep mode OFF (POST every %d ms)\n", API_POST_MS);
+                    }
+                }
             }
         }
     }
@@ -682,7 +1002,7 @@ static void btn_task(void *)
 static void buttons_setup(void)
 {
     s_btn_q = xQueueCreate(10, sizeof(int));
-    xTaskCreate(btn_task, "btn", 2048, NULL, 5, NULL);
+    xTaskCreate(btn_task, "btn", 4096, NULL, 5, NULL);
     gpio_config_t c = {};
     c.pin_bit_mask = (1ULL << BUTTON1_PIN) | (1ULL << BUTTON2_PIN);
     c.mode         = GPIO_MODE_INPUT;
@@ -731,7 +1051,7 @@ extern "C" void app_main(void)
 
     // Unique serial derived from factory MAC (set monitored.DeviceSerialNumber to this value)
     uint8_t mac[6];
-    esp_efuse_mac_get_default(mac);
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
     snprintf(g_serial, sizeof(g_serial), "ESP32-%02X%02X%02X%02X%02X%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     printf("[ID] %s\n", g_serial);
@@ -747,11 +1067,12 @@ extern "C" void app_main(void)
     printf("[MPU6050 ] %s | ch%d 0x%02X\n", mpu_ok ? "OK " : "---", MUX_CH_MPU6050, g_mpu_addr);
 
     bool max_ok = max_setup();
+    if (max_ok) max_sleep();   // doarme până la primul POST
     printf("[MAX30100] %s | ch%d 0x%02X\n", max_ok ? "OK " : "---", MUX_CH_MAX30100, M30_ADDR);
 
-    bool oled_ok = oled_setup();
-    if (oled_ok) { oled_clear(); oled_show_title(); }
-    printf("[OLED    ] %s | ch%d 0x%02X\n", oled_ok ? "OK " : "---", MUX_CH_OLED, OLED_ADDR);
+    g_oled_ok = oled_setup();
+    if (g_oled_ok) { oled_clear(); oled_show_title(); }
+    printf("[OLED    ] %s | ch%d 0x%02X\n", g_oled_ok ? "OK " : "---", MUX_CH_OLED, OLED_ADDR);
 
     ds_gpio_init();
     bool ds_conv    = ds_start_conv();
@@ -763,30 +1084,38 @@ extern "C" void app_main(void)
     gps_setup();
     printf("[GPS     ] OK | TX=%d RX=%d\n", GPS_TX_PIN, GPS_RX_PIN);
 
-    // Buzzer + LEDs
-    buzzer_setup();
+    // LEDs
     gpio_config_t led_conf = {};
-    led_conf.pin_bit_mask = (1ULL << LED1_PIN) | (1ULL << LED2_PIN);
+    led_conf.pin_bit_mask = (1ULL << LED_GREEN_PIN) | (1ULL << LED_YELLOW_PIN);
     led_conf.mode         = GPIO_MODE_OUTPUT;
     led_conf.intr_type    = GPIO_INTR_DISABLE;
     gpio_config(&led_conf);
-    gpio_set_level((gpio_num_t)LED1_PIN, 1);
-    gpio_set_level((gpio_num_t)LED2_PIN, 0);
+    gpio_set_level((gpio_num_t)LED_GREEN_PIN,  1);  // green on — system running
+    gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);  // yellow off initially
 
     // Buttons
     gpio_install_isr_service(0);
     buttons_setup();
 
     // WiFi — LED2 lights up on connect
-    printf("[WiFi] Connecting to \"%s\"...\n", WIFI_SSID);
     bool wifi_ok = wifi_setup();
     if (wifi_ok) {
-        gpio_set_level((gpio_num_t)LED2_PIN, 1);
-        buzzer_beep(80);
+        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);  // yellow off = connected OK
         printf("[WiFi] Connected\n");
     } else {
+        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);  // yellow on = offline
         printf("[WiFi] FAILED — running offline\n");
     }
+
+    // Offline queue (NVS must be initialised inside wifi_setup already)
+    queue_init();
+
+    // Heartbeat timer — fires every HEARTBEAT_MS
+    esp_timer_create_args_t hb_args = {};
+    hb_args.callback = heartbeat_send;
+    hb_args.name     = "heartbeat";
+    esp_timer_create(&hb_args, &s_hb_timer);
+    esp_timer_start_periodic(s_hb_timer, (uint64_t)HEARTBEAT_MS * 1000ULL);
 
     printf("\n[SYS] Monitoring active | POST every %d ms\n", API_POST_MS);
     printf("=====================================\n\n");
@@ -799,10 +1128,10 @@ extern "C" void app_main(void)
     while (true) {
         uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
+        // MPU6050: citit la fiecare iteraţie pentru detecţia căzăturilor
         bool mpu_ok_r = mpu_ok && mpu_read(accel, gyro);
-        bool max_ok_r = max_ok && max_read(&ir, &red);
 
-        // DS18B20 non-blocking: read result after 750 ms conversion window
+        // DS18B20 non-blocking: citeşte rezultatul după fereastra de 750 ms
         if (ds_conv && (now - ds_t0) >= DS18B20_CONV_MS) {
             ds_ready = ds_read_temp(&ds_temp);
             ds_conv  = false;
@@ -812,18 +1141,31 @@ extern "C" void app_main(void)
             ds_t0   = now;
         }
 
-        // GPS
+        // GPS — UART driver bufferează datele, citim pasiv
         int gps_n = uart_read_bytes(GPS_UART_NUM, g_gps_rx, sizeof(g_gps_rx) - 1, pdMS_TO_TICKS(20));
         if (gps_n > 0) gps_feed(g_gps_rx, gps_n);
 
-        // POST to API at configured interval
-        if ((now - last_post_ms) >= API_POST_MS) {
+        // La intervalul de POST: trezeşte MAX30100, citeşte, pune-l la somn,
+        // actualizează OLED şi trimite datele
+        uint32_t post_interval = g_sleep_mode ? SLEEP_POST_MS : API_POST_MS;
+        if ((now - last_post_ms) >= post_interval) {
+            if (max_ok) max_wake();
+            bool max_ok_r = max_ok && max_read(&ir, &red);
+            if (max_ok) max_sleep();
+
+            oled_show_data(ds_ready, ds_temp, max_ok_r, ir, red, mpu_ok_r, accel);
+
             build_json(json_buf, sizeof(json_buf),
                        mpu_ok_r, accel, gyro,
                        max_ok_r, ir, red,
                        ds_ready, ds_temp,
                        (uint64_t)now);
-            http_post(json_buf);
+            if (s_wifi_ok) {
+                queue_flush();
+                http_post(json_buf);
+            } else {
+                queue_push(json_buf);
+            }
             last_post_ms = now;
         }
 

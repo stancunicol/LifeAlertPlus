@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
+using LifeAlertPlus.Shared.DTOs.Requests.ESP;
 using Microsoft.AspNetCore.Authorization;
 using LifeAlertPlus.Application.IServices;
 
@@ -12,6 +13,7 @@ namespace LifeAlertPlus.API.Controllers
         IConfiguration configuration,
         ILogger<ESPController> logger,
         Services.SimulationManager simulationManager,
+        Services.AlertMonitorService alertMonitorService,
         IMonitoredService monitoredService,
         IUserMonitoredService userMonitoredService) : BaseApiController
     {
@@ -62,6 +64,45 @@ namespace LifeAlertPlus.API.Controllers
             simulationManager.SetData(payload);
             logger.LogDebug("ESP data ingested from {Serial}", payload.Serial);
 
+            return Ok();
+        }
+
+        [HttpPost("panic")]
+        [AllowAnonymous]
+        public async Task<IActionResult> PanicAlert([FromBody] ESPPanicDTO payload)
+        {
+            var expectedKey = configuration["Urls:EspDeviceKey"];
+            var providedKey = Request.Headers["X-Device-Key"].ToString();
+            if (string.IsNullOrWhiteSpace(expectedKey) || providedKey != expectedKey)
+                return Unauthorized(new { Message = "Invalid device key." });
+
+            if (string.IsNullOrWhiteSpace(payload?.Serial))
+                return BadRequest(new { Message = "Serial is required." });
+
+            var monitored = await monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(payload.Serial.Trim());
+            if (monitored == null)
+                return NotFound(new { Message = "Device not found." });
+
+            await alertMonitorService.TriggerPanicAlertAsync(monitored.Id, payload.Coordinates);
+            logger.LogWarning("Panic alert triggered by device {Serial}", payload.Serial);
+            return Ok();
+        }
+
+        [HttpPost("heartbeat")]
+        [AllowAnonymous]
+        public IActionResult Heartbeat([FromBody] ESPHeartbeatDTO payload)
+        {
+            var expectedKey = configuration["Urls:EspDeviceKey"];
+            var providedKey = Request.Headers["X-Device-Key"].ToString();
+            if (string.IsNullOrWhiteSpace(expectedKey) || providedKey != expectedKey)
+                return Unauthorized(new { Message = "Invalid device key." });
+
+            if (string.IsNullOrWhiteSpace(payload?.Serial))
+                return BadRequest(new { Message = "Serial is required." });
+
+            simulationManager.SetHeartbeat(payload.Serial.Trim(), payload);
+            logger.LogDebug("Heartbeat from {Serial}: RSSI={Rssi} heap={Heap} uptime={Uptime}s queue={Queue}",
+                payload.Serial, payload.RssiDbm, payload.FreeHeapBytes, payload.UptimeSeconds, payload.QueuedMeasurements);
             return Ok();
         }
 

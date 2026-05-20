@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using LifeAlertPlus.Shared.DTOs.Responses.ESP;
+using LifeAlertPlus.Shared.DTOs.Requests.ESP;
 using LifeAlertPlus.Shared.Helpers;
 using LifeAlertPlus.Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ namespace LifeAlertPlus.API.Services
         private readonly ConcurrentDictionary<Guid, (CancellationTokenSource Cts, Task RunningTask)> _runs = new();
         private readonly ConcurrentDictionary<string, ESPDataResponseDTO> _simulatedData = new(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<Guid, DateTime> _simulationStartTimes = new();
+        private readonly ConcurrentDictionary<string, (DateTime ReceivedAt, ESPHeartbeatDTO Data)> _heartbeats = new(StringComparer.OrdinalIgnoreCase);
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<SimulationManager> _logger;
         private readonly AlertMonitorService _alertMonitor;
@@ -42,6 +44,12 @@ namespace LifeAlertPlus.API.Services
 
             _simulatedData[payload.Serial.Trim()] = payload;
         }
+
+        public void SetHeartbeat(string serial, ESPHeartbeatDTO data)
+            => _heartbeats[serial] = (DateTime.UtcNow, data);
+
+        public (DateTime ReceivedAt, ESPHeartbeatDTO Data)? GetHeartbeat(string serial)
+            => _heartbeats.TryGetValue(serial, out var h) ? h : null;
 
         public IEnumerable<Guid> GetRunningPersonIds() => _runs.Keys.ToList();
 

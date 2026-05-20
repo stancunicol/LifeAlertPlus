@@ -776,5 +776,72 @@ namespace LifeAlertPlus.API.Services
             }
         }
 
+        public async Task TriggerPanicAlertAsync(Guid monitoredId, string? coordinates = null)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
+
+                var monitored = await dbContext.Monitoreds.FindAsync(monitoredId);
+                if (monitored == null) return;
+
+                var patientName = $"{monitored.FirstName} {monitored.LastName}".Trim();
+
+                HospitalRouteResult? hospital = null;
+                if (!string.IsNullOrWhiteSpace(coordinates))
+                {
+                    var (lat, lon) = ParseCoordinates(coordinates);
+                    if (lat != 0 || lon != 0)
+                    {
+                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
+                        hospital = await _nearestHospitalService.FindNearestAsync(lat, lon, cts.Token);
+                    }
+                }
+
+                var userMonitoreds = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
+                    .ToListAsync(dbContext.UserMonitoreds
+                        .Where(um => um.IdMonitored == monitoredId)
+                        .Include(um => um.User));
+
+                var createdAt = DateTime.UtcNow;
+
+                foreach (var um in userMonitoreds)
+                {
+                    var user = um.User;
+                    if (user == null || user.DeletedAt.HasValue) continue;
+
+                    var lang = user.Language ?? "en";
+                    var msg = lang == "ro"
+                        ? $"🆘 ALERTĂ MANUALĂ: {patientName} a apăsat butonul de panică!"
+                        : $"🆘 MANUAL ALERT: {patientName} pressed the panic button!";
+
+                    if (hospital != null)
+                        msg += lang == "ro"
+                            ? $" Cel mai apropiat spital: {hospital.HospitalName} (~{hospital.DistanceKm} km, ~{hospital.EstimatedMinutes} min)."
+                            : $" Nearest hospital: {hospital.HospitalName} (~{hospital.DistanceKm} km, ~{hospital.EstimatedMinutes} min).";
+
+                    dbContext.Notifications.Add(new Domain.Entities.Notification
+                    {
+                        Id = Guid.NewGuid(),
+                        IdUser = user.Id,
+                        IdMonitored = monitoredId,
+                        NotificationType = "Critical",
+                        Message = msg,
+                        CreatedAt = createdAt
+                    });
+
+                    await dbContext.SaveChangesAsync();
+                    await _pushNotificationService.SendPushNotificationAsync(user.Id, msg, "Critical");
+                }
+
+                _logger.LogWarning("Panic alert triggered for monitored {MonitoredId} ({Name})", monitoredId, patientName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "TriggerPanicAlertAsync failed for monitored {MonitoredId}", monitoredId);
+            }
+        }
+
     }
 }

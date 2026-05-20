@@ -297,6 +297,14 @@ FakesAssemblies/
 # GhostDoc plugin setting file
 *.GhostDoc.xml
 
+# ESP-IDF firmware
+firmware/build/
+firmware/sdkconfig.old
+firmware/dependencies.lock
+firmware/managed_components/
+firmware/.cache/
+firmware/**/__pycache__/
+
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 node_modules/

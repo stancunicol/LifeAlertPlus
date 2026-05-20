@@ -1,0 +1,27 @@
+{
+    "folders": [
+        {
+            "name": "LifeAlertPlus (.NET)",
+            "path": "./LifeAlertPlus"
+        },
+        {
+            "name": "Firmware (ESP-IDF)",
+            "path": "./firmware"
+        }
+    ],
+    "settings": {
+        "idf.espIdfPath": "${env:IDF_PATH}",
+        "idf.toolsPath": "${env:IDF_TOOLS_PATH}",
+        "files.exclude": {
+            "**/build": true,
+            "**/.cache": true
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "espressif.esp-idf-extension",
+            "ms-dotnettools.csdevkit",
+            "ms-vscode.cpptools"
+        ]
+    }
+}
