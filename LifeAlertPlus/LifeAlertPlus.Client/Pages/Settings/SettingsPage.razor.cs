@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using System.Globalization;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Client.Services;
 using Microsoft.JSInterop;
@@ -28,38 +27,22 @@ namespace LifeAlertPlus.Client.Pages.Settings
 
         private AppSettings Settings { get; set; } = new AppSettings
         {
-            AccentColor = "#A5D6A7",
-            EnableAnimations = true,
             FirstDayOfWeek = "monday",
 
-            BPSystolicMin = 90,
-            BPSystolicMax = 140,
-            BPDiastolicMin = 60,
-            BPDiastolicMax = 90,
             HeartRateMin = 60,
             HeartRateMax = 100,
-            GlucoseMin = 70,
-            GlucoseMax = 140,
             TemperatureMin = 36.0,
             TemperatureMax = 37.5,
             SpO2Min = 95,
             SpO2Max = 100,
 
-            NotificationSound = true,
-            NotificationVibration = true,
-            DesktopNotifications = true,
-            CheckInterval = "60",
             NotifyByEmail = true,
             NotifyByPush = true,
             EnableDailyReport = false,
 
-            AutoSave = true,
-            AutoBackup = true,
             UpdateFrequency = 30,
 
-            Language = "ro",
-            DateFormat = "dd/MM/yyyy",
-            TimeFormat = "24h"
+            Language = "ro"
         };
 
         private bool ShowSaveConfirmation { get; set; } = false;
@@ -182,14 +165,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
 
         private void ResetThresholds()
         {
-            Settings.BPSystolicMin = 90;
-            Settings.BPSystolicMax = 140;
-            Settings.BPDiastolicMin = 60;
-            Settings.BPDiastolicMax = 90;
             Settings.HeartRateMin = 60;
             Settings.HeartRateMax = 100;
-            Settings.GlucoseMin = 70;
-            Settings.GlucoseMax = 140;
             Settings.TemperatureMin = 36.0;
             Settings.TemperatureMax = 37.5;
             Settings.SpO2Min = 95;
@@ -200,80 +177,45 @@ namespace LifeAlertPlus.Client.Pages.Settings
         {
             Settings = new AppSettings
             {
-                AccentColor = "#A5D6A7",
-                EnableAnimations = true,
                 FirstDayOfWeek = "monday",
-                BPSystolicMin = 90,
-                BPSystolicMax = 140,
-                BPDiastolicMin = 60,
-                BPDiastolicMax = 90,
                 HeartRateMin = 60,
                 HeartRateMax = 100,
-                GlucoseMin = 70,
-                GlucoseMax = 140,
                 TemperatureMin = 36.0,
                 TemperatureMax = 37.5,
                 SpO2Min = 95,
                 SpO2Max = 100,
-                NotificationSound = true,
-                NotificationVibration = true,
-                DesktopNotifications = true,
-                CheckInterval = "60",
                 NotifyByEmail = true,
                 NotifyByPush = true,
                 NotifyBySms = false,
                 EnableDailyReport = false,
-                AutoSave = true,
-                AutoBackup = true,
                 UpdateFrequency = 30,
-                Language = "ro",
-                DateFormat = "dd/MM/yyyy",
-                TimeFormat = "24h"
+                Language = "ro"
             };
         }
 
         private class AppSettings
         {
-            // Appearance
-            public string AccentColor { get; set; } = string.Empty;
-            public bool EnableAnimations { get; set; }
             public string FirstDayOfWeek { get; set; } = string.Empty;
 
             // Alert Thresholds
-            public int BPSystolicMin { get; set; }
-            public int BPSystolicMax { get; set; }
-            public int BPDiastolicMin { get; set; }
-            public int BPDiastolicMax { get; set; }
             public int HeartRateMin { get; set; }
             public int HeartRateMax { get; set; }
-            public int GlucoseMin { get; set; }
-            public int GlucoseMax { get; set; }
             public double TemperatureMin { get; set; }
             public double TemperatureMax { get; set; }
             public int SpO2Min { get; set; }
             public int SpO2Max { get; set; }
 
             // Notifications
-            public bool NotificationSound { get; set; }
-            public bool NotificationVibration { get; set; }
-            public bool DesktopNotifications { get; set; }
-            public string CheckInterval { get; set; } = string.Empty;
             public bool NotifyByEmail { get; set; } = true;
             public bool NotifyByPush { get; set; } = true;
             public bool NotifyBySms { get; set; } = false;
             public bool EnableDailyReport { get; set; } = false;
-
-            // Data Management
-            public bool AutoSave { get; set; }
-            public bool AutoBackup { get; set; }
 
             // Update frequency (seconds)
             public int UpdateFrequency { get; set; } = 30;
 
             // System
             public string Language { get; set; } = string.Empty;
-            public string DateFormat { get; set; } = string.Empty;
-            public string TimeFormat { get; set; } = string.Empty;
         }
     }
 }

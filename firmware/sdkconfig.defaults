@@ -1,0 +1,7 @@
+# Default project configuration committed to source control.
+# Override in your local sdkconfig (gitignored) — do NOT put real secrets here.
+
+CONFIG_LIFEALERT_API_BASE_URL="http://localhost:5176/"
+CONFIG_LIFEALERT_API_DEVICE_KEY=""
+CONFIG_LIFEALERT_DEFAULT_WIFI_SSID=""
+CONFIG_LIFEALERT_DEFAULT_WIFI_PASS=""

@@ -17,11 +17,8 @@ namespace LifeAlertPlus.API.Services
         private readonly ILogger<SimulationManager> _logger;
         private readonly AlertMonitorService _alertMonitor;
 
-        /// <summary>
-        /// Duration from simulation start during which alert-level data is generated.
-        /// Set to TimeSpan.Zero to disable alert simulation.
-        /// </summary>
-        public static TimeSpan AlertPhaseDuration { get; set; } = TimeSpan.FromMinutes(3);
+        // Duration from simulation start during which alert-level data is generated.
+        private static readonly TimeSpan AlertPhaseDuration = TimeSpan.FromMinutes(3);
 
         public SimulationManager(IServiceScopeFactory scopeFactory, ILogger<SimulationManager> logger, AlertMonitorService alertMonitor)
         {

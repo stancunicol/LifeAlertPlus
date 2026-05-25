@@ -16,7 +16,5 @@ namespace LifeAlertPlus.Shared.DTOs.Requests.Monitored
         public string Address { get; set; } = string.Empty;
         [Required]
         public string DeviceSerialNumber { get; set; } = string.Empty;
-        [Required]
-        public bool IsActive { get; set; }
     }
 }

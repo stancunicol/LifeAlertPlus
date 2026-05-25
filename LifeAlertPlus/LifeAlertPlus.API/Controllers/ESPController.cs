@@ -76,13 +76,14 @@ namespace LifeAlertPlus.API.Controllers
             double temperature = payload.Temperature ?? 0;
             int spo2 = 0;
             string coordinates = payload.Neo6m ?? string.Empty;
+            bool isFall = payload.IsFall;
 
             var measurement = new Domain.Entities.Measurement
             {
                 Id = Guid.NewGuid(),
                 Name = "ESP Device",
                 Activity = string.Empty,
-                IsFall = false,
+                IsFall = isFall,
                 IdMonitored = monitored.Id,
                 Pulse = pulse,
                 SpO2 = spo2,
@@ -93,10 +94,13 @@ namespace LifeAlertPlus.API.Controllers
             await measurementService.AddMeasurementAsync(measurement);
 
             _ = alertMonitorService.ProcessMeasurementAsync(
-                monitored.Id, pulse, temperature, spo2, isFall: false,
+                monitored.Id, pulse, temperature, spo2, isFall: isFall,
                 coordinates: coordinates);
 
-            logger.LogDebug("ESP data ingested from {Serial}: pulse={Pulse} temp={Temp}", payload.Serial, pulse, temperature);
+            if (isFall)
+                logger.LogWarning("ESP {Serial} reported FALL — triggering critical alert flow", payload.Serial);
+            else
+                logger.LogDebug("ESP data ingested from {Serial}: pulse={Pulse} temp={Temp}", payload.Serial, pulse, temperature);
             return Ok();
         }
 

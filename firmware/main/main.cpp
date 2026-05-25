@@ -45,25 +45,37 @@
 #include "cJSON.h"
 
 // ─── WiFi / API ───────────────────────────────────────────────────────────────
-// Fallback credentials used only when NVS has no stored networks
-#define WIFI_SSID_DEFAULT  "Nicole"
-#define WIFI_PASS_DEFAULT  "20042005"
+// All secrets / deployment-specific values come from sdkconfig (gitignored),
+// generated from menuconfig options defined in main/Kconfig.projbuild.
+// Real values live in the developer's local sdkconfig; sdkconfig.defaults
+// committed to git has only empty placeholders.
+#define WIFI_SSID_DEFAULT  CONFIG_LIFEALERT_DEFAULT_WIFI_SSID
+#define WIFI_PASS_DEFAULT  CONFIG_LIFEALERT_DEFAULT_WIFI_PASS
 #define WIFI_MAX_RETRY     5
 
-// Must match Urls:EspDeviceKey in API appsettings
-#define API_BASE_URL       "https://api-lifealertplusiot-gqf3crdrenfgd9bw.germanywestcentral-01.azurewebsites.net/"
+#define API_BASE_URL         CONFIG_LIFEALERT_API_BASE_URL
 #define API_INGEST_PATH      "/api/ESP/ingest"
 #define API_PANIC_PATH       "/api/ESP/panic"
 #define API_HEARTBEAT_PATH   "/api/ESP/heartbeat"
 #define API_WIFI_CONFIG_PATH "/api/ESP/wifi-config/"  // serial appended at call site
-#define API_DEVICE_KEY     "idontknowwhattoputhere"
-#define FIRMWARE_VERSION   "1.1.0"
+#define API_DEVICE_KEY       CONFIG_LIFEALERT_API_DEVICE_KEY
+#define FIRMWARE_VERSION     "1.1.0"
 
 // ─── Timing ───────────────────────────────────────────────────────────────────
 #define SENSOR_READ_MS     500      // inner loop period
 #define API_POST_MS        5000     // how often to POST measurements
 #define HEARTBEAT_MS       300000   // heartbeat every 5 minutes
 // În sleep mode nu se trimit date — SLEEP_POST_MS eliminat
+
+// ─── Fall detection (MPU6050) ─────────────────────────────────────────────────
+// Threshold-based detector: free-fall (low |a|) → impact spike → post-impact stillness.
+#define FALL_SAMPLE_MS              20      // ~50 Hz polling
+#define FALL_FREEFALL_THRESHOLD_G   0.5f    // |a| below this = free-fall in progress
+#define FALL_FREEFALL_MIN_MS        80      // sustained free-fall before impact accepted
+#define FALL_FREEFALL_MAX_MS        800     // max free-fall window (anything longer = abort)
+#define FALL_IMPACT_THRESHOLD_G     2.5f    // impact spike on landing
+#define FALL_STILLNESS_THRESHOLD_G  0.25f   // |a-1g| deviation tolerated while "lying still"
+#define FALL_STILLNESS_DURATION_MS  1500    // sustained stillness needed to confirm fall
 
 // ─── Offline queue (NVS) ──────────────────────────────────────────────────────
 #define QUEUE_NS              "offl_q"
@@ -187,6 +199,9 @@ static volatile uint16_t g_last_ir       = 0;
 static volatile uint16_t g_last_red      = 0;
 static volatile int      g_bpm           = 0;     // 0 = necalculat / fără deget
 static volatile bool     g_finger_on     = false; // IR peste prag
+
+// Fall detector — setat de fall_task, citit (şi resetat) de build_json
+static volatile bool g_fall_detected = false;
 
 // Netif handle — necesar pentru a seta DNS backup după connect
 static esp_netif_t *s_wifi_netif = NULL;
@@ -449,6 +464,97 @@ static void pulse_task(void *)
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));  // ~100 Hz polling
+    }
+}
+
+// =============================================================================
+// Fall detection task — eşantionează MPU6050 la ~50 Hz şi rulează state machine:
+//   IDLE → FREE_FALL → STILLNESS_MONITOR → confirm (sau abort).
+// Magnitudinea acceleraţiei (în g) sub un prag = free-fall; un spike după = impact;
+// dacă persoana rămâne imobilă (|a| ~ 1g, fără variaţii) câteva secunde după impact,
+// considerăm căderea confirmată. Setează flag-ul g_fall_detected — main loop îl citeşte
+// la următorul POST şi îl resetează după ce l-a inclus în payload.
+// =============================================================================
+typedef enum {
+    FALL_IDLE,
+    FALL_IN_FREEFALL,
+    FALL_MONITORING_STILLNESS
+} fall_state_t;
+
+static void fall_task(void *)
+{
+    fall_state_t state         = FALL_IDLE;
+    int64_t      state_start_ms = 0;
+    int64_t      freefall_start_ms = 0;
+
+    while (true) {
+        // În sleep mode sau dacă MPU nu a iniţializat: stăm pe loc şi resetăm starea
+        if (g_sleep_mode || !g_mpu_ok) {
+            state = FALL_IDLE;
+            vTaskDelay(pdMS_TO_TICKS(300));
+            continue;
+        }
+
+        int16_t accel[3], gyro[3];
+        if (!mpu_read(accel, gyro)) {
+            vTaskDelay(pdMS_TO_TICKS(FALL_SAMPLE_MS));
+            continue;
+        }
+
+        // MPU6050 implicit pe ±2g, 16384 LSB/g
+        float ax  = accel[0] / 16384.0f;
+        float ay  = accel[1] / 16384.0f;
+        float az  = accel[2] / 16384.0f;
+        float mag = sqrtf(ax * ax + ay * ay + az * az);
+
+        int64_t now_ms = esp_timer_get_time() / 1000;
+
+        switch (state) {
+            case FALL_IDLE:
+                if (mag < FALL_FREEFALL_THRESHOLD_G) {
+                    state = FALL_IN_FREEFALL;
+                    state_start_ms    = now_ms;
+                    freefall_start_ms = now_ms;
+                }
+                break;
+
+            case FALL_IN_FREEFALL:
+                if (mag >= FALL_IMPACT_THRESHOLD_G) {
+                    // Impact: acceptat doar dacă free-fall-ul a durat suficient
+                    if ((now_ms - freefall_start_ms) >= FALL_FREEFALL_MIN_MS) {
+                        state          = FALL_MONITORING_STILLNESS;
+                        state_start_ms = now_ms;
+                        printf("[FALL] Impact dupa %lldms free-fall (|a|=%.2fg)\n",
+                               now_ms - freefall_start_ms, mag);
+                    } else {
+                        state = FALL_IDLE;  // free-fall prea scurt = fals trigger
+                    }
+                } else if (mag > FALL_FREEFALL_THRESHOLD_G) {
+                    // Ieşit din free-fall fără impact = mişcare normală
+                    state = FALL_IDLE;
+                } else if ((now_ms - state_start_ms) > FALL_FREEFALL_MAX_MS) {
+                    // Free-fall prelungit = senzor blocat / scenariu atipic
+                    state = FALL_IDLE;
+                }
+                break;
+
+            case FALL_MONITORING_STILLNESS: {
+                // |a| ar trebui ~1g (gravitaţia) cu variaţii minime dacă persoana e jos
+                float dev = fabsf(mag - 1.0f);
+                if (dev > FALL_STILLNESS_THRESHOLD_G) {
+                    // Încă se mişcă — resetăm contorul de stillness
+                    state_start_ms = now_ms;
+                }
+                if ((now_ms - state_start_ms) >= FALL_STILLNESS_DURATION_MS) {
+                    g_fall_detected = true;
+                    printf("[FALL] CONFIRMAT — raportez la urmatorul POST\n");
+                    state = FALL_IDLE;
+                }
+                break;
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(FALL_SAMPLE_MS));
     }
 }
 
@@ -936,12 +1042,17 @@ static void wifi_load_credentials(void)
         }
         nvs_close(h);
     }
-    if (s_wifi_net_count == 0) {
-        strncpy(s_wifi_ssids[0],  WIFI_SSID_DEFAULT, 32);
-        strncpy(s_wifi_passes[0], WIFI_PASS_DEFAULT, 64);
+    if (s_wifi_net_count == 0 && WIFI_SSID_DEFAULT[0] != '\0') {
+        // No NVS entries — fall back to the compile-time default if set.
+        strncpy(s_wifi_ssids[0],  WIFI_SSID_DEFAULT, sizeof(s_wifi_ssids[0]) - 1);
+        strncpy(s_wifi_passes[0], WIFI_PASS_DEFAULT, sizeof(s_wifi_passes[0]) - 1);
         s_wifi_net_count = 1;
     }
-    printf("[WiFi] %u network(s) configured\n", s_wifi_net_count);
+    if (s_wifi_net_count == 0) {
+        printf("[WiFi] No networks configured. Provision one from the web UI; running offline until then.\n");
+    } else {
+        printf("[WiFi] %u network(s) configured\n", s_wifi_net_count);
+    }
 }
 
 static bool wifi_try_connect(uint8_t idx)
@@ -1641,10 +1752,14 @@ static void build_json(char *buf, size_t sz,
                        bool ds_ok,  float temp,
                        uint64_t ts)
 {
+    // Consum atomic al flag-ului de cădere (set de fall_task, raportat o singură dată)
+    bool is_fall = g_fall_detected;
+    if (is_fall) g_fall_detected = false;
+
     int n = snprintf(buf, sz,
-        "{\"serial\":\"%s\",\"date\":%llu,\"isAvailable\":true,"
+        "{\"serial\":\"%s\",\"date\":%llu,\"isAvailable\":true,\"isFall\":%s,"
         "\"mpu6050\":[%d,%d,%d],\"gyro\":[%d,%d,%d],",
-        g_serial, (unsigned long long)ts,
+        g_serial, (unsigned long long)ts, is_fall ? "true" : "false",
         mpu_ok ? accel[0] : 0, mpu_ok ? accel[1] : 0, mpu_ok ? accel[2] : 0,
         mpu_ok ? gyro[0]  : 0, mpu_ok ? gyro[1]  : 0, mpu_ok ? gyro[2]  : 0);
 
@@ -1671,6 +1786,12 @@ extern "C" void app_main(void)
     s_i2c_lock = xSemaphoreCreateRecursiveMutex();
 
     printf("\n=== LifeAlertPlus | ESP32-C3 Mini ===\n\n");
+
+    // Sanity check on Kconfig-provided secrets — make missing values loud rather than silent.
+    if (API_DEVICE_KEY[0] == '\0')
+        printf("[CFG] WARNING: CONFIG_LIFEALERT_API_DEVICE_KEY is empty. API calls will be rejected (401).\n");
+    if (API_BASE_URL[0] == '\0')
+        printf("[CFG] WARNING: CONFIG_LIFEALERT_API_BASE_URL is empty. No HTTP requests will be issued.\n");
 
     // Unique serial derived from factory MAC (set monitored.DeviceSerialNumber to this value)
     uint8_t mac[6];
@@ -1763,6 +1884,9 @@ extern "C" void app_main(void)
 
     // Pulse task — eşantionează MAX30100 la 100Hz şi calculează BPM
     if (g_max_ok) xTaskCreate(pulse_task, "pulse", 4096, NULL, 5, NULL);
+
+    // Fall detection task — eşantionează MPU6050 la 50Hz şi rulează state machine free-fall/impact/stillness
+    if (g_mpu_ok) xTaskCreate(fall_task, "fall", 4096, NULL, 5, NULL);
 
     printf("\n[SYS] Monitoring active | POST every %d ms\n", API_POST_MS);
     printf("=====================================\n\n");

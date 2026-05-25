@@ -30,7 +30,6 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		protected List<SimPerson> Persons { get; } = new();
 		protected string UserFullName { get; private set; } = "Admin";
 		protected string ProfilePictureUrl { get; private set; } = string.Empty;
-		private bool _disposed;
 
 		protected string SearchQuery { get; set; } = string.Empty;
 		protected string StatusFilter { get; set; } = "all";
@@ -335,7 +334,6 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 
 		public void Dispose()
 		{
-			_disposed = true;
 		}
 
 		private async Task RestoreRunningSimulationsAsync()

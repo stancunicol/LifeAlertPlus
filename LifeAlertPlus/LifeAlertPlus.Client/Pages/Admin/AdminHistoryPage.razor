@@ -65,9 +65,9 @@
 				<div class="section-actions">
 					<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="@T("adminHistory.searchPh")" />
 					<div class="filters">
-						<button class="filter-btn @GetFilterClass("all")" @onclick="() => SetFilter("all")">@T("adminHistory.all")</button>
-						<button class="filter-btn @GetFilterClass("Account")" @onclick="() => SetFilter("Account")">@T("adminHistory.account")</button>
-						<button class="filter-btn @GetFilterClass("System")" @onclick="() => SetFilter("System")">@T("adminHistory.system")</button>
+						<button class="filter-btn @GetFilterClass("all")" @onclick='() => SetFilter("all")'>@T("adminHistory.all")</button>
+						<button class="filter-btn @GetFilterClass("Account")" @onclick='() => SetFilter("Account")'>@T("adminHistory.account")</button>
+						<button class="filter-btn @GetFilterClass("System")" @onclick='() => SetFilter("System")'>@T("adminHistory.system")</button>
 					</div>
 				</div>
 			</div>

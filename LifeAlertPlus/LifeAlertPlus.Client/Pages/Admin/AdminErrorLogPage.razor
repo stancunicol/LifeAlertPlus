@@ -65,10 +65,10 @@
 				<div class="section-actions">
 					<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="@T("adminErrors.searchPh")" />
 					<div class="filters">
-						<button class="filter-btn @GetFilterClass("all")" @onclick="() => SetFilter("all")">@T("adminErrors.all")</button>
-						<button class="filter-btn @GetFilterClass("Error")" @onclick="() => SetFilter("Error")">@T("adminErrors.error")</button>
-						<button class="filter-btn @GetFilterClass("Warning")" @onclick="() => SetFilter("Warning")">@T("adminErrors.warning")</button>
-						<button class="filter-btn @GetFilterClass("Info")" @onclick="() => SetFilter("Info")">@T("adminErrors.info")</button>
+						<button class="filter-btn @GetFilterClass("all")" @onclick='() => SetFilter("all")'>@T("adminErrors.all")</button>
+						<button class="filter-btn @GetFilterClass("Error")" @onclick='() => SetFilter("Error")'>@T("adminErrors.error")</button>
+						<button class="filter-btn @GetFilterClass("Warning")" @onclick='() => SetFilter("Warning")'>@T("adminErrors.warning")</button>
+						<button class="filter-btn @GetFilterClass("Info")" @onclick='() => SetFilter("Info")'>@T("adminErrors.info")</button>
 					</div>
 				</div>
 			</div>

@@ -1,0 +1,35 @@
+menu "LifeAlertPlus Configuration"
+
+    config LIFEALERT_API_BASE_URL
+        string "Backend API base URL"
+        default "http://localhost:5176/"
+        help
+            Base URL of the LifeAlertPlus backend API. Include the trailing slash.
+            Set the production Azure URL here for deployed builds.
+
+    config LIFEALERT_API_DEVICE_KEY
+        string "ESP device API key (X-Device-Key header)"
+        default ""
+        help
+            Shared secret sent in the X-Device-Key header on every request.
+            Must match the Urls:EspDeviceKey value in the API's appsettings.
+            Leave empty in committed defaults; set the real value in your
+            local sdkconfig (which is gitignored).
+
+    config LIFEALERT_DEFAULT_WIFI_SSID
+        string "Fallback WiFi SSID"
+        default ""
+        help
+            WiFi network the device tries when no networks are stored in NVS
+            (first boot or after a reset). Leave empty to skip the fallback
+            entirely — in that case the device can only connect after the
+            user provisions a network from the web UI.
+
+    config LIFEALERT_DEFAULT_WIFI_PASS
+        string "Fallback WiFi password"
+        default ""
+        help
+            Password for the fallback WiFi network above. Leave empty for
+            open networks or when no fallback SSID is configured.
+
+endmenu
