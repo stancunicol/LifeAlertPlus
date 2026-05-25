@@ -28,8 +28,8 @@ builder.Services.AddScoped<SimulationBackgroundService>();
 builder.Services.AddScoped<TokenParserService>();
 builder.Services.AddScoped<ProfilePictureService>();
 builder.Services.AddScoped<UserStateService>();
-builder.Services.AddScoped<ImportApiClient>();
 builder.Services.AddScoped<MeasurementApiClient>();
+builder.Services.AddScoped<WifiApiClient>();
 builder.Services.AddScoped<AIPredictionService>();
 builder.Services.AddScoped<ChatbotClientService>();
 

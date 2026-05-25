@@ -92,7 +92,6 @@ namespace LifeAlertPlus.Application.Services
                 MinSpO2 = 95,
                 MaxSpO2 = 100,
                 Language = "ro",
-                FontSize = "medium",
                 UpdateFrequency = 30,
                 NotifyByEmail = true,
                 NotifyByPush = true
@@ -172,7 +171,6 @@ namespace LifeAlertPlus.Application.Services
                 MinSpO2 = 95,
                 MaxSpO2 = 100,
                 Language = "ro",
-                FontSize = "medium",
                 UpdateFrequency = 30,
                 NotifyByEmail = true,
                 NotifyByPush = true

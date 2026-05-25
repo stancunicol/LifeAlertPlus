@@ -13,15 +13,11 @@ namespace LifeAlertPlus.API.Controllers
     public class UserController : BaseApiController
     {
         private readonly IUserService _userService;
-        private readonly IMeasurementService _measurementService;
-        private readonly IUserMonitoredService _userMonitoredService;
         private readonly ILogger<UserController> _logger;
 
-        public UserController(IUserService userService, IMeasurementService measurementService, IUserMonitoredService userMonitoredService, ILogger<UserController> logger)
+        public UserController(IUserService userService, ILogger<UserController> logger)
         {
             _userService = userService;
-            _measurementService = measurementService;
-            _userMonitoredService = userMonitoredService;
             _logger = logger;
         }
 
@@ -58,7 +54,6 @@ namespace LifeAlertPlus.API.Controllers
             user.LastName = updatedUser.LastName ?? user.LastName;
             if (!string.IsNullOrEmpty(updatedUser.FirstDayOfTheWeek)) user.FirstDayOfTheWeek = updatedUser.FirstDayOfTheWeek;
             if (!string.IsNullOrEmpty(updatedUser.Language)) user.Language = updatedUser.Language;
-            if (!string.IsNullOrEmpty(updatedUser.FontSize)) user.FontSize = updatedUser.FontSize;
             user.MinHeartRate = updatedUser.MinHeartRate ?? user.MinHeartRate;
             user.MaxHeartRate = updatedUser.MaxHeartRate ?? user.MaxHeartRate;
             user.MinTemperature = updatedUser.MinTemperature ?? user.MinTemperature;
@@ -66,7 +61,6 @@ namespace LifeAlertPlus.API.Controllers
             user.MinSpO2 = updatedUser.MinSpO2 ?? user.MinSpO2;
             user.MaxSpO2 = updatedUser.MaxSpO2 ?? user.MaxSpO2;
             user.UpdateFrequency = updatedUser.UpdateFrequency ?? user.UpdateFrequency;
-            user.DataRetentionDays = updatedUser.DataRetentionDays ?? user.DataRetentionDays;
             user.NotifyByEmail = updatedUser.NotifyByEmail ?? user.NotifyByEmail;
             user.NotifyByPush = updatedUser.NotifyByPush ?? user.NotifyByPush;
             user.NotifyBySms = updatedUser.NotifyBySms ?? user.NotifyBySms;
@@ -78,24 +72,6 @@ namespace LifeAlertPlus.API.Controllers
             {
                 _logger.LogError("[UpdateUser] Failed to update user {Id} in DB", id);
                 return StatusCode(500, new { Message = "Failed to update user." });
-            }
-
-            // Apply data retention cleanup if the user set a retention period
-            if (user.DataRetentionDays.HasValue && user.DataRetentionDays.Value > 0)
-            {
-                try
-                {
-                    var cutoff = DateTime.UtcNow.AddDays(-user.DataRetentionDays.Value);
-                    var monitoredPeople = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(id);
-                    var monitoredIds = monitoredPeople.Select(m => m.Id);
-                    var deleted = await _measurementService.DeleteMeasurementsOlderThanAsync(monitoredIds, cutoff);
-                    if (deleted > 0)
-                        _logger.LogInformation("[UpdateUser] Cleaned up {Count} old measurements for user {Id}", deleted, id);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "[UpdateUser] Data retention cleanup failed for user {Id}", id);
-                }
             }
 
             _logger.LogInformation("[UpdateUser] User {Id} updated successfully", id);
@@ -281,7 +257,6 @@ namespace LifeAlertPlus.API.Controllers
                 Provider = string.IsNullOrEmpty(user.Provider) ? "Local" : user.Provider,
                 FirstDayOfTheWeek = user.FirstDayOfTheWeek,
                 Language = user.Language ?? "en",
-                FontSize = user.FontSize ?? "medium",
                 MinHeartRate = user.MinHeartRate ?? 0,
                 MaxHeartRate = user.MaxHeartRate ?? 0,
                 MinTemperature = (float)(user.MinTemperature ?? 0),
@@ -289,10 +264,10 @@ namespace LifeAlertPlus.API.Controllers
                 MinSpO2 = user.MinSpO2 ?? 0,
                 MaxSpO2 = user.MaxSpO2 ?? 0,
                 UpdateFrequency = user.UpdateFrequency ?? 30,
-                DataRetentionDays = user.DataRetentionDays ?? 0,
                 NotifyByEmail = user.NotifyByEmail,
                 NotifyByPush = user.NotifyByPush,
                 NotifyBySms = user.NotifyBySms,
+                EnableDailyReport = user.EnableDailyReport,
                 LastChangedPasswordAt = user.LastChangedPasswordAt,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
@@ -323,7 +298,6 @@ namespace LifeAlertPlus.API.Controllers
                 Provider = string.IsNullOrEmpty(user.Provider) ? "Local" : user.Provider,
                 FirstDayOfTheWeek = user.FirstDayOfTheWeek,
                 Language = user.Language ?? "en",
-                FontSize = user.FontSize ?? "medium",
                 MinHeartRate = user.MinHeartRate ?? 0,
                 MaxHeartRate = user.MaxHeartRate ?? 0,
                 MinTemperature = (float)(user.MinTemperature ?? 0),
@@ -331,10 +305,10 @@ namespace LifeAlertPlus.API.Controllers
                 MinSpO2 = user.MinSpO2 ?? 0,
                 MaxSpO2 = user.MaxSpO2 ?? 0,
                 UpdateFrequency = user.UpdateFrequency ?? 30,
-                DataRetentionDays = user.DataRetentionDays ?? 0,
                 NotifyByEmail = user.NotifyByEmail,
                 NotifyByPush = user.NotifyByPush,
                 NotifyBySms = user.NotifyBySms,
+                EnableDailyReport = user.EnableDailyReport,
                 LastChangedPasswordAt = user.LastChangedPasswordAt,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt

@@ -13,8 +13,8 @@
  *   GPIO 4  — Button 2 (sleep toggle)
  *   GPIO 5  — LED yellow (problem / offline / sleep)
  *   GPIO 6  — LED green  (system on)
- *   GPIO 7  — I2C SDA (TCA9548)
- *   GPIO 8  — I2C SCL (TCA9548)
+ *   GPIO 8  — I2C SDA (TCA9548)
+ *   GPIO 9  — I2C SCL (TCA9548)
  */
 
 #include <stdio.h>
@@ -24,6 +24,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/semphr.h"
 #include "driver/i2c.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
@@ -40,6 +41,8 @@
 #include "nvs.h"
 #include "esp_timer.h"
 #include "lwip/inet.h"
+#include "lwip/dns.h"
+#include "cJSON.h"
 
 // ─── WiFi / API ───────────────────────────────────────────────────────────────
 // Fallback credentials used only when NVS has no stored networks
@@ -49,25 +52,31 @@
 
 // Must match Urls:EspDeviceKey in API appsettings
 #define API_BASE_URL       "https://api-lifealertplusiot-gqf3crdrenfgd9bw.germanywestcentral-01.azurewebsites.net/"
-#define API_INGEST_PATH    "/api/ESP/ingest"
-#define API_PANIC_PATH     "/api/ESP/panic"
-#define API_HEARTBEAT_PATH "/api/ESP/heartbeat"
+#define API_INGEST_PATH      "/api/ESP/ingest"
+#define API_PANIC_PATH       "/api/ESP/panic"
+#define API_HEARTBEAT_PATH   "/api/ESP/heartbeat"
+#define API_WIFI_CONFIG_PATH "/api/ESP/wifi-config/"  // serial appended at call site
 #define API_DEVICE_KEY     "idontknowwhattoputhere"
 #define FIRMWARE_VERSION   "1.1.0"
 
 // ─── Timing ───────────────────────────────────────────────────────────────────
 #define SENSOR_READ_MS     500      // inner loop period
-#define API_POST_MS        10000    // how often to POST measurements
+#define API_POST_MS        5000     // how often to POST measurements
 #define HEARTBEAT_MS       300000   // heartbeat every 5 minutes
-#define SLEEP_POST_MS      10000    // POST interval in power-save mode
+// În sleep mode nu se trimit date — SLEEP_POST_MS eliminat
 
 // ─── Offline queue (NVS) ──────────────────────────────────────────────────────
-#define QUEUE_NS           "offl_q"
-#define QUEUE_MAX          50
+#define QUEUE_NS              "offl_q"
+#define QUEUE_MAX             50
+#define QUEUE_FLUSH_PER_CYCLE  5    // max cereri per ciclu de POST
+
+// Coadă separată pentru panic (alertele sunt rare dar critice — au prioritate)
+#define PANIC_QUEUE_NS        "panic_q"
+#define PANIC_QUEUE_MAX       10
 
 // ─── I2C ──────────────────────────────────────────────────────────────────────
-#define I2C_SDA_PIN      7
-#define I2C_SCL_PIN      8
+#define I2C_SDA_PIN      8
+#define I2C_SCL_PIN      9
 #define I2C_PORT         I2C_NUM_0
 #define I2C_FREQ_HZ      100000
 #define I2C_TIMEOUT_MS   50
@@ -92,6 +101,7 @@
 #define M30_SPO2_CFG     0x07
 #define M30_LED_CFG      0x09
 #define M30_FIFO_WR      0x02
+#define MAX30100_FINGER_THRESH  1000   // IR sub acest prag = fără deget pe senzor
 
 // ─── OLED SSD1306 ─────────────────────────────────────────────────────────────
 #define OLED_ADDR        0x3C
@@ -113,6 +123,8 @@
 #define BUTTON2_PIN      4    // sleep toggle
 #define LED_YELLOW_PIN   5    // problem / offline / sleep indicator
 #define LED_GREEN_PIN    6    // system on indicator
+
+#define HW_SELFTEST      0    // diagnostic LED verde + butoane la boot (dezactivat)
 
 // =============================================================================
 // Global state
@@ -142,7 +154,9 @@ static int         g_gps_line_n = 0;
 static uint8_t     g_gps_rx[GPS_RX_BUF];
 
 // Buttons
-static QueueHandle_t s_btn_q = NULL;
+static QueueHandle_t s_btn_q     = NULL;
+static int64_t       s_btn_last_us[2] = {}; // debounce timestamps per button
+static bool          s_btn_disabled[2] = { false, false }; // [0]=panic, [1]=sleep
 
 // Power-save mode (Button 2 toggle)
 static volatile bool g_sleep_mode = false;
@@ -150,8 +164,38 @@ static volatile bool g_sleep_mode = false;
 // Heartbeat
 static esp_timer_handle_t s_hb_timer = NULL;
 
-// OLED availability (set once in app_main)
+// Sleep auto-off: după 5s în sleep mode, stinge LED galben + OLED display
+static esp_timer_handle_t s_sleep_off_timer = NULL;
+#define SLEEP_OFF_DELAY_MS  5000
+
+// Senzori — status init la boot (folosit pentru afişarea erorilor pe OLED)
 static bool g_oled_ok = false;
+static bool g_mpu_ok  = false;
+static bool g_max_ok  = false;
+static bool g_ds_ok   = false;
+
+// Mutex I2C recursiv — serializează accesul la magistrală + mux între task-uri
+// concurente (main loop, pulse_task, btn_task). Recursiv pentru ca o funcţie de nivel
+// înalt (oled_show_data) să poată ţine lock-ul peste mai multe apeluri imbricate
+// (oled_write_str), garantând că un draw OLED complet nu e întrerupt de pulse_task.
+static SemaphoreHandle_t s_i2c_lock = NULL;
+static inline void i2c_lock(void)   { if (s_i2c_lock) xSemaphoreTakeRecursive(s_i2c_lock, portMAX_DELAY); }
+static inline void i2c_unlock(void) { if (s_i2c_lock) xSemaphoreGiveRecursive(s_i2c_lock); }
+
+// Date publicate de pulse_task — citite de main loop / OLED
+static volatile uint16_t g_last_ir       = 0;
+static volatile uint16_t g_last_red      = 0;
+static volatile int      g_bpm           = 0;     // 0 = necalculat / fără deget
+static volatile bool     g_finger_on     = false; // IR peste prag
+
+// Netif handle — necesar pentru a seta DNS backup după connect
+static esp_netif_t *s_wifi_netif = NULL;
+
+// Offline queue counters (used by oled_show_data and queue functions)
+static uint32_t s_q_head = 0, s_q_tail = 0, s_q_count = 0;
+
+// Panic queue counters (NVS handle declarat lângă funcţiile sale)
+static uint32_t s_pq_head = 0, s_pq_tail = 0, s_pq_count = 0;
 
 // =============================================================================
 // I2C
@@ -227,12 +271,14 @@ static bool mpu_setup(void)
 
 static bool mpu_read(int16_t *accel, int16_t *gyro)
 {
+    i2c_lock();
     mux_open(MUX_CH_MPU6050);
     uint8_t reg = MPU_ACCEL_XOUT_H;
     uint8_t d[14];
     esp_err_t e = i2c_master_write_read_device(
         I2C_PORT, g_mpu_addr, &reg, 1, d, 14, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     mux_close();
+    i2c_unlock();
     if (e != ESP_OK) return false;
     accel[0] = (int16_t)((d[0]  << 8) | d[1]);
     accel[1] = (int16_t)((d[2]  << 8) | d[3]);
@@ -260,7 +306,7 @@ static bool max_setup(void)
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     d[0] = M30_SPO2_CFG; d[1] = 0x27;   // 1600 Hz, 16-bit ADC
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
-    d[0] = M30_LED_CFG;  d[1] = 0x24;   // medium LED current
+    d[0] = M30_LED_CFG;  d[1] = 0x4F;   // RED=4.4mA, IR=50mA (max) — semnal PPG puternic
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     d[0] = M30_FIFO_WR;  d[1] = 0x00;   // clear FIFO
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
@@ -270,12 +316,14 @@ static bool max_setup(void)
 
 static bool max_read(uint16_t *ir, uint16_t *red)
 {
+    i2c_lock();
     mux_open(MUX_CH_MAX30100);
     uint8_t reg = M30_FIFO_DATA;
     uint8_t d[4];
     esp_err_t e = i2c_master_write_read_device(
         I2C_PORT, M30_ADDR, &reg, 1, d, 4, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     mux_close();
+    i2c_unlock();
     if (e != ESP_OK) return false;
     *ir  = (uint16_t)((d[0] << 8) | d[1]);
     *red = (uint16_t)((d[2] << 8) | d[3]);
@@ -284,19 +332,124 @@ static bool max_read(uint16_t *ir, uint16_t *red)
 
 static void max_sleep(void)
 {
+    i2c_lock();
     mux_open(MUX_CH_MAX30100);
-    uint8_t d[2] = { M30_MODE_CFG, 0x00 };   // power-down
+    uint8_t d[2] = { M30_MODE_CFG, 0x80 };   // SHDN bit — shutdown corect
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     mux_close();
+    i2c_unlock();
 }
 
 static void max_wake(void)
 {
+    i2c_lock();
     mux_open(MUX_CH_MAX30100);
-    uint8_t d[2] = { M30_MODE_CFG, 0x03 };   // SpO2 mode
+    uint8_t d[2];
+    d[0] = M30_MODE_CFG; d[1] = 0x03;   // SpO2 mode, clear SHDN
+    i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+    d[0] = M30_LED_CFG;  d[1] = 0x24;   // rescrie curentul LED (se poate reseta la SHDN)
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     mux_close();
-    vTaskDelay(pdMS_TO_TICKS(20));            // stabilizare ADC
+    i2c_unlock();
+    vTaskDelay(pdMS_TO_TICKS(50));       // timp pentru ADC + umplere FIFO
+}
+
+// =============================================================================
+// Pulse task — eşantionează MAX30100 la ~100Hz şi calculează BPM
+// =============================================================================
+//   Algoritm:
+//     1) eşantionează IR la fiecare 10ms (rata MAX30100 = 100sps în SpO2 mode);
+//     2) urmăreşte componenta DC printr-o medie mobilă exponenţială (EMA);
+//     3) componenta AC = sample - DC;
+//     4) detecţie de vârfuri: tranziţie din "sub prag" în "peste prag" pe AC;
+//     5) BPM = 60000 / medie(intervale_intre_varfuri) [ms].
+//
+//   Rezultatul (g_bpm) este afişat pe OLED şi trimis în JSON la fiecare POST.
+// =============================================================================
+static void pulse_task(void *)
+{
+    float dc_ir         = 0.0f;          // tracker DC
+    const float DC_ALPHA = 0.01f;        // ~100 samples (~1s) time constant
+    bool   above        = false;          // hist state pentru detecţia muchiei
+    int    last_peak_ms = 0;
+    int    intervals[6] = {0};            // ultimele 6 intervale între vârfuri (ms)
+    int    int_idx      = 0;
+    int    int_filled   = 0;
+
+    while (true) {
+        // În sleep mode sau dacă MAX nu a iniţializat: stăm pe loc
+        if (g_sleep_mode || !g_max_ok) {
+            g_bpm = 0;
+            g_finger_on = false;
+            // Reset stare DSP la trezire
+            dc_ir = 0.0f;
+            above = false;
+            int_filled = 0;
+            int_idx = 0;
+            last_peak_ms = 0;
+            vTaskDelay(pdMS_TO_TICKS(300));
+            continue;
+        }
+
+        uint16_t ir = 0, red = 0;
+        if (!max_read(&ir, &red)) {
+            vTaskDelay(pdMS_TO_TICKS(20));
+            continue;
+        }
+        g_last_ir  = ir;
+        g_last_red = red;
+
+        bool finger = (ir > MAX30100_FINGER_THRESH);
+        g_finger_on = finger;
+
+        if (!finger) {
+            // Reset state — degetul nu e pe senzor
+            g_bpm = 0;
+            dc_ir = 0.0f;
+            above = false;
+            int_filled = 0;
+            int_idx = 0;
+            last_peak_ms = 0;
+            vTaskDelay(pdMS_TO_TICKS(50));
+            continue;
+        }
+
+        // DC tracking (EMA)
+        if (dc_ir == 0.0f) dc_ir = (float)ir;
+        dc_ir = dc_ir * (1.0f - DC_ALPHA) + (float)ir * DC_ALPHA;
+        float ac = (float)ir - dc_ir;
+
+        // Prag auto-adaptiv: 0.5% din DC (min 50) — semnalul PPG variază cu
+        // intensitatea LED-ului şi presiunea degetului
+        float peak_th = dc_ir * 0.005f;
+        if (peak_th < 50.0f) peak_th = 50.0f;
+
+        int now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+
+        // Detecţie vârfuri — rising edge peste prag (cu histeresis pe ac < -peak_th)
+        if (!above && ac > peak_th) {
+            above = true;
+            if (last_peak_ms > 0) {
+                int dt = now_ms - last_peak_ms;
+                if (dt > 300 && dt < 1500) {  // 40-200 BPM = interval 300-1500 ms
+                    intervals[int_idx] = dt;
+                    int_idx = (int_idx + 1) % 6;
+                    if (int_filled < 6) int_filled++;
+                    // BPM = media intervalelor recente
+                    int sum = 0;
+                    for (int i = 0; i < int_filled; i++) sum += intervals[i];
+                    int avg_dt = sum / int_filled;
+                    int bpm = 60000 / avg_dt;
+                    if (bpm >= 40 && bpm <= 200) g_bpm = bpm;
+                }
+            }
+            last_peak_ms = now_ms;
+        } else if (above && ac < -peak_th) {
+            above = false;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(10));  // ~100 Hz polling
+    }
 }
 
 // =============================================================================
@@ -332,6 +485,7 @@ static bool oled_setup(void)
 
 static void oled_clear(void)
 {
+    i2c_lock();
     mux_open(MUX_CH_OLED);
     for (int p = 0; p < 8; p++) {
         oled_cmd((uint8_t)(0xB0 + p));
@@ -342,6 +496,7 @@ static void oled_clear(void)
         }
     }
     mux_close();
+    i2c_unlock();
 }
 
 // 8×8 bitmap for "LifeAlertPlus" (13 chars)
@@ -363,6 +518,7 @@ static const uint8_t oled_font[][8] = {
 
 static void oled_show_title(void)
 {
+    i2c_lock();
     mux_open(MUX_CH_OLED);
     oled_cmd(0xB0 + 3);         // middle row
     oled_cmd(0x10); oled_cmd(0x02);
@@ -373,6 +529,7 @@ static void oled_show_title(void)
         }
     }
     mux_close();
+    i2c_unlock();
 }
 
 // 5×7 font — ASCII 32-127, 5 bytes per glyph (column-major, LSB=top)
@@ -411,14 +568,16 @@ static const uint8_t g_font5x7[][5] = {
     {0x00,0x41,0x36,0x08,0x00},{0x10,0x08,0x08,0x10,0x08},{0x78,0x46,0x41,0x46,0x78},
 };
 
-// Scrie un string pe OLED la pagina şi coloana date (6px per caracter)
+// Scrie un string pe OLED la pagina şi coloana date (6px per caracter).
+// Zero-fillează restul liniei până la col 128 pentru a şterge conţinut vechi.
 static void oled_write_str(uint8_t page, uint8_t col, const char *s)
 {
+    i2c_lock();
     mux_open(MUX_CH_OLED);
     oled_cmd((uint8_t)(0xB0 + page));
     oled_cmd((uint8_t)(col & 0x0F));
     oled_cmd((uint8_t)(0x10 | (col >> 4)));
-    while (*s && col < 128) {
+    while (*s && col <= 122) {   // 122 = ultimul start valid (122+6=128)
         uint8_t c = (uint8_t)*s++;
         if (c < 0x20 || c > 0x7F) c = 0x20;
         const uint8_t *g = g_font5x7[c - 0x20];
@@ -430,62 +589,91 @@ static void oled_write_str(uint8_t page, uint8_t col, const char *s)
         i2c_master_write_to_device(I2C_PORT, OLED_ADDR, gap, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
         col += 6;
     }
+    // Şterge pixelii rămaşi din write-uri anterioare
+    while (col < 128) {
+        uint8_t b[2] = { OLED_DATA_BYTE, 0x00 };
+        i2c_master_write_to_device(I2C_PORT, OLED_ADDR, b, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+        col++;
+    }
     mux_close();
+    i2c_unlock();
 }
 
 // Afişează ultimele date citite pe OLED (apelat la fiecare POST)
-static void oled_show_data(
-    bool ds_ok,  float ds_temp,
-    bool max_ok, uint16_t ir, uint16_t red,
-    bool mpu_ok, const int16_t *accel)
+//   ds_read_ok = succesul ultimei citiri de temperatură
+//   Pulsul (BPM) e produs de pulse_task şi citit din globala g_bpm.
+static void oled_show_data(bool ds_read_ok, float ds_temp)
 {
     if (!g_oled_ok) return;
 
-    char line[22];
+    char line[32];
 
-    // Page 0: titlu centrat (10 chars × 6px = 60px → start col 34)
+    i2c_lock();   // ţinem lock-ul peste tot draw-ul (mutex recursiv)
+
+    // Page 0: titlu centrat
     oled_write_str(0, 34, "LifeAlert+");
 
-    // Page 2: temperatură (evitam %f — folosim aritmetică pe int)
-    if (ds_ok) {
-        bool neg = (ds_temp < 0.0f);
-        int ti = (int)(fabsf(ds_temp) * 10.0f + 0.5f);
-        snprintf(line, sizeof(line), "Temp:%s%d.%dC        ",
-                 neg ? "-" : " ", ti / 10, ti % 10);
+    // Page 2: Puls (BPM real calculat de pulse_task)
+    if (!g_max_ok) {
+        snprintf(line, sizeof(line), "Puls: ERR");
+    } else if (!g_finger_on) {
+        snprintf(line, sizeof(line), "Puls: --");
+    } else if (g_bpm > 0) {
+        snprintf(line, sizeof(line), "Puls: %d bpm", g_bpm);
     } else {
-        snprintf(line, sizeof(line), "Temp: --.-C        ");
+        snprintf(line, sizeof(line), "Puls: ...");  // deget pus, încă se calculează
     }
     oled_write_str(2, 0, line);
 
-    // Page 3: MAX30100
-    if (max_ok) {
-        snprintf(line, sizeof(line), "IR:%-5u  R:%-5u  ", ir, red);
+    // Page 3: Temperatură
+    if (ds_read_ok) {
+        bool neg = (ds_temp < 0.0f);
+        int ti = (int)(fabsf(ds_temp) * 10.0f + 0.5f);
+        snprintf(line, sizeof(line), "Temp:%c%d.%dC",
+                 neg ? '-' : ' ', ti / 10, ti % 10);
     } else {
-        snprintf(line, sizeof(line), "IR:-----  R:-----  ");
+        snprintf(line, sizeof(line), "Temp: --.-C");
     }
     oled_write_str(3, 0, line);
 
-    // Page 4: accelerometru X/Y
-    if (mpu_ok) {
-        snprintf(line, sizeof(line), "AX:%-6d AY:%-5d", (int)accel[0], (int)accel[1]);
-    } else {
-        snprintf(line, sizeof(line), "AX:------  AY:-----");
-    }
+    // Page 4: Net + Sys
+    snprintf(line, sizeof(line), "Net:%-3s  Sys:%s",
+             s_wifi_ok ? "OK" : "OFF",
+             g_sleep_mode ? "SLP" : "ON");
     oled_write_str(4, 0, line);
 
-    // Page 5: accelerometru Z
-    if (mpu_ok) {
-        snprintf(line, sizeof(line), "AZ:%-6d           ", (int)accel[2]);
-    } else {
-        snprintf(line, sizeof(line), "AZ:------           ");
-    }
+    // Page 5: Baterie + coadă (Bat = placeholder — ADC nelegat la VBAT)
+    snprintf(line, sizeof(line), "Bat: --   Q:%lu",
+             (unsigned long)s_q_count);
     oled_write_str(5, 0, line);
 
-    // Page 6: WiFi + coadă offline
-    snprintf(line, sizeof(line), "WiFi:%-3s  Q:%-6lu  ",
-             s_wifi_ok ? "OK" : "---",
-             (unsigned long)s_q_count);
-    oled_write_str(6, 0, line);
+    // Page 7: stare globală — eroare doar dacă init la boot a eşuat sau wifi off
+    if (!g_mpu_ok || !g_max_ok || !g_ds_ok) {
+        snprintf(line, sizeof(line), "Err:%s%s%s",
+                 g_mpu_ok ? "" : " MPU",
+                 g_max_ok ? "" : " MAX",
+                 g_ds_ok  ? "" : " DS");
+    } else if (!s_wifi_ok) {
+        snprintf(line, sizeof(line), "Stare: OFFLINE");
+    } else {
+        snprintf(line, sizeof(line), "Stare: OK");
+    }
+    oled_write_str(7, 0, line);
+
+    i2c_unlock();
+}
+
+// Ecran afişat când sistemul intră în sleep mode (butonul 2)
+static void oled_show_sleep(void)
+{
+    if (!g_oled_ok) return;
+    i2c_lock();
+    oled_clear();
+    oled_write_str(0, 34, "LifeAlert+");
+    oled_write_str(3, 40, "SISTEM");
+    oled_write_str(4, 46, "OPRIT");
+    oled_write_str(6, 4,  "Buton 2 = pornire");
+    i2c_unlock();
 }
 
 // =============================================================================
@@ -715,6 +903,10 @@ static void on_wifi_event(void *, esp_event_base_t base, int32_t id, void *data)
         printf("[WiFi] IP: " IPSTR "\n", IP2STR(&e->ip_info.ip));
         s_wifi_retry = 0;
         s_wifi_ok    = true;
+        // Setează 8.8.8.8 direct în tabelul LWIP (index 1 = backup).
+        // esp_netif_set_dns_info nu propagă fiabil la LWIP când DHCP e activ.
+        const ip_addr_t dns_8888 = IPADDR4_INIT_BYTES(8, 8, 8, 8);
+        dns_setserver(1, &dns_8888);
         xEventGroupSetBits(s_wifi_eg, WIFI_OK_BIT);
     }
 }
@@ -787,7 +979,7 @@ static bool wifi_setup(void)
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+    s_wifi_netif = esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -819,7 +1011,7 @@ static bool http_post_to(const char *path, const char *json)
     esp_http_client_config_t cfg = {};
     cfg.url               = url;
     cfg.method            = HTTP_METHOD_POST;
-    cfg.timeout_ms        = 5000;
+    cfg.timeout_ms        = 15000;
     cfg.crt_bundle_attach = esp_crt_bundle_attach;
 
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
@@ -844,13 +1036,76 @@ static bool http_post_to(const char *path, const char *json)
     return ok;
 }
 
-static void http_post(const char *json) { http_post_to(API_INGEST_PATH, json); }
+static bool http_post(const char *json) { return http_post_to(API_INGEST_PATH, json); }
+
+// =============================================================================
+// HTTP GET — captures response body into a caller-provided buffer via event cb.
+// Used for fetching the WiFi config from the API.
+// =============================================================================
+typedef struct {
+    char *buf;
+    int   capacity;
+    int   length;
+} http_resp_t;
+
+static esp_err_t _http_resp_evt(esp_http_client_event_t *evt)
+{
+    if (evt->event_id != HTTP_EVENT_ON_DATA) return ESP_OK;
+    http_resp_t *r = (http_resp_t *)evt->user_data;
+    if (!r || !r->buf || r->capacity <= 0) return ESP_OK;
+    int n = evt->data_len;
+    int room = r->capacity - r->length - 1;  // leave 1 for NUL
+    if (n > room) n = room;
+    if (n > 0) {
+        memcpy(r->buf + r->length, evt->data, n);
+        r->length += n;
+        r->buf[r->length] = 0;
+    }
+    return ESP_OK;
+}
+
+static bool http_get_to(const char *path, char *out, int out_sz, int *out_status)
+{
+    if (!s_wifi_ok || !out || out_sz <= 0) return false;
+    out[0] = 0;
+    if (out_status) *out_status = 0;
+
+    char url[160];
+    snprintf(url, sizeof(url), "%s%s", API_BASE_URL, path);
+
+    http_resp_t r = { out, out_sz, 0 };
+
+    esp_http_client_config_t cfg = {};
+    cfg.url               = url;
+    cfg.method            = HTTP_METHOD_GET;
+    cfg.timeout_ms        = 15000;
+    cfg.crt_bundle_attach = esp_crt_bundle_attach;
+    cfg.event_handler     = _http_resp_evt;
+    cfg.user_data         = &r;
+
+    esp_http_client_handle_t client = esp_http_client_init(&cfg);
+    if (!client) return false;
+
+    esp_http_client_set_header(client, "X-Device-Key", API_DEVICE_KEY);
+
+    esp_err_t err = esp_http_client_perform(client);
+    bool ok = false;
+    if (err == ESP_OK || err == ESP_ERR_NOT_SUPPORTED) {
+        int code = esp_http_client_get_status_code(client);
+        if (out_status) *out_status = code;
+        ok = (code == 200);
+    } else {
+        printf("[HTTP-GET] %s → %s\n", path, esp_err_to_name(err));
+    }
+    esp_http_client_cleanup(client);
+    return ok;
+}
 
 // =============================================================================
 // Offline queue — NVS ring buffer, max QUEUE_MAX measurements
 // =============================================================================
 static nvs_handle_t s_q_nvs = 0;
-static uint32_t     s_q_head = 0, s_q_tail = 0, s_q_count = 0;
+// s_q_head / s_q_tail / s_q_count declared in global state section
 
 static void queue_init(void)
 {
@@ -885,36 +1140,184 @@ static void queue_push(const char *json)
 static void queue_flush(void)
 {
     if (!s_q_nvs || s_q_count == 0) return;
-    printf("[Q] Flushing %lu measurements...\n", (unsigned long)s_q_count);
-    while (s_q_count > 0 && s_wifi_ok) {
+    printf("[Q] Flushing %lu measurements (%d per ciclu)...\n",
+           (unsigned long)s_q_count, QUEUE_FLUSH_PER_CYCLE);
+    int sent = 0;
+    while (s_q_count > 0 && s_wifi_ok && sent < QUEUE_FLUSH_PER_CYCLE) {
         char key[8];
         snprintf(key, sizeof(key), "%lu", (unsigned long)s_q_head);
         char json[512] = {};
         size_t len = sizeof(json);
         if (nvs_get_str(s_q_nvs, key, json, &len) != ESP_OK) {
-            // corrupt entry — skip
             s_q_head = (s_q_head + 1) % QUEUE_MAX;
             s_q_count--;
             continue;
         }
-        if (!http_post_to(API_INGEST_PATH, json)) break; // stop on failure
+        if (!http_post_to(API_INGEST_PATH, json)) break;
         nvs_erase_key(s_q_nvs, key);
         s_q_head = (s_q_head + 1) % QUEUE_MAX;
         s_q_count--;
         nvs_set_u32(s_q_nvs, "head",  s_q_head);
         nvs_set_u32(s_q_nvs, "count", s_q_count);
         nvs_commit(s_q_nvs);
+        sent++;
     }
-    if (s_q_count == 0) printf("[Q] Flush complete\n");
+    if (s_q_count == 0) printf("[Q] Flush complet\n");
+}
+
+// =============================================================================
+// Panic offline queue — coadă separată, prioritate la flush
+// =============================================================================
+static nvs_handle_t s_pq_nvs = 0;
+
+static void panic_queue_init(void)
+{
+    esp_err_t e = nvs_open(PANIC_QUEUE_NS, NVS_READWRITE, &s_pq_nvs);
+    if (e != ESP_OK) { printf("[PQ] NVS open failed\n"); return; }
+    nvs_get_u32(s_pq_nvs, "head",  &s_pq_head);
+    nvs_get_u32(s_pq_nvs, "tail",  &s_pq_tail);
+    nvs_get_u32(s_pq_nvs, "count", &s_pq_count);
+    if (s_pq_count > 0)
+        printf("[PQ] %lu panic(s) pending from previous session\n",
+               (unsigned long)s_pq_count);
+}
+
+static void panic_queue_push(const char *json)
+{
+    if (!s_pq_nvs) return;
+    if (s_pq_count >= PANIC_QUEUE_MAX) {
+        printf("[PQ] Full — dropping oldest panic\n");
+        s_pq_head = (s_pq_head + 1) % PANIC_QUEUE_MAX;
+        s_pq_count--;
+    }
+    char key[8];
+    snprintf(key, sizeof(key), "%lu", (unsigned long)s_pq_tail);
+    nvs_set_str(s_pq_nvs, key, json);
+    s_pq_tail = (s_pq_tail + 1) % PANIC_QUEUE_MAX;
+    s_pq_count++;
+    nvs_set_u32(s_pq_nvs, "head",  s_pq_head);
+    nvs_set_u32(s_pq_nvs, "tail",  s_pq_tail);
+    nvs_set_u32(s_pq_nvs, "count", s_pq_count);
+    nvs_commit(s_pq_nvs);
+    printf("[PQ] Panic enqueued (%lu in coadă)\n", (unsigned long)s_pq_count);
+}
+
+static void panic_queue_flush(void)
+{
+    if (!s_pq_nvs || s_pq_count == 0 || !s_wifi_ok) return;
+    printf("[PQ] Retrimitere %lu panic(uri) salvate...\n", (unsigned long)s_pq_count);
+    while (s_pq_count > 0 && s_wifi_ok) {
+        char key[8];
+        snprintf(key, sizeof(key), "%lu", (unsigned long)s_pq_head);
+        char json[256] = {};
+        size_t len = sizeof(json);
+        if (nvs_get_str(s_pq_nvs, key, json, &len) != ESP_OK) {
+            s_pq_head = (s_pq_head + 1) % PANIC_QUEUE_MAX;
+            s_pq_count--;
+            continue;
+        }
+        if (!http_post_to(API_PANIC_PATH, json)) break;   // server încă jos — oprire
+        nvs_erase_key(s_pq_nvs, key);
+        s_pq_head = (s_pq_head + 1) % PANIC_QUEUE_MAX;
+        s_pq_count--;
+        nvs_set_u32(s_pq_nvs, "head",  s_pq_head);
+        nvs_set_u32(s_pq_nvs, "count", s_pq_count);
+        nvs_commit(s_pq_nvs);
+        printf("[PQ] Panic retrimis OK (%lu rămase)\n", (unsigned long)s_pq_count);
+    }
+}
+
+// =============================================================================
+// WiFi config sync — pulls latest networks from API and persists to NVS.
+// Networks are picked up by wifi_load_credentials() on next boot.
+// =============================================================================
+static void wifi_config_fetch_and_store(void)
+{
+    if (!s_wifi_ok) return;
+
+    char path[96];
+    snprintf(path, sizeof(path), "%s%s", API_WIFI_CONFIG_PATH, g_serial);
+
+    char body[1024];
+    int  status = 0;
+    if (!http_get_to(path, body, sizeof(body), &status)) {
+        if (status > 0) printf("[WIFI-CFG] fetch failed: HTTP %d\n", status);
+        return;
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    if (!root) { printf("[WIFI-CFG] JSON parse failed\n"); return; }
+
+    cJSON *nets = cJSON_GetObjectItem(root, "networks");
+    if (!cJSON_IsArray(nets)) { cJSON_Delete(root); return; }
+
+    char ssids[3][33]  = {};
+    char passes[3][65] = {};
+    int  valid = 0;
+    cJSON *n = NULL;
+    cJSON_ArrayForEach(n, nets) {
+        if (valid >= 3) break;
+        cJSON *s = cJSON_GetObjectItem(n, "ssid");
+        cJSON *p = cJSON_GetObjectItem(n, "password");
+        if (!cJSON_IsString(s) || !s->valuestring || s->valuestring[0] == 0) continue;
+        strncpy(ssids[valid], s->valuestring, sizeof(ssids[valid]) - 1);
+        if (cJSON_IsString(p) && p->valuestring)
+            strncpy(passes[valid], p->valuestring, sizeof(passes[valid]) - 1);
+        valid++;
+    }
+    cJSON_Delete(root);
+
+    // Skip the NVS write if config is unchanged — avoids flash wear and log noise.
+    bool same = (valid == s_wifi_net_count);
+    if (same) {
+        for (int i = 0; i < valid; i++) {
+            if (strcmp(ssids[i],  s_wifi_ssids[i])  != 0 ||
+                strcmp(passes[i], s_wifi_passes[i]) != 0) { same = false; break; }
+        }
+    }
+    if (same) return;
+
+    nvs_handle_t h;
+    if (nvs_open("wifi_cfg", NVS_READWRITE, &h) != ESP_OK) {
+        printf("[WIFI-CFG] NVS open failed\n");
+        return;
+    }
+    nvs_set_u8(h, "n", (uint8_t)valid);
+    for (int i = 0; i < valid; i++) {
+        char sk[8], pk[8];
+        snprintf(sk, sizeof(sk), "s%d", i);
+        snprintf(pk, sizeof(pk), "p%d", i);
+        nvs_set_str(h, sk, ssids[i]);
+        nvs_set_str(h, pk, passes[i]);
+    }
+    nvs_commit(h);
+    nvs_close(h);
+    printf("[WIFI-CFG] updated NVS with %d network(s) — active on next reboot\n", valid);
 }
 
 // =============================================================================
 // Heartbeat
 // =============================================================================
 
+// Callback al timer-ului — la 5s după intrarea în sleep, stinge LED galben + OLED.
+// Verifică g_sleep_mode pentru a evita stingerea dacă userul a trezit între timp.
+static void sleep_off_cb(void *)
+{
+    if (!g_sleep_mode) return;  // user a apăsat butonul 2 între timp — anulat
+    gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);
+    if (g_oled_ok) {
+        i2c_lock();
+        mux_open(MUX_CH_OLED);
+        oled_cmd(0xAE);   // SSD1306 display off
+        mux_close();
+        i2c_unlock();
+    }
+    printf("[SLP] LED galben + OLED stinse (5s după intrarea în sleep)\n");
+}
+
 static void heartbeat_send(void *)
 {
-    if (!s_wifi_ok) return;
+    if (!s_wifi_ok || g_sleep_mode) return;
     int rssi = 0;
     esp_wifi_sta_get_rssi(&rssi);
 
@@ -933,6 +1336,10 @@ static void heartbeat_send(void *)
     http_post_to(API_HEARTBEAT_PATH, json);
     printf("[HB] RSSI=%d heap=%lu queue=%lu\n",
            rssi, (unsigned long)esp_get_free_heap_size(), (unsigned long)s_q_count);
+
+    // Pull any updated WiFi networks configured from the web app.
+    // Diff against the currently loaded set; writes NVS only when something changed.
+    wifi_config_fetch_and_store();
 }
 
 // =============================================================================
@@ -948,10 +1355,12 @@ static void panic_send(void)
         : (snprintf(json, sizeof(json),
                "{\"serial\":\"%s\",\"coordinates\":null}", g_serial), json);
     (void)coords;
-    if (http_post_to(API_PANIC_PATH, json))
+    if (http_post_to(API_PANIC_PATH, json)) {
         printf("[BTN] Panic sent\n");
-    else
-        printf("[BTN] Panic send FAILED\n");
+    } else {
+        printf("[BTN] Panic send FAILED — salvat offline pentru retrimitere\n");
+        panic_queue_push(json);
+    }
 }
 
 // =============================================================================
@@ -959,22 +1368,50 @@ static void panic_send(void)
 // =============================================================================
 static void IRAM_ATTR btn_isr(void *arg)
 {
-    int pin   = (int)(intptr_t)arg;
-    int event = (pin << 8) | gpio_get_level((gpio_num_t)pin);
-    xQueueSendFromISR(s_btn_q, &event, NULL);
+    int pin = (int)(intptr_t)arg;
+    int idx = (pin == BUTTON1_PIN) ? 0 : 1;
+    if (s_btn_disabled[idx]) return;               // stuck-LOW guard
+    int64_t now = esp_timer_get_time();
+    if (now - s_btn_last_us[idx] < 50000) return;  // 50 ms debounce
+    s_btn_last_us[idx] = now;
+    xQueueSendFromISR(s_btn_q, &pin, NULL);
 }
 
 static void btn_task(void *)
 {
-    int event;
+    int pin;
+    int last_b1 = 1, last_b2 = 1;   // pull-up: idle HIGH
     while (true) {
-        if (xQueueReceive(s_btn_q, &event, portMAX_DELAY)) {
-            int pin   = (event >> 8) & 0xFF;
-            int level = event & 1;
-            if (level == 0) {  // pressed (active-low)
-                if (pin == BUTTON1_PIN) {
+        // ISR path: aşteaptă eveniment 30 ms; dacă nu vine, fă poll fallback
+        bool got = xQueueReceive(s_btn_q, &pin, pdMS_TO_TICKS(30));
+
+        if (!got) {
+            // Polling — prinde apăsarea dacă ISR-ul nu se declanşează
+            int b1 = gpio_get_level((gpio_num_t)BUTTON1_PIN);
+            int b2 = gpio_get_level((gpio_num_t)BUTTON2_PIN);
+            int64_t now_us = esp_timer_get_time();
+            if (!s_btn_disabled[0] && last_b1 == 1 && b1 == 0 &&
+                (now_us - s_btn_last_us[0]) > 50000) {
+                s_btn_last_us[0] = now_us;
+                pin = BUTTON1_PIN;
+                got = true;
+                printf("[BTN] GPIO%d falling edge (poll)\n", BUTTON1_PIN);
+            } else if (!s_btn_disabled[1] && last_b2 == 1 && b2 == 0 &&
+                       (now_us - s_btn_last_us[1]) > 50000) {
+                s_btn_last_us[1] = now_us;
+                pin = BUTTON2_PIN;
+                got = true;
+                printf("[BTN] GPIO%d falling edge (poll)\n", BUTTON2_PIN);
+            }
+            last_b1 = b1;
+            last_b2 = b2;
+        }
+
+        if (!got) continue;
+
+        {
+                    if (pin == BUTTON1_PIN) {
                     printf("[BTN] Panic!\n");
-                    // Flash yellow LED twice as visual feedback
                     for (int i = 0; i < 2; i++) {
                         gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);
                         vTaskDelay(pdMS_TO_TICKS(150));
@@ -985,16 +1422,47 @@ static void btn_task(void *)
                 } else {
                     g_sleep_mode = !g_sleep_mode;
                     if (g_sleep_mode) {
+                        // === SLEEP MODE ON ===
+                        gpio_set_level((gpio_num_t)LED_GREEN_PIN,  0);
+                        vTaskDelay(pdMS_TO_TICKS(50));
+                        max_sleep();                                    // stinge LED MAX30100
+                        vTaskDelay(pdMS_TO_TICKS(50));
                         esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
-                        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);
-                        printf("[BTN] Sleep mode ON  (POST every %d ms)\n", SLEEP_POST_MS);
+                        vTaskDelay(pdMS_TO_TICKS(50));
+                        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1); // galben on (5s)
+                        oled_show_sleep();                              // ecran "SISTEM OPRIT" (5s)
+                        // Programează stingerea LED galben + OLED display după 5s
+                        if (s_sleep_off_timer) {
+                            esp_timer_stop(s_sleep_off_timer);  // ignorat dacă nu rulează
+                            esp_timer_start_once(s_sleep_off_timer,
+                                                 (uint64_t)SLEEP_OFF_DELAY_MS * 1000ULL);
+                        }
+                        printf("[BTN] >>> SISTEM OPRIT (sleep) — stingere LED+OLED în %dms\n",
+                               SLEEP_OFF_DELAY_MS);
                     } else {
-                        esp_wifi_set_ps(WIFI_PS_NONE);
+                        // === SLEEP MODE OFF ===
+                        // Anulează timer-ul de stingere (poate să fi fost deja stins LED+OLED)
+                        if (s_sleep_off_timer) esp_timer_stop(s_sleep_off_timer);
+                        // Reaprinde OLED display (cazul în care timer-ul l-a stins după 5s)
+                        if (g_oled_ok) {
+                            i2c_lock();
+                            mux_open(MUX_CH_OLED);
+                            oled_cmd(0xAF);   // SSD1306 display on
+                            mux_close();
+                            i2c_unlock();
+                        }
                         gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);
-                        printf("[BTN] Sleep mode OFF (POST every %d ms)\n", API_POST_MS);
+                        vTaskDelay(pdMS_TO_TICKS(50));
+                        esp_wifi_set_ps(WIFI_PS_NONE);
+                        vTaskDelay(pdMS_TO_TICKS(50));
+                        max_wake();
+                        vTaskDelay(pdMS_TO_TICKS(50));
+                        gpio_set_level((gpio_num_t)LED_GREEN_PIN,  1);
+                        // Reset OLED — main loop va popula datele la următorul POST
+                        if (g_oled_ok) { oled_clear(); oled_show_title(); }
+                        printf("[BTN] >>> SISTEM PORNIT — POST activ la %d ms\n", API_POST_MS);
                     }
                 }
-            }
         }
     }
 }
@@ -1002,15 +1470,166 @@ static void btn_task(void *)
 static void buttons_setup(void)
 {
     s_btn_q = xQueueCreate(10, sizeof(int));
-    xTaskCreate(btn_task, "btn", 4096, NULL, 5, NULL);
     gpio_config_t c = {};
     c.pin_bit_mask = (1ULL << BUTTON1_PIN) | (1ULL << BUTTON2_PIN);
     c.mode         = GPIO_MODE_INPUT;
     c.pull_up_en   = GPIO_PULLUP_ENABLE;
-    c.intr_type    = GPIO_INTR_ANYEDGE;
+    c.intr_type    = GPIO_INTR_NEGEDGE;
     gpio_config(&c);
+
+    // Stuck-LOW guard: dacă un pin stă LOW continuu 500ms după setup,
+    // butonul/cablajul e defect (scurt la GND) — dezactivează-l ca să nu
+    // genereze false-presses continue.
+    vTaskDelay(pdMS_TO_TICKS(20));  // stabilizare pull-up
+    int low_count[2] = {0, 0};
+    for (int i = 0; i < 25; i++) {  // 25 × 20ms = 500ms
+        if (gpio_get_level((gpio_num_t)BUTTON1_PIN) == 0) low_count[0]++;
+        if (gpio_get_level((gpio_num_t)BUTTON2_PIN) == 0) low_count[1]++;
+        vTaskDelay(pdMS_TO_TICKS(20));
+    }
+    if (low_count[0] >= 24) {
+        s_btn_disabled[0] = true;
+        printf("[BTN] GPIO%d (panic) stuck LOW => DEZACTIVAT (cablaj/buton defect)\n", BUTTON1_PIN);
+    }
+    if (low_count[1] >= 24) {
+        s_btn_disabled[1] = true;
+        printf("[BTN] GPIO%d (sleep) stuck LOW => DEZACTIVAT (cablaj/buton defect)\n", BUTTON2_PIN);
+    }
+
+    // 8KB stack — panic_send() face HTTPS (mbedTLS) care consumă ~6KB
+    xTaskCreate(btn_task, "btn", 8192, NULL, 5, NULL);
     gpio_isr_handler_add((gpio_num_t)BUTTON1_PIN, btn_isr, (void *)(intptr_t)BUTTON1_PIN);
     gpio_isr_handler_add((gpio_num_t)BUTTON2_PIN, btn_isr, (void *)(intptr_t)BUTTON2_PIN);
+}
+
+#if HW_SELFTEST
+// Diagnostic la boot: verifică LED verde (GPIO 6) şi nivelul butoanelor (GPIO 3/4).
+static void hw_selftest(void)
+{
+    printf("\n[DIAG] ===== HARDWARE SELF-TEST =====\n");
+
+    // LED verde — clipeşte ambele polarităţi; dacă LED-ul e bun, se vede
+    printf("[DIAG] LED verde GPIO%d: 12 clipiri — urmăreşte LED-ul...\n", LED_GREEN_PIN);
+    for (int i = 0; i < 12; i++) {
+        gpio_set_level((gpio_num_t)LED_GREEN_PIN, i & 1);
+        vTaskDelay(pdMS_TO_TICKS(350));
+    }
+    gpio_set_level((gpio_num_t)LED_GREEN_PIN, 1);
+    printf("[DIAG] Nu a clipit deloc => LED/rezistor/fir defect pe GPIO%d\n", LED_GREEN_PIN);
+
+    // Butoane — citeşte nivelul brut 10s; idle=1 (pull-up), apăsat=0
+    printf("[DIAG] Apasă AMBELE butoane în următoarele 10s...\n");
+    int last1 = -1, last2 = -1;
+    int press1_count = 0, press2_count = 0;   // contor de tranziţii 1->0
+    int idle1_seen = 0,   idle2_seen = 0;     // confirmă pull-up funcţional
+    for (int t = 0; t < 100; t++) {
+        int l1 = gpio_get_level((gpio_num_t)BUTTON1_PIN);
+        int l2 = gpio_get_level((gpio_num_t)BUTTON2_PIN);
+        if (l1 == 1) idle1_seen++;
+        if (l2 == 1) idle2_seen++;
+        if (l1 != last1) {
+            printf("[DIAG]  buton panică GPIO%d = %d\n", BUTTON1_PIN, l1);
+            if (last1 == 1 && l1 == 0) press1_count++;
+            last1 = l1;
+        }
+        if (l2 != last2) {
+            printf("[DIAG]  buton sleep  GPIO%d = %d\n", BUTTON2_PIN, l2);
+            if (last2 == 1 && l2 == 0) press2_count++;
+            last2 = l2;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+    // Verdict final
+    printf("[DIAG] ----- Rezultat butoane -----\n");
+    if (idle1_seen == 0)
+        printf("[DIAG]  GPIO%d (panică): NICIODATĂ HIGH => pull-up rupt / pin scurtcircuitat la GND\n", BUTTON1_PIN);
+    else if (press1_count == 0)
+        printf("[DIAG]  GPIO%d (panică): %d apăsări detectate (rămas la idle HIGH)\n", BUTTON1_PIN, press1_count);
+    else
+        printf("[DIAG]  GPIO%d (panică): OK, %d apăsări detectate\n", BUTTON1_PIN, press1_count);
+
+    if (idle2_seen == 0)
+        printf("[DIAG]  GPIO%d (sleep) : NICIODATĂ HIGH => pull-up rupt / pin scurtcircuitat la GND\n", BUTTON2_PIN);
+    else if (press2_count == 0)
+        printf("[DIAG]  GPIO%d (sleep) : NICIODATĂ LOW => buton/fir GND defect sau buton neapăsat\n", BUTTON2_PIN);
+    else
+        printf("[DIAG]  GPIO%d (sleep) : OK, %d apăsări detectate\n", BUTTON2_PIN, press2_count);
+    printf("[DIAG] ===== END SELF-TEST =====\n\n");
+}
+#endif
+
+// =============================================================================
+// Sensor functional self-test — verifică prezență + valori sensibile
+// =============================================================================
+static void sensors_self_test(bool mpu_present, bool max_present,
+                              bool oled_present, bool mux_present)
+{
+    printf("\n[SENS] ===== SENSOR FUNCTIONAL TEST =====\n");
+
+    // MUX
+    printf("[SENS] TCA9548 mux: %s (addr 0x%02X)\n",
+           mux_present ? "PRESENT" : "MISSING", g_mux_addr);
+
+    // MPU6050 — citeşte un sample şi verifică valori sensibile
+    if (mpu_present) {
+        int16_t a[3] = {}, g[3] = {};
+        bool ok = mpu_read(a, g);
+        bool stuck = ok && (a[0] == 0 && a[1] == 0 && a[2] == 0) &&
+                            (g[0] == 0 && g[1] == 0 && g[2] == 0);
+        bool railed = ok && ((uint16_t)a[0] == 0xFFFF && (uint16_t)a[1] == 0xFFFF);
+        printf("[SENS] MPU6050:  %s | accel=[%d,%d,%d] gyro=[%d,%d,%d]%s\n",
+               ok && !stuck && !railed ? "FUNCTIONAL" : "FAULT",
+               a[0], a[1], a[2], g[0], g[1], g[2],
+               stuck  ? " (stuck zero)" :
+               railed ? " (bus railed)" : "");
+    } else {
+        printf("[SENS] MPU6050:  NOT DETECTED on I2C\n");
+    }
+
+    // MAX30100 — rulează deja continuu de la setup; aşteaptă FIFO să se umple
+    if (max_present) {
+        vTaskDelay(pdMS_TO_TICKS(100));   // ~10 sample-uri la 100Hz
+        uint16_t ir = 0, red = 0;
+        bool ok = max_read(&ir, &red);
+        printf("[SENS] MAX30100: %s | IR=%u RED=%u%s\n",
+               ok ? "FUNCTIONAL" : "FAULT", ir, red,
+               (ok && ir == 0 && red == 0) ? " (no finger / FIFO empty)" : "");
+    } else {
+        printf("[SENS] MAX30100: NOT DETECTED on I2C\n");
+    }
+
+    // OLED
+    printf("[SENS] SSD1306:  %s (addr 0x%02X ch%d)\n",
+           oled_present ? "FUNCTIONAL" : "FAULT", OLED_ADDR, MUX_CH_OLED);
+
+    // DS18B20 — full convert cycle: start, wait 750ms, read
+    printf("[SENS] DS18B20:  starting conversion...\n");
+    bool ds_started = ds_start_conv();
+    if (ds_started) {
+        vTaskDelay(pdMS_TO_TICKS(DS18B20_CONV_MS + 50));
+        float t = 0.0f;
+        bool ok = ds_read_temp(&t);
+        printf("[SENS] DS18B20:  %s | temp=%.2f C\n",
+               ok ? "FUNCTIONAL" : "FAULT (no response / CRC)", t);
+    } else {
+        printf("[SENS] DS18B20:  FAULT (no presence pulse on GPIO%d)\n", DS18B20_PIN);
+    }
+
+    // GPS — citeşte 200 ms din UART, verifică dacă vin caractere NMEA
+    uint8_t buf[128];
+    int n = uart_read_bytes(GPS_UART_NUM, buf, sizeof(buf) - 1, pdMS_TO_TICKS(200));
+    bool gps_chars = false, gps_dollar = false;
+    for (int i = 0; i < n; i++) {
+        if (buf[i] >= 0x20 && buf[i] < 0x7F) gps_chars = true;
+        if (buf[i] == '$') gps_dollar = true;
+    }
+    if (n > 0) gps_feed(buf, n);
+    printf("[SENS] NEO-6M:   %s | %d bytes in 200ms%s\n",
+           gps_dollar ? "FUNCTIONAL" : (gps_chars ? "PARTIAL" : "NO DATA"),
+           n, gps_dollar ? " (NMEA detected)" : "");
+
+    printf("[SENS] ===== END SENSOR TEST =====\n\n");
 }
 
 // =============================================================================
@@ -1029,8 +1648,8 @@ static void build_json(char *buf, size_t sz,
         mpu_ok ? accel[0] : 0, mpu_ok ? accel[1] : 0, mpu_ok ? accel[2] : 0,
         mpu_ok ? gyro[0]  : 0, mpu_ok ? gyro[1]  : 0, mpu_ok ? gyro[2]  : 0);
 
-    if (max_ok) n += snprintf(buf+n, sz-n, "\"max30100\":[%u,%u],", ir, red);
-    else        n += snprintf(buf+n, sz-n, "\"max30100\":null,");
+    if (max_ok) n += snprintf(buf+n, sz-n, "\"max30100\":[%u,%u],\"bpm\":%d,", ir, red, g_bpm);
+    else        n += snprintf(buf+n, sz-n, "\"max30100\":null,\"bpm\":0,");
 
     if (ds_ok) n += snprintf(buf+n, sz-n, "\"temperature\":%.2f,", temp);
     else       n += snprintf(buf+n, sz-n, "\"temperature\":null,");
@@ -1047,6 +1666,10 @@ static void build_json(char *buf, size_t sz,
 extern "C" void app_main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
+
+    // Mutex I2C recursiv — creat înainte de orice acces I2C concurent
+    s_i2c_lock = xSemaphoreCreateRecursiveMutex();
+
     printf("\n=== LifeAlertPlus | ESP32-C3 Mini ===\n\n");
 
     // Unique serial derived from factory MAC (set monitored.DeviceSerialNumber to this value)
@@ -1064,11 +1687,13 @@ extern "C" void app_main(void)
 
     // Sensors
     bool mpu_ok = mpu_setup();
+    g_mpu_ok = mpu_ok;
     printf("[MPU6050 ] %s | ch%d 0x%02X\n", mpu_ok ? "OK " : "---", MUX_CH_MPU6050, g_mpu_addr);
 
     bool max_ok = max_setup();
-    if (max_ok) max_sleep();   // doarme până la primul POST
-    printf("[MAX30100] %s | ch%d 0x%02X\n", max_ok ? "OK " : "---", MUX_CH_MAX30100, M30_ADDR);
+    g_max_ok = max_ok;
+    // LED-ul rămâne aprins continuu (sleep doar prin butonul 2 / sleep mode)
+    printf("[MAX30100] %s | ch%d 0x%02X (LED ON)\n", max_ok ? "OK " : "---", MUX_CH_MAX30100, M30_ADDR);
 
     g_oled_ok = oled_setup();
     if (g_oled_ok) { oled_clear(); oled_show_title(); }
@@ -1076,6 +1701,7 @@ extern "C" void app_main(void)
 
     ds_gpio_init();
     bool ds_conv    = ds_start_conv();
+    g_ds_ok = ds_conv;
     uint32_t ds_t0  = xTaskGetTickCount() * portTICK_PERIOD_MS;
     float    ds_temp = 0.0f;
     bool     ds_ready = false;
@@ -1090,12 +1716,23 @@ extern "C" void app_main(void)
     led_conf.mode         = GPIO_MODE_OUTPUT;
     led_conf.intr_type    = GPIO_INTR_DISABLE;
     gpio_config(&led_conf);
-    gpio_set_level((gpio_num_t)LED_GREEN_PIN,  1);  // green on — system running
+    gpio_set_level((gpio_num_t)LED_GREEN_PIN,  1);  // green on — active-HIGH (ca galbenul)
     gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);  // yellow off initially
 
     // Buttons
     gpio_install_isr_service(0);
     buttons_setup();
+
+#if HW_SELFTEST
+    hw_selftest();
+#endif
+
+    // Verifică prezenţa ŞI funcţionalitatea senzorilor (citire reală de valori)
+    sensors_self_test(mpu_ok, max_ok, g_oled_ok, mux_ok);
+
+    // Reia conversia DS18B20 după self-test (acesta a făcut propriul ciclu)
+    ds_conv = ds_start_conv();
+    ds_t0   = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
     // WiFi — LED2 lights up on connect
     bool wifi_ok = wifi_setup();
@@ -1109,6 +1746,7 @@ extern "C" void app_main(void)
 
     // Offline queue (NVS must be initialised inside wifi_setup already)
     queue_init();
+    panic_queue_init();
 
     // Heartbeat timer — fires every HEARTBEAT_MS
     esp_timer_create_args_t hb_args = {};
@@ -1116,6 +1754,15 @@ extern "C" void app_main(void)
     hb_args.name     = "heartbeat";
     esp_timer_create(&hb_args, &s_hb_timer);
     esp_timer_start_periodic(s_hb_timer, (uint64_t)HEARTBEAT_MS * 1000ULL);
+
+    // Sleep-off timer (one-shot) — stinge LED galben + OLED după 5s în sleep
+    esp_timer_create_args_t so_args = {};
+    so_args.callback = sleep_off_cb;
+    so_args.name     = "sleep_off";
+    esp_timer_create(&so_args, &s_sleep_off_timer);
+
+    // Pulse task — eşantionează MAX30100 la 100Hz şi calculează BPM
+    if (g_max_ok) xTaskCreate(pulse_task, "pulse", 4096, NULL, 5, NULL);
 
     printf("\n[SYS] Monitoring active | POST every %d ms\n", API_POST_MS);
     printf("=====================================\n\n");
@@ -1146,27 +1793,38 @@ extern "C" void app_main(void)
         if (gps_n > 0) gps_feed(g_gps_rx, gps_n);
 
         // La intervalul de POST: trezeşte MAX30100, citeşte, pune-l la somn,
-        // actualizează OLED şi trimite datele
-        uint32_t post_interval = g_sleep_mode ? SLEEP_POST_MS : API_POST_MS;
-        if ((now - last_post_ms) >= post_interval) {
-            if (max_ok) max_wake();
-            bool max_ok_r = max_ok && max_read(&ir, &red);
-            if (max_ok) max_sleep();
+        // actualizează OLED şi trimite datele (skipped complet în sleep mode)
+        if ((now - last_post_ms) >= (uint32_t)API_POST_MS) {
+            last_post_ms = now;  // actualizează mereu — evită POST imediat la wake
+            if (!g_sleep_mode) {
+                // MAX30100 e eşantionat continuu de pulse_task — luăm valorile actuale
+                ir  = g_last_ir;
+                red = g_last_red;
+                bool max_ok_r = g_max_ok && g_finger_on;
 
-            oled_show_data(ds_ready, ds_temp, max_ok_r, ir, red, mpu_ok_r, accel);
+                oled_show_data(ds_ready, ds_temp);
 
-            build_json(json_buf, sizeof(json_buf),
-                       mpu_ok_r, accel, gyro,
-                       max_ok_r, ir, red,
-                       ds_ready, ds_temp,
-                       (uint64_t)now);
-            if (s_wifi_ok) {
-                queue_flush();
-                http_post(json_buf);
-            } else {
-                queue_push(json_buf);
+                build_json(json_buf, sizeof(json_buf),
+                           mpu_ok_r, accel, gyro,
+                           max_ok_r, ir, red,
+                           ds_ready, ds_temp,
+                           (uint64_t)now);
+                printf("[JSON] %s\n", json_buf);
+                if (s_wifi_ok) {
+                    panic_queue_flush();   // panic-ul are prioritate
+                    queue_flush();
+                    if (http_post(json_buf)) {
+                        printf("[POST] OK -> server\n");
+                    } else {
+                        printf("[POST] FAILED -> enqueued offline\n");
+                        queue_push(json_buf);
+                    }
+                } else {
+                    printf("[POST] OFFLINE -> enqueued (queue=%lu)\n",
+                           (unsigned long)(s_q_count + 1));
+                    queue_push(json_buf);
+                }
             }
-            last_post_ms = now;
         }
 
         vTaskDelay(pdMS_TO_TICKS(SENSOR_READ_MS));

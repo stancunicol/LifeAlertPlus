@@ -5,36 +5,66 @@ namespace LifeAlertPlus.API.Services
     public class DailyReportBackgroundService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<DailyReportBackgroundService> _logger;
 
         public DailyReportBackgroundService(
             IServiceScopeFactory scopeFactory,
+            IConfiguration configuration,
             ILogger<DailyReportBackgroundService> logger)
         {
             _scopeFactory = scopeFactory;
+            _configuration = configuration;
             _logger = logger;
+        }
+
+        // Resolve the configured local time zone. Falls back to UTC if the ID is
+        // missing or unknown (e.g. on Windows hosts that ship IANA differently).
+        private TimeZoneInfo GetLocalTimeZone()
+        {
+            var tzId = _configuration["DailyReport:LocalTimeZone"];
+            if (string.IsNullOrWhiteSpace(tzId)) return TimeZoneInfo.Utc;
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(tzId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Unknown DailyReport:LocalTimeZone '{Tz}'. Falling back to UTC.", tzId);
+                return TimeZoneInfo.Utc;
+            }
+        }
+
+        // Next 00:00 in the configured local time zone, expressed as UTC.
+        private DateTime ComputeNextLocalMidnightUtc(TimeZoneInfo tz)
+        {
+            var nowUtc = DateTime.UtcNow;
+            var nowLocal = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, tz);
+            var nextLocalMidnight = DateTime.SpecifyKind(nowLocal.Date.AddDays(1), DateTimeKind.Unspecified);
+            return TimeZoneInfo.ConvertTimeToUtc(nextLocalMidnight, tz);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Daily Report Background Service started");
+            var tz = GetLocalTimeZone();
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    var now = DateTime.UtcNow;
-                    var nextMidnight = now.Date.AddDays(1);
-                    var timeUntilMidnight = nextMidnight - now;
+                    var nextRunUtc = ComputeNextLocalMidnightUtc(tz);
+                    var delay = nextRunUtc - DateTime.UtcNow;
+                    if (delay < TimeSpan.Zero) delay = TimeSpan.FromMinutes(1);
 
-                    if (timeUntilMidnight.TotalSeconds < 0)
-                        timeUntilMidnight = timeUntilMidnight.Add(TimeSpan.FromDays(1));
+                    _logger.LogInformation(
+                        "Next daily report scheduled at {LocalTime} {Tz} ({Hours}h {Minutes}m from now)",
+                        TimeZoneInfo.ConvertTimeFromUtc(nextRunUtc, tz),
+                        tz.Id,
+                        (int)delay.TotalHours,
+                        delay.Minutes);
 
-                    _logger.LogInformation("Next report scheduled in {Hours}h {Minutes}m",
-                        (int)timeUntilMidnight.TotalHours,
-                        timeUntilMidnight.Minutes);
-
-                    await Task.Delay(timeUntilMidnight, stoppingToken);
+                    await Task.Delay(delay, stoppingToken);
 
                     if (stoppingToken.IsCancellationRequested)
                         break;

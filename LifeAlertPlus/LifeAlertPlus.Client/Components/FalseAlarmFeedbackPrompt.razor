@@ -1,0 +1,81 @@
+@using LifeAlertPlus.Client.Services
+@using LifeAlertPlus.Shared.DTOs.Responses.Notification
+@inject NotificationService Notifications
+@inject TokenParserService TokenParser
+@inject LanguageService Lang
+
+@if (_current != null)
+{
+    <div class="feedback-overlay" @onclick="DismissAsync">
+        <div class="feedback-modal" @onclick:stopPropagation="true">
+            <div class="feedback-header">
+                <span class="feedback-icon">@(_current.NotificationType == "Critical" ? "🚨" : "⚠️")</span>
+                <h3>@Lang.T("feedback.title")</h3>
+            </div>
+            <p class="feedback-patient">@_current.MonitoredName</p>
+            <p class="feedback-time">@_current.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</p>
+            <p class="feedback-prompt">@Lang.T("feedback.prompt")</p>
+            <div class="feedback-actions">
+                <button class="feedback-btn feedback-real" @onclick="() => RespondAsync(true)" disabled="@_isSubmitting">
+                    ✓ @Lang.T("feedback.wasReal")
+                </button>
+                <button class="feedback-btn feedback-false" @onclick="() => RespondAsync(false)" disabled="@_isSubmitting">
+                    ✗ @Lang.T("feedback.wasFalse")
+                </button>
+            </div>
+            <button class="feedback-skip" @onclick="DismissAsync" disabled="@_isSubmitting">
+                @Lang.T("feedback.skip")
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private Queue<PendingFeedbackDTO> _queue = new();
+    private PendingFeedbackDTO? _current;
+    private bool _isSubmitting;
+    private bool _loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_loaded) return;
+        _loaded = true;
+
+        var claims = await TokenParser.GetClaimsAsync();
+        if (claims == null || claims.UserId == Guid.Empty) return;
+
+        var pending = await Notifications.GetPendingFeedbackAsync();
+        foreach (var p in pending)
+            _queue.Enqueue(p);
+
+        Advance();
+    }
+
+    private void Advance()
+    {
+        _current = _queue.Count > 0 ? _queue.Dequeue() : null;
+        StateHasChanged();
+    }
+
+    private async Task RespondAsync(bool wasReal)
+    {
+        if (_current == null || _isSubmitting) return;
+        _isSubmitting = true;
+        try
+        {
+            await Notifications.SubmitFeedbackAsync(_current.Id, wasReal);
+        }
+        finally
+        {
+            _isSubmitting = false;
+            Advance();
+        }
+    }
+
+    private Task DismissAsync()
+    {
+        // Skip — leaves WasReal null so the popup reappears on next visit.
+        Advance();
+        return Task.CompletedTask;
+    }
+}

@@ -106,6 +106,16 @@
                         <span class="toggle-slider"></span>
                     </label>
                 </div>
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h3>@T("settings.dailyReport")</h3>
+                        <p>@T("settings.dailyReportDesc")</p>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" @bind="Settings.EnableDailyReport" />
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -126,18 +136,6 @@
                         <option value="60">@T("settings.every1m")</option>
                         <option value="120">@T("settings.every2m")</option>
                         <option value="300">@T("settings.every5m")</option>
-                    </select>
-                </div>
-                <div class="setting-item">
-                    <div class="setting-info">
-                        <h3>@T("settings.historyRetention")</h3>
-                        <p>@T("settings.historyRetentionDesc")</p>
-                    </div>
-                    <select @bind="Settings.HistoryRetention" class="select-input">
-                        <option value="30">@T("settings.30days")</option>
-                        <option value="90">@T("settings.90days")</option>
-                        <option value="180">@T("settings.6months")</option>
-                        <option value="365">@T("settings.1year")</option>
                     </select>
                 </div>
             </div>

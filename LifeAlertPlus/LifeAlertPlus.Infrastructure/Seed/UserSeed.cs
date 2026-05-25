@@ -85,7 +85,6 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     MinSpO2 = 95,
                     MaxSpO2 = 100,
                     Language = "ro",
-                    FontSize = "medium",
                     UpdateFrequency = 30,
                     NotifyByEmail = true,
                     NotifyByPush = true
@@ -111,7 +110,6 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     MinSpO2 = 95,
                     MaxSpO2 = 100,
                     Language = "ro",
-                    FontSize = "medium",
                     UpdateFrequency = 30,
                     NotifyByEmail = true,
                     NotifyByPush = true
@@ -145,8 +143,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 var userMonitored = new UserMonitored
                 {
                     IdUser = user.Id,
-                    IdMonitored = monitored.Id,
-                    Relationship = "Grandmother"
+                    IdMonitored = monitored.Id
                 };
                 context.Set<UserMonitored>().Add(userMonitored);
 

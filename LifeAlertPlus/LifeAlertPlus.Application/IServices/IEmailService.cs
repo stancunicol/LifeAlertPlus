@@ -10,6 +10,7 @@ namespace LifeAlertPlus.Application.IServices
         Task SendEmailChangeNotificationAsync(string oldEmail, string recipientName, string newEmail, string cancelUrl);
         Task SendReportEmailAsync(string doctorEmail, string patientName, byte[] pdfAttachment);
         Task SendAlertNotificationEmailAsync(string recipientEmail, string recipientName, string patientName, string severity, string details, string lang = "ro");
+        Task SendDailyReportEmailAsync(string recipientEmail, string recipientName, string reportHtmlBody, DateTime reportDate, string lang = "ro");
         Task SendDoctorInvitationEmailAsync(string doctorEmail, string patientName, string invitationLink);
     }
 }

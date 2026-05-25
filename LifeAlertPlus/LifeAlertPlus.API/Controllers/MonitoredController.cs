@@ -143,6 +143,7 @@ namespace LifeAlertPlus.API.Controllers
             existing.MinSpO2 = dto.MinSpO2;
             existing.MaxSpO2 = dto.MaxSpO2;
             existing.UpdateFrequency = dto.UpdateFrequency;
+            existing.DataRetentionDays = dto.DataRetentionDays;
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _monitoredService.UpdateMonitoredPersonAsync(existing);

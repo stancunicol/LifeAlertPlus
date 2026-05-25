@@ -86,16 +86,14 @@ namespace LifeAlertPlus.API.Services
             var html = GenerateReportHtml(user, yesterday, monitored, measurements, alerts);
 
             bool isEn = string.Equals(user.Language, "en", StringComparison.OrdinalIgnoreCase);
-            string reportTitle = isEn ? "Daily Health Report" : "Raport zilnic de sănătate";
             string lang = isEn ? "en" : "ro";
 
-            // Send email
-            await _emailService.SendAlertNotificationEmailAsync(
+            // Send via the dedicated daily-report email channel (own subject + template).
+            await _emailService.SendDailyReportEmailAsync(
                 user.Email,
                 user.FirstName,
-                reportTitle,
-                "Report",
                 html,
+                yesterday,
                 lang);
 
             _logger.LogInformation("Sent daily report to {Email} for {Date}", user.Email, yesterday.ToString("yyyy-MM-dd"));

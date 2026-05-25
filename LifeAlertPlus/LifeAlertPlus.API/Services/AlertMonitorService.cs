@@ -148,8 +148,11 @@ namespace LifeAlertPlus.API.Services
 
             if (severity == AlertSeverity.Normal)
             {
-                if (_alertStates.TryRemove(monitoredId, out _))
+                if (_alertStates.TryRemove(monitoredId, out var resolvedState))
+                {
                     _logger.LogInformation("Monitored {MonitoredId} returned to normal and alert state was cleared.", monitoredId);
+                    _ = Task.Run(() => MarkFeedbackRequestedAsync(monitoredId, resolvedState.FirstDetected));
+                }
                 _lastNotificationSent.TryRemove(monitoredId, out _);
                 return;
             }
@@ -776,12 +779,50 @@ namespace LifeAlertPlus.API.Services
             }
         }
 
+        // After an alert episode resolves to Normal, flag the most recent Alert/Critical
+        // notification for each watcher so the false-alarm popup appears on next visit.
+        private async Task MarkFeedbackRequestedAsync(Guid monitoredId, DateTime episodeStartedAt)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
+                var now = DateTime.UtcNow;
+
+                var candidates = await db.Notifications
+                    .Where(n => n.IdMonitored == monitoredId
+                        && n.IdUser != null
+                        && n.CreatedAt >= episodeStartedAt
+                        && n.FeedbackRequestedAt == null
+                        && n.DeletedAt == null
+                        && (n.NotificationType == "Alert" || n.NotificationType == "Critical"))
+                    .ToListAsync();
+
+                var latestPerUser = candidates
+                    .GroupBy(n => n.IdUser!.Value)
+                    .Select(g => g.OrderByDescending(n => n.CreatedAt).First())
+                    .ToList();
+
+                foreach (var n in latestPerUser)
+                    n.FeedbackRequestedAt = now;
+
+                if (latestPerUser.Count > 0)
+                    await db.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "MarkFeedbackRequestedAsync failed for {MonitoredId}", monitoredId);
+            }
+        }
+
         public async Task TriggerPanicAlertAsync(Guid monitoredId, string? coordinates = null)
         {
             try
             {
                 using var scope = _scopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
+                var emailService = scope.ServiceProvider.GetRequiredService<Application.IServices.IEmailService>();
+                var twilioService = scope.ServiceProvider.GetService<Application.IServices.ITwilioService>();
 
                 var monitored = await dbContext.Monitoreds.FindAsync(monitoredId);
                 if (monitored == null) return;
@@ -799,10 +840,10 @@ namespace LifeAlertPlus.API.Services
                     }
                 }
 
-                var userMonitoreds = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions
-                    .ToListAsync(dbContext.UserMonitoreds
-                        .Where(um => um.IdMonitored == monitoredId)
-                        .Include(um => um.User));
+                var userMonitoreds = await dbContext.UserMonitoreds
+                    .Where(um => um.IdMonitored == monitoredId)
+                    .Include(um => um.User)
+                    .ToListAsync();
 
                 var createdAt = DateTime.UtcNow;
 
@@ -812,14 +853,7 @@ namespace LifeAlertPlus.API.Services
                     if (user == null || user.DeletedAt.HasValue) continue;
 
                     var lang = user.Language ?? "en";
-                    var msg = lang == "ro"
-                        ? $"🆘 ALERTĂ MANUALĂ: {patientName} a apăsat butonul de panică!"
-                        : $"🆘 MANUAL ALERT: {patientName} pressed the panic button!";
-
-                    if (hospital != null)
-                        msg += lang == "ro"
-                            ? $" Cel mai apropiat spital: {hospital.HospitalName} (~{hospital.DistanceKm} km, ~{hospital.EstimatedMinutes} min)."
-                            : $" Nearest hospital: {hospital.HospitalName} (~{hospital.DistanceKm} km, ~{hospital.EstimatedMinutes} min).";
+                    var fullMsg = BuildPanicMessage(patientName, lang, hospital, isSms: false, isPush: false);
 
                     dbContext.Notifications.Add(new Domain.Entities.Notification
                     {
@@ -827,20 +861,123 @@ namespace LifeAlertPlus.API.Services
                         IdUser = user.Id,
                         IdMonitored = monitoredId,
                         NotificationType = "Critical",
-                        Message = msg,
+                        Message = fullMsg,
                         CreatedAt = createdAt
                     });
 
-                    await dbContext.SaveChangesAsync();
-                    await _pushNotificationService.SendPushNotificationAsync(user.Id, msg, "Critical");
+                    if (user.NotifyByPush)
+                    {
+                        try
+                        {
+                            var pushMsg = BuildPanicMessage(patientName, lang, hospital, isSms: false, isPush: true);
+                            await _pushNotificationService.SendPushNotificationAsync(user.Id, pushMsg, "Critical");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to send panic push notification to user {UserId} for monitored {MonitoredId}", user.Id, monitoredId);
+                        }
+                    }
+
+                    if (user.NotifyByEmail)
+                    {
+                        try
+                        {
+                            await emailService.SendAlertNotificationEmailAsync(
+                                user.Email,
+                                $"{user.FirstName} {user.LastName}".Trim(),
+                                patientName,
+                                lang == "ro" ? "CRITIC" : "CRITICAL",
+                                fullMsg,
+                                lang);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to send panic email to {Email} for monitored {MonitoredId}", user.Email, monitoredId);
+                        }
+                    }
+
+                    if (user.NotifyBySms)
+                    {
+                        if (twilioService == null)
+                        {
+                            _logger.LogWarning("Twilio service unavailable. Cannot send panic SMS for user {UserId} monitoring {MonitoredId}.", user.Id, monitoredId);
+                        }
+                        else if (string.IsNullOrWhiteSpace(user.PhoneNumber))
+                        {
+                            _logger.LogWarning("User {UserId} has NotifyBySms enabled but no phone number configured.", user.Id);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                var smsMsg = BuildPanicMessage(patientName, lang, hospital, isSms: true, isPush: false);
+                                await twilioService.SendSmsAsync(user.PhoneNumber, smsMsg);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed to send panic SMS to {Phone} for monitored {MonitoredId}", user.PhoneNumber, monitoredId);
+                            }
+                        }
+                    }
                 }
 
-                _logger.LogWarning("Panic alert triggered for monitored {MonitoredId} ({Name})", monitoredId, patientName);
+                await dbContext.SaveChangesAsync();
+
+                _logger.LogWarning("Panic alert dispatched for monitored {MonitoredId} ({Name}) to {Count} watcher(s)", monitoredId, patientName, userMonitoreds.Count);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "TriggerPanicAlertAsync failed for monitored {MonitoredId}", monitoredId);
             }
+        }
+
+        private static string BuildPanicMessage(string patientName, string lang, HospitalRouteResult? hospital, bool isSms, bool isPush)
+        {
+            bool isRo = !string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase);
+
+            if (isSms)
+            {
+                string sms = isRo
+                    ? $"🆘 PANICĂ: {patientName} nu se simte în siguranță și a cerut ajutor."
+                    : $"🆘 PANIC: {patientName} does not feel safe and is asking for help.";
+                if (hospital != null)
+                    sms += $"\n🏥 {hospital.HospitalName} (~{hospital.EstimatedMinutes} min, {hospital.DistanceKm} km)";
+                sms += isRo ? "\nContactați-l ACUM!" : "\nContact them NOW!";
+                return sms;
+            }
+
+            if (isPush)
+            {
+                string push = isRo
+                    ? $"🆘 {patientName} nu se simte în siguranță"
+                    : $"🆘 {patientName} does not feel safe";
+                if (hospital != null)
+                    push += $"\n🏥 {hospital.HospitalName} – ~{hospital.EstimatedMinutes} min";
+                push += isRo ? "\nVerifică acum" : "\nCheck now";
+                return push;
+            }
+
+            var lines = new List<string>();
+            lines.Add(isRo
+                ? $"🆘 ALERTĂ DE PANICĂ — {patientName} a apăsat butonul de panică și semnalează că nu se simte în siguranță."
+                : $"🆘 PANIC ALERT — {patientName} pressed the panic button and is signaling that they do not feel safe.");
+            lines.Add("");
+            lines.Add(isRo
+                ? "Vârstnicul a cerut ajutor manual. Contactați-l imediat pentru a verifica situația."
+                : "The elderly person has manually requested help. Contact them immediately to check on the situation.");
+
+            if (hospital != null)
+            {
+                lines.Add("");
+                lines.Add(isRo ? "🏥 Cel mai apropiat spital de urgență:" : "🏥 Nearest emergency hospital:");
+                lines.Add($"  {hospital.HospitalName} (~{hospital.EstimatedMinutes} min, {hospital.DistanceKm} km)");
+            }
+
+            lines.Add("");
+            lines.Add(isRo
+                ? "Dacă nu răspunde sau pare în pericol, contactați serviciile de urgență."
+                : "If they do not respond or seem in danger, contact emergency services.");
+            return string.Join("\n", lines);
         }
 
     }

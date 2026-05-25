@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using LifeAlertPlus.Infrastructure.Context;
+using LifeAlertPlus.Shared.DTOs.Requests.Notification;
 using LifeAlertPlus.Shared.DTOs.Responses.Notification;
 namespace LifeAlertPlus.API.Controllers
 {
@@ -138,6 +139,55 @@ namespace LifeAlertPlus.API.Controllers
 
             await _dbContext.SaveChangesAsync();
             return Ok(new { Updated = unread.Count });
+        }
+
+        [HttpGet("pending-feedback")]
+        public async Task<IActionResult> GetPendingFeedback()
+        {
+            var userId = GetCallerId();
+            if (userId == null) return Forbid();
+
+            var items = await _dbContext.Notifications
+                .Where(n => n.IdUser == userId.Value
+                    && n.DeletedAt == null
+                    && n.FeedbackRequestedAt != null
+                    && n.WasReal == null)
+                .OrderBy(n => n.FeedbackRequestedAt)
+                .Join(_dbContext.Monitoreds,
+                    n => n.IdMonitored,
+                    m => m.Id,
+                    (n, m) => new PendingFeedbackDTO
+                    {
+                        Id = n.Id,
+                        NotificationType = n.NotificationType,
+                        Message = n.Message,
+                        CreatedAt = n.CreatedAt,
+                        MonitoredName = (m.FirstName + " " + m.LastName).Trim()
+                    })
+                .ToListAsync();
+
+            return Ok(items);
+        }
+
+        [HttpPatch("{id}/feedback")]
+        public async Task<IActionResult> SubmitFeedback(Guid id, [FromBody] NotificationFeedbackRequestDTO body)
+        {
+            var userId = GetCallerId();
+            if (userId == null) return Forbid();
+            if (body == null) return BadRequest();
+
+            var notification = await _dbContext.Notifications
+                .FirstOrDefaultAsync(n => n.Id == id
+                    && n.IdUser == userId.Value
+                    && n.DeletedAt == null
+                    && n.FeedbackRequestedAt != null);
+
+            if (notification == null) return NotFound();
+
+            notification.WasReal = body.WasReal;
+            notification.FeedbackRespondedAt = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync();
+            return NoContent();
         }
 
         [HttpGet("unread-count")]

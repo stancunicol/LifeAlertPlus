@@ -1,0 +1,1139 @@
+% !TeX program = pdflatex
+% LifeAlertPlus - Lucrare de licență
+% Document reconstruit din documentatie.pdf, cu subcapitolele 2.3, 2.4 și 2.5 completate.
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[romanian]{babel}
+\usepackage[sfdefault]{carlito}  % font sans-serif metric-compatibil cu Calibri
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{textcomp}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage[hidelinks]{hyperref}
+
+% ----- Stiluri de titlu (1 INTRODUCERE, 1.1 CONTEXT ACTUAL, 1.1.1 ...) -----
+\titleformat{\section}{\Large\bfseries}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{2.2ex plus 1ex minus .2ex}{1.4ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.8ex plus 1ex minus .2ex}{1.0ex plus .2ex}
+\titlespacing*{\subsubsection}{0pt}{1.4ex plus 1ex minus .2ex}{0.8ex plus .2ex}
+
+% Numerotare extinsă: include subsubsection în corp şi în cuprins (1.1.1, 1.1.2...)
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+% ----- Antet / subsol -----
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small LifeAlertPlus}
+\fancyhead[R]{\small Stancu Nicol-Alexia}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ----- Comenzi utilitare -----
+\newcommand{\spo}{SpO\textsubscript{2}}
+
+% Placeholder pentru figuri care urmează să fie inserate.
+% Înlocuiește apelul \figplaceholder{...} cu \includegraphics[width=0.9\textwidth]{nume-fisier}
+\newcommand{\figplaceholder}[1]{\fbox{\parbox[c][4.8cm][c]{0.88\textwidth}{\centering\itshape #1}}}
+
+% Titlul secțiunii de bibliografie generate automat de mediul thebibliography
+\addto\captionsromanian{\renewcommand{\refname}{Bibliografie}}
+
+\setlength{\parskip}{0.6em}
+\renewcommand{\baselinestretch}{1.0}  % spațiere la un rând
+
+\begin{document}
+
+% ====================== PAGINA DE TITLU ======================
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{center}
+
+{\large Universitatea Transilvania din Brașov\\[0.3em]
+Facultatea de Matematică și Informatică}
+
+\vspace{0.6em}
+{\small Programul de studii: Informatică}
+
+\vfill
+
+{\Huge\bfseries Lucrare de licență\par}
+
+\vspace{1.2em}
+
+{\LARGE\bfseries LifeAlertPlus --- Sistem IoT inteligent pentru monitorizarea și siguranța persoanelor vârstnice\par}
+
+\vfill
+
+\begin{flushleft}
+\large
+\begin{tabular}{@{}ll@{}}
+Autor: & Stancu Nicol-Alexia\\[0.5em]
+Coordonator științific: & Lectr. Dr. Vasilescu Anca\\
+\end{tabular}
+\end{flushleft}
+
+\vfill
+
+{\large Brașov, 2026}
+
+\end{center}
+\end{titlepage}
+
+% ====================== CUPRINS ======================
+\newpage
+\tableofcontents
+\newpage
+
+% ====================== LISTĂ DE FIGURI ȘI TABELE ======================
+\phantomsection
+\addcontentsline{toc}{section}{Listă de figuri}
+\listoffigures
+\newpage
+
+\phantomsection
+\addcontentsline{toc}{section}{Listă de tabele}
+\listoftables
+\newpage
+
+% ====================== LISTĂ DE ABREVIERI ======================
+\phantomsection
+\addcontentsline{toc}{section}{Listă de abrevieri}
+\section*{Listă de abrevieri}
+
+{\small
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{@{}>{\bfseries}p{2.7cm}p{10.6cm}@{}}
+AI & Artificial Intelligence --- inteligență artificială\\
+API & Application Programming Interface --- interfață de programare a aplicațiilor\\
+AUC-ROC & Area Under the ROC Curve --- aria de sub curba ROC\\
+AV & Alură ventriculară (frecvență cardiacă)\\
+BIDMC & Beth Israel Deaconess Medical Center --- instituție sursă a unui set public de date fiziologice\\
+BLE & Bluetooth Low Energy\\
+bpm & Bătăi pe minut (unitate pentru frecvența cardiacă)\\
+CI/CD & Continuous Integration / Continuous Delivery --- integrare și livrare continuă\\
+CORS & Cross-Origin Resource Sharing\\
+CPaaS & Communication Platform as a Service --- platformă de comunicație în cloud\\
+DTO & Data Transfer Object --- obiect de transfer de date\\
+ECG & Electrocardiogramă\\
+EDA & Electrodermal Activity --- activitate electrodermală\\
+ESP-IDF & Espressif IoT Development Framework --- mediul de dezvoltare pentru microcontrollere Espressif\\
+FreeRTOS & Free Real-Time Operating System --- sistem de operare în timp real\\
+GPIO & General-Purpose Input/Output --- pin de intrare/ieșire de uz general\\
+GPS & Global Positioning System --- sistem de poziționare globală\\
+HTTP & HyperText Transfer Protocol\\
+HTTPS & HyperText Transfer Protocol Secure --- HTTP securizat\\
+I2C & Inter-Integrated Circuit --- magistrală de comunicație serială\\
+IMU & Inertial Measurement Unit --- unitate de măsurare inerțială\\
+IoMT & Internet of Medical Things --- internetul dispozitivelor medicale\\
+IoT & Internet of Things --- internetul lucrurilor\\
+JSON & JavaScript Object Notation --- format de schimb de date\\
+JWT & JSON Web Token\\
+LED & Light-Emitting Diode --- diodă electroluminescentă\\
+LiPo & Lithium Polymer --- acumulator litiu-polimer\\
+MQTT & Message Queuing Telemetry Transport --- protocol de comunicație IoT\\
+NMEA & National Marine Electronics Association --- standard de format pentru datele GPS\\
+NVS & Non-Volatile Storage --- memorie nevolatilă\\
+OAuth & Open Authorization --- protocol de autorizare delegată\\
+OLED & Organic Light-Emitting Diode --- ecran cu diode electroluminescente organice\\
+ORM & Object-Relational Mapper --- mapare obiect-relațional\\
+PERS & Personal Emergency Response System --- sistem de alertă personală medicală\\
+PPG & Photoplethysmography --- fotopletismografie\\
+PWA & Progressive Web Application --- aplicație web progresivă\\
+REST & Representational State Transfer --- stil arhitectural pentru API-uri web\\
+RFID & Radio-Frequency Identification --- identificare prin radiofrecvență\\
+RISC-V & Reduced Instruction Set Computer --- arhitectură deschisă de procesor\\
+ROC & Receiver Operating Characteristic --- curbă de evaluare a clasificatorilor\\
+SHAP & SHapley Additive exPlanations --- metodă de explicare a modelelor de inteligență artificială\\
+SMS & Short Message Service --- serviciu de mesaje text\\
+SMTP & Simple Mail Transfer Protocol --- protocol de trimitere a email-urilor\\
+SPA & Single-Page Application --- aplicație web cu pagină unică\\
+SPI & Serial Peripheral Interface --- magistrală de comunicație serială\\
+\spo & Saturația periferică a oxigenului în sânge\\
+TLS & Transport Layer Security --- protocol de securizare a comunicației\\
+TTFF & Time To First Fix --- timpul până la primul fix GPS\\
+UART & Universal Asynchronous Receiver-Transmitter --- interfață de comunicație serială\\
+USB-C & Universal Serial Bus Type-C\\
+WiFi & Tehnologie de rețea locală fără fir (standard IEEE 802.11)\\
+\end{longtable}
+}
+
+\newpage
+
+% ====================== 1 INTRODUCERE ======================
+\section{Introducere}
+
+\subsection{Context actual}
+
+Transformarea digitală a sistemelor de sănătate reprezintă una dintre tendințele cele mai semnificative ale ultimului deceniu. La nivel global, numărul persoanelor diagnosticate cu afecțiuni cronice --- diabet, hipertensiune, boli cardiovasculare --- depășește 1,9 miliarde, potrivit datelor Organizației Mondiale a Sănătății (2023). În România, aproximativ 35\% din populație suferă de cel puțin o boală cronică, un procentaj care pune o presiune considerabilă asupra sistemului medical tradițional, bazat în principal pe consultații periodice și internări.
+
+În acest context, tehnologiile Internet of Things (IoT) oferă o alternativă viabilă: monitorizarea continuă a pacienților în afara mediului spitalicesc, prin intermediul senzorilor portabili capabili să măsoare parametri vitali precum ritmul cardiac, saturația oxigenului în sânge (\spo) și temperatura corporală, dar și să detecteze, prin senzori de mișcare, evenimente critice precum căderile --- frecvente și potențial grave în cazul persoanelor vârstnice. Datele colectate sunt transmise în timp real către platforme software care le procesează, le stochează și le analizează, permițând intervenția rapidă în situații critice.
+
+Această abordare reduce costurile de spitalizare, crește autonomia pacientului și îmbunătățește calitatea actului medical prin accesul la date obiective și continue.
+
+\subsection{Motivația alegerii temei}
+
+Alegerea acestei teme a fost motivată de dorința de a dezvolta o soluție tehnologică cu impact direct și măsurabil asupra calității vieții utilizatorilor. Sistemele de monitorizare existente sunt adesea costisitoare, greu de configurat sau limitate la mediul clinic, ceea ce le face inaccesibile pentru utilizatorul obișnuit.
+
+Provocarea de a integra mai multe tehnologii moderne --- senzori IoT, comunicație wireless, backend scalabil, aplicație web și mecanisme de notificare prin SMS, email și notificări push --- a reprezentat un factor motivant suplimentar. Complexitatea tehnică a proiectului oferă oportunitatea aplicării practice a cunoștințelor acumulate pe parcursul studiilor, într-un scenariu cu relevanță reală.
+
+Nu în ultimul rând, posibilitatea de a defini și implementa un mecanism propriu de evaluare a stării de sănătate a utilizatorului --- denumit în lucrare \textit{health score} --- a constituit o motivație importantă, reprezentând o contribuție originală față de soluțiile existente.
+
+\subsection{Scopul lucrării}
+
+Scopul lucrării este de a demonstra că un sistem IoT de monitorizare medicală accesibil, fiabil și scalabil poate fi proiectat și implementat cu tehnologii open-source și hardware de uz general, fără a necesita infrastructură specializată de nivel clinic.
+
+Dincolo de aspectul tehnic, lucrarea urmărește să arate că o astfel de soluție poate contribui la prevenirea complicațiilor medicale prin detectarea timpurie a anomaliilor și notificarea automată a persoanelor responsabile --- aparținători, medici sau servicii de urgență. În situațiile critice, intervenția rapidă este sprijinită de localizarea GPS a pacientului și de un buton de panică prin care acesta poate solicita direct ajutor.
+
+\subsection{Obiective}
+
+Pentru realizarea scopului propus, au fost stabilite următoarele obiective:
+
+\textbf{O1} --- Proiectarea și implementarea unui subsistem de achiziție a datelor de la senzori biomedicali (ritm cardiac, \spo, temperatură corporală) și de la un senzor inerțial pentru detectarea mișcării și a căderilor, precum și a poziției geografice prin GPS, cu transmitere în timp real către un server centralizat.
+
+\textbf{O2} --- Dezvoltarea unei aplicații web pentru vizualizarea datelor colectate, accesibilă atât pacienților, cât și persoanelor responsabile de monitorizare.
+
+\textbf{O3} --- Definirea și implementarea unui mecanism inteligent de evaluare a stării de sănătate, care combină un model de învățare automată pentru clasificarea stării pacientului cu un indice sintetic original (health score), bazat pe corelarea mai multor parametri vitali și pe praguri de alertă personalizabile.
+
+\textbf{O4} --- Integrarea unui sistem de notificări multi-canal (SMS, email, notificări push) care să fie declanșat automat atunci când health score-ul coboară sub un prag critic.
+
+\textbf{O5} --- Asigurarea funcționării sistemului în timp real, cu latență minimă între achiziția datelor și afișarea/alertarea acestora.
+
+\textbf{O6} --- Proiectarea unei arhitecturi modulare și scalabile, capabile să susțină un număr crescut de utilizatori și dispozitive fără modificări structurale majore.
+
+\subsection{Contribuții personale}
+
+Lucrarea de față aduce următoarele contribuții originale:
+
+\textbf{Arhitectura sistemului} --- a fost proiectată integral de autor, alegând o structură modulară care separă clar nivelul de achiziție (dispozitiv IoT), nivelul de procesare (backend) și nivelul de prezentare (frontend), facilitând astfel întreținerea și extinderea ulterioară.
+
+\textbf{Mecanismul health score} --- reprezintă contribuția cu cel mai înalt grad de originalitate. Spre deosebire de sistemele existente care alertează pe baza depășirii unui singur prag (ex: AV > 100 bpm), health score-ul propus corelează simultan mai mulți parametri vitali, ponderați în funcție de severitate, producând un indice unic al stării de sănătate, mai expresiv și mai puțin predispus la alerte false.
+
+\textbf{Modelul de inteligență artificială} --- a fost antrenat și integrat un model de învățare automată (Random Forest) pentru clasificarea automată a stării de sănătate în categoriile normal, alertă și critic. Modelul este combinat cu un set de reguli medicale într-un mecanism hibrid de decizie și este expus printr-un microserviciu dedicat.
+
+\textbf{Implementarea backend și frontend} --- întreaga aplicație software a fost dezvoltată de autor, inclusiv API-ul REST pentru comunicarea cu dispozitivele IoT, baza de date pentru stocarea istoricului și interfața web pentru vizualizare.
+
+\textbf{Integrarea senzorilor} --- configurarea și calibrarea senzorilor pentru achiziția corectă a datelor biomedicale, precum și implementarea protocolului de comunicație dintre dispozitiv și server.
+
+\textbf{Stocarea locală și sincronizarea datelor} --- pentru a asigura continuitatea înregistrării chiar și în absența conexiunii la internet, dispozitivul stochează temporar măsurătorile într-o coadă locală și le sincronizează automat cu serverul la revenirea semnalului.
+
+\textbf{Sistemul de alertare multi-canal} --- proiectarea logicii de declanșare a notificărilor și integrarea serviciilor externe pentru livrarea acestora prin SMS, email și notificări push.
+
+\subsection{Structura lucrării}
+
+Lucrarea este organizată în șapte capitole, fiecare tratând un aspect distinct al dezvoltării sistemului.
+
+Capitolul II prezintă fundamentele teoretice necesare înțelegerii lucrării: concepte IoT, protocoale de comunicație, senzori biomedicali și tehnologii software utilizate.
+
+Capitolul III analizează critic soluțiile existente pe piață și în literatura de specialitate, identificând limitările acestora și justificând abordarea propusă.
+
+Capitolul IV descrie proiectarea sistemului --- arhitectura generală, fluxul de date, structura bazei de date și logica mecanismului health score.
+
+Capitolul V detaliază implementarea efectivă a fiecărei componente: firmware-ul dispozitivului IoT, backend-ul, frontend-ul și sistemul de notificări.
+
+Capitolul VI prezintă metodologia de testare și rezultatele obținute, cu accent pe acuratețea datelor, latența sistemului și fiabilitatea alertelor.
+
+Capitolul VII formulează concluziile lucrării, limitările identificate și direcțiile de dezvoltare ulterioară.
+
+% ====================== 2 FUNDAMENTE TEORETICE ======================
+\newpage
+\section{Fundamente teoretice și tehnologii}
+
+\subsection{Internet of Things}
+
+Termenul Internet of Things (IoT) descrie un ecosistem de dispozitive fizice echipate cu senzori, procesoare și module de comunicație, capabile să colecteze și să schimbe date prin intermediul rețelelor de comunicații, fără a necesita intervenție umană directă. Conceptul a fost introdus pentru prima dată de Kevin Ashton în 1999, în contextul identificării prin radiofrecvență (RFID), și s-a extins ulterior pentru a descrie orice obiect conectat la internet capabil să interacționeze cu mediul înconjurător.
+
+Din punct de vedere arhitectural, un sistem IoT este organizat pe trei niveluri principale. Primul nivel, numit nivelul de percepție, cuprinde dispozitivele fizice și senzorii responsabili de achiziția datelor din mediu. Al doilea nivel, nivelul de rețea, asigură transmiterea datelor colectate către infrastructura de procesare, utilizând protocoale precum WiFi, Bluetooth Low Energy (BLE), MQTT sau HTTP. Al treilea nivel, nivelul de aplicație, include platformele software care procesează, stochează și prezintă datele utilizatorilor finali.
+
+În domeniul medical, IoT a generat un subdomeniu distinct, denumit Internet of Medical Things (IoMT), care cuprinde dispozitive precum brățări de monitorizare, pulsioximetre portabile, glucometre conectate și sisteme de monitorizare a semnelor vitale. Potrivit unui raport Fortune Business Insights din 2023, piața globală IoMT a depășit 50 de miliarde de dolari și este estimată să crească la peste 180 de miliarde până în 2030, reflectând cererea crescândă pentru soluții de monitorizare continuă în afara mediului clinic.
+
+Un aspect critic în sistemele IoT medicale este fiabilitatea comunicației. Spre deosebire de aplicațiile industriale sau de automatizare casnică, întreruperea transmisiei datelor într-un sistem medical poate avea consecințe directe asupra siguranței pacientului. Din acest motiv, arhitecturile IoMT includ în mod obișnuit mecanisme de stocare locală temporară a datelor, care asigură continuitatea înregistrării chiar și în absența conectivității la rețea, cu sincronizare automată la revenirea conexiunii.
+
+În cadrul sistemului dezvoltat în această lucrare, arhitectura IoT este implementată pe trei niveluri corespunzătoare: un dispozitiv portabil bazat pe microcontrollerul ESP32-C3 Mini în rolul de nod de percepție, comunicația WiFi și BLE în rolul nivelului de rețea, și o aplicație web deployată pe Azure în rolul nivelului de aplicație. Dat fiind că sistemul este destinat persoanelor vârstnice, s-a acordat o atenție deosebită simplificării interacțiunii cu dispozitivul, configurarea tehnică fiind realizată o singură dată de aparținător, iar funcționarea ulterioară fiind complet transparentă pentru pacient.
+
+% >>> FIGURĂ SUGERATĂ (opțional): diagrama conceptuală a arhitecturii IoT pe trei
+% niveluri --- percepție / rețea / aplicație.
+
+\subsection{Senzori și dispozitive}
+
+\subsubsection{Microcontrollerul ESP32-C3 Mini}
+
+ESP32-C3 Mini este un microcontroller de dimensiuni reduse, produs de Espressif Systems, bazat pe arhitectura RISC-V pe 32 de biți. Dispune de conectivitate WiFi 802.11 b/g/n și Bluetooth 5.0 Low Energy, ceea ce îl face potrivit pentru aplicații IoT portabile care necesită atât comunicație locală, cât și acces la internet. Consumul redus de energie, dimensiunile compacte și suportul pentru protocoale de comunicație standard --- I2C, SPI, UART --- îl recomandă ca platformă centrală pentru un dispozitiv de tip brățară medicală.
+
+În cadrul sistemului, ESP32-C3 Mini îndeplinește rolul de unitate centrală de procesare a dispozitivului portabil: colectează datele de la toți senzorii, le procesează local, le afișează pe ecranul OLED și le transmite către serverul din cloud prin WiFi sau, în absența acestuia, prin BLE către telefonul aparținătorului.
+
+\subsubsection{Senzorul MAX30100 --- puls și saturație de oxigen}
+
+MAX30100 este un senzor optic integrat, produs de Maxim Integrated, destinat măsurării neinvazive a frecvenței cardiace și a saturației oxigenului în sânge (\spo). Funcționarea sa se bazează pe principiul \textbf{fotopletismografiei (PPG)}: senzorul emite lumină în spectrul roșu și infraroșu prin țesutul cutanat, iar un fotodetector măsoară variațiile de absorbție cauzate de pulsațiile sângelui. Diferența de absorbție dintre hemoglobina oxigenată și cea dezoxigenată permite calcularea \spo.
+
+Comunicația cu microcontrollerul se realizează prin protocolul \textbf{I2C}, la o adresă fixă de 0x57. Tensiunea de alimentare este de 1.8V pentru nucleul digital și 3.3V pentru LED-uri, necesitând atenție la proiectarea schemei electrice. Valorile normale ale parametrilor măsurați sunt între 60 și 100 bătăi pe minut pentru frecvența cardiacă și între 95\% și 100\% pentru \spo, valorile sub 90\% indicând o hipoxemie potențial critică.
+
+\subsubsection{Senzorul DS18B20 --- temperatură corporală}
+
+DS18B20 este un senzor digital de temperatură produs de Dallas Semiconductor (Maxim Integrated), cu o rezoluție configurabilă între 9 și 12 biți și o precizie de $\pm$0.5\textdegree C în intervalul 0--70\textdegree C. Comunicația se realizează prin protocolul \textbf{1-Wire}, care permite conectarea mai multor senzori pe același fir de date, fiecare identificat printr-un cod unic de 64 de biți. Intervalul de măsurare este de -55\textdegree C până la +125\textdegree C, acoperind cu generozitate intervalul temperaturilor corporale normale (36.1\textdegree C -- 37.2\textdegree C) și febrile (peste 38\textdegree C).
+
+Un avantaj important pentru aplicația de față este că DS18B20 poate fi utilizat în variantă impermeabilă, potrivită pentru contact cu pielea, și are un consum extrem de redus în modul de așteptare.
+
+\subsubsection{Senzorul MPU6050 --- mișcare și accelerație}
+
+MPU6050, produs de InvenSense, este o unitate de măsurare inerțială (IMU) care integrează un accelerometru triaxial și un giroscop triaxial într-un singur circuit, comunicând prin \textbf{I2C} la adresele 0x68 sau 0x69. Accelerometrul măsoară accelerația pe axele X, Y și Z, iar giroscopul măsoară viteza unghiulară, permițând împreună determinarea orientării și a tipului de mișcare al purtătorului.
+
+În contextul acestei lucrări, datele furnizate de MPU6050 sunt utilizate în două scopuri distincte. Primul scop este \textbf{detectarea activității fizice} --- mers, repaus, somn --- pentru construirea profilului de activitate zilnică al pacientului. Al doilea scop, cu implicații directe asupra siguranței, este \textbf{detectarea căderilor}, un eveniment frecvent și potențial grav în cazul persoanelor vârstnice. Algoritmul de detecție a căderilor analizează variațiile bruște de accelerație caracteristice unui impact, urmate de o perioadă de imobilitate.
+
+Interpretarea datelor brute ale senzorului pentru clasificarea activităților este realizată de un modul AI descris în subcapitolul 2.3.
+
+\subsubsection{Modulul GPS NEO-6M}
+
+NEO-6M este un modul GPS produs de u-blox, capabil să determine poziția geografică cu o precizie de aproximativ 2.5 metri în condiții favorabile. Comunicația cu microcontrollerul se realizează prin \textbf{UART}, la o rată de 9600 baud implicit, transmițând date în format NMEA 0183. Timpul de achiziție a primului fix GPS (TTFF) este de aproximativ 27 de secunde la pornire rece și sub 1 secundă la pornire caldă.
+
+În cadrul sistemului, modulul GPS servește la localizarea pacientului în scenarii de alertă, permițând aparținătorului să vizualizeze ultima poziție cunoscută în aplicație. Deoarece GPS-ul are un consum relativ ridicat față de ceilalți senzori, frecvența de interogare este configurabilă, reducând impactul asupra autonomiei bateriei.
+
+\subsubsection{Multiplexorul I2C TCA9548A}
+
+TCA9548A este un multiplexor I2C pe 8 canale, produs de Texas Instruments, care permite conectarea simultană a mai multor dispozitive I2C cu aceeași adresă la același microcontroller. Această componentă rezolvă conflictele de adresă care apar inevitabil atunci când se conectează mai mulți senzori pe aceeași magistrală I2C --- în cazul de față, MAX30100 și MPU6050 utilizează ambele magistrala I2C. Comunicația cu ESP32-C3 se realizează tot prin I2C, la adresa 0x70, iar selectarea canalului activ se face prin scriere software.
+
+\subsubsection{Sistemul de alimentare}
+
+Alimentarea dispozitivului portabil este asigurată de un acumulator \textbf{LiPo 3.7V 1500mAh} (103048 AM Electronics), cu dimensiuni compacte de 10$\times$30$\times$48mm și protecție integrată împotriva supraîncărcării, supradescărcării și scurtcircuitului. Gestionarea încărcării este realizată de modulul \textbf{TP4056}, un circuit integrat dedicat încărcării bateriilor Li-Ion/Li-Po prin USB-C, cu curent de încărcare de 1A și protecție completă a celulei. Conversia tensiunii de la 3.7V la nivelul necesar componentelor este asigurată de convertorul boost \textbf{MT3608}, capabil să furnizeze până la 28V la 2A, configurat în acest caz pentru tensiunea de operare a sistemului.
+
+\subsubsection{Interfața utilizator pe dispozitiv}
+
+Dispozitivul include două elemente de interfață locală. Un \textbf{ecran OLED} afișează în timp real informații esențiale precum frecvența cardiacă, \spo, temperatura și starea conexiunii, oferind pacientului sau aparținătorului o confirmare vizuală a funcționării. Două \textbf{LED-uri} indică starea sistemului: verde pentru funcționare normală și roșu pentru eroare sau alertă activă.
+
+Interacțiunea fizică cu dispozitivul este limitată la două butoane, în concordanță cu principiul simplității pentru utilizatorul vârstnic: un buton de pornire/oprire și un \textbf{buton de panică}, a cărui apăsare declanșează imediat o alertă către aparținător, indiferent de valorile senzorilor.
+
+\begin{figure}[H]
+\centering
+% Înlocuiește cu fotografia reală, de exemplu:
+% \includegraphics[width=0.75\textwidth]{figuri/dispozitiv.jpg}
+\figplaceholder{[Spațiu pentru figură --- fotografia dispozitivului portabil asamblat, cu senzorii, ecranul OLED și butoanele vizibile.]}
+\caption{Dispozitivul portabil LifeAlertPlus.}
+\label{fig:dispozitiv}
+\end{figure}
+
+% >>> FIGURĂ SUGERATĂ: schema electrică / de conexiuni a dispozitivului ---
+% maparea pinilor GPIO ai ESP32-C3 către senzori, multiplexor, OLED și butoane.
+
+% ---------- 2.3 (NOU) ----------
+\subsection{Prelucrarea datelor și inteligență artificială}
+
+Datele brute furnizate de senzorii biomedicali nu pot fi utilizate direct pentru a decide dacă starea pacientului este una normală sau una care necesită intervenție. Valorile individuale --- o frecvență cardiacă de 105 bpm, o temperatură de 37,8\textdegree C --- sunt ambigue atunci când sunt interpretate izolat: ele pot indica fie o stare patologică, fie o reacție fiziologică firească la efort, stres sau temperatura ambientală. Din acest motiv, transformarea datelor în informație utilă din punct de vedere clinic presupune o etapă de prelucrare și o etapă de interpretare, în care intervine inteligența artificială.
+
+În sistemul dezvoltat, prelucrarea datelor este organizată pe două niveluri. Primul nivel, realizat local pe microcontroller, cuprinde filtrarea valorilor evident eronate (citiri în afara intervalelor fizic posibile, generate de contactul imperfect al senzorului cu pielea) și calculul unor mărimi derivate, precum magnitudinea vectorului de accelerație, obținută din componentele pe cele trei axe. Al doilea nivel, realizat pe server, cuprinde analiza propriu-zisă a stării de sănătate, prin combinarea unui model de învățare automată cu un set de reguli medicale deterministe.
+
+\subsubsection{Învățarea automată și problema de clasificare}
+
+Învățarea automată (machine learning) este subdomeniul inteligenței artificiale care studiază algoritmii capabili să își îmbunătățească performanța pe baza datelor, fără a fi programați explicit pentru fiecare situație posibilă. În cazul de față, evaluarea stării pacientului a fost formulată ca o problemă de \textbf{clasificare supervizată}: pornind de la un set de parametri vitali, modelul trebuie să atribuie pacientului una dintre trei clase --- \texttt{NORMAL}, \texttt{ALERT} sau \texttt{CRITICAL}. Clasificarea supervizată presupune existența unui set de date de antrenare în care fiecare exemplu este însoțit de eticheta corectă, modelul deducând din aceste exemple o funcție de decizie care poate fi aplicată ulterior unor date noi.
+
+Algoritmul utilizat este \textbf{Random Forest}, un model de tip ansamblu (ensemble) format dintr-o mulțime de arbori de decizie antrenați independent pe subseturi aleatorii ale datelor. Predicția finală rezultă din agregarea voturilor tuturor arborilor, ceea ce reduce semnificativ riscul de supraînvățare (overfitting) caracteristic unui arbore de decizie individual. Random Forest a fost preferat datorită robusteții în raport cu zgomotul din date, a capacității de a estima importanța fiecărui parametru de intrare și a faptului că nu necesită un volum de date la fel de mare ca rețelele neuronale --- un avantaj practic important într-un domeniu în care datele medicale reale etichetate sunt greu de obținut. Modelul a fost configurat cu 150 de arbori, o adâncime maximă de 10 niveluri și ponderarea claselor, pentru a compensa distribuția lor inegală.
+
+\subsubsection{Datele de antrenare și pregătirea lor}
+
+Întrucât colectarea unui volum suficient de date medicale reale, etichetate, ridică probleme practice și de confidențialitate, modelul a fost antrenat pe un set de date sintetice, generat pornind de la trei surse publice recunoscute: setul de date BIDMC pentru frecvența cardiacă și saturația oxigenului, un set de date de termometrie pentru temperatura corporală și un set de date provenit de la senzori MPU6050 pentru parametrii de mișcare. Peste valorile extrase din aceste surse a fost adăugat un zgomot gaussian controlat, pentru a obține o variabilitate realistă, și au fost generate suplimentar exemple corespunzătoare stărilor \texttt{ALERT} și \texttt{CRITICAL}, mai rare în datele reale, astfel încât modelul să poată învăța corect și situațiile critice.
+
+Înainte de antrenare, datele au fost supuse unor operații standard de preprocesare. Parametrii proveniți de la accelerometru și giroscop au fost normalizați prin metoda Min-Max, care aduce toate valorile în intervalul $[0, 1]$, împiedicând ca mărimile cu domeniu numeric larg să domine procesul de învățare. Etichetele textuale ale claselor au fost convertite în valori numerice prin codificare (label encoding), iar saturației oxigenului i s-a atribuit o pondere suplimentară, fiind cel mai relevant indicator clinic dintre parametrii monitorizați.
+
+\subsubsection{Sistemul hibrid de decizie}
+
+O caracteristică importantă a soluției este faptul că decizia finală nu este lăsată exclusiv în seama modelului de învățare automată. Predicția acestuia este combinată cu un set de \textbf{reguli medicale deterministe}, derivate din praguri clinice consacrate. Motivul acestei abordări hibride este unul de siguranță: un model de învățare automată, oricât de bine antrenat, poate produce predicții eronate în cazuri rare sau atipice, în timp ce o regulă medicală absolută --- de exemplu, o saturație a oxigenului sub un prag critic clasificată automat ca stare \texttt{CRITICAL} --- garantează că situațiile fără echivoc sunt tratate corect indiferent de comportamentul modelului. Astfel, modelul AI aduce capacitatea de a recunoaște tipare complexe și corelații subtile între parametri, iar regulile medicale aduc garanții de corectitudine și explicabilitate.
+
+În plus față de starea discretă (NORMAL/ALERT/CRITICAL), sistemul calculează un \textbf{health score}, un indice sintetic cu valori între 0 și 100 care exprimă numeric gradul de risc al pacientului la un moment dat. Spre deosebire de starea discretă, health score-ul oferă o măsură continuă, care permite urmărirea tendințelor (o stare care se degradează lent, dar constant) și declanșarea graduală a alertelor. Logica de calcul a acestui indice, precum și modul în care ține cont de pragurile personalizate ale fiecărui pacient și de afecțiunile preexistente ale acestuia, sunt detaliate în capitolul de proiectare a sistemului.
+
+% >>> FIGURĂ SUGERATĂ: schema sistemului hibrid de decizie --- model Random Forest
+% combinat cu reguli medicale, conducând la starea finală și la health score.
+
+\subsubsection{Explicabilitatea și evaluarea modelului}
+
+Într-un domeniu cu implicații medicale, un model care produce predicții corecte, dar de neînțeles, este insuficient: este necesar ca decizia să poată fi explicată. Din acest motiv, modelul a fost analizat folosind metoda \textbf{SHAP (SHapley Additive exPlanations)}, o tehnică ce cuantifică contribuția fiecărui parametru de intrare la o predicție individuală. Analiza SHAP a confirmat că saturația oxigenului, frecvența cardiacă și temperatura corporală sunt factorii dominanți în decizia modelului, în concordanță cu criteriile clinice de triaj.
+
+Performanța modelului a fost estimată prin \textbf{validare încrucișată stratificată în 5 falduri} (stratified 5-fold cross-validation), o metodă prin care setul de date este împărțit repetat în subseturi de antrenare și testare, păstrând în fiecare fald aceeași distribuție a claselor. Această abordare oferă o estimare mai realistă a capacității de generalizare decât o singură împărțire antrenare/testare și permite, totodată, verificarea absenței supraînvățării prin compararea performanței pe datele de antrenare cu cea pe datele de testare. Au fost urmărite metrici precum acuratețea, scorul F1 și aria de sub curba ROC.
+
+\subsubsection{Clasificarea activității și arhitectura de tip microserviciu}
+
+Pe lângă evaluarea stării de sănătate, datele de mișcare furnizate de senzorul MPU6050 sunt prelucrate pentru a clasifica tipul de activitate al pacientului --- mers, repaus, somn --- și pentru a contribui la detectarea căderilor. Aceste informații stau la baza profilului de activitate zilnică, util atât pacientului, cât și aparținătorului sau medicului.
+
+Din punct de vedere arhitectural, componenta de inteligență artificială este implementată ca un \textbf{microserviciu} independent, scris în limbajul Python și expus printr-o interfață REST. Această separare a fost aleasă deliberat: ecosistemul Python oferă cele mai mature biblioteci de învățare automată, iar izolarea modulului AI într-un serviciu propriu permite actualizarea, înlocuirea sau scalarea modelului fără a afecta restul aplicației. Backend-ul aplicației comunică cu microserviciul AI prin cereri HTTP, transmițând valorile senzorilor și primind în răspuns starea prezisă, health score-ul și o explicație textuală a deciziei.
+
+% ---------- 2.4 (NOU) ----------
+\subsection{Sisteme de alertare}
+
+Un sistem de alertare reprezintă ansamblul de mecanisme prin care un sistem informatic semnalează automat apariția unei situații care necesită atenție. În contextul monitorizării medicale, sistemul de alertare este componenta care transformă o anomalie detectată într-o acțiune concretă: informarea unei persoane capabile să intervină. Funcționarea sa presupune trei etape succesive --- detectarea evenimentului, decizia de a alerta și livrarea efectivă a notificării.
+
+\subsubsection{Fiabilitate și problema alertelor false}
+
+Cerința fundamentală a unui sistem de alertare medicală este fiabilitatea, înțeleasă în dublu sens: sistemul trebuie să semnaleze toate situațiile reale de risc (sensibilitate ridicată), dar trebuie, în același timp, să evite alarmele nejustificate (specificitate ridicată). Un sistem care generează frecvent alerte false produce fenomenul cunoscut sub numele de \textit{alert fatigue} --- obișnuirea destinatarului cu notificările, urmată de ignorarea acestora, inclusiv a celor reale. Pentru o aplicație destinată siguranței persoanelor vârstnice, acest efect ar anula însuși scopul sistemului.
+
+Din acest motiv, sistemele de alertare moderne includ mai multe mecanisme de reducere a alertelor false. \textbf{Pragul de persistență} impune ca o situație anormală să se mențină o durată minimă de timp înainte de a declanșa o notificare, eliminând astfel valorile tranzitorii cauzate de un contact imperfect al senzorului. Mecanismul de \textbf{cooldown} (perioadă de inhibare) împiedică transmiterea repetată a aceleiași alerte într-un interval scurt, evitând inundarea destinatarului cu mesaje. \textbf{Escaladarea} presupune trecerea succesivă la canale de comunicație mai insistente atunci când o alertă nu este confirmată --- de exemplu, o notificare push urmată de un SMS dacă situația persistă.
+
+\subsubsection{Alertarea multi-canal}
+
+Niciun canal de comunicație nu este, singur, suficient de fiabil pentru un scenariu medical. Din acest motiv, soluția propusă utilizează trei canale complementare, fiecare cu caracteristici proprii.
+
+\textbf{SMS} --- mesajele text reprezintă canalul cu cea mai mare acoperire, întrucât nu necesită ca destinatarul să dețină un smartphone, o aplicație instalată sau o conexiune la internet. SMS-ul este deosebit de potrivit pentru notificarea aparținătorilor în orice condiții. Livrarea SMS-urilor se realizează prin intermediul unei platforme de comunicație în cloud (CPaaS --- Communication Platform as a Service), care expune o interfață de programare prin care aplicația poate trimite mesaje fără a gestiona direct infrastructura de telefonie.
+
+\textbf{Email} --- poșta electronică este potrivită pentru notificări mai puțin urgente și pentru transmiterea de conținut bogat: rapoarte, grafice, atașamente. Spre deosebire de SMS, livrarea email-ului nu este garantată în timp real și poate fi întârziată sau filtrată ca spam, motiv pentru care este utilizată ca un canal complementar, nu ca singura cale de alertare.
+
+\textbf{Notificările push} --- acestea sunt mesaje livrate instantaneu în interfața aplicației web, atâta vreme cât aceasta este deschisă. Notificările push oferă cea mai mică latență dintre toate canalele și sunt ideale pentru actualizarea în timp real a tabloului de bord al aparținătorului. Ele depind însă de existența unei conexiuni active, motiv pentru care sunt dublate de SMS în situațiile critice.
+
+Combinarea celor trei canale asigură redundanță: dacă un canal eșuează sau nu este observat, un altul preia rolul de informare, crescând probabilitatea ca aparținătorul să fie alertat la timp.
+
+% ---------- 2.5 (NOU) ----------
+\subsection{Tehnologii utilizate (backend, frontend, Docker etc.)}
+
+Realizarea unui sistem IoT funcțional, dincolo de componenta hardware, presupune integrarea unui set coerent de tehnologii software. Această secțiune prezintă pe scurt tehnologiile pe care se sprijină aplicația, grupate pe niveluri arhitecturale.
+
+\subsubsection{Backend-ul aplicației}
+
+Backend-ul reprezintă nivelul de procesare al sistemului și a fost dezvoltat folosind \textbf{ASP.NET Core}, un framework open-source și cross-platform dezvoltat de Microsoft pentru construirea de aplicații web și interfețe de programare, utilizând limbajul C\#. Backend-ul expune un \textbf{API REST} --- un stil arhitectural bazat pe protocolul HTTP, în care resursele sunt accesate prin verbe standard (GET, POST, PUT, DELETE), iar datele sunt schimbate în format JSON. Prin acest API comunică atât dispozitivele IoT, care transmit măsurătorile, cât și aplicația web, care le consultă.
+
+Codul backend-ului este organizat conform principiilor unei \textbf{arhitecturi stratificate (clean architecture)}, separat în mai multe straturi cu responsabilități distincte: stratul de domeniu, care conține entitățile fundamentale; stratul de aplicație, care conține logica de business; stratul de infrastructură, responsabil cu accesul la date și cu serviciile externe; și stratul de prezentare a API-ului, care conține controlerele. Această separare facilitează testarea, întreținerea și extinderea ulterioară a sistemului.
+
+Persistența datelor este asigurată de o bază de date relațională \textbf{SQLite}, un sistem de baze de date încorporat, care stochează întreaga bază într-un singur fișier și nu necesită un server dedicat. Accesul la baza de date se realizează prin intermediul unui ORM (Object-Relational Mapper) --- \textbf{Entity Framework Core} --- care mapează automat clasele din cod pe tabelele bazei de date și permite formularea interogărilor direct în limbajul C\#.
+
+\subsubsection{Securitatea}
+
+Întrucât sistemul gestionează date medicale, securitatea reprezintă o cerință esențială. Autentificarea utilizatorilor se bazează pe \textbf{JWT (JSON Web Token)}, un mecanism de autentificare fără stare în care, după autentificare, serverul emite un token semnat criptografic ce conține informații despre utilizator și care este prezentat la fiecare cerere ulterioară. Aplicația permite, de asemenea, autentificarea prin \textbf{OAuth 2.0} folosind un cont Google, un protocol standard de autorizare delegată care elimină necesitatea gestionării unei parole suplimentare. Parolele utilizatorilor care aleg înregistrarea clasică sunt stocate sub formă de hash generat cu algoritmul \textbf{BCrypt}, conceput special pentru a fi lent și rezistent la atacuri de tip forță brută.
+
+\subsubsection{Comunicarea în timp real}
+
+Pentru actualizarea instantanee a interfeței și pentru livrarea notificărilor push, sistemul folosește \textbf{SignalR}, o bibliotecă care permite comunicarea bidirecțională în timp real între server și client. SignalR abstractizează protocolul WebSocket, menținând o conexiune permanentă prin care serverul poate transmite mesaje către client fără ca acesta să le ceară explicit.
+
+\subsubsection{Frontend-ul aplicației}
+
+Interfața web a fost dezvoltată folosind \textbf{Blazor WebAssembly}, un framework care permite scrierea aplicațiilor web interactive în limbajul C\#, fără a fi necesar JavaScript pentru logica aplicației. Codul C\# este compilat în \textbf{WebAssembly}, un format binar de instrucțiuni care rulează direct în browser, la o viteză apropiată de cea nativă. Aplicația este o \textbf{SPA (Single-Page Application)} --- o aplicație web care se încarcă o singură dată și care actualizează dinamic conținutul, fără reîncărcarea completă a paginii.
+
+Aplicația este, în plus, o \textbf{PWA (Progressive Web Application)}: include un service worker care permite funcționarea parțială în lipsa conexiunii la internet, un fișier manifest care permite instalarea aplicației pe dispozitiv ca o aplicație nativă și o pagină dedicată pentru modul offline.
+
+\subsubsection{Containerizarea și implementarea}
+
+Pentru asigurarea consistenței între mediul de dezvoltare și cel de producție, componentele aplicației sunt împachetate folosind \textbf{Docker}, o tehnologie de containerizare care încapsulează o aplicație împreună cu toate dependențele sale într-o imagine portabilă. Cele trei componente principale ale sistemului --- microserviciul AI, backend-ul și frontend-ul --- sunt orchestrate prin \textbf{Docker Compose}, un instrument care permite definirea și pornirea coordonată a mai multor containere. Servirea fișierelor statice ale interfeței web este realizată printr-un server \textbf{nginx}.
+
+Procesul de construire, testare și publicare a aplicației este automatizat printr-un flux de \textbf{integrare și livrare continuă (CI/CD)} configurat cu GitHub Actions, iar sistemul este deployat pe infrastructura cloud \textbf{Microsoft Azure}, asigurând disponibilitatea și accesul de la distanță.
+
+% ====================== 3 ANALIZA SOLUȚIILOR EXISTENTE ======================
+\newpage
+\section{Analiza soluțiilor existente}
+
+\subsection{Prezentarea soluțiilor actuale}
+
+Piața dispozitivelor de monitorizare medicală portabilă a cunoscut o expansiune semnificativă în ultimul deceniu, atât din perspectiva soluțiilor comerciale de masă, cât și a sistemelor dedicate mediului clinic sau îngrijirii persoanelor vârstnice. În cele ce urmează sunt prezentate cele mai relevante categorii de soluții existente, analizate din perspectiva funcționalității, a publicului țintă și a tehnologiilor utilizate.
+
+\subsubsection{Fitbit Sense 2 / Google Pixel Watch}
+
+Fitbit, achiziționat de Google în 2021, reprezintă unul dintre cele mai cunoscute ecosisteme de monitorizare a sănătății destinate publicului larg. Dispozitivele din gama Sense monitorizează frecvența cardiacă, \spo, temperatura pielii, nivelul de stres prin electrodermal activity (EDA) și calitatea somnului. Datele sunt sincronizate prin BLE cu aplicația mobilă Fitbit, disponibilă pe Android și iOS, și stocate în cloud-ul Google.
+
+Deși ecosistemul Fitbit este matur și bine documentat, el este proiectat pentru utilizatori activi, orientați spre fitness și auto-monitorizare. Interfața aplicației presupune un nivel de familiarizare digitală incompatibil cu profilul persoanelor vârstnice, iar sistemul de alertare este limitat la notificări generale, fără posibilitatea configurării unor praguri personalizate sau a notificării unui aparținător desemnat.
+
+\subsubsection{Apple Watch (Series 9 / Ultra 2)}
+
+Apple Watch reprezintă cel mai avansat dispozitiv portabil de monitorizare a sănătății disponibil comercial. Seria 9 include senzori pentru ECG, frecvență cardiacă, \spo, temperatură și detecție a căderilor, aceasta din urmă fiind direct relevantă pentru scenariul persoanelor vârstnice. Funcția Emergency SOS permite contactarea serviciilor de urgență automat după detectarea unei căderi, dacă utilizatorul nu răspunde în intervalul de timp configurat.
+
+Cu toate acestea, Apple Watch necesită un iPhone asociat pentru configurare și funcționare completă, ceea ce presupune că pacientul trebuie să dețină și să opereze un smartphone Apple --- o cerință nerealistă pentru majoritatea persoanelor vârstnice din România. Costul ridicat al ecosistemului (dispozitiv + abonament iCloud) reprezintă o barieră suplimentară. Mai mult, platforma este închisă, nepermițând integrarea cu sisteme externe de monitorizare sau exportul structurat al datelor către un medic sau aparținător prin canale personalizate.
+
+\subsubsection{Philips Lifeline / Medical Guardian}
+
+Philips Lifeline și Medical Guardian reprezintă o categorie distinctă de dispozitive, anume sistemele de alertă personală medicală (PERS --- Personal Emergency Response Systems), dedicate exclusiv persoanelor vârstnice sau cu mobilitate redusă. Acestea iau forma unor butoane de panică purtate ca pandantiv sau brățară, conectate la o centrală care permite contactarea unui operator uman sau a serviciilor de urgență.
+
+Avantajul principal al acestor sisteme este simplitatea extremă din perspectiva utilizatorului --- un singur buton fizic. Dezavantajul major este că nu realizează monitorizare continuă a parametrilor vitali. Sistemul reacționează exclusiv la inițiativa pacientului, ceea ce îl face ineficient în scenarii în care pacientul este incapabil să apese butonul --- pierderea conștienței, cădere cu imobilizare, degradare lentă a stării de sănătate.
+
+\subsubsection{Withings ScanWatch}
+
+Withings ScanWatch este un ceas inteligent cu design clasic, care monitorizează frecvența cardiacă, \spo, respirația în somn și activitatea fizică. Spre deosebire de Fitbit sau Apple Watch, ScanWatch are un design discret, similar unui ceas tradițional, ceea ce îl face mai acceptabil estetic pentru utilizatorii vârstnici. Autonomia bateriei de până la 30 de zile reprezintă un avantaj semnificativ față de concurență.
+
+Totuși, și Withings ScanWatch este orientat spre auto-monitorizare, fără un sistem dedicat de alertare a aparținătorilor și fără posibilitatea configurării unor praguri personalizate de alertă. Exportul datelor se face prin aplicația Health Mate, care nu oferă funcționalitate de tip dashboard pentru o persoană terță (aparținător).
+
+\subsubsection{Soluții academice și de cercetare}
+
+Literatura de specialitate propune numeroase sisteme IoT de monitorizare medicală dezvoltate în context academic, bazate frecvent pe platforme Arduino sau ESP32, senzori MAX30100/MAX30102 și protocoale MQTT pentru transmisia datelor. Aceste sisteme demonstrează viabilitatea tehnică a abordării, însă rămân în stadiul de prototip de laborator, fără interfețe utilizator complete, fără mecanisme de alertare multi-canal și fără considerarea aspectelor practice legate de autonomia bateriei, rezistența mecanică sau ușurința de utilizare pentru persoane fără competențe tehnice.
+
+\subsection{Limitări identificate}
+
+Analiza soluțiilor prezentate în secțiunea anterioară relevă o serie de limitări comune, grupate în câteva categorii principale.
+
+\subsubsection{Inadecvarea pentru utilizatorii vârstnici}
+
+Majoritatea soluțiilor comerciale sunt proiectate pentru utilizatori tineri sau de vârstă medie, cu competențe digitale solide. Interfețele complexe, necesitatea unui smartphone asociat și procesele de configurare multi-pas reprezintă bariere reale pentru persoanele vârstnice. Sistemele PERS (Philips Lifeline, Medical Guardian) rezolvă parțial această problemă prin simplitate, dar sacrifică complet monitorizarea continuă.
+
+\subsubsection{Lipsa monitorizării continue și a alertării inteligente}
+
+Dispozitivele comerciale de tip smartwatch alertează utilizatorul însuși, nu un aparținător desemnat. Scenariul critic --- pacient incapabil să reacționeze, aparținător neinformat --- nu este acoperit adecvat de niciuna dintre soluțiile analizate. Sistemele PERS depind exclusiv de inițiativa pacientului, iar smartwatch-urile nu oferă un mecanism fiabil de escaladare a alertelor către persoane terțe prin canale multiple (SMS, email, push).
+
+\subsubsection{Platforme închise și lipsa personalizării}
+
+Soluțiile comerciale funcționează în ecosisteme închise care nu permit integrarea cu sisteme externe, configurarea pragurilor de alertă în funcție de profilul medical individual sau exportul structurat al datelor. Un medic nu poate accesa direct datele unui pacient care folosește Fitbit sau Apple Watch fără ca pacientul să realizeze manual operațiuni de export.
+
+\subsubsection{Costul și dependența de abonamente}
+
+Atât Apple Watch, cât și sistemele PERS implică costuri recurente --- abonamente cloud, taxe lunare pentru servicii de monitorizare umană --- care pot fi prohibitive pe termen lung, în special pentru persoane cu venituri fixe reduse, categorie frecvent suprapusă cu cea a vârstnicilor.
+
+\subsubsection{Limitări ale soluțiilor academice}
+
+Prototipurile academice demonstrează conceptul tehnic, dar nu adresează aspecte esențiale pentru un sistem funcțional real: interfață utilizator completă, securitatea datelor medicale, mecanisme de recuperare la pierderea conexiunii, autonomia bateriei în condiții reale de utilizare sau scalabilitatea la număr mare de utilizatori.
+
+Tabelul~\ref{tab:comparatie} sintetizează comparativ limitările identificate.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.0cm}|p{1.7cm}|p{1.7cm}|p{1.9cm}|p{1.5cm}|p{1.9cm}|}
+\hline
+\textbf{Criteriu} & \textbf{FitBit/ Google} & \textbf{Apple Watch} & \textbf{Philips Lifeline} & \textbf{Withings} & \textbf{Soluții academice}\\
+\hline
+Potrivit pentru vârstnici & Parțial & Nu & Da & Parțial & Nu\\
+\hline
+Monitorizare continuă vitale & Da & Da & Nu & Da & Da\\
+\hline
+Alertare aparținător multi-canal & Nu & Nu & Parțial & Nu & Nu\\
+\hline
+Praguri personalizabile & Nu & Nu & Nu & Nu & Parțial\\
+\hline
+Export date structurat & Limitat & Limitat & Nu & Limitat & Parțial\\
+\hline
+Fără abonament obligatoriu & Nu & Nu & Nu & Nu & Da\\
+\hline
+Stocare locală la pierdere semnal & Nu & Nu & Nu & Nu & Nu\\
+\hline
+Detecție căderi & Nu & Da & Nu & Nu & Nu\\
+\hline
+Healthscore integrat & Nu & Nu & Nu & Nu & Nu\\
+\hline
+\end{tabular}
+\caption{Comparație între soluțiile existente și limitările identificate.}
+\label{tab:comparatie}
+\end{table}
+
+\subsection{Poziționarea soluției propuse}
+
+Soluția dezvoltată în cadrul acestei lucrări se poziționează într-un spațiu neacoperit adecvat de produsele existente: un sistem de monitorizare continuă a parametrilor vitali, dedicat persoanelor vârstnice, cu alertare automată multi-canal a aparținătorilor și configurare tehnică minimă din partea pacientului.
+
+Față de soluțiile comerciale de tip smartwatch, sistemul propus oferă:
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Alertare activă a aparținătorului} prin SMS, email și notificări push, fără a depinde de inițiativa pacientului;
+\item \textbf{Praguri de alertă personalizabile} per pacient, configurabile de aparținător din aplicația web;
+\item \textbf{Health score} --- un indice sintetic al stării de sănătate bazat pe corelarea mai multor parametri vitali simultan, absent din oricare dintre soluțiile analizate;
+\item \textbf{Stocare locală a datelor} la pierderea conectivității, cu sincronizare automată la revenirea semnalului;
+\item \textbf{Export structurat} al datelor direct către medicul curant, prin email, dintr-un interval selectabil.
+\end{itemize}
+
+Față de sistemele PERS (butoane de panică), soluția propusă adaugă monitorizarea continuă și detecția automată a situațiilor critice, eliminând dependența de capacitatea pacientului de a apăsa un buton în momentul critic.
+
+Față de prototipurile academice, sistemul propus depășește stadiul de demonstrație tehnică prin includerea unei interfețe web complete, a unui sistem de autentificare securizat, a unui mecanism de notificări funcțional și a unei arhitecturi deployate pe infrastructură cloud reală.
+
+Această poziționare confirmă relevanța și originalitatea soluției propuse, care nu încearcă să concureze frontal cu ecosistemele comerciale mature, ci adresează un segment specific și insuficient acoperit: monitorizarea continuă, automată și inteligentă a persoanelor vârstnice, cu implicarea activă a aparținătorului prin tehnologii accesibile și fără costuri recurente semnificative.
+
+% ====================== 4 PROIECTAREA SISTEMULUI ======================
+\newpage
+\section{Proiectarea sistemului}
+
+Acest capitol descrie deciziile de proiectare luate înaintea implementării propriu-zise. Sunt prezentate, pe rând, arhitectura de ansamblu a sistemului, componentele care îl alcătuiesc și rolul fiecăreia, structura bazei de date și, în final, fluxurile prin care datele circulă prin sistem --- de la achiziția lor pe dispozitiv până la declanșarea unei alerte. Tot aici este detaliată logica mecanismului health score, anunțată în subcapitolul 2.3.
+
+\subsection{Arhitectura generală}
+
+Sistemul LifeAlertPlus respectă modelul arhitectural pe trei niveluri specific aplicațiilor IoT, prezentat în subcapitolul 2.1. Fiecărui nivel teoretic îi corespunde o componentă concretă: nivelului de percepție îi corespunde dispozitivul portabil bazat pe microcontrollerul ESP32-C3 Mini; nivelului de rețea îi corespund comunicația WiFi și BLE; iar nivelului de aplicație îi corespund backend-ul, microserviciul de inteligență artificială, baza de date și aplicația web, toate găzduite pe infrastructură cloud.
+
+\subsubsection{Separarea în straturi a aplicației software}
+
+Partea software a sistemului a fost proiectată conform principiilor unei arhitecturi stratificate (clean architecture), în care responsabilitățile sunt împărțite între mai multe straturi cu dependențe orientate într-un singur sens, dinspre exterior spre interior. Concret, soluția este organizată în următoarele proiecte:
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Domain} --- conține entitățile fundamentale ale sistemului (utilizator, persoană monitorizată, măsurătoare etc.) și interfețele depozitelor de date. Acest strat nu depinde de niciun alt strat și nu cunoaște detalii de implementare.
+\item \textbf{Application} --- conține logica de business, organizată în servicii, și interfețele acestora. Depinde exclusiv de stratul Domain.
+\item \textbf{Infrastructure} --- conține implementările concrete: contextul bazei de date și depozitele realizate cu Entity Framework Core, precum și integrările cu servicii externe. Depinde de Application și Domain.
+\item \textbf{API} --- stratul de prezentare al backend-ului, care expune controlerele REST, serviciile de fundal și configurarea aplicației.
+\item \textbf{Client} --- aplicația web Blazor WebAssembly, executată în browserul utilizatorului.
+\item \textbf{Shared} --- conține obiectele de transfer de date (DTO) folosite în comun de backend și de client, asigurând un contract unic de comunicare.
+\end{itemize}
+
+Avantajul acestei separări este că logica de business rămâne independentă de tehnologiile concrete: baza de date SQLite, de exemplu, ar putea fi înlocuită fără a modifica straturile Domain și Application. Totodată, structura facilitează testarea izolată a fiecărui strat și întreținerea pe termen lung.
+
+\subsubsection{Microserviciul de inteligență artificială}
+
+Spre deosebire de celelalte componente software, scrise în C\#, componenta de inteligență artificială este un microserviciu independent, scris în Python. Această decizie de proiectare a fost luată deliberat, din două motive: ecosistemul Python oferă cele mai mature biblioteci de învățare automată, iar izolarea modelului într-un serviciu propriu permite reantrenarea sau înlocuirea acestuia fără a afecta restul aplicației. Backend-ul comunică cu microserviciul AI prin cereri HTTP, cu un timp maxim de așteptare scurt, astfel încât o eventuală indisponibilitate a serviciului AI să nu blocheze fluxul principal.
+
+\subsubsection{Comunicarea între componente}
+
+Componentele sistemului comunică prin trei mecanisme distincte. Dispozitivul IoT și aplicația web comunică cu backend-ul prin \textbf{API-ul REST}, peste HTTPS. Backend-ul comunică cu microserviciul AI tot prin HTTP. În fine, pentru actualizarea instantanee a interfeței și pentru livrarea notificărilor push, backend-ul comunică cu aplicația web printr-o conexiune permanentă \textbf{WebSocket}, gestionată de biblioteca SignalR. Cele trei componente principale --- microserviciul AI, backend-ul și frontend-ul --- sunt împachetate în containere Docker și orchestrate prin Docker Compose, ceea ce asigură consistența între mediul de dezvoltare și cel de producție. Ansamblul componentelor și al legăturilor dintre ele este prezentat în figura~\ref{fig:arhitectura}.
+
+\begin{figure}[H]
+\centering
+% Înlocuiește linia de mai jos cu imaginea reală, de exemplu:
+% \includegraphics[width=0.9\textwidth]{figuri/arhitectura.png}
+\figplaceholder{[Spațiu pentru figură --- diagrama de arhitectură a sistemului: dispozitivul IoT (ESP32 + senzori), nivelul de rețea (WiFi/BLE), backend-ul, microserviciul AI, baza de date și aplicația web, cu protocoalele de comunicație dintre ele (HTTPS/REST, HTTP, WebSocket).]}
+\caption{Arhitectura generală a sistemului LifeAlertPlus.}
+\label{fig:arhitectura}
+\end{figure}
+
+\subsubsection{Modelul de deployment}
+
+Cele trei componente software ale sistemului --- microserviciul AI, backend-ul și aplicația web --- sunt împachetate fiecare într-o imagine Docker proprie și pornite coordonat. Această izolare a fost o decizie de proiectare deliberată: fiecare componentă poate fi actualizată, repornită sau scalată independent de celelalte, iar mediul de execuție rămâne identic în dezvoltare și în producție. Datele persistente --- baza de date SQLite --- sunt păstrate într-un volum separat de containere, astfel încât informația să nu se piardă la reconstruirea sau actualizarea acestora.
+
+În producție, sistemul este găzduit pe infrastructura cloud Microsoft Azure. Procesul de construire și publicare a imaginilor este automatizat printr-un flux de integrare și livrare continuă (CI/CD): la fiecare modificare a codului, componentele sunt reconstruite și, după validare, publicate automat, ceea ce reduce riscul erorilor manuale și asigură consistența între versiuni.
+
+\subsection{Componentele sistemului}
+
+\subsubsection{Dispozitivul portabil}
+
+Dispozitivul portabil este construit în jurul microcontrollerului ESP32-C3 Mini și integrează senzorii descriși în subcapitolul 2.2: MAX30100 pentru puls și \spo, DS18B20 pentru temperatură, MPU6050 pentru mișcare și NEO-6M pentru poziție. Microcontrollerul colectează periodic datele de la senzori, calculează local mărimi derivate, le afișează pe ecranul OLED și le transmite către backend. Frecvența de transmitere este configurabilă, fiind stabilită de aparținător din aplicația web. Atunci când conexiunea la internet nu este disponibilă, măsurătorile sunt stocate temporar într-o coadă locală pe dispozitiv și transmise ulterior, la revenirea conexiunii. Dispozitivul trimite periodic și un mesaj de tip \textit{heartbeat}, care raportează starea sa tehnică --- puterea semnalului, memoria liberă, timpul de funcționare și numărul de măsurători aflate în coada de așteptare.
+
+\subsubsection{Backend-ul}
+
+Backend-ul reprezintă nucleul logic al sistemului. El expune API-ul REST prin care comunică dispozitivele și aplicația web, validează și autorizează cererile, persistă datele în baza de date și coordonează evaluarea stării de sănătate și declanșarea alertelor. Pe lângă controlerele care răspund cererilor, backend-ul include și servicii de fundal care rulează continuu, independent de cereri: serviciul de monitorizare a alertelor, care analizează măsurătorile primite pentru a detecta situații de risc susținute, și serviciul de raportare zilnică, care generează și trimite periodic rapoarte de sănătate.
+
+\subsubsection{Microserviciul de inteligență artificială}
+
+Microserviciul AI primește valorile senzorilor și pragurile personalizate ale pacientului și returnează starea de sănătate prezisă (NORMAL, ALERT sau CRITICAL), health score-ul și o explicație textuală a deciziei. Funcționarea sa internă --- modelul Random Forest combinat cu reguli medicale deterministe --- a fost descrisă în subcapitolul 2.3.
+
+\subsubsection{Aplicația web}
+
+Aplicația web este interfața prin care utilizatorii umani interacționează cu sistemul. Ea deservește mai multe categorii de utilizatori, cu drepturi diferite: aparținătorul, care monitorizează una sau mai multe persoane și configurează pragurile și preferințele de notificare; medicul, care primește acces la datele unui pacient prin invitație; și administratorul, care gestionează sistemul. Aplicația oferă un tablou de bord cu starea curentă a persoanei monitorizate, vizualizarea grafică a istoricului măsurătorilor, configurarea pragurilor de alertă, gestionarea notificărilor și localizarea pe hartă a pacientului în scenarii de alertă.
+
+\subsubsection{Baza de date}
+
+Persistența datelor este asigurată de o bază de date relațională SQLite, accesată prin ORM-ul Entity Framework Core. Baza de date stochează utilizatorii, persoanele monitorizate, istoricul măsurătorilor, notificările și datele agregate. Structura sa este detaliată în subcapitolul următor.
+
+\subsubsection{Serviciile externe}
+
+Sistemul integrează mai multe servicii externe: o platformă de comunicație în cloud pentru trimiterea SMS-urilor, un server SMTP pentru email, furnizorul de identitate Google pentru autentificarea prin OAuth și un serviciu de date geografice pentru identificarea celui mai apropiat spital în cazul unei alerte.
+
+Structura claselor principale ale aplicației --- entități, servicii și controlere --- este prezentată în diagrama de clase din figura~\ref{fig:clase}.
+
+\begin{figure}[H]
+\centering
+% Exportă diagrama din LifeAlertPlusClassDiagram.vpp ca imagine și inserează-o:
+% \includegraphics[width=\textwidth]{figuri/diagrama-clase.png}
+\figplaceholder{[Spațiu pentru figură --- diagrama de clase a aplicației, exportată din fișierul LifeAlertPlusClassDiagram.vpp: clasele de domeniu, serviciile și controlerele, cu relațiile dintre ele.]}
+\caption{Diagrama de clase a aplicației LifeAlertPlus.}
+\label{fig:clase}
+\end{figure}
+
+\subsection{Modelul de date}
+
+Modelul de date al sistemului este alcătuit din unsprezece entități, fiecare corespunzând unei tabele în baza de date. Entitățile principale și rolul lor sunt următoarele:
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{User} --- utilizatorul aplicației web (aparținător, medic sau administrator). Conține datele de identificare, credențialele, preferințele de afișare și de notificare (email, push, SMS), precum și un set de praguri implicite pentru parametrii vitali.
+\item \textbf{Role} --- rolul unui utilizator, care îi determină drepturile în aplicație.
+\item \textbf{Monitored} --- persoana monitorizată (pacientul vârstnic). Conține datele personale, numărul de serie al dispozitivului asociat, frecvența de actualizare și \textbf{pragurile de alertă personalizate} pentru puls, temperatură și \spo.
+\item \textbf{UserMonitored} --- tabelă de legătură care modelează relația \textit{mulți-la-mulți} dintre utilizatori și persoanele monitorizate; un utilizator poate monitoriza mai multe persoane, iar o persoană poate fi monitorizată de mai mulți utilizatori. Conține și tipul relației (de exemplu, gradul de rudenie).
+\item \textbf{Measurement} --- o măsurătoare individuală transmisă de dispozitiv, cu valorile de puls, temperatură, \spo, activitatea detectată, indicatorul de cădere și coordonatele geografice.
+\item \textbf{MonitoredCondition} --- o afecțiune medicală preexistentă a unei persoane monitorizate (hipertensiune, aritmie, diabet etc.), folosită de modulul AI pentru ajustarea evaluării.
+\item \textbf{ActivityProfile} --- profilul de activitate al unei persoane, agregat pe ore ale zilei (puls mediu, rata de mișcare, probabilitatea de somn).
+\item \textbf{Notification} --- o notificare generată de sistem, asociată unei persoane monitorizate și, opțional, unui utilizator destinatar.
+\item \textbf{DailyHistory} și \textbf{WeeklyHistory} --- date agregate zilnic, respectiv săptămânal (valori minime/maxime, medii, numărul de căderi și de alerte), folosite pentru rapoarte și statistici.
+\item \textbf{Invitation} --- o invitație trimisă unui medic pentru a-i acorda acces la datele unui pacient, identificată printr-un token unic cu termen de expirare.
+\end{itemize}
+
+\subsubsection{Relațiile dintre entități}
+
+Relația centrală a modelului este cea \textit{mulți-la-mulți} dintre \texttt{User} și \texttt{Monitored}, realizată prin tabela de legătură \texttt{UserMonitored}, a cărei cheie primară este compusă din cele două chei străine. Fiecare persoană monitorizată este, totodată, în relație \textit{unu-la-mulți} cu măsurătorile, notificările, afecțiunile, profilele de activitate și înregistrările de istoric care îi aparțin. Ștergerea unei persoane monitorizate determină ștergerea în cascadă a datelor sale dependente, în timp ce relațiile cu utilizatorii sunt protejate la ștergere, pentru a păstra integritatea referențială.
+
+Pentru a optimiza performanța interogărilor frecvente, au fost definite indexuri pe cheile străine cele mai utilizate --- în special pe identificatorul persoanei monitorizate din tabelele de măsurători și notificări. Token-ul fiecărei invitații este indexat unic, iar combinația dintre o persoană monitorizată și o afecțiune este, de asemenea, unică, pentru a împiedica înregistrările duplicate.
+
+\subsubsection{Ștergerea logică}
+
+Entitățile importante --- utilizatorii, persoanele monitorizate, notificările --- folosesc mecanismul de \textbf{ștergere logică} (soft delete): în loc de a fi eliminate fizic din baza de date, înregistrările primesc o dată în câmpul \texttt{DeletedAt} și sunt excluse din interogările obișnuite. Această abordare păstrează integritatea istoricului medical și permite recuperarea datelor în caz de eroare.
+
+\subsubsection{Datele agregate și istoricul}
+
+Pe lângă entitățile care reflectă starea curentă, modelul include entități de \textbf{date agregate}, calculate periodic din măsurătorile brute. \texttt{DailyHistory} reține, pentru fiecare zi, valorile minime și maxime ale pulsului și temperaturii, numărul de căderi și numărul de alerte; \texttt{WeeklyHistory} reține medii și totaluri la nivel de săptămână. Aceste entități nu adaugă informație nouă, ci o sintetizează: ele permit afișarea rapidă a statisticilor și generarea rapoartelor fără a parcurge de fiecare dată întregul istoric de măsurători, care crește considerabil în timp. O a treia formă de agregare este \texttt{ActivityProfile}, care reține distribuția activității pacientului pe orele zilei și stă la baza profilului de activitate zilnică.
+
+Diagrama entitate-relație a modelului de date este prezentată în figura~\ref{fig:model-date}.
+
+\begin{figure}[H]
+\centering
+% Înlocuiește linia de mai jos cu imaginea reală, de exemplu:
+% \includegraphics[width=0.9\textwidth]{figuri/model-date.png}
+\figplaceholder{[Spațiu pentru figură --- diagrama entitate-relație: cele 11 entități, atributele lor și relațiile dintre ele, cu evidențierea relației mulți-la-mulți User--Monitored prin tabela UserMonitored.]}
+\caption{Diagrama entitate-relație a bazei de date.}
+\label{fig:model-date}
+\end{figure}
+
+\subsection{Fluxuri de funcționare}
+
+\subsubsection{Achiziția și transmiterea unei măsurători}
+
+Fluxul principal al sistemului începe pe dispozitivul portabil. La intervalul de timp configurat, microcontrollerul citește valorile tuturor senzorilor, filtrează citirile evident eronate și calculează mărimile derivate. Pachetul de date rezultat este transmis backend-ului printr-o cerere HTTP către endpoint-ul de ingestie, autentificată printr-o cheie de dispozitiv transmisă în antetul cererii. Dacă transmiterea eșuează din cauza lipsei conexiunii, măsurătoarea este adăugată în coada locală a dispozitivului și retransmisă ulterior. La recepție, backend-ul validează cheia de dispozitiv, asociază măsurătoarea persoanei monitorizate pe baza numărului de serie, o persistă în baza de date și o transmite mai departe serviciului de monitorizare a alertelor.
+
+\subsubsection{Evaluarea stării prin modulul AI}
+
+Fiecare măsurătoare primită este trimisă microserviciului de inteligență artificială, împreună cu pragurile personalizate ale pacientului și lista afecțiunilor sale. Microserviciul returnează starea prezisă, health score-ul și explicația. Pentru a evita ca o indisponibilitate a serviciului AI să blocheze fluxul, cererea are un timp de așteptare scurt, iar în lipsa unui răspuns sistemul recurge la evaluarea pe bază de reguli.
+
+\subsubsection{Calculul health score-ului}
+
+Health score-ul este un indice numeric între 0 și 100, în care valoarea 0 corespunde unei stări complet stabile, iar valori ridicate corespund unui risc crescut. Spre deosebire de o alertă bazată pe depășirea unui singur prag, health score-ul este o \textbf{sumă ponderată de contribuții}, fiecare parametru vital adăugând la scor o cantitate proporțională cu severitatea abaterii sale. Pragurile utilizate sunt cele personalizate ale pacientului, cu valori clinice implicite atunci când acestea nu au fost configurate.
+
+Contribuțiile sunt agregate astfel:
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Saturația oxigenului} are ponderea cea mai mare: o valoare sub pragul critic adaugă o contribuție majoră, iar o valoare situată între pragul critic și cel minim adaugă o contribuție proporțională cu distanța față de prag.
+\item \textbf{Frecvența cardiacă} adaugă o contribuție mare la depășirea pragului maxim sau la coborârea sub cel minim și o contribuție moderată în zonele de avertizare aflate înaintea acestor praguri.
+\item \textbf{Temperatura corporală} contribuie similar, atât pentru valori febrile, cât și pentru hipotermie.
+\item \textbf{Imobilitatea} --- o accelerație foarte redusă, care poate indica o cădere urmată de imobilizare --- adaugă o contribuție suplimentară.
+\item \textbf{Afecțiunile preexistente} aplică modificatori specifici: de exemplu, în cazul unei aritmii, un puls anormal adaugă o penalizare suplimentară, întrucât are o semnificație clinică mai gravă pentru acel pacient.
+\end{itemize}
+
+Ponderile concrete utilizate în agregare sunt sintetizate în tabelul~\ref{tab:healthscore}. Pragurile la care se raportează condițiile sunt cele personalizate ale pacientului; în lipsa configurării, se folosesc valori clinice implicite (frecvență cardiacă 50--130 bpm, temperatură 35--39\,\textdegree C, saturație minimă 95\%).
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}p{7.2cm}|c|}
+\hline
+\textbf{Parametru} & \textbf{Condiție} & \textbf{Contribuție}\\
+\hline
+\multicolumn{3}{|l|}{\textit{Parametri vitali}}\\
+\hline
+\spo & Sub pragul critic de saturație & $+60$\\
+\hline
+\spo & Între pragul critic și pragul minim & $+30$ (gradual)\\
+\hline
+Frecvență cardiacă & Peste pragul maxim & $+25$\\
+\hline
+Frecvență cardiacă & Zona de avertizare înaltă (peste 85\% din maxim) & $+12$\\
+\hline
+Frecvență cardiacă & Sub pragul minim & $+20$\\
+\hline
+Frecvență cardiacă & Zona de avertizare joasă (sub 120\% din minim) & $+10$\\
+\hline
+Temperatură corporală & Peste pragul maxim & $+20$\\
+\hline
+Temperatură corporală & Zona de avertizare înaltă (cu 1\,\textdegree C sub maxim) & $+10$\\
+\hline
+Temperatură corporală & Sub pragul minim & $+20$\\
+\hline
+Temperatură corporală & Zona de avertizare joasă (cu 1\,\textdegree C peste minim) & $+10$\\
+\hline
+Imobilitate & Accelerație sub 0,2\,g (posibilă cădere/imobilizare) & $+8$\\
+\hline
+\multicolumn{3}{|l|}{\textit{Modificatori în funcție de afecțiunile preexistente}}\\
+\hline
+Hipertensiune & Puls peste 100 bpm & $+8$\\
+\hline
+Aritmie & Puls peste 110 bpm sau sub 52 bpm & $+10$\\
+\hline
+Risc de infarct & Puls peste 110 bpm și temperatură peste 37,8\,\textdegree C & $+12$\\
+\hline
+Diabet & Temperatură peste 38\,\textdegree C & $+8$\\
+\hline
+Parkinson / epilepsie & Accelerație sub 0,5\,g & $+5$\\
+\hline
+\end{tabular}
+\caption{Ponderile contribuțiilor în calculul health score-ului.}
+\label{tab:healthscore}
+\end{table}
+
+Scorul rezultat este limitat la intervalul $[0, 100]$. Avantajul acestui mecanism este că surprinde \textbf{corelația dintre mai mulți parametri}: mai multe abateri ușoare, fiecare insuficientă pentru a declanșa singură o alertă, se pot cumula într-un scor ridicat, semnalând o degradare globală a stării pacientului care altfel ar trece neobservată.
+
+\subsubsection{Declanșarea și escaladarea unei alerte}
+
+Detectarea unei situații de risc nu declanșează imediat o notificare. Serviciul de monitorizare a alertelor menține, pentru fiecare persoană monitorizată, un buffer cu măsurătorile recente și aplică un \textbf{prag de persistență}: o stare anormală trebuie să se mențină o durată minimă înainte de a genera o alertă, eliminând astfel valorile tranzitorii cauzate de un contact imperfect al senzorului. Severitatea de bază a alertei este apoi ajustată de motorul de reguli pe baza afecțiunilor pacientului, care poate ridica nivelul de severitate și poate adăuga recomandări specifice.
+
+Odată confirmată, alerta este livrată simultan prin toate canalele activate în preferințele aparținătorului --- notificare push, email și/sau SMS. Pragul de persistență este de aproximativ două minute în cazul stărilor critice; după ce este atins, toate canalele alese de utilizator primesc notificarea în același moment, fără ca SMS-ul să fie întârziat suplimentar față de celelalte. Atâta vreme cât starea critică persistă, sistemul retrimite notificarea la fiecare două minute; pentru alertele non-critice, un mecanism de \textbf{cooldown} împiedică retransmiterea aceleiași alerte pentru aceeași persoană într-un interval scurt, evitând inundarea destinatarului cu mesaje. În cazul alertelor critice, sistemul include în notificare și informații despre cel mai apropiat spital față de poziția pacientului. Întregul flux, de la achiziția măsurătorii până la livrarea alertei, este ilustrat în figura~\ref{fig:flux-alerta}.
+
+\begin{figure}[H]
+\centering
+% Înlocuiește linia de mai jos cu imaginea reală, de exemplu:
+% \includegraphics[width=0.9\textwidth]{figuri/flux-alerta.png}
+\figplaceholder{[Spațiu pentru figură --- diagrama de flux/secvență a unei alerte: achiziția măsurătorii pe dispozitiv, transmiterea către backend, evaluarea AI și calculul health score-ului, pragul de persistență, ajustarea severității prin motorul de reguli și livrarea multi-canal (push/email/SMS).]}
+\caption{Fluxul de declanșare și escaladare a unei alerte.}
+\label{fig:flux-alerta}
+\end{figure}
+
+\subsubsection{Butonul de panică}
+
+Independent de fluxul automat, pacientul poate declanșa el însuși o alertă apăsând butonul de panică al dispozitivului. Această acțiune trimite o cerere dedicată către backend, care generează imediat o alertă către aparținător, fără a aștepta pragul de persistență și indiferent de valorile senzorilor, întrucât reprezintă o solicitare explicită de ajutor.
+
+\subsubsection{Sincronizarea datelor stocate local}
+
+Atunci când dispozitivul funcționează fără conexiune la internet, măsurătorile se acumulează în coada locală. La revenirea conexiunii, dispozitivul transmite măsurătorile aflate în așteptare, în ordinea înregistrării lor. Astfel, istoricul medical rămâne complet chiar și în condiții de conectivitate intermitentă, în concordanță cu cerința de fiabilitate a sistemelor IoMT prezentată în subcapitolul 2.1.
+
+\subsubsection{Înrolarea utilizatorilor și asocierea dispozitivului}
+
+Înainte de a putea monitoriza o persoană, un aparținător își creează un cont și îl confirmă prin email. Ulterior, el adaugă o persoană monitorizată, completând datele acesteia și asociind numărul de serie al dispozitivului fizic. Această asociere este cheia pe baza căreia backend-ul leagă, ulterior, fiecare măsurătoare primită de la dispozitiv de persoana corectă. Tot la acest moment sunt configurate pragurile de alertă personalizate și afecțiunile preexistente, care vor fi folosite la evaluarea stării de sănătate.
+
+\subsubsection{Invitarea medicului și exportul datelor}
+
+Un aparținător poate acorda unui medic acces la datele unei persoane monitorizate. Sistemul generează în acest scop o invitație identificată printr-un token unic, cu termen de expirare, transmisă medicului prin email; la acceptarea ei, medicul primește drept de vizualizare asupra datelor pacientului respectiv. În plus, istoricul de măsurători poate fi exportat în mod structurat și transmis medicului curant, pentru un interval de timp selectabil, facilitând consultarea datelor în afara aplicației.
+
+% ====================== 5 IMPLEMENTAREA APLICAȚIEI ======================
+\newpage
+\section{Implementarea aplicației}
+
+Acest capitol detaliază implementarea efectivă a fiecărei componente proiectate în capitolul anterior. Sunt prezentate, pe rând, hardware-ul dispozitivului portabil, firmware-ul care îl operează, backend-ul și API-ul REST, microserviciul de inteligență artificială, aplicația web și sistemul de notificări multi-canal.
+
+\subsection{Hardware-ul dispozitivului portabil}
+
+Dincolo de descrierea conceptuală a senzorilor din subcapitolul 2.2, realizarea efectivă a dispozitivului a presupus o serie de decizii practice de proiectare hardware: alegerea topologiei magistralei de comunicație, dimensionarea circuitului de alimentare, alocarea atentă a pinilor microcontrollerului și implementarea unei proceduri de auto-testare care să facă vizibile defectele de montaj încă de la pornire. Aceste aspecte sunt detaliate în continuare.
+
+\subsubsection{Schema de conexiuni şi maparea pinilor GPIO}
+
+Microcontrollerul ESP32-C3 Mini dispune de un număr limitat de pini GPIO de uz general, iar unii dintre aceştia au funcţii speciale (pini de \textit{strapping} care influenţează modul de boot, pini rezervaţi USB-JTAG-ului nativ, pini de alimentare). Maparea folosită în acest proiect, sintetizată în tabelul~\ref{tab:gpio-map}, a fost stabilită astfel încât funcțiile care necesită pull-up extern sau întreruperi pe muchie să fie alocate pe pini neutri, iar pinii rezervaţi USB să rămână disponibili pentru depanare.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{4.0cm}|>{\raggedright\arraybackslash}p{6.5cm}|}
+\hline
+\textbf{GPIO} & \textbf{Componentă} & \textbf{Observaţii}\\
+\hline
+0  & DS18B20 (1-Wire) & Pull-up extern 4{,}7\,k$\Omega$; mod open-drain\\
+\hline
+1  & GPS NEO-6M (TX $\rightarrow$ ESP RX) & UART1 RX, 9600 baud, NMEA\\
+\hline
+2  & GPS NEO-6M (RX $\leftarrow$ ESP TX) & UART1 TX\\
+\hline
+3  & Buton panică & Pull-up intern; întrerupere pe muchie descendentă\\
+\hline
+4  & Buton pornire/oprire & Pull-up intern; întrerupere pe muchie descendentă\\
+\hline
+5  & LED galben (eroare / offline / sleep) & Active-HIGH\\
+\hline
+6  & LED verde (sistem activ) & Active-HIGH\\
+\hline
+8  & I\textsuperscript{2}C SDA (TCA9548) & Pull-up intern activat\\
+\hline
+9  & I\textsuperscript{2}C SCL (TCA9548) & Pull-up intern activat\\
+\hline
+\end{tabular}
+\caption{Maparea pinilor GPIO ai microcontrollerului ESP32-C3 Mini.}
+\label{tab:gpio-map}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\figplaceholder{[Spaţiu pentru figură --- schema electrică a dispozitivului: ESP32-C3 Mini, multiplexorul TCA9548A, senzorii MAX30100/MPU6050/DS18B20/NEO-6M, ecranul OLED, butoanele şi LED-urile, cu pinii GPIO corespunzători şi rezistoarele de pull-up evidenţiate.]}
+\caption{Schema de conexiuni a dispozitivului portabil.}
+\label{fig:schema}
+\end{figure}
+
+\subsubsection{Magistrala I\textsuperscript{2}C şi multiplexarea TCA9548A}
+
+Trei dintre componentele dispozitivului --- ecranul OLED SSD1306, senzorul MAX30100 şi senzorul MPU6050 --- comunică prin magistrala I\textsuperscript{2}C. Întrucât MAX30100 are o adresă fixă (0x57), iar OLED-ul şi MPU6050 au adrese predefinite care nu pot fi modificate fără remontare hardware, conectarea directă pe aceeaşi magistrală ar genera, în practică, comportament instabil din cauza încărcării capacitive cumulate şi a interferenţelor între dispozitive cu cerinţe diferite de \textit{timing}.
+
+Soluţia adoptată este utilizarea unui multiplexor I\textsuperscript{2}C \textbf{TCA9548A} pe 8 canale, care expune fiecărui dispozitiv un canal izolat electric. Microcontrollerul selectează canalul activ printr-o scriere unică pe registrul multiplexorului (adresa 0x70), efectuează tranzacţia I\textsuperscript{2}C cu senzorul vizat, apoi închide canalul. Această secvenţă --- \textit{open / read / close} --- este aplicată sistematic în firmware pentru a preveni conflictele de adresă atunci când mai mulţi senzori partajează aceleaşi numere de adresă pe magistrale diferite. Canalul 0 a fost alocat senzorului MAX30100, canalul 1 ecranului OLED, iar canalul 2 senzorului MPU6050.
+
+\subsubsection{Sistemul de alimentare}
+
+Alimentarea dispozitivului portabil este asigurată de un acumulator \textbf{LiPo 3{,}7\,V / 1500\,mAh} (model 103048, AM Electronics), ales pentru raportul favorabil între capacitate şi gabarit (10\,$\times$\,30\,$\times$\,48\,mm) şi pentru protecţia integrată împotriva supraîncărcării, supradescărcării şi scurtcircuitului. Gestionarea încărcării prin USB-C este realizată de modulul \textbf{TP4056}, un circuit integrat dedicat încărcării bateriilor Li-Ion / Li-Po cu un curent maxim de 1\,A şi protecţie completă a celulei.
+
+Întrucât tensiunea nominală a acumulatorului LiPo (3{,}0--4{,}2\,V) este insuficientă pentru alimentarea simultană a tuturor componentelor în regimul lor optim, sistemul include un convertor \textbf{boost MT3608}, capabil să furnizeze până la 28\,V / 2\,A şi configurat în acest caz pentru tensiunea de operare a sistemului (5\,V).
+
+Modulul ESP32-C3 Mini integrează un \textbf{Brownout Detector (BOD)} care resetează cipul atunci când tensiunea de alimentare coboară sub un prag configurabil (implicit 2{,}51\,V pe ESP32-C3). În timpul testărilor s-a observat că tranziţiile rapide de regim --- de exemplu, comutarea în modul sleep cu oprirea simultană a LED-urilor senzorului MAX30100 şi schimbarea modului de \textit{power save} al radio-ului WiFi --- generau pe sursa de alimentare un \textit{transient} suficient de mare încât să declanşeze BOD-ul. Cauza principală o reprezintă curentul-vârf consumat de transceiver-ul WiFi în timpul emisiei, care poate atinge 350\,mA, valoare la limita capacităţii unui cablu USB de calitate medie.
+
+Pentru atenuarea acestui efect, în firmware s-au introdus pauze scurte (50\,ms) între acţiunile cu impact electric major, astfel încât condensatoarele de filtraj să aibă timp să-şi revină între evenimente. La nivel hardware, soluţia recomandată este adăugarea unei perechi de condensatoare de decuplare --- 100\,$\mu$F electrolitic în paralel cu 100\,nF ceramic --- montate cât mai aproape de pinul de alimentare al microcontrollerului, precum şi folosirea unui cablu USB cu fire de alimentare cu rezistenţă scăzută.
+
+\subsubsection{Interfaţa fizică: LED-uri şi butoane}
+
+Dispozitivul include două elemente de feedback vizual şi două elemente de interacţiune fizică. Cele două LED-uri --- verde pentru funcţionare normală şi galben pentru eroare, lipsă de reţea sau mod sleep --- sunt conectate active-HIGH la pinii GPIO 6, respectiv GPIO 5, prin rezistoare de limitare a curentului dimensionate la aproximativ 10\,mA per LED.
+
+Cele două butoane momentane sunt conectate între pinul GPIO şi masă, iar starea de inactivitate (HIGH) este menţinută prin pull-up-urile interne ale microcontrollerului, configurate software. Detecţia apăsării se face pe \textbf{muchie descendentă} (\textit{negative edge}), printr-o întrerupere GPIO, cu \textit{debounce} software de 50\,ms aplicat în handler. Pentru a creşte fiabilitatea, firmware-ul implementează în paralel şi o cale de \textit{polling}: dacă, dintr-un motiv oarecare, întreruperea nu se declanşează, citirea ciclică a nivelului pinului prinde tot tranziţia. Această abordare hibridă a fost utilă în depanare, întrucât a permis distingerea unei probleme de cablaj (pin niciodată \textit{LOW} la apăsare) de o problemă strict software (pin oscilează corect, dar întreruperea nu se înregistrează).
+
+\subsubsection{Diagnoza la pornire şi auto-testarea}
+
+Pentru ca defectele de montaj să poată fi identificate fără instrumente externe, firmware-ul execută la pornire o procedură de auto-testare în două etape, ale cărei rezultate sunt afişate pe portul serial. Prima etapă, denumită \textit{hardware self-test}, verifică elementele active de interacţiune: face LED-ul verde să clipească de mai multe ori --- absenţa clipirii indică imediat o defecţiune a LED-ului, a rezistorului sau a cablajului --- şi monitorizează timp de 10\,s nivelul pinilor celor două butoane, raportând câte tranziţii \textit{HIGH$\rightarrow$LOW} a detectat pe fiecare. Această ultimă măsurare permite distingerea unui buton blocat (pin niciodată \textit{HIGH}) de un buton deconectat sau cu firul de masă întrerupt (pin niciodată \textit{LOW}).
+
+A doua etapă, denumită \textit{sensor functional test}, depăşeşte simpla verificare a prezenţei pe magistrală (\textit{I\textsuperscript{2}C probe}) şi efectuează o citire reală de la fiecare senzor: extrage un eşantion de la MPU6050 şi îl validează împotriva valorilor \textit{stuck zero} sau \textit{bus railed} (toţi biţii la 0 sau la 1, semn al unei defecţiuni de comunicaţie); trezeşte senzorul MAX30100 şi citeşte FIFO-ul după un interval suficient pentru acumularea câtorva eşantioane; declanşează o conversie completă a senzorului DS18B20 şi verifică integritatea datelor prin codul de control \textit{CRC8}; verifică prezenţa caracterelor NMEA pe portul UART al modulului GPS. Pentru fiecare senzor se afişează verdictul --- \texttt{FUNCTIONAL}, \texttt{FAULT} sau \texttt{NOT DETECTED} --- alături de valorile efective citite, ceea ce face vizibile deopotrivă defectele de cablaj, contactul slab al senzorului şi erorile de configurare.
+
+Pentru cazul particular al unui buton blocat la masă (pin permanent \textit{LOW}), firmware-ul include şi un \textit{guard} care, după 500\,ms de citire continuă, dezactivează butonul respectiv, împiedicând astfel generarea unei avalanşe de evenimente false şi păstrând restul sistemului funcţional până la remedierea defecţiunii hardware.
+
+
+
+Firmware-ul dispozitivului portabil a fost dezvoltat în limbajul C++, utilizând framework-ul \textbf{ESP-IDF} (Espressif IoT Development Framework), mediul de dezvoltare oficial pentru microcontrollerele Espressif. Programul rulează peste sistemul de operare în timp real \textbf{FreeRTOS}, care permite organizarea funcționalității în sarcini (\textit{tasks}) concurente și sincronizarea acestora prin grupuri de evenimente --- de exemplu, transmiterea datelor către server este declanșată doar după ce sarcina de conectare la rețea semnalează stabilirea conexiunii WiFi.
+
+Pornind de la maparea pinilor şi de la organizarea hardware descrise în subcapitolul 5.1, firmware-ul defineşte o abstractizare uniformă pentru fiecare senzor: o funcţie de iniţializare, o funcţie de citire şi, după caz, funcţii de \textit{wake} / \textit{sleep} pentru gestionarea consumului. Procedura de auto-testare prezentată anterior este apelată o singură dată, la pornire, după care execuţia intră într-o buclă principală responsabilă cu achiziţia periodică şi transmiterea datelor.
+
+\subsubsection{Citirea senzorilor și multiplexarea I2C}
+
+Senzorii sunt interogați ciclic, într-o buclă cu perioada de ordinul a câteva sute de milisecunde. Întrucât MAX30100, ecranul OLED și MPU6050 partajează aceeași magistrală I2C, accesul la fiecare dintre ele se face prin selectarea canalului corespunzător al multiplexorului TCA9548A înaintea fiecărei citiri. Senzorul de temperatură DS18B20 comunică separat, prin protocolul 1-Wire, iar modulul GPS NEO-6M prin interfața UART, datele de poziție fiind extrase din mesajele transmise în format NMEA. Valorile brute sunt validate local, prin compararea cu intervalele fizic posibile, iar citirile evident eronate --- generate de un contact imperfect al senzorului cu pielea --- sunt eliminate înainte de a fi luate în considerare. Din componentele de accelerație pe cele trei axe se calculează magnitudinea vectorului de accelerație, mărime derivată folosită ulterior la detectarea imobilității și a căderilor.
+
+\subsubsection{Comunicația cu serverul și coada offline}
+
+Măsurătorile validate sunt acumulate și transmise periodic către backend, la un interval de ordinul zecilor de secunde, printr-o cerere HTTPS de tip POST către endpoint-ul de ingestie. Cererea este autentificată cu o cheie de dispozitiv inclusă într-un antet dedicat, iar conexiunea securizată TLS este validată pe baza unui pachet de certificate inclus în firmware. La un interval mai mare --- de ordinul minutelor --- dispozitivul trimite un mesaj de tip \textit{heartbeat}, care raportează starea sa tehnică: puterea semnalului WiFi, memoria liberă, timpul de funcționare și numărul de măsurători aflate în coada de așteptare.
+
+Atunci când transmiterea eșuează din cauza lipsei conexiunii, măsurătoarea este salvată într-o \textbf{coadă locală} păstrată în memoria nevolatilă (NVS) a microcontrollerului. Coada are o capacitate maximă fixă, iar la depășirea acesteia cele mai vechi înregistrări sunt suprascrise. La revenirea conexiunii, înregistrările aflate în așteptare sunt transmise treptat, într-un număr limitat la fiecare ciclu de comunicație, pentru a nu suprasolicita rețeaua și a nu întârzia achiziția curentă de date.
+
+\subsubsection{Interfața locală}
+
+Interacțiunea cu utilizatorul se realizează prin ecranul OLED, care afișează în timp real parametrii vitali și starea conexiunii, prin două LED-uri de stare și prin două butoane: un buton de pornire/oprire și un buton de panică, a cărui apăsare declanșează o cerere dedicată către backend, independent de valorile senzorilor.
+
+% >>> FIGURI SUGERATE pentru această secțiune:
+%  - fotografie a dispozitivului în funcțiune, cu ecranul OLED afișând parametrii vitali;
+%  - schema de conexiuni / montajul pe breadboard al componentelor.
+
+\subsubsection{Configurarea rețelei}
+
+Datele de conectare la rețeaua WiFi sunt păstrate în memoria nevolatilă a dispozitivului, fiind introduse o singură dată, la configurarea inițială. Această abordare respectă principiul simplității pentru utilizatorul vârstnic, prezentat în subcapitolul 2.1: după configurarea efectuată de aparținător, dispozitivul se reconectează automat la pornire, fără a necesita vreo intervenție tehnică ulterioară din partea pacientului.
+
+\subsection{Backend-ul și API-ul REST}
+
+Backend-ul a fost implementat în \textbf{ASP.NET Core 8}, organizat conform arhitecturii stratificate descrise în subcapitolul 4.1. Funcționalitatea este expusă printr-un ansamblu de controlere REST, fiecare grupând operațiile asociate unei resurse: autentificare, utilizatori, persoane monitorizate, măsurători, notificări, afecțiuni, invitații, precum și controlerele dedicate dispozitivelor IoT și interogării modelului de inteligență artificială.
+
+\subsubsection{Injecția de dependențe și accesul la date}
+
+Componentele backend-ului sunt înregistrate într-un container de \textbf{injecție de dependențe}, mecanism prin care serviciile și depozitele sunt furnizate automat claselor care le solicită, fără ca acestea să le instanțieze direct. Accesul la baza de date urmează șablonul \textbf{repository}: fiecare entitate are un depozit propriu, care încapsulează interogările Entity Framework Core și izolează restul aplicației de detaliile de persistență.
+
+\subsubsection{Autentificare și securitate}
+
+Autentificarea este gestionată prin token-uri JWT, validate la fiecare cerere pe baza unei chei secrete. Aplicația acceptă și autentificarea prin OAuth folosind un cont Google. O particularitate de implementare o reprezintă conexiunile SignalR, care --- spre deosebire de cererile HTTP obișnuite --- transmit token-ul prin șirul de interogare al adresei; backend-ul tratează explicit acest caz. Securitatea este întărită prin mai multe mecanisme complementare. \textbf{Limitarea ratei} (\textit{rate limiting}) restricționează numărul de cereri de autentificare acceptate de la același client într-o fereastră de timp, atenuând atacurile de tip forță brută. Răspunsurile includ \textbf{antete HTTP de securitate} --- precum \texttt{X-Content-Type-Options}, \texttt{X-Frame-Options} și \texttt{Referrer-Policy} --- care reduc riscul atacurilor de tip \textit{clickjacking} sau de interpretare greșită a conținutului. O \textbf{politică CORS} restrictivă permite accesul la API doar din partea aplicației web autorizate. Un \textbf{gestionar global de excepții} interceptează erorile neprevăzute și returnează un mesaj generic, fără a expune detalii interne care ar putea fi exploatate. În fine, întrucât backend-ul este găzduit în spatele unui \textit{reverse proxy}, sunt procesate antetele transmise de acesta, pentru ca redirecționările și fluxul de autentificare OAuth să folosească corect protocolul HTTPS.
+
+\subsubsection{Serviciile de fundal}
+
+Pe lângă controlere, backend-ul include servicii de fundal care rulează independent de cereri: serviciul de monitorizare a alertelor și serviciul de raportare zilnică. La pornirea aplicației se execută, de asemenea, popularea inițială a bazei de date cu rolurile și datele de bază.
+
+\subsubsection{Contractul cu clientul și optimizări}
+
+Comunicarea cu aplicația web folosește obiecte de transfer de date (DTO) definite în proiectul partajat \textit{Shared}, ceea ce garantează că backend-ul și clientul folosesc exact aceeași structură a datelor și elimină erorile de nepotrivire a câmpurilor. Pentru a reduce volumul transferat prin rețea și a accelera încărcarea aplicației, răspunsurile sunt comprimate folosind algoritmii Brotli și Gzip, iar interogările frecvente către baza de date sunt accelerate prin indexurile descrise în subcapitolul 4.3.
+
+\subsubsection{Validarea cererilor și importul de date}
+
+Fiecare cerere primită de API este validată înainte de a fi procesată: sunt verificate prezența câmpurilor obligatorii, încadrarea valorilor în intervale plauzibile și dreptul utilizatorului de a accesa resursa solicitată. O cerere invalidă este respinsă cu un mesaj explicativ, fără a ajunge la stratul de persistență. Pe lângă datele primite în timp real de la dispozitive, backend-ul oferă și o funcție de \textbf{import}, prin care un istoric de măsurători poate fi încărcat dintr-un fișier extern --- utilă, de exemplu, pentru migrarea datelor dintr-un sistem anterior sau pentru popularea aplicației cu date de test.
+
+% >>> FIGURI SUGERATE: captură cu structura soluției pe proiecte (Solution Explorer)
+% și/sau captură cu interfața Swagger a API-ului.
+
+\subsection{Microserviciul de inteligență artificială}
+
+Microserviciul de inteligență artificială a fost implementat în limbajul \textbf{Python}, folosind framework-ul web \textbf{FastAPI}. La pornire, serviciul încarcă din fișierul de artefacte modelul Random Forest antrenat, împreună cu obiectele auxiliare necesare --- scalatorul Min-Max și codificatorul de etichete --- serializate anterior cu biblioteca joblib.
+
+\subsubsection{Antrenarea modelului}
+
+Modelul de inteligență artificială a fost antrenat separat de aplicație, printr-un proces reproductibil. Sunt încărcate mai întâi cele trei seturi de date publice menționate în subcapitolul 2.3, pe baza cărora este generat un set de date sintetic, prin eșantionare cu adăugare de zgomot gaussian; setul cuprinde câteva mii de exemple normale și câteva mii de exemple corespunzătoare stărilor de alertă și critice. Datele sunt împărțite în subseturi de antrenare și de testare, componentele de mișcare sunt normalizate, iar modelul Random Forest este antrenat și evaluat. La final, modelul împreună cu obiectele auxiliare --- scalatorul și codificatorul de etichete --- sunt serializate într-un singur fișier de artefacte, exact fișierul pe care microserviciul îl încarcă la pornire. Astfel, etapa de antrenare, costisitoare și executată o singură dată, este complet separată de etapa de inferență, rapidă și executată la fiecare măsurătoare primită.
+
+\subsubsection{Endpoint-urile serviciului}
+
+Serviciul expune trei endpoint-uri: unul de verificare a stării (folosit de mecanismul de \textit{healthcheck} al containerului), unul care returnează informații despre model și endpoint-ul principal de predicție. Backend-ul în C\# apelează acest endpoint printr-un client HTTP configurat cu un timp de așteptare scurt, astfel încât o eventuală indisponibilitate a serviciului AI să nu afecteze fluxul principal.
+
+\subsubsection{Logica hibridă de decizie}
+
+În interiorul endpoint-ului de predicție, datele primite sunt mai întâi validate: o măsurătoare cu valori în afara intervalelor fiziologic plauzibile este respinsă, evitând astfel o predicție lipsită de sens. Componentele de mișcare sunt apoi normalizate cu scalatorul Min-Max, iar modelul Random Forest produce o predicție și un set de probabilități asociate celor trei clase.
+
+Peste predicția modelului se aplică un strat de \textbf{reguli medicale}, cu prioritate față de model. Regulile absolute decid singure în cazurile clare --- de exemplu, o saturație a oxigenului sub pragul critic determină starea \texttt{CRITICAL} indiferent de ce a prezis modelul. Un set de reguli cumulative analizează simultan toți parametrii, fiecare abatere contribuind la un scor de severitate pe baza căruia, împreună cu starea modelului, se stabilește starea finală. Modificatorii specifici afecțiunilor preexistente, prezentați în subcapitolul 4.4, ajustează la rândul lor evaluarea. Această stratificare asigură că situațiile clare din punct de vedere clinic sunt tratate corect, iar explicația textuală returnată indică exact ce parametru sau ce regulă a determinat decizia.
+
+\subsection{Frontend-ul web}
+
+Aplicația web a fost implementată în \textbf{Blazor WebAssembly}, sub forma unei aplicații de tip SPA. Interfața este organizată în pagini corespunzătoare funcționalităților principale: autentificare și înregistrare, tabloul de bord, lista persoanelor monitorizate, vizualizarea detaliată a unei persoane, istoricul măsurătorilor, notificările, setările și paginile de administrare.
+
+\subsubsection{Comunicarea cu backend-ul}
+
+Comunicarea cu API-ul se realizează prin clienți dedicați, construiți peste componenta \texttt{HttpClient}. Token-ul de autentificare este atașat automat fiecărei cereri printr-un gestionar de mesaje (\textit{message handler}) interpus, care elimină necesitatea adăugării manuale a antetului de autorizare. Pentru actualizarea în timp real, aplicația menține o conexiune SignalR către backend, prin care primește notificările push fără a fi necesară reîncărcarea paginii.
+
+\subsubsection{Autorizarea pe roluri și accesibilitatea}
+
+Accesul la pagini este controlat în funcție de rolul utilizatorului: paginile de administrare sunt disponibile doar administratorilor, iar fiecare aparținător sau medic vede exclusiv persoanele monitorizate la care are drept de acces. Tentativele de acces neautorizat sunt redirecționate către pagina de autentificare. Întrucât aplicația se adresează inclusiv unui public mai puțin familiarizat cu tehnologia, interfața include opțiuni de accesibilitate --- reglarea dimensiunii fontului și selectarea limbii --- precum și un asistent conversațional integrat, care răspunde la întrebări frecvente despre utilizarea aplicației.
+
+\subsubsection{Organizarea interfeței și gestionarea stării}
+
+Interfața este construită din componente Blazor reutilizabile --- antetul, widget-urile și notificările de tip \textit{toast} --- combinate în pagini. Starea partajată între pagini, precum datele utilizatorului autentificat sau persoana monitorizată selectată, este menținută de servicii dedicate, înregistrate în containerul de injecție de dependențe al aplicației client. Astfel, informațiile încărcate o singură dată sunt disponibile în întreaga aplicație, fără a fi nevoie de cereri repetate către server la fiecare schimbare de pagină.
+
+\subsubsection{Vizualizarea datelor și funcționalitatea PWA}
+
+Reprezentarea grafică a istoricului parametrilor vitali este realizată prin interoperabilitate cu JavaScript, folosind o bibliotecă de grafice; tot prin interoperabilitate sunt integrate harta pentru localizarea pacientului și exportul rapoartelor în format PDF. Aplicația este configurată ca \textbf{PWA}: include un service worker, un fișier manifest care permite instalarea pe dispozitiv și o pagină dedicată modului offline.
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=\textwidth]{figuri/dashboard.png}
+\figplaceholder{[Spațiu pentru figură --- captură de ecran cu tabloul de bord al aplicației web: starea curentă a persoanei monitorizate, parametrii vitali și health score-ul.]}
+\caption{Tabloul de bord al aplicației web.}
+\label{fig:dashboard}
+\end{figure}
+
+% >>> FIGURI SUGERATE (capturi de ecran din aplicație) pentru această secțiune:
+%  - pagina de autentificare / înregistrare;
+%  - lista persoanelor monitorizate;
+%  - pagina de istoric cu graficele parametrilor vitali;
+%  - pagina de setări (configurarea pragurilor de alertă personalizate);
+%  - vizualizarea pe hartă a poziției pacientului.
+
+\subsection{Sistemul de notificări}
+
+Sistemul de notificări implementează alertarea multi-canal descrisă conceptual în subcapitolul 2.4. Logica de declanșare este coordonată de serviciul de monitorizare a alertelor, care decide când și prin ce canale trebuie transmisă o notificare, ținând cont de preferințele fiecărui utilizator.
+
+\subsubsection{Temporizarea alertelor}
+
+Pentru a evita alertele false, serviciul de monitorizare aplică mai multe temporizări. O stare anormală trebuie să persiste o durată minimă --- pragul de persistență, de aproximativ două minute pentru stările critice --- înainte de a genera o notificare, eliminând valorile tranzitorii. La declanșare, alerta este transmisă simultan prin toate canalele activate de utilizator (push, email și SMS), fiecare alertă fiind însoțită de SMS dacă acest canal este selectat; SMS-ul nu este întârziat suplimentar față de celelalte canale. Atâta vreme cât starea critică persistă, notificarea este retrimisă la fiecare două minute; pentru alertele non-critice, un interval de inhibare (\textit{cooldown}) împiedică retransmiterea aceleiași alerte pentru aceeași persoană, eliminând riscul inundării aparținătorului cu mesaje. Pentru aplicarea acestor reguli, serviciul menține în memorie, pentru fiecare persoană monitorizată, un buffer cu măsurătorile din ultimele minute.
+
+\subsubsection{Notificările push}
+
+Notificările push sunt livrate prin \textbf{SignalR}, printr-un hub la care clienții se conectează după autentificare. Fiecare utilizator este asociat unui grup propriu, identificat prin identificatorul său, astfel încât o notificare să poată fi direcționată exact către destinatarul vizat. Mesajele sunt afișate instantaneu în interfață și salvate, totodată, în baza de date, pentru a putea fi consultate ulterior.
+
+\subsubsection{SMS și email}
+
+Trimiterea SMS-urilor este realizată prin integrarea cu platforma de comunicație în cloud \textbf{Twilio}, apelată prin biblioteca oficială a acesteia. Email-urile --- atât notificările, cât și mesajele tranzacționale precum confirmarea contului sau resetarea parolei --- sunt trimise printr-un server SMTP. Fiecare utilizator poate activa sau dezactiva independent fiecare canal din pagina de setări, iar sistemul respectă aceste preferințe la livrarea fiecărei alerte.
+
+\subsubsection{Raportul zilnic}
+
+Pe lângă alertele declanșate de situații de risc, sistemul generează, pentru utilizatorii care au activat această opțiune, un \textbf{raport zilnic} de sănătate. Un serviciu de fundal rulează periodic, agregă măsurătorile zilei --- valori minime, maxime și medii, numărul de căderi și de alerte --- și trimite sinteza prin email. Acest mecanism oferă aparținătorului o imagine de ansamblu chiar și în zilele fără evenimente, fără a fi necesară consultarea activă a aplicației.
+
+% >>> FIGURI SUGERATE: captură cu o notificare push afișată în interfață,
+% exemplu de SMS de alertă primit pe telefon și exemplu de email de notificare.
+
+% ====================== 6 TESTARE ȘI REZULTATE ======================
+\newpage
+\section{Testare și rezultate}
+
+Acest capitol prezintă metodologia de testare aplicată sistemului și rezultatele obținute. Sunt urmărite patru aspecte: corectitudinea funcțională, performanța modelului de inteligență artificială, latența sistemului și fiabilitatea mecanismului de alertare.
+
+\textit{[Notă: valorile numerice marcate mai jos cu paranteze drepte trebuie completate cu rezultatele măsurate efectiv în timpul testării. Metodologia este descrisă complet; doar cifrele finale rămân de inserat.]}
+
+\subsection{Metodologia de testare}
+
+Testarea sistemului a fost realizată pe mai multe planuri. \textbf{Testarea funcțională} a vizat verificarea fiecărui flux descris în subcapitolul 4.4 --- înregistrarea utilizatorilor, asocierea unei persoane monitorizate, recepția măsurătorilor, declanșarea alertelor și livrarea notificărilor.
+
+Pentru testarea fluxurilor care depind de dispozitivul fizic a fost utilizat un \textbf{mod de simulare}, integrat în aplicație, care permite generarea de măsurători cu valori controlate, fără a fi necesar hardware-ul real. Acest mecanism a permis reproducerea sistematică a scenariilor de risc --- valori critice de \spo, tahicardie, febră, imobilitate --- și verificarea reacției corecte a sistemului în fiecare caz.
+
+\textbf{Performanța modelului de inteligență artificială} a fost evaluată separat, pe setul de date, folosind tehnicile de validare descrise mai jos.
+
+\subsection{Acuratețea datelor și performanța modelului AI}
+
+Performanța modelului Random Forest a fost estimată prin \textbf{validare încrucișată stratificată în 5 falduri}, metodă care împarte repetat setul de date în subseturi de antrenare și testare, păstrând în fiecare fald distribuția claselor NORMAL, ALERT și CRITICAL. Au fost urmărite acuratețea, scorul F1 (în variantele macro și ponderată) și aria de sub curba ROC (AUC-ROC), calculată în regim \textit{one-vs-rest}.
+
+Setul de date utilizat la antrenare și evaluare a fost construit sintetic, pornind de la sursele publice menționate în subcapitolul 2.3. El cuprinde câteva mii de exemple corespunzătoare stării normale și câteva mii de exemple corespunzătoare stărilor ALERT și CRITICAL, generate în mod echilibrat astfel încât modelul să dispună de suficiente cazuri din fiecare clasă. Caracterul stratificat al validării garantează că această proporție este păstrată în fiecare fald, evitând estimările optimiste care ar putea apărea dacă o clasă rară ar fi insuficient reprezentată în subsetul de testare.
+
+Rezultatele obținute sunt sintetizate în tabelul~\ref{tab:cv-results}.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5.5cm}|c|c|}
+\hline
+\textbf{Metrică} & \textbf{Medie} & \textbf{Abatere standard}\\
+\hline
+Acuratețe & [\ \ ] & [\ \ ]\\
+\hline
+Scor F1 (macro) & [\ \ ] & [\ \ ]\\
+\hline
+Scor F1 (ponderat) & [\ \ ] & [\ \ ]\\
+\hline
+AUC-ROC (one-vs-rest) & [\ \ ] & ---\\
+\hline
+\end{tabular}
+\caption{Rezultatele validării încrucișate stratificate în 5 falduri.}
+\label{tab:cv-results}
+\end{table}
+
+Pentru a verifica absența supraînvățării (overfitting), a fost comparată acuratețea pe datele de antrenare cu cea pe datele de testare; o diferență mică între cele două indică o bună capacitate de generalizare a modelului \textit{(diferența măsurată: [\ \ ])}.
+
+Comportamentul modelului pe fiecare clasă a fost analizat prin \textbf{matricea de confuzie} (figura~\ref{fig:confuzie}), care evidențiază eventualele confuzii între stările apropiate. Importanța parametrilor de intrare a fost evaluată prin metoda \textbf{SHAP} (figura~\ref{fig:shap}), care a confirmat că saturația oxigenului, frecvența cardiacă și temperatura corporală sunt factorii dominanți în decizia modelului, în concordanță cu criteriile clinice de triaj.
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.7\textwidth]{figuri/matrice-confuzie.png}
+\figplaceholder{[Spațiu pentru figură --- matricea de confuzie a modelului pe cele trei clase (NORMAL, ALERT, CRITICAL), generată de scriptul de antrenare.]}
+\caption{Matricea de confuzie a modelului Random Forest.}
+\label{fig:confuzie}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.8\textwidth]{figuri/shap.png}
+\figplaceholder{[Spațiu pentru figură --- graficul SHAP cu importanța globală a parametrilor de intrare, generat de scriptul de antrenare.]}
+\caption{Importanța parametrilor de intrare (analiză SHAP).}
+\label{fig:shap}
+\end{figure}
+
+\subsection{Latența sistemului}
+
+Latența reprezintă intervalul de timp scurs între achiziția unei măsurători pe dispozitiv și afișarea sau alertarea acesteia (obiectivul O5). Au fost măsurate două intervale: timpul \textit{dispozitiv -- afișare}, de la citirea senzorilor până la actualizarea tabloului de bord, și timpul \textit{dispozitiv -- alertă}, de la achiziție până la livrarea notificării push.
+
+Latența totală este suma mai multor componente: intervalul de transmitere configurat pe dispozitiv, timpul de procesare pe backend, timpul de răspuns al microserviciului AI și timpul de livrare prin SignalR. Valorile măsurate au fost: timp \textit{dispozitiv -- afișare} de aproximativ [\ \ ] secunde și timp \textit{dispozitiv -- alertă} de aproximativ [\ \ ] secunde, confirmând funcționarea în regim apropiat de timp real.
+
+\subsection{Fiabilitatea alertelor}
+
+Fiabilitatea mecanismului de alertare a fost evaluată din două perspective: capacitatea de a semnala situațiile reale de risc și capacitatea de a evita alertele false. Folosind modul de simulare, au fost generate scenarii de risc cunoscute și s-a verificat dacă sistemul declanșează alerta corespunzătoare. În paralel, au fost generate valori normale cu variații tranzitorii, pentru a verifica dacă pragul de persistență elimină alertele false.
+
+Rezultatele au arătat că, din [\ \ ] scenarii de risc testate, sistemul a declanșat corect alerta în [\ \ ] cazuri, iar pragul de persistență a redus numărul de alerte false cu [\ \ ]\% față de o variantă fără acest mecanism. A fost testat separat și comportamentul la pierderea conexiunii: măsurătorile acumulate în coada locală a dispozitivului au fost transmise integral și în ordine corectă la revenirea semnalului, fără pierderi de date.
+
+% ====================== 7 CONCLUZII ȘI PERSPECTIVE ======================
+\newpage
+\section{Concluzii și perspective}
+
+\subsection{Concluzii}
+
+Lucrarea de față a urmărit proiectarea și implementarea unui sistem IoT inteligent pentru monitorizarea și siguranța persoanelor vârstnice. Pornind de la obiectivele formulate în subcapitolul 1.4, se poate constata că acestea au fost atinse.
+
+A fost realizat un subsistem de achiziție a datelor de la senzori biomedicali, cu transmitere în timp real către un server centralizat (O1), și a fost dezvoltată o aplicație web completă pentru vizualizarea datelor, accesibilă atât aparținătorilor, cât și medicilor (O2). A fost definit și implementat mecanismul original de evaluare a stării de sănătate --- health score-ul --- bazat pe corelarea mai multor parametri vitali și pe praguri personalizabile (O3), și a fost integrat un sistem de notificări multi-canal declanșat automat (O4). Sistemul funcționează în regim apropiat de timp real, cu o latență redusă (O5), iar arhitectura stratificată și modulară adoptată îi asigură scalabilitatea și extensibilitatea (O6).
+
+Principala contribuție originală a lucrării rămâne mecanismul health score, care depășește limitarea sistemelor existente bazate pe praguri unice, oferind un indice sintetic, personalizat și mai puțin predispus la alerte false. La aceasta se adaugă integrarea, într-un sistem funcțional și unitar, a unor componente care în soluțiile analizate apar doar izolat: monitorizarea continuă, alertarea activă a aparținătorului, configurarea personalizată și stocarea locală la pierderea conexiunii.
+
+\subsection{Limitări identificate}
+
+Cu toate că sistemul este funcțional, dezvoltarea sa în cadrul unei lucrări de licență a presupus o serie de limitări.
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Hardware de prototip} --- dispozitivul a fost realizat din componente de uz general, asamblate într-o formă de prototip; el nu are gradul de miniaturizare, ergonomie și rezistență mecanică al unui produs comercial.
+\item \textbf{Antrenarea pe date sintetice} --- modelul de inteligență artificială a fost antrenat pe date generate pornind de la seturi publice, nu pe date clinice reale colectate de la pacienți, ceea ce limitează validitatea concluziilor în condiții reale.
+\item \textbf{Validare la scară redusă} --- testarea a fost realizată în regim de laborator, pe un număr mic de dispozitive, fără un studiu de utilizare pe termen lung cu utilizatori reali.
+\item \textbf{Dependența de servicii externe} --- funcționarea alertării prin SMS și a autentificării prin Google depinde de servicii terțe și de disponibilitatea acestora.
+\item \textbf{Baza de date} --- soluția SQLite este potrivită pentru scara actuală, dar un număr foarte mare de utilizatori ar necesita migrarea către un sistem de baze de date de tip server.
+\end{itemize}
+
+\subsection{Direcții de dezvoltare ulterioară}
+
+Sistemul dezvoltat constituie o bază solidă pentru extinderi viitoare. Printre direcțiile de dezvoltare se numără:
+
+\begin{itemize}[leftmargin=1.5em]
+\item antrenarea și validarea modelului de inteligență artificială pe date clinice reale, obținute în cadrul unui studiu cu pacienți, eventual cu acordul unei instituții medicale;
+\item dezvoltarea unei aplicații mobile native pentru aparținători, complementară interfeței web;
+\item integrarea de senzori suplimentari --- de exemplu, măsurarea ECG sau a tensiunii arteriale --- pentru o evaluare medicală mai cuprinzătoare;
+\item optimizarea consumului de energie al dispozitivului, pentru creșterea autonomiei bateriei;
+\item integrarea cu sistemele informatice medicale, pentru ca datele să poată fi consultate direct de medicul curant în fișa electronică a pacientului;
+\item extinderea mecanismului health score cu analiza tendințelor pe termen lung, pentru detectarea degradărilor lente ale stării de sănătate.
+\end{itemize}
+
+În concluzie, LifeAlertPlus demonstrează că o soluție de monitorizare medicală accesibilă, fiabilă și inteligentă poate fi construită cu tehnologii open-source și hardware de uz general, adresând un segment real și insuficient acoperit: siguranța persoanelor vârstnice prin implicarea activă a aparținătorului.
+
+% ====================== BIBLIOGRAFIE ======================
+% Notă: intrările de mai jos corespund surselor citate în text;
+% completează detaliile lipsă (autori, editură, ediție, URL, dată de accesare).
+\newpage
+\phantomsection
+\addcontentsline{toc}{section}{Bibliografie}
+\begin{thebibliography}{99}
+
+\bibitem{who2023} World Health Organization, \textit{Noncommunicable diseases --- Fact sheet}, 2023. \textit{[De completat: URL și dată de accesare.]}
+
+\bibitem{fbi2023} Fortune Business Insights, \textit{Internet of Medical Things (IoMT) Market Size Report}, 2023. \textit{[De completat: URL și dată de accesare.]}
+
+\bibitem{ashton1999} K. Ashton, \textit{That ``Internet of Things'' Thing}, RFID Journal, 1999. \textit{[De completat.]}
+
+\bibitem{lundberg2017} S. M. Lundberg, S.-I. Lee, \textit{A Unified Approach to Interpreting Model Predictions}, Advances in Neural Information Processing Systems (NeurIPS), 2017.
+
+\bibitem{scikit} F. Pedregosa et al., \textit{Scikit-learn: Machine Learning in Python}, Journal of Machine Learning Research, vol. 12, 2011.
+
+\bibitem{bidmc} PhysioNet, \textit{BIDMC PPG and Respiration Dataset}. \textit{[De completat: URL și dată de accesare.]}
+
+\bibitem{espressif} Espressif Systems, \textit{ESP32-C3 Datasheet}. \textit{[De completat.]}
+
+\bibitem{max30100} Maxim Integrated, \textit{MAX30100 --- Pulse Oximeter and Heart-Rate Sensor Datasheet}. \textit{[De completat.]}
+
+\bibitem{ds18b20} Maxim Integrated, \textit{DS18B20 --- Programmable Resolution 1-Wire Digital Thermometer Datasheet}. \textit{[De completat.]}
+
+\bibitem{mpu6050} InvenSense, \textit{MPU-6050 --- Product Specification}. \textit{[De completat.]}
+
+\bibitem{neo6m} u-blox, \textit{NEO-6 GPS Modules Datasheet}. \textit{[De completat.]}
+
+\bibitem{aspnetcore} Microsoft, \textit{ASP.NET Core documentation}. \textit{[De completat: URL și dată de accesare.]}
+
+\bibitem{blazor} Microsoft, \textit{Blazor WebAssembly documentation}. \textit{[De completat: URL și dată de accesare.]}
+
+\bibitem{docker} Docker Inc., \textit{Docker documentation}. \textit{[De completat: URL și dată de accesare.]}
+
+\end{thebibliography}
+
+\end{document}

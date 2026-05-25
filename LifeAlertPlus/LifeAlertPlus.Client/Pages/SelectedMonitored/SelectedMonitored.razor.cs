@@ -10,6 +10,7 @@ using LifeAlertPlus.Shared.DTOs.Requests.Email;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Shared.DTOs.Responses.ActivityProfile;
 using LifeAlertPlus.Shared.DTOs.Responses.Monitoring;
+using LifeAlertPlus.Shared.DTOs.Responses.Wifi;
 
 namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 {
@@ -44,6 +45,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         [Inject]
         private HttpClient HttpClient { get; set; } = default!;
+
+        [Inject]
+        private WifiApiClient WifiApiClient { get; set; } = default!;
 
         private string T(string key) => Lang.T(key);
 
@@ -111,6 +115,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private int? _editMinSpO2;
         private int? _editMaxSpO2;
         private int? _editUpdateFrequency;
+        private int? _editDataRetentionDays;
 
         // Condition threshold preview (client-side mirror of ConditionThresholdAdjuster)
         private int _previewMinHr = 60;
@@ -143,6 +148,17 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private string _inviteDoctorEmail = string.Empty;
         private string? _inviteStatusMessage;
         private bool _inviteSuccess;
+
+        // WiFi modal state (multiple networks for the ESP device)
+        private bool _showWifiModal;
+        private bool _isWifiLoading;
+        private bool _isAddingWifi;
+        private List<WifiNetworkResponseDTO> _wifiNetworks = new();
+        private string _newWifiSsid = string.Empty;
+        private string _newWifiPassword = string.Empty;
+        private string? _wifiStatusMessage;
+        private bool _wifiSuccess;
+        private const int MaxWifiNetworks = 3;
 
         private static SelectedMonitored? _instance;
 
@@ -242,7 +258,6 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     FirstName = monitored.FirstName ?? "",
                     LastName = monitored.LastName ?? "",
                     Age = GetAge(monitored.Birthdate),
-                    Relationship = monitored.Gender ?? "N/A",
                     HeartRate = heartRate,
                     SpO2 = spO2,
                     Temperature = temperature,
@@ -1681,6 +1696,93 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        private async Task OpenWifiModalAsync()
+        {
+            _newWifiSsid = string.Empty;
+            _newWifiPassword = string.Empty;
+            _wifiStatusMessage = null;
+            _wifiSuccess = false;
+            _showWifiModal = true;
+            _isWifiLoading = true;
+            StateHasChanged();
+
+            try
+            {
+                _wifiNetworks = await WifiApiClient.GetByMonitoredAsync(PersonId);
+            }
+            finally
+            {
+                _isWifiLoading = false;
+                StateHasChanged();
+            }
+        }
+
+        private void CloseWifiModal()
+        {
+            _showWifiModal = false;
+            _wifiStatusMessage = null;
+            _newWifiSsid = string.Empty;
+            _newWifiPassword = string.Empty;
+        }
+
+        private async Task AddWifiNetworkAsync()
+        {
+            if (string.IsNullOrWhiteSpace(_newWifiSsid) || _wifiNetworks.Count >= MaxWifiNetworks)
+                return;
+
+            _isAddingWifi = true;
+            _wifiStatusMessage = null;
+            StateHasChanged();
+
+            try
+            {
+                var (success, errorKey, network) = await WifiApiClient.AddAsync(PersonId, _newWifiSsid.Trim(), _newWifiPassword ?? string.Empty);
+                if (success && network != null)
+                {
+                    _wifiNetworks.Add(network);
+                    _newWifiSsid = string.Empty;
+                    _newWifiPassword = string.Empty;
+                    _wifiSuccess = true;
+                    _wifiStatusMessage = T("wifi.added");
+                }
+                else
+                {
+                    _wifiSuccess = false;
+                    _wifiStatusMessage = errorKey switch
+                    {
+                        "ssidRequired" => T("wifi.errSsidRequired"),
+                        "ssidTooLong" => T("wifi.errSsidTooLong"),
+                        "passwordTooLong" => T("wifi.errPasswordTooLong"),
+                        "ssidDuplicate" => T("wifi.errSsidDuplicate"),
+                        "limitReached" => T("wifi.errLimitReached"),
+                        _ => T("wifi.errGeneric")
+                    };
+                }
+            }
+            catch
+            {
+                _wifiSuccess = false;
+                _wifiStatusMessage = T("wifi.errGeneric");
+            }
+            finally
+            {
+                _isAddingWifi = false;
+                StateHasChanged();
+            }
+        }
+
+        private async Task DeleteWifiNetworkAsync(Guid id)
+        {
+            var ok = await WifiApiClient.DeleteAsync(id);
+            if (ok)
+            {
+                _wifiNetworks.RemoveAll(n => n.Id == id);
+                _wifiSuccess = true;
+                _wifiStatusMessage = T("wifi.deleted");
+                StateHasChanged();
+            }
+        }
+
         private async Task SendEmailToDoctorAsync()
         {
             if (string.IsNullOrWhiteSpace(_doctorEmail) || Person == null) return;
@@ -2276,6 +2378,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 _editMinSpO2 = monitored.MinSpO2;
                 _editMaxSpO2 = monitored.MaxSpO2;
                 _editUpdateFrequency = monitored.UpdateFrequency;
+                _editDataRetentionDays = monitored.DataRetentionDays;
             }
             _showEditModal = true;
             StateHasChanged();
@@ -2318,7 +2421,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     MaxTemperature = _editMaxTemp,
                     MinSpO2 = _editMinSpO2,
                     MaxSpO2 = _editMaxSpO2,
-                    UpdateFrequency = _editUpdateFrequency
+                    UpdateFrequency = _editUpdateFrequency,
+                    DataRetentionDays = _editDataRetentionDays
                 };
 
                 var success = await MonitoredApiClient.UpdateMonitoredPersonAsync(PersonId, dto);
@@ -2350,7 +2454,6 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             public string FirstName { get; set; } = string.Empty;
             public string LastName { get; set; } = string.Empty;
             public int Age { get; set; }
-            public string Relationship { get; set; } = string.Empty;
             public int HeartRate { get; set; }
             public int SpO2 { get; set; }
             public double Temperature { get; set; }

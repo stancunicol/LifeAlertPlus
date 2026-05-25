@@ -26,14 +26,6 @@
                         @if (Person.Age > 0)
                         {
                             <span>@Person.Age @T("selected.years")</span>
-                            @if (!string.IsNullOrEmpty(Person.Relationship))
-                            {
-                                <span> • @Person.Relationship</span>
-                            }
-                        }
-                        else if (!string.IsNullOrEmpty(Person.Relationship))
-                        {
-                            <span>@Person.Relationship</span>
                         }
                         else
                         {

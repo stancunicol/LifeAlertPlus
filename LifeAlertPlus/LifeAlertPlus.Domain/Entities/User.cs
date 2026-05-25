@@ -23,7 +23,6 @@
         public string? PendingEmail { get; set; }
         public string? FirstDayOfTheWeek { get; set; }
         public string? Language { get; set; }
-        public string? FontSize { get; set; }
         public int? MinHeartRate { get; set; } = 60;
         public int? MaxHeartRate { get; set; } = 100;
         public double? MinTemperature { get; set; } = 36;
@@ -31,7 +30,6 @@
         public int? MinSpO2 { get; set; } = 95;
         public int? MaxSpO2 { get; set; } = 100;
         public int? UpdateFrequency { get; set; }
-        public int? DataRetentionDays { get; set; }
         public bool NotifyByEmail { get; set; } = true;
         public bool NotifyByPush { get; set; } = true;
         public bool NotifyBySms { get; set; } = false;

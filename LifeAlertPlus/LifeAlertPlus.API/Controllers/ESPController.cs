@@ -15,7 +15,9 @@ namespace LifeAlertPlus.API.Controllers
         Services.SimulationManager simulationManager,
         Services.AlertMonitorService alertMonitorService,
         IMonitoredService monitoredService,
-        IUserMonitoredService userMonitoredService) : BaseApiController
+        IUserMonitoredService userMonitoredService,
+        IMeasurementService measurementService,
+        IWifiNetworkService wifiNetworkService) : BaseApiController
     {
         [HttpGet("data/{serial}")]
         public async Task<IActionResult> GetESPData(string serial)
@@ -45,7 +47,7 @@ namespace LifeAlertPlus.API.Controllers
 
         [HttpPost("ingest")]
         [AllowAnonymous]
-        public IActionResult IngestESPData([FromBody] ESPDataResponseDTO payload)
+        public async Task<IActionResult> IngestESPData([FromBody] ESPDataResponseDTO payload)
         {
             var expectedKey = configuration["Urls:EspDeviceKey"];
             var providedKey = Request.Headers["X-Device-Key"].ToString();
@@ -62,8 +64,39 @@ namespace LifeAlertPlus.API.Controllers
             payload.ErrorMessage = null;
 
             simulationManager.SetData(payload);
-            logger.LogDebug("ESP data ingested from {Serial}", payload.Serial);
 
+            var monitored = await monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(payload.Serial);
+            if (monitored == null)
+            {
+                logger.LogDebug("ESP data ingested from {Serial} (no monitored linked — measurement not persisted)", payload.Serial);
+                return Ok();
+            }
+
+            int pulse = payload.Bpm ?? 0;
+            double temperature = payload.Temperature ?? 0;
+            int spo2 = 0;
+            string coordinates = payload.Neo6m ?? string.Empty;
+
+            var measurement = new Domain.Entities.Measurement
+            {
+                Id = Guid.NewGuid(),
+                Name = "ESP Device",
+                Activity = string.Empty,
+                IsFall = false,
+                IdMonitored = monitored.Id,
+                Pulse = pulse,
+                SpO2 = spo2,
+                Temperature = temperature,
+                Coordinates = coordinates,
+                CreatedAt = DateTime.UtcNow
+            };
+            await measurementService.AddMeasurementAsync(measurement);
+
+            _ = alertMonitorService.ProcessMeasurementAsync(
+                monitored.Id, pulse, temperature, spo2, isFall: false,
+                coordinates: coordinates);
+
+            logger.LogDebug("ESP data ingested from {Serial}: pulse={Pulse} temp={Temp}", payload.Serial, pulse, temperature);
             return Ok();
         }
 
@@ -86,6 +119,25 @@ namespace LifeAlertPlus.API.Controllers
             await alertMonitorService.TriggerPanicAlertAsync(monitored.Id, payload.Coordinates);
             logger.LogWarning("Panic alert triggered by device {Serial}", payload.Serial);
             return Ok();
+        }
+
+        [HttpGet("wifi-config/{serial}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetWifiConfig(string serial)
+        {
+            var expectedKey = configuration["Urls:EspDeviceKey"];
+            var providedKey = Request.Headers["X-Device-Key"].ToString();
+            if (string.IsNullOrWhiteSpace(expectedKey) || providedKey != expectedKey)
+                return Unauthorized(new { Message = "Invalid device key." });
+
+            if (string.IsNullOrWhiteSpace(serial))
+                return BadRequest(new { Message = "Serial is required." });
+
+            var networks = await wifiNetworkService.GetByDeviceSerialAsync(serial.Trim());
+            var payload = networks
+                .Select(n => new { ssid = n.Ssid, password = n.Password })
+                .ToList();
+            return Ok(new { networks = payload });
         }
 
         [HttpPost("heartbeat")]

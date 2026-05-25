@@ -20,6 +20,7 @@ namespace LifeAlertPlus.Infrastructure.Context
         public DbSet<Invitation> Invitations { get; set; } = default!;
         public DbSet<ActivityProfile> ActivityProfiles { get; set; } = default!;
         public DbSet<MonitoredCondition> MonitoredConditions { get; set; } = default!;
+        public DbSet<WifiNetwork> WifiNetworks { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -104,6 +105,15 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<MonitoredCondition>()
                 .HasIndex(c => new { c.IdMonitored, c.ConditionKey })
                 .IsUnique();
+
+            modelBuilder.Entity<WifiNetwork>().HasKey(w => w.Id);
+            modelBuilder.Entity<WifiNetwork>()
+                .HasOne(w => w.Monitored)
+                .WithMany()
+                .HasForeignKey(w => w.IdMonitored)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<WifiNetwork>()
+                .HasIndex(w => w.IdMonitored);
         }
     }
 }

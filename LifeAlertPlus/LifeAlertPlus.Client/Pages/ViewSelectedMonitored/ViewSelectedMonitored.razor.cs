@@ -141,7 +141,6 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                     Id = monitored.Id,
                     Name = $"{monitored.FirstName} {monitored.LastName}".Trim(),
                     Age = GetAge(monitored.Birthdate),
-                    Relationship = monitored.Gender ?? "N/A",
                     HeartRate = heartRate,
                     SpO2 = spO2,
                     Temperature = temperature,
@@ -942,7 +941,6 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             public Guid Id { get; set; }
             public string Name { get; set; } = string.Empty;
             public int Age { get; set; }
-            public string Relationship { get; set; } = string.Empty;
             public int HeartRate { get; set; }
             public int SpO2 { get; set; }
             public double Temperature { get; set; }

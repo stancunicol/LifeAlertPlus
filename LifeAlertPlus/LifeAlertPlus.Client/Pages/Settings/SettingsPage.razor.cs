@@ -29,7 +29,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
         private AppSettings Settings { get; set; } = new AppSettings
         {
             AccentColor = "#A5D6A7",
-            FontSize = "medium",
             EnableAnimations = true,
             FirstDayOfWeek = "monday",
 
@@ -52,10 +51,10 @@ namespace LifeAlertPlus.Client.Pages.Settings
             CheckInterval = "60",
             NotifyByEmail = true,
             NotifyByPush = true,
+            EnableDailyReport = false,
 
             AutoSave = true,
             AutoBackup = true,
-            HistoryRetention = "365",
             UpdateFrequency = 30,
 
             Language = "ro",
@@ -90,7 +89,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
             {
                 FirstDayOfTheWeek = Settings.FirstDayOfWeek,
                 Language = Settings.Language,
-                FontSize = Settings.FontSize,
                 MinHeartRate = Settings.HeartRateMin,
                 MaxHeartRate = Settings.HeartRateMax,
                 MinTemperature = (float)Settings.TemperatureMin,
@@ -98,10 +96,10 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 MinSpO2 = Settings.SpO2Min,
                 MaxSpO2 = Settings.SpO2Max,
                 UpdateFrequency = Settings.UpdateFrequency,
-                DataRetentionDays = int.TryParse(Settings.HistoryRetention, out var ret) ? ret : 0,
                 NotifyByEmail = Settings.NotifyByEmail,
                 NotifyByPush = Settings.NotifyByPush,
-                NotifyBySms = Settings.NotifyBySms
+                NotifyBySms = Settings.NotifyBySms,
+                EnableDailyReport = Settings.EnableDailyReport
             };
 
             var request = await UserApiClient.UpdateUserAsync(UserId, settings);
@@ -181,8 +179,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 Lang.SetLanguage(userFromApi.Language);
                 await JSRuntime.InvokeVoidAsync("setLanguage", userFromApi.Language);
             }
-            if (!string.IsNullOrEmpty(userFromApi.FontSize))
-                Settings.FontSize = userFromApi.FontSize;
             if (userFromApi.MinHeartRate > 0) Settings.HeartRateMin = userFromApi.MinHeartRate;
             if (userFromApi.MaxHeartRate > 0) Settings.HeartRateMax = userFromApi.MaxHeartRate;
             if (userFromApi.MinTemperature > 0) Settings.TemperatureMin = userFromApi.MinTemperature;
@@ -191,10 +187,10 @@ namespace LifeAlertPlus.Client.Pages.Settings
             if (userFromApi.MaxSpO2 > 0) Settings.SpO2Max = userFromApi.MaxSpO2;
             if (userFromApi.UpdateFrequency > 0)
                 Settings.UpdateFrequency = userFromApi.UpdateFrequency;
-            Settings.HistoryRetention = userFromApi.DataRetentionDays > 0 ? userFromApi.DataRetentionDays.ToString() : "365";
             Settings.NotifyByEmail = userFromApi.NotifyByEmail;
             Settings.NotifyByPush = userFromApi.NotifyByPush;
             Settings.NotifyBySms = userFromApi.NotifyBySms;
+            Settings.EnableDailyReport = userFromApi.EnableDailyReport;
 
             if (_lastUpdatedDate.HasValue)
             {
@@ -235,7 +231,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Settings = new AppSettings
             {
                 AccentColor = "#A5D6A7",
-                FontSize = "medium",
                 EnableAnimations = true,
                 FirstDayOfWeek = "monday",
                 BPSystolicMin = 90,
@@ -257,9 +252,9 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 NotifyByEmail = true,
                 NotifyByPush = true,
                 NotifyBySms = false,
+                EnableDailyReport = false,
                 AutoSave = true,
                 AutoBackup = true,
-                HistoryRetention = "365",
                 UpdateFrequency = 30,
                 Language = "ro",
                 DateFormat = "dd/MM/yyyy",
@@ -271,7 +266,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
         {
             // Appearance
             public string AccentColor { get; set; } = string.Empty;
-            public string FontSize { get; set; } = string.Empty;
             public bool EnableAnimations { get; set; }
             public string FirstDayOfWeek { get; set; } = string.Empty;
 
@@ -297,11 +291,11 @@ namespace LifeAlertPlus.Client.Pages.Settings
             public bool NotifyByEmail { get; set; } = true;
             public bool NotifyByPush { get; set; } = true;
             public bool NotifyBySms { get; set; } = false;
+            public bool EnableDailyReport { get; set; } = false;
 
             // Data Management
             public bool AutoSave { get; set; }
             public bool AutoBackup { get; set; }
-            public string HistoryRetention { get; set; } = string.Empty;
 
             // Update frequency (seconds)
             public int UpdateFrequency { get; set; } = 30;

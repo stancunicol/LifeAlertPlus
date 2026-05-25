@@ -44,7 +44,6 @@ public static class TestDataFactory
         MinSpO2             = 95,
         MaxSpO2             = 100,
         Language            = "ro",
-        FontSize            = "medium",
         UpdateFrequency     = 30,
         NotifyByEmail       = true,
         NotifyByPush        = true

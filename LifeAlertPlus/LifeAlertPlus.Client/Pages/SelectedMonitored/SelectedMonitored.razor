@@ -19,6 +19,7 @@
                 @if (_showEditButton)
                 {
                     <button class="btn-action-main" @onclick="OpenInviteModal">✉️ @T("invite.sendToDoctor")</button>
+                    <button class="btn-action-main" @onclick="OpenWifiModalAsync">📶 @T("wifi.manage")</button>
                 }
             </div>
         </div>
@@ -32,14 +33,6 @@
                         @if (Person.Age > 0)
                         {
                             <span>@Person.Age @T("selected.years")</span>
-                            @if (!string.IsNullOrEmpty(Person.Relationship))
-                            {
-                                <span> • @Person.Relationship</span>
-                            }
-                        }
-                        else if (!string.IsNullOrEmpty(Person.Relationship))
-                        {
-                            <span>@Person.Relationship</span>
                         }
                         else
                         {
@@ -689,6 +682,17 @@
                         <option value="300">@T("settings.every5m")</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>@T("selected.dataRetention")</label>
+                    <p class="form-hint">@T("selected.dataRetentionDesc")</p>
+                    <select @bind="_editDataRetentionDays">
+                        <option value="">@T("selected.dataRetentionDefault")</option>
+                        <option value="30">@T("settings.30days")</option>
+                        <option value="90">@T("settings.90days")</option>
+                        <option value="180">@T("settings.6months")</option>
+                        <option value="365">@T("settings.1year")</option>
+                    </select>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" @onclick="CloseEditModal">@T("common.cancel")</button>
@@ -857,6 +861,75 @@
                 <button class="btn-save" @onclick="SendInvitationToDoctorAsync" disabled="@(_isSendingInvitation || string.IsNullOrWhiteSpace(_inviteDoctorEmail))">
                     @(_isSendingInvitation ? T("invite.sendingInvitation") : "✉️ " + T("invite.sendInvitation"))
                 </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showWifiModal)
+{
+    <div class="modal-overlay" @onclick="CloseWifiModal">
+        <div class="modal-content wifi-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>📶 @T("wifi.modalTitle")</h2>
+                <button class="modal-close" @onclick="CloseWifiModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="wifi-hint">@T("wifi.hint")</p>
+
+                @if (_isWifiLoading)
+                {
+                    <p>@T("wifi.loading")</p>
+                }
+                else
+                {
+                    @if (_wifiNetworks.Count == 0)
+                    {
+                        <p class="wifi-empty">@T("wifi.empty")</p>
+                    }
+                    else
+                    {
+                        <ul class="wifi-list">
+                            @foreach (var net in _wifiNetworks)
+                            {
+                                <li class="wifi-item">
+                                    <span class="wifi-ssid">📡 @net.Ssid</span>
+                                    <button class="wifi-delete" @onclick="() => DeleteWifiNetworkAsync(net.Id)" title="@T("wifi.delete")">🗑️</button>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    @if (_wifiNetworks.Count < MaxWifiNetworks)
+                    {
+                        <div class="wifi-add">
+                            <h3>@T("wifi.addTitle")</h3>
+                            <div class="form-group">
+                                <label>@T("wifi.ssid")</label>
+                                <input type="text" maxlength="32" @bind="_newWifiSsid" placeholder="@T("wifi.ssidPlaceholder")" />
+                            </div>
+                            <div class="form-group">
+                                <label>@T("wifi.password")</label>
+                                <input type="password" maxlength="64" @bind="_newWifiPassword" placeholder="@T("wifi.passwordPlaceholder")" />
+                            </div>
+                            <button class="btn-save" @onclick="AddWifiNetworkAsync" disabled="@(_isAddingWifi || string.IsNullOrWhiteSpace(_newWifiSsid))">
+                                @(_isAddingWifi ? T("wifi.adding") : "➕ " + T("wifi.add"))
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="wifi-limit">@T("wifi.limitReached")</p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_wifiStatusMessage))
+                    {
+                        <p class="@(_wifiSuccess ? "email-success" : "email-error")">@_wifiStatusMessage</p>
+                    }
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseWifiModal">@T("common.close")</button>
             </div>
         </div>
     </div>

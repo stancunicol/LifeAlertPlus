@@ -585,6 +585,28 @@ namespace LifeAlertPlus.Application.Services
             await client.SendMailAsync(mail);
         }
 
+        public async Task SendDailyReportEmailAsync(string recipientEmail, string recipientName, string reportHtmlBody, DateTime reportDate, string lang = "ro")
+        {
+            using var client = CreateSmtpClient();
+            var sender = GetSenderAddress();
+
+            bool isEn = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase);
+            var culture = isEn ? new System.Globalization.CultureInfo("en-US") : new System.Globalization.CultureInfo("ro-RO");
+            string dateText = reportDate.ToString("dd MMMM yyyy", culture);
+            string subject = isEn
+                ? $"📊 LifeAlert+ Daily Report — {dateText}"
+                : $"📊 LifeAlert+ Raport zilnic — {dateText}";
+
+            var mail = new MailMessage(sender, new MailAddress(recipientEmail, recipientName))
+            {
+                Subject = subject,
+                IsBodyHtml = true,
+                Body = reportHtmlBody
+            };
+
+            await client.SendMailAsync(mail);
+        }
+
         private string GenerateAlertEmailBody(string recipientName, string patientName, string severity, string details, bool isEn)
         {
             var severityColor = severity == "CRITICAL" ? "#e53935" : "#FF8F00";

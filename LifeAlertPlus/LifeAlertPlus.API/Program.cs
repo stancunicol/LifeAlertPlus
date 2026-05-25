@@ -56,6 +56,8 @@ builder.Services.AddSingleton<ConditionRuleEngine>();
 builder.Services.AddSingleton<AlertMonitorService>();
 builder.Services.AddScoped<DailyReportService>();
 builder.Services.AddHostedService<DailyReportBackgroundService>();
+builder.Services.AddScoped<RetentionCleanupService>();
+builder.Services.AddHostedService<RetentionCleanupBackgroundService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -92,6 +94,7 @@ builder.Services.AddScoped<IMeasurementRepository, MeasurementRepository>();
 builder.Services.AddScoped<IInvitationRepository, InvitationRepository>();
 builder.Services.AddScoped<IActivityProfileRepository, ActivityProfileRepository>();
 builder.Services.AddScoped<IMonitoredConditionRepository, MonitoredConditionRepository>();
+builder.Services.AddScoped<IWifiNetworkRepository, WifiNetworkRepository>();
 builder.Services.AddSingleton<NearestHospitalService>();
 
 builder.Services.AddScoped<IUserService, UserService>();
@@ -102,9 +105,9 @@ builder.Services.AddScoped<IMonitoredService, MonitoredService>();
 builder.Services.AddScoped<IUserMonitoredService, UserMonitoredService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IMeasurementService, MeasurementService>();
+builder.Services.AddScoped<IWifiNetworkService, WifiNetworkService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<GetUrlService>();
-builder.Services.AddScoped<IImportService, ImportService>();
 
 var connString = builder.Configuration.GetConnectionString("Default") ?? "Data Source=lifealert.db";
 

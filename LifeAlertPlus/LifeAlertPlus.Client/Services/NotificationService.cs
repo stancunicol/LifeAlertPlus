@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using LifeAlertPlus.Domain.Entities;
+using LifeAlertPlus.Shared.DTOs.Requests.Notification;
 using LifeAlertPlus.Shared.DTOs.Responses.Notification;
 
 namespace LifeAlertPlus.Client.Services
@@ -41,6 +42,27 @@ namespace LifeAlertPlus.Client.Services
         {
             var result = await _httpClient.GetFromJsonAsync<List<Notification>>("api/notification/recent?count=" + count);
             return result ?? new List<Notification>();
+        }
+
+        public async Task<List<PendingFeedbackDTO>> GetPendingFeedbackAsync()
+        {
+            try
+            {
+                var result = await _httpClient.GetFromJsonAsync<List<PendingFeedbackDTO>>("api/notification/pending-feedback");
+                return result ?? new List<PendingFeedbackDTO>();
+            }
+            catch
+            {
+                return new List<PendingFeedbackDTO>();
+            }
+        }
+
+        public async Task<bool> SubmitFeedbackAsync(Guid id, bool wasReal)
+        {
+            var response = await _httpClient.PatchAsJsonAsync(
+                $"api/notification/{id}/feedback",
+                new NotificationFeedbackRequestDTO { WasReal = wasReal });
+            return response.IsSuccessStatusCode;
         }
     }
 }
