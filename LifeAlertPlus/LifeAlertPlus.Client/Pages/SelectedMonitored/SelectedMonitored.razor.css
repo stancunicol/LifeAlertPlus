@@ -1939,6 +1939,10 @@
     margin-top: 4px;
 }
 
+.wifi-add .btn-save {
+    margin-top: 16px;
+}
+
 .wifi-add h3 {
     margin: 0 0 12px;
     font-size: 15px;

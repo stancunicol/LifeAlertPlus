@@ -142,20 +142,22 @@
                 <div class="form-group">
                     <label>@T("profile.currentPassword")</label>
                     <div class="password-field">
-                        <input type="@(_showPasswords ? "text" : "password")" @bind="PasswordChange.CurrentPassword" placeholder="@T("profile.currentPasswordPh")" class="input-modal" />
+                        <input type="@(_showCurrentPassword ? "text" : "password")" @bind="PasswordChange.CurrentPassword" placeholder="@T("profile.currentPasswordPh")" class="input-modal" />
+                        <button type="button" class="password-toggle" @onclick="ToggleCurrentPasswordVisibility" aria-label="Toggle current password visibility">👁</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>@T("profile.newPassword")</label>
                     <div class="password-field">
-                        <input type="@(_showPasswords ? "text" : "password")" @bind="PasswordChange.NewPassword" placeholder="@T("profile.newPasswordPh")" class="input-modal" />
+                        <input type="@(_showNewPassword ? "text" : "password")" @bind="PasswordChange.NewPassword" placeholder="@T("profile.newPasswordPh")" class="input-modal" />
+                        <button type="button" class="password-toggle" @onclick="ToggleNewPasswordVisibility" aria-label="Toggle new password visibility">👁</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>@T("profile.confirmNewPassword")</label>
                     <div class="password-field">
-                        <input type="@(_showPasswords ? "text" : "password")" @bind="PasswordChange.ConfirmPassword" placeholder="@T("profile.confirmNewPasswordPh")" class="input-modal" />
-                        <button type="button" class="password-toggle" @onclick="TogglePasswordsVisibility" aria-label="Toggle password visibility">👁</button>
+                        <input type="@(_showConfirmPassword ? "text" : "password")" @bind="PasswordChange.ConfirmPassword" placeholder="@T("profile.confirmNewPasswordPh")" class="input-modal" />
+                        <button type="button" class="password-toggle" @onclick="ToggleConfirmPasswordVisibility" aria-label="Toggle confirm password visibility">👁</button>
                     </div>
                 </div>
                 @if (!string.IsNullOrEmpty(PasswordError))

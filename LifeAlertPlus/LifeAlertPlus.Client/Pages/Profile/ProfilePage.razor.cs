@@ -49,7 +49,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private bool ShowChangePasswordModal { get; set; } = false;
         private UserChangePasswordRequestDTO PasswordChange { get; set; } = new UserChangePasswordRequestDTO();
         private string PasswordError { get; set; } = string.Empty;
-        private bool _showPasswords = false;
+        private bool _showCurrentPassword = false;
+        private bool _showNewPassword = false;
+        private bool _showConfirmPassword = false;
         private string EmailCurrentPasswordFieldType { get; set; } = "password";
 
         private bool ShowChangeEmailModal { get; set; } = false;
@@ -216,9 +218,19 @@ namespace LifeAlertPlus.Client.Pages.Profile
             PasswordError = string.Empty;
         }
 
-        private void TogglePasswordsVisibility()
+        private void ToggleCurrentPasswordVisibility()
         {
-            _showPasswords = !_showPasswords;
+            _showCurrentPassword = !_showCurrentPassword;
+        }
+
+        private void ToggleNewPasswordVisibility()
+        {
+            _showNewPassword = !_showNewPassword;
+        }
+
+        private void ToggleConfirmPasswordVisibility()
+        {
+            _showConfirmPassword = !_showConfirmPassword;
         }
 
         private void ToggleEmailCurrentPasswordVisibility()
@@ -231,7 +243,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
             ShowChangePasswordModal = false;
             PasswordChange = new UserChangePasswordRequestDTO();
             PasswordError = string.Empty;
-            _showPasswords = false;
+            _showCurrentPassword = false;
+            _showNewPassword = false;
+            _showConfirmPassword = false;
         }
 
         private async Task ChangePassword()

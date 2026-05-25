@@ -1,0 +1,107 @@
+@page "/admin-history"
+@using LifeAlertPlus.Client.Components.HeaderAdmin
+
+<HeaderAdminComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
+
+<div class="admin-container">
+	<div class="admin-header">
+		<div class="header-title-section">
+			<h1>@T("adminHistory.title")</h1>
+			<p class="admin-subtitle">@T("adminHistory.subtitle")</p>
+		</div>
+		<span class="tag chip-muted">@T("adminHistory.liveOverview")</span>
+	</div>
+
+	@if (IsLoading)
+	{
+		<div class="loading-message">@T("adminHistory.loading")</div>
+	}
+	else if (!string.IsNullOrEmpty(ErrorMessage))
+	{
+		<div class="error-message">
+			<span>@ErrorMessage</span>
+			<button @onclick="LoadEntriesAsync">@T("adminHistory.retry")</button>
+		</div>
+	}
+	else
+	{
+		<div class="stats-grid admin-stats">
+			<div class="stat-card">
+				<div class="stat-icon users">📝</div>
+				<div class="stat-info">
+					<span class="stat-label">@T("adminHistory.totalEvents")</span>
+					<span class="stat-value">@TotalEvents</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon alert">⚠️</div>
+				<div class="stat-info">
+					<span class="stat-label">@T("adminHistory.accountEvents")</span>
+					<span class="stat-value">@AccountEvents</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon monitored">⚙️</div>
+				<div class="stat-info">
+					<span class="stat-label">@T("adminHistory.systemEvents")</span>
+					<span class="stat-value">@SystemEvents</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon online">✅</div>
+				<div class="stat-info">
+					<span class="stat-label">@T("adminHistory.deleteActions")</span>
+					<span class="stat-value">@DeleteActions</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="section">
+			<div class="section-header">
+				<div>
+					<h2>@T("adminHistory.logTitle")</h2>
+					<span class="section-note">@T("adminHistory.summary")</span>
+				</div>
+				<div class="section-actions">
+					<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="@T("adminHistory.searchPh")" />
+					<div class="filters">
+						<button class="filter-btn @GetFilterClass("all")" @onclick="() => SetFilter("all")">@T("adminHistory.all")</button>
+						<button class="filter-btn @GetFilterClass("Account")" @onclick="() => SetFilter("Account")">@T("adminHistory.account")</button>
+						<button class="filter-btn @GetFilterClass("System")" @onclick="() => SetFilter("System")">@T("adminHistory.system")</button>
+					</div>
+				</div>
+			</div>
+
+			@if (!FilteredEntries.Any())
+			{
+				<div class="empty-message">@T("adminHistory.noEvents")</div>
+			}
+			else
+			{
+				<div class="table-container">
+					<table class="admin-table">
+						<thead>
+							<tr>
+								<th>@T("adminHistory.thTimestamp")</th>
+								<th>@T("adminHistory.thUser")</th>
+								<th>@T("adminHistory.thAction")</th>
+								<th>@T("adminHistory.thDetails")</th>
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (var entry in FilteredEntries)
+							{
+								<tr>
+									<td>@FormatDate(entry.Timestamp)</td>
+									<td>@entry.User</td>
+									<td>@entry.Action</td>
+									<td>@entry.Details</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</div>
+	}
+</div>

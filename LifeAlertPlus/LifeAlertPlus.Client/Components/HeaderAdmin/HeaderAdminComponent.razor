@@ -18,6 +18,8 @@
                 <a href="/admin-dashboard" class="nav-link @(IsActive("/admin-dashboard") ? "active" : "")">@T("adminNav.dashboard")</a>
                 <a href="/monitored-users" class="nav-link @(IsActive("/monitored-users") ? "active" : "")">@T("adminNav.monitoreds")</a>
                 <a href="/users" class="nav-link @(IsActive("/users") ? "active" : "")">@T("adminNav.users")</a>
+                <a href="/admin-history" class="nav-link @(IsActive("/admin-history") ? "active" : "")">@T("adminNav.history")</a>
+                <a href="/admin-errors" class="nav-link @(IsActive("/admin-errors") ? "active" : "")">@T("adminNav.errorLog")</a>
                 <a href="/simulations" class="nav-link @(IsActive("/simulations") ? "active" : "")">@T("adminNav.simulations")</a>
             </nav>
         </div>
@@ -62,6 +64,8 @@
         <a href="/admin-dashboard" class="mobile-nav-link @(IsActive("/admin-dashboard") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.dashboard")</a>
         <a href="/monitored-users" class="mobile-nav-link @(IsActive("/monitored-users") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.monitoreds")</a>
         <a href="/users" class="mobile-nav-link @(IsActive("/users") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.users")</a>
+        <a href="/admin-history" class="mobile-nav-link @(IsActive("/admin-history") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.history")</a>
+        <a href="/admin-errors" class="mobile-nav-link @(IsActive("/admin-errors") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.errorLog")</a>
         <a href="/simulations" class="mobile-nav-link @(IsActive("/simulations") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.simulations")</a>
         <div class="mobile-nav-divider"></div>
         <a href="/profile" class="mobile-nav-link @(IsActive("/profile") ? "active" : "")" @onclick="CloseMobileMenu">@T("adminNav.profile")</a>

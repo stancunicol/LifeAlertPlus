@@ -66,8 +66,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
         private string Version = "";
-        private string LastUpdated = "";
-        private DateTime? _lastUpdatedDate;
         private Guid UserId;
 
         private string T(string key) => Lang.T(key);
@@ -77,13 +75,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
             // Sync language to LanguageService before saving
             Lang.SetLanguage(Settings.Language);
             await JSRuntime.InvokeVoidAsync("setLanguage", Settings.Language);
-
-            // Re-format last update date with the new language
-            if (_lastUpdatedDate.HasValue)
-            {
-                var culture = Settings.Language == "ro" ? new CultureInfo("ro-RO") : new CultureInfo("en-US");
-                LastUpdated = _lastUpdatedDate.Value.ToString("dd MMMM yyyy", culture);
-            }
 
             var settings = new UserUpdateRequestDTO
             {
@@ -135,21 +126,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 Version = AppVersion.Version;
             }
 
-            try
-            {
-                var luUrl = Navigation.BaseUri + "LAST_UPDATED";
-                var lu = await Http.GetStringAsync(luUrl);
-                var raw = (lu ?? string.Empty).Trim();
-                if (DateTime.TryParse(raw, out var dt))
-                    _lastUpdatedDate = dt;
-                else
-                    LastUpdated = raw;
-            }
-            catch
-            {
-                LastUpdated = "—";
-            }
-
             var claims = await TokenParser.GetClaimsAsync();
             if (claims == null)
             {
@@ -191,12 +167,6 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Settings.NotifyByPush = userFromApi.NotifyByPush;
             Settings.NotifyBySms = userFromApi.NotifyBySms;
             Settings.EnableDailyReport = userFromApi.EnableDailyReport;
-
-            if (_lastUpdatedDate.HasValue)
-            {
-                var culture = Settings.Language == "ro" ? new CultureInfo("ro-RO") : new CultureInfo("en-US");
-                LastUpdated = _lastUpdatedDate.Value.ToString("dd MMMM yyyy", culture);
-            }
 
             if (!string.IsNullOrEmpty(userFromApi.ProfilePictureUrl))
             {

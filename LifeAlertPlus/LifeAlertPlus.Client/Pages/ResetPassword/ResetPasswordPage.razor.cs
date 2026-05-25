@@ -21,9 +21,11 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
         private string Password { get; set; } = string.Empty;
         private string ConfirmPassword { get; set; } = string.Empty;
         private bool _showPassword = false;
+        private bool _showConfirmPassword = false;
         private string Version { get; set; } = string.Empty;
 
         private void ToggleShowPassword() => _showPassword = !_showPassword;
+        private void ToggleShowConfirmPassword() => _showConfirmPassword = !_showConfirmPassword;
         private string ErrorMessage { get; set; } = string.Empty;
         private string SuccessMessage { get; set; } = string.Empty;
         private string ResetToken { get; set; } = string.Empty;

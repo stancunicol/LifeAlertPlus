@@ -41,6 +41,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private IJSRuntime JSRuntime { get; set; } = default!;
 
         [Inject]
+        private PushNotificationClientService PushService { get; set; } = default!;
+
+        [Inject]
         private LanguageService Lang { get; set; } = default!;
 
         [Inject]
@@ -88,6 +91,28 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _hasPrevDayData = false;
         private System.Threading.Timer? _refreshTimer;
         private bool _disposed = false;
+
+        private void OnPushNotificationReceived(string message, string severity)
+        {
+            if (_disposed)
+                return;
+
+            _ = InvokeAsync(async () =>
+            {
+                await RefreshDataAsync();
+            });
+        }
+
+        private void OnMeasurementAdded(Guid monitoredId)
+        {
+            if (_disposed || monitoredId != PersonId)
+                return;
+
+            _ = InvokeAsync(async () =>
+            {
+                await RefreshDataAsync();
+            });
+        }
 
         // User global vital range fallbacks
         private int _userMinHr = 60;
@@ -1227,6 +1252,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
             await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
 
+            PushService.OnNotificationReceived += OnPushNotificationReceived;
+            MeasurementApiClient.OnMeasurementAdded += OnMeasurementAdded;
+
             // Start auto-refresh timer (uses user-configured update frequency)
             _refreshTimer = new System.Threading.Timer(_ => _ = RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
         }
@@ -1403,6 +1431,12 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         public async ValueTask DisposeAsync()
         {
             _disposed = true;
+            if (PushService != null)
+            {
+                PushService.OnNotificationReceived -= OnPushNotificationReceived;
+            }
+
+            MeasurementApiClient.OnMeasurementAdded -= OnMeasurementAdded;
             _refreshTimer?.Dispose();
             try
             {

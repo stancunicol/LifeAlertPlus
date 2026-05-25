@@ -29,7 +29,6 @@ namespace LifeAlertPlus.Client.Pages.Login
         
         private string Email { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
-        private bool _showPassword = false;
         private string Version { get; set; } = string.Empty;
         private string ErrorMessage { get; set; } = string.Empty;
         private bool ShowForgotPasswordModal { get; set; } = false;
@@ -116,11 +115,6 @@ namespace LifeAlertPlus.Client.Pages.Login
             {
                 await OnLogin();
             }
-        }
-
-        private void ToggleShowPassword()
-        {
-            _showPassword = !_showPassword;
         }
 
         private void OpenForgotPasswordModal()

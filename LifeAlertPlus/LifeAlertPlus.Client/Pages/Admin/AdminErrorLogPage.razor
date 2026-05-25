@@ -1,0 +1,110 @@
+@page "/admin-errors"
+@using LifeAlertPlus.Client.Components.HeaderAdmin
+
+<HeaderAdminComponent UserName="@UserFullName" ProfilePictureUrl="@ProfilePictureUrl" />
+
+<div class="admin-container">
+	<div class="admin-header">
+		<div class="header-title-section">
+			<h1>@T("adminErrors.title")</h1>
+			<p class="admin-subtitle">@T("adminErrors.subtitle")</p>
+		</div>
+		<span class="tag chip-muted">@T("adminErrors.liveOverview")</span>
+	</div>
+
+	@if (IsLoading)
+	{
+		<div class="loading-message">@T("adminErrors.loading")</div>
+	}
+	else if (!string.IsNullOrEmpty(ErrorMessage))
+	{
+		<div class="error-message">
+			<span>@ErrorMessage</span>
+			<button @onclick="LoadErrorsAsync">@T("adminErrors.retry")</button>
+		</div>
+	}
+	else
+	{
+		<div class="stats-grid admin-stats">
+			<div class="stat-card">
+				<div class="stat-icon error">❌</div>
+				<div class="stat-info">
+					<span class="stat-label">@T("adminErrors.totalErrors")</span>
+					<span class="stat-value">@ErrorCount</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon warning">⚠️</div>
+				<div class="stat-info">
+					<span class="stat-label">@T("adminErrors.totalWarnings")</span>
+					<span class="stat-value">@WarningCount</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon info">ℹ️</div>
+				<div class="stat-info">
+					<span class="stat-label">@T("adminErrors.totalInfo")</span>
+					<span class="stat-value">@InfoCount</span>
+				</div>
+			</div>
+			<div class="stat-card">
+				<div class="stat-icon monitored">🕒</div>
+				<div class="stat-info">
+					<span class="stat-label">@T("adminErrors.recent24h")</span>
+					<span class="stat-value">@Recent24hCount</span>
+				</div>
+			</div>
+		</div>
+
+		<div class="section">
+			<div class="section-header">
+				<div>
+					<h2>@T("adminErrors.logTitle")</h2>
+					<span class="section-note">@T("adminErrors.summary")</span>
+				</div>
+				<div class="section-actions">
+					<input class="search" @bind="SearchText" @bind:event="oninput" placeholder="@T("adminErrors.searchPh")" />
+					<div class="filters">
+						<button class="filter-btn @GetFilterClass("all")" @onclick="() => SetFilter("all")">@T("adminErrors.all")</button>
+						<button class="filter-btn @GetFilterClass("Error")" @onclick="() => SetFilter("Error")">@T("adminErrors.error")</button>
+						<button class="filter-btn @GetFilterClass("Warning")" @onclick="() => SetFilter("Warning")">@T("adminErrors.warning")</button>
+						<button class="filter-btn @GetFilterClass("Info")" @onclick="() => SetFilter("Info")">@T("adminErrors.info")</button>
+					</div>
+				</div>
+			</div>
+
+			@if (!FilteredEntries.Any())
+			{
+				<div class="empty-message">@T("adminErrors.noEntries")</div>
+			}
+			else
+			{
+				<div class="table-container">
+					<table class="admin-table">
+						<thead>
+							<tr>
+								<th>@T("adminErrors.thTimestamp")</th>
+								<th>@T("adminErrors.thLevel")</th>
+								<th>@T("adminErrors.thSource")</th>
+								<th>@T("adminErrors.thMessage")</th>
+								<th>@T("adminErrors.thDetails")</th>
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (var entry in FilteredEntries)
+							{
+								<tr>
+									<td>@FormatDate(entry.Timestamp)</td>
+									<td>@entry.Level</td>
+									<td>@entry.Source</td>
+									<td>@entry.Message</td>
+									<td>@entry.Details</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+		</div>
+	}
+</div>

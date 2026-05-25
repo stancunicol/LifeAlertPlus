@@ -1,0 +1,99 @@
+.admin-container {
+	padding: 2.5rem 2rem 2rem;
+	max-width: 1400px;
+	margin: 12px auto 0;
+	background: #f8f8f8;
+	min-height: 100vh;
+}
+
+.admin-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 2rem;
+}
+
+.section-actions {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+}
+
+.search {
+	flex: 1 1 280px;
+	padding: 12px 14px;
+	border-radius: 14px;
+	border: 1px solid #d9dde8;
+	background: white;
+	font-family: var(--font-body);
+	font-size: 0.95rem;
+	color: #1f2937;
+}
+
+.filters {
+	display: inline-flex;
+	gap: 10px;
+}
+
+.filter-btn {
+	border: 1px solid #d1d5db;
+	background: white;
+	padding: 10px 16px;
+	border-radius: 12px;
+	font-family: var(--font-body);
+	font-size: 0.95rem;
+	color: #374151;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+	border-color: #9ca3af;
+}
+
+.filter-btn.active {
+	background: linear-gradient(135deg, #fdf2f8 0%, #fce8f3 100%);
+	border-color: #ec4899;
+	color: #111827;
+}
+
+.table-container {
+	overflow-x: auto;
+	border-radius: 12px;
+}
+
+.admin-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-family: var(--font-body);
+}
+
+.admin-table th,
+.admin-table td {
+	padding: 14px 16px;
+	text-align: left;
+	border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-table thead {
+	background: linear-gradient(135deg, #F8BBD0 0%, #F48FB1 100%);
+}
+
+.admin-table th {
+	font-size: 0.95rem;
+	color: #111827;
+}
+
+.admin-table tbody tr:hover {
+	background: #f9fafb;
+}
+
+@media (max-width: 860px) {
+	.admin-header,
+	.section-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+}

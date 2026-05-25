@@ -8,6 +8,8 @@ namespace LifeAlertPlus.Client.Services
     {
         private readonly HttpClient _httpClient;
 
+        public event Action<Guid>? OnMeasurementAdded;
+
         public MeasurementApiClient(HttpClient httpClient)
         {
             _httpClient = httpClient;
@@ -17,6 +19,7 @@ namespace LifeAlertPlus.Client.Services
         {
             var response = await _httpClient.PostAsJsonAsync("api/measurement", measurement);
             response.EnsureSuccessStatusCode();
+            OnMeasurementAdded?.Invoke(measurement.IdMonitored);
         }
 
         public async Task<IEnumerable<MeasurementResponseDTO>> GetMeasurementsByMonitoredIdAsync(Guid idMonitored, int pageNumber, int pageSize)

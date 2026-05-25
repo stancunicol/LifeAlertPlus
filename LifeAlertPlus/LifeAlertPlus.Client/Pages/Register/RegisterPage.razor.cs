@@ -25,7 +25,6 @@ namespace LifeAlertPlus.Client.Pages.Register
         private string PhoneNumber { get; set; } = string.Empty;
         private string Password { get; set; } = string.Empty;
         private string ConfirmPassword { get; set; } = string.Empty;
-        private bool _showPassword = false;
         private string Version { get; set; } = string.Empty;
         private string ErrorMessage { get; set; } = string.Empty;
         private string SuccessMessage { get; set; } = string.Empty;
@@ -107,11 +106,6 @@ namespace LifeAlertPlus.Client.Pages.Register
             {
                 await OnRegister();
             }
-        }
-
-        private void ToggleShowPassword()
-        {
-            _showPassword = !_showPassword;
         }
 
         private string MapApiError(string? apiMessage) => apiMessage switch
