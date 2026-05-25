@@ -7,7 +7,7 @@ const PRECACHE_URLS = [
   'LifeAlertPlus.Client.styles.css',
   'favicon.png',
   'icon-192.png',
-  'logo_final.png',
+  'final_logo.png',
   'VERSION'
 ];
 
