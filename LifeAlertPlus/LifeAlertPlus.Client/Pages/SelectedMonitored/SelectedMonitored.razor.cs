@@ -91,6 +91,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _hasPrevDayData = false;
         private System.Threading.Timer? _refreshTimer;
         private bool _disposed = false;
+        private int _refreshInFlight; // 0 = idle, 1 = a RefreshDataAsync is currently running
+        private DateTime _lastRefreshUtc = DateTime.MinValue;
+        private static readonly TimeSpan MinRefreshInterval = TimeSpan.FromSeconds(5);
 
         private void OnPushNotificationReceived(string message, string severity)
         {
@@ -247,26 +250,6 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 else
                 {
                     status = "Offline";
-                }
-
-                // Save measurement so the server-side alert monitor can track sustained alerts
-                if (espData?.IsAvailable == true && (heartRate > 0 || temperature > 0))
-                {
-                    try
-                    {
-                        await MeasurementApiClient.AddMeasurementAsync(new LifeAlertPlus.Shared.DTOs.Requests.Measurement.MeasurementRequestDTO
-                        {
-                            Name = "Auto",
-                            Activity = "Monitoring",
-                            IsFall = false,
-                            IdMonitored = monitored.Id,
-                            Pulse = heartRate,
-                            Temperature = temperature,
-                            SpO2 = spO2,
-                            Coordinates = gps
-                        });
-                    }
-                    catch { /* Don't block UI if save fails */ }
                 }
 
                 // Get last measurement time
@@ -1263,6 +1246,17 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         {
             if (_disposed) return;
 
+            // Drop overlapping refreshes: a single cascade already issues ~8 GETs.
+            // Without this guard, push notifications + timer + measurement events
+            // can stack and produce multiplied request bursts.
+            if (System.Threading.Interlocked.Exchange(ref _refreshInFlight, 1) == 1)
+                return;
+            if (DateTime.UtcNow - _lastRefreshUtc < MinRefreshInterval)
+            {
+                System.Threading.Interlocked.Exchange(ref _refreshInFlight, 0);
+                return;
+            }
+
             try
             {
                 await InvokeAsync(async () =>
@@ -1279,6 +1273,11 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             catch
             {
                 // Ignore errors during auto-refresh
+            }
+            finally
+            {
+                _lastRefreshUtc = DateTime.UtcNow;
+                System.Threading.Interlocked.Exchange(ref _refreshInFlight, 0);
             }
         }
 
