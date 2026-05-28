@@ -135,17 +135,28 @@ namespace LifeAlertPlus.Application.Services
 
             if (user != null)
             {
-                if (user.Provider != "Google" || user.ProviderKey != googleId ||
+                // If the existing account is NOT a Google account (classic email/password
+                // signup, or any other provider) we MUST refuse to merge — otherwise anyone
+                // who controls the Google account for that address could take over a
+                // password-protected account. The caller surfaces this as a user-facing
+                // error on the login page.
+                if (!string.Equals(user.Provider, "Google", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new GoogleEmailConflictException(email);
+                }
+
+                // Same email + same provider — refresh profile data if anything changed.
+                if (user.ProviderKey != googleId ||
                     user.FirstName != resolvedFirstName || user.LastName != resolvedLastName ||
                     user.ProfilePictureUrl != profilePictureUrl ||
                     user.RoleId == Guid.Empty)
                 {
-                    user.Provider = "Google";
                     user.ProviderKey = googleId;
                     user.FirstName = resolvedFirstName;
                     user.LastName = resolvedLastName;
                     user.ProfilePictureUrl = profilePictureUrl;
-                    user.RoleId = userRole.Id;
+                    if (user.RoleId == Guid.Empty)
+                        user.RoleId = userRole.Id;
                     user.UpdatedAt = DateTime.UtcNow;
                     await _userRepository.UpdateUserAsync(user);
                 }

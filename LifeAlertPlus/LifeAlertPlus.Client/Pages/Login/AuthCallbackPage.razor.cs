@@ -30,11 +30,26 @@ namespace LifeAlertPlus.Client.Pages.Login
                 if (key.Equals("returnUrl", StringComparison.OrdinalIgnoreCase)) returnUrl = val;
             }
 
+            // If the server forwarded an `error` in the callback URL, propagate it to /login
+            // so the user sees a concrete message instead of a silent redirect.
+            string? serverError = null;
+            foreach (var part in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = part.Split('=', 2);
+                if (kv.Length == 2 && kv[0].Equals("error", StringComparison.OrdinalIgnoreCase))
+                    serverError = Uri.UnescapeDataString(kv[1]);
+            }
+            if (!string.IsNullOrWhiteSpace(serverError))
+            {
+                _message = $"Authentication failed: {serverError}";
+                Navigation.NavigateTo($"/login?error={Uri.EscapeDataString(serverError)}");
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(code))
             {
-                _message = "Authentication failed. Invalid callback.";
-                await Task.Delay(2000);
-                Navigation.NavigateTo("/login");
+                _message = "Authentication failed: missing authorization code.";
+                Navigation.NavigateTo("/login?error=GoogleAuthFailed");
                 return;
             }
 
@@ -56,16 +71,19 @@ namespace LifeAlertPlus.Client.Pages.Login
                 }
                 else
                 {
-                    _message = "Authentication failed. Please try again.";
-                    await Task.Delay(2000);
-                    Navigation.NavigateTo("/login");
+                    _message = "Authentication failed: the server did not return a token.";
+                    Navigation.NavigateTo("/login?error=GoogleExchangeFailed");
                 }
             }
-            catch
+            catch (HttpRequestException ex)
             {
-                _message = "Authentication failed. Please try again.";
-                await Task.Delay(2000);
-                Navigation.NavigateTo("/login");
+                _message = $"Authentication failed: {ex.Message}";
+                Navigation.NavigateTo("/login?error=GoogleExchangeFailed");
+            }
+            catch (Exception ex)
+            {
+                _message = $"Authentication failed: {ex.Message}";
+                Navigation.NavigateTo("/login?error=GoogleExchangeFailed");
             }
         }
 

@@ -131,12 +131,12 @@ namespace LifeAlertPlus.API.Services
             sb.AppendLine("<meta charset='utf-8'>");
             sb.AppendLine("<style>");
             sb.AppendLine("body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }");
-            sb.AppendLine(".header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }");
+            sb.AppendLine(".header { background: linear-gradient(135deg, #81C784, #66BB6A); color: white; padding: 30px; border-radius: 8px 8px 0 0; }");
             sb.AppendLine(".header h1 { margin: 0; font-size: 24px; }");
-            sb.AppendLine(".header p { margin: 5px 0 0; font-size: 14px; opacity: 0.9; }");
+            sb.AppendLine(".header p { margin: 5px 0 0; font-size: 14px; opacity: 0.92; }");
             sb.AppendLine(".container { max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }");
             sb.AppendLine(".section { padding: 20px; border-bottom: 1px solid #f0f0f0; }");
-            sb.AppendLine(".section-title { font-size: 18px; font-weight: bold; color: #667eea; margin-bottom: 15px; }");
+            sb.AppendLine(".section-title { font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 15px; }");
             sb.AppendLine(".stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }");
             sb.AppendLine(".stat-label { font-weight: 600; color: #555; }");
             sb.AppendLine(".stat-value { color: #333; }");

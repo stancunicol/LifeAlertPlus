@@ -372,47 +372,49 @@ O caracteristică importantă a soluției este faptul că decizia finală nu est
 
 \begin{figure}[H]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
     every node/.style={font=\small},
-    input/.style={rectangle, rounded corners, draw, minimum width=4.0cm, minimum height=1.0cm, align=center, fill=blue!8},
-    proc/.style={rectangle, rounded corners, draw, minimum width=4.0cm, minimum height=1.0cm, align=center, fill=orange!15},
-    rules/.style={rectangle, rounded corners, draw, minimum width=4.0cm, minimum height=1.0cm, align=center, fill=yellow!20},
-    fuz/.style={rectangle, rounded corners, draw, minimum width=8.6cm, minimum height=1.1cm, align=center, fill=red!10},
-    out/.style={rectangle, rounded corners, draw, minimum width=4.0cm, minimum height=1.0cm, align=center, fill=green!15},
-    arrow/.style={-{Latex[length=2mm]}, thick},
-    join/.style={draw, thick}]
+    input/.style={rectangle, rounded corners, draw, minimum width=2.6cm, minimum height=1.0cm, align=center, fill=blue!8},
+    proc/.style={rectangle, rounded corners, draw, minimum width=3.0cm, minimum height=1.0cm, align=center, fill=orange!15},
+    rules/.style={rectangle, rounded corners, draw, minimum width=3.0cm, minimum height=1.0cm, align=center, fill=yellow!20},
+    fuz/.style={rectangle, rounded corners, draw, minimum width=3.0cm, minimum height=1.5cm, align=center, fill=red!10},
+    out/.style={rectangle, rounded corners, draw, minimum width=3.0cm, minimum height=1.0cm, align=center, fill=green!15},
+    merger/.style={rectangle, rounded corners, draw, fill=gray!12, font=\scriptsize\itshape, align=center, inner sep=4pt, minimum height=0.9cm, minimum width=1.6cm},
+    arrow/.style={-{Latex[length=2mm]}, thick}]
 
-  \node[input] (sens) at (-2.3,0) {Valori senzori\\\scriptsize puls, \spo, T, IMU};
-  \node[input] (prag) at (2.3,0) {Praguri + afecțiuni\\\scriptsize personalizate pe pacient};
+  % Column 1 — inputs (left)
+  \node[input] (sens) at (-6.4, 1.3) {Valori senzori\\\scriptsize puls, \spo, T, IMU};
+  \node[input] (prag) at (-6.4,-1.3) {Praguri + afecțiuni\\\scriptsize per pacient};
 
-  \node[proc] (rf) at (-2.3,-3.0) {Random Forest\\\scriptsize predicție + probabilități};
-  \node[rules] (rg) at (2.3,-3.0) {Reguli medicale\\\scriptsize praguri absolute};
+  % Merge 1 — combined feature vector
+  \node[merger] (m1) at (-3.6, 0) {vector\\de intrare};
 
-  \node[fuz] (fuziune) at (0,-5.2) {Strat de fuziune și severitate\\\scriptsize combinație predicție + reguli + modificatori};
+  % Column 2 — parallel processors (middle)
+  \node[proc]  (rf) at (-0.6, 1.3) {\textbf{Random Forest}\\\scriptsize predicție + prob.};
+  \node[rules] (rg) at (-0.6,-1.3) {\textbf{Reguli medicale}\\\scriptsize praguri absolute};
 
-  \node[out] (stare) at (-2.3,-7.4) {Stare finală\\\scriptsize NORMAL / ALERT / CRITICAL};
-  \node[out] (score) at (2.3,-7.4) {Health score\\\scriptsize 0--100 + explicație};
+  % Column 3 — fusion (center-right)
+  \node[fuz] (fz) at ( 3.0, 0) {\textbf{Fuziune și}\\\textbf{severitate}\\\scriptsize + modificatori};
 
-  % Fan-out from inputs to both processors via a junction at y=-1.5
-  \draw[join] (sens.south) -- (-2.3,-1.5);
-  \draw[join] (prag.south) -- (2.3,-1.5);
-  \draw[join] (-2.3,-1.5) -- (2.3,-1.5);
-  \draw[arrow] (-2.3,-1.5) -- (rf.north);
-  \draw[arrow] (2.3,-1.5) -- (rg.north);
+  % Column 4 — outputs (right)
+  \node[out] (stare) at ( 6.6, 1.3) {Stare finală\\\scriptsize NORMAL/ALERT/CRITICAL};
+  \node[out] (score) at ( 6.6,-1.3) {Health score\\\scriptsize 0--100};
 
-  % Fan-in from processors to the fusion box via a junction at y=-4.0
-  \draw[join] (rf.south) -- (-2.3,-4.0);
-  \draw[join] (rg.south) -- (2.3,-4.0);
-  \draw[join] (-2.3,-4.0) -- (2.3,-4.0);
-  \draw[arrow] (0,-4.0) -- (fuziune.north);
-
-  % Fan-out from fusion to two outputs via a junction at y=-6.4
-  \draw[join] (fuziune.south) -- (0,-6.4);
-  \draw[join] (-2.3,-6.4) -- (2.3,-6.4);
-  \draw[arrow] (-2.3,-6.4) -- (stare.north);
-  \draw[arrow] (2.3,-6.4) -- (score.north);
-\end{tikzpicture}
-\caption{Mecanismul hibrid de decizie: modelul Random Forest cooperează cu setul de reguli medicale pentru a produce starea finală și health score-ul.}
+  % Inputs converge into the shared feature vector
+  \draw[arrow] (sens.east) -- (m1.north west);
+  \draw[arrow] (prag.east) -- (m1.south west);
+  % Feature vector feeds both parallel processors
+  \draw[arrow] (m1.north east) -- (rf.west);
+  \draw[arrow] (m1.south east) -- (rg.west);
+  % Processors converge into the fusion layer
+  \draw[arrow] (rf.east) -- (fz.north west);
+  \draw[arrow] (rg.east) -- (fz.south west);
+  % Fusion fans out into the two outputs
+  \draw[arrow] (fz.north east) -- (stare.west);
+  \draw[arrow] (fz.south east) -- (score.west);
+\end{tikzpicture}}
+\caption{Mecanismul hibrid de decizie: senzorii și pragurile personalizate formează un vector de intrare comun, evaluat în paralel de modelul Random Forest și de setul de reguli medicale; predicțiile sunt combinate în stratul de fuziune, care produce simultan starea discretă și health score-ul.}
 \label{fig:hibrid-ai}
 \end{figure}
 
@@ -1278,7 +1280,21 @@ Peste predicția modelului se aplică un strat de \textbf{reguli medicale}, cu p
 
 \subsection{Frontend-ul web}
 
-Aplicația web a fost implementată în \textbf{Blazor WebAssembly}, sub forma unei aplicații de tip SPA. Interfața este organizată în pagini corespunzătoare funcționalităților principale: autentificare și înregistrare, tabloul de bord, lista persoanelor monitorizate, vizualizarea detaliată a unei persoane, istoricul măsurătorilor, notificările, setările și paginile de administrare.
+Aplicația web a fost implementată în \textbf{Blazor WebAssembly}, sub forma unei aplicații de tip SPA. Interfața este organizată în pagini corespunzătoare funcționalităților principale: autentificare și înregistrare, tabloul de bord, lista persoanelor monitorizate, vizualizarea detaliată a unei persoane, istoricul măsurătorilor, notificările, setările și paginile de administrare. Punctul de intrare al aplicației îl reprezintă paginile de \textit{autentificare} (figura~\ref{fig:login}) și de \textit{înregistrare} (figura~\ref{fig:register}); utilizatorul poate alege între autentificarea clasică pe bază de email și parolă și autentificarea delegată prin contul Google (OAuth 2.0).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuri/login.png}
+\caption{Pagina de autentificare a aplicației LifeAlert+: câmpuri pentru email și parolă, plus butonul de autentificare prin Google.}
+\label{fig:login}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figuri/register.png}
+\caption{Pagina de înregistrare: utilizatorul completează datele personale, email-ul, numărul de telefon și parola.}
+\label{fig:register}
+\end{figure}
 
 \subsubsection{Comunicarea cu backend-ul}
 
@@ -1286,34 +1302,74 @@ Comunicarea cu API-ul se realizează prin clienți dedicați, construiți peste 
 
 \subsubsection{Autorizarea pe roluri și accesibilitatea}
 
-Accesul la pagini este controlat în funcție de rolul utilizatorului: paginile de administrare sunt disponibile doar administratorilor, iar fiecare aparținător sau medic vede exclusiv persoanele monitorizate la care are drept de acces. Tentativele de acces neautorizat sunt redirecționate către pagina de autentificare. Întrucât aplicația se adresează inclusiv unui public mai puțin familiarizat cu tehnologia, interfața include opțiuni de accesibilitate, precum selectarea limbii (română sau engleză), comutarea limbii fiind reflectată în timp real pe toate paginile, precum și un asistent conversațional integrat, care răspunde la întrebări frecvente despre utilizarea aplicației.
-
-\subsubsection{Organizarea interfeței și gestionarea stării}
-
-Interfața este construită din componente Blazor reutilizabile, anume antetul, widget-urile și notificările de tip \textit{toast}, combinate în pagini. Starea partajată între pagini, precum datele utilizatorului autentificat sau persoana monitorizată selectată, este menținută de servicii dedicate, înregistrate în containerul de injecție de dependențe al aplicației client. Astfel, informațiile încărcate o singură dată sunt disponibile în întreaga aplicație, fără a fi nevoie de cereri repetate către server la fiecare schimbare de pagină.
-
-\subsubsection{Vizualizarea datelor și funcționalitatea PWA}
-
-Reprezentarea grafică a istoricului parametrilor vitali este realizată prin interoperabilitate cu JavaScript, folosind o bibliotecă de grafice; tot prin interoperabilitate sunt integrate harta pentru localizarea pacientului și exportul rapoartelor în format PDF. Aplicația este configurată ca \textbf{PWA}: include un service worker, un fișier manifest care permite instalarea pe dispozitiv și o pagină dedicată modului offline.
+Accesul la pagini este controlat în funcție de rolul utilizatorului: paginile de administrare sunt disponibile doar administratorilor, iar fiecare aparținător sau medic vede exclusiv persoanele monitorizate la care are drept de acces. Tentativele de acces neautorizat sunt redirecționate către pagina de autentificare. Întrucât aplicația se adresează inclusiv unui public mai puțin familiarizat cu tehnologia, interfața include opțiuni de accesibilitate, precum selectarea limbii (română sau engleză), comutarea limbii fiind reflectată în timp real pe toate paginile, precum și un \textbf{asistent conversațional integrat} (figura~\ref{fig:chatbot}), care răspunde la întrebări frecvente despre utilizarea aplicației, pragurile semnelor vitale și afecțiunile medicale.
 
 \begin{figure}[H]
 \centering
-% \includegraphics[width=\textwidth]{figuri/dashboard.png}
-\figplaceholder{[Spațiu pentru figură: captură de ecran cu tabloul de bord al aplicației web, care prezintă starea curentă a persoanei monitorizate, parametrii vitali și health score-ul.]}
-\caption{Tabloul de bord al aplicației web.}
-\label{fig:dashboard}
+\includegraphics[width=0.45\textwidth]{figuri/chatbot.png}
+\caption{Asistentul conversațional integrat răspunde la întrebări despre utilizarea aplicației și despre praguri / afecțiuni medicale.}
+\label{fig:chatbot}
 \end{figure}
 
-% >>> FIGURI SUGERATE (capturi de ecran din aplicație) pentru această secțiune:
-%  - pagina de autentificare / înregistrare;
-%  - lista persoanelor monitorizate;
-%  - pagina de istoric cu graficele parametrilor vitali;
-%  - pagina de setări (configurarea pragurilor de alertă personalizate);
-%  - vizualizarea pe hartă a poziției pacientului.
+\subsubsection{Organizarea interfeței și gestionarea stării}
+
+Interfața este construită din componente Blazor reutilizabile, anume antetul, widget-urile și notificările de tip \textit{toast}, combinate în pagini. Starea partajată între pagini, precum datele utilizatorului autentificat sau persoana monitorizată selectată, este menținută de servicii dedicate, înregistrate în containerul de injecție de dependențe al aplicației client. Astfel, informațiile încărcate o singură dată sunt disponibile în întreaga aplicație, fără a fi nevoie de cereri repetate către server la fiecare schimbare de pagină. Pagina principală a aparținătorului este lista persoanelor monitorizate (figura~\ref{fig:persoane-monitorizate}), unde fiecare pacient apare sub forma unui card cu starea curentă a parametrilor vitali, ultima actualizare, indicatorul GPS și statusul detectorului de căderi.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/persoane-monitorizate.png}
+\caption{Pagina cu persoanele monitorizate: cardul rezumă vitalele curente (puls, \spo, temperatură), starea (Stabil / Alertă / Verificare necesară), poziția GPS și momentul ultimei măsurători.}
+\label{fig:persoane-monitorizate}
+\end{figure}
+
+Tot din această pagină se accesează \textbf{modalul de editare a profilului pacientului} (figura~\ref{fig:modal-editare-profil}), prin care aparținătorul configurează pragurile personalizate ale fiecărui parametru vital, frecvența de actualizare a dispozitivului și perioada de retenție a datelor. Suplimentar, modalul de \textbf{configurare a rețelelor WiFi} (figura~\ref{fig:modal-wifi}) permite înregistrarea a până la trei rețele pe care dispozitivul portabil le va încerca la conectare.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.55\textwidth]{figuri/modal-editare-profil.png}
+\caption{Modalul de editare a profilului unei persoane monitorizate, cu pragurile personalizate pentru ritm cardiac, temperatură și \spo, frecvența de actualizare și perioada de retenție.}
+\label{fig:modal-editare-profil}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.55\textwidth]{figuri/modal-wifi.png}
+\caption{Modalul de configurare a rețelelor WiFi pentru dispozitivul portabil al pacientului.}
+\label{fig:modal-wifi}
+\end{figure}
+
+\subsubsection{Vizualizarea datelor și funcționalitatea PWA}
+
+Reprezentarea grafică a istoricului parametrilor vitali este realizată direct în SVG, prin curbe Bézier monotone (Fritsch-Carlson) trasate peste o grilă cu axă temporală. Cele două grafice (puls și temperatură) sunt așezate într-un container cu \textbf{scroll orizontal sincronizat} și un control de \textbf{zoom} (1x--4x): wrapper-ul rămâne la lățimea cardului, iar SVG-ul intern se lungește, astfel încât citirile dense să nu se mai suprapună (figura~\ref{fig:grafice-vitale}). La trecerea mouse-ului peste oricare zonă a graficului, un tooltip arată valoarea exactă și ora la cel mai apropiat punct înregistrat.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/grafice-vitale.png}
+\caption{Graficele zilnice de puls și temperatură, cu tooltip-ul activ la hover (afișează valoarea --- ex. 82~bpm la 19:16 --- și ora) și scrollbar orizontal sincronizat sub fiecare grafic.}
+\label{fig:grafice-vitale}
+\end{figure}
+
+Localizarea pacientului în scenarii de alertă este realizată tot prin interoperabilitate JavaScript, integrând harta Google Maps direct în vizualizarea persoanei monitorizate (figura~\ref{fig:harta-pacient}). Marcatorul este actualizat automat la fiecare nouă măsurătoare cu fix GPS valid. Exportul rapoartelor în format PDF folosește același mecanism de interoperabilitate.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/harta-pacient.png}
+\caption{Vizualizarea pe hartă a poziției curente a pacientului în pagina sa de detalii.}
+\label{fig:harta-pacient}
+\end{figure}
+
+Aplicația este configurată ca \textbf{PWA}: include un service worker, un fișier manifest care permite instalarea pe dispozitiv și o pagină dedicată modului offline.
 
 \subsection{Sistemul de notificări}
 
-Sistemul de notificări implementează alertarea multi-canal descrisă conceptual în subcapitolul 2.4. Logica de declanșare este coordonată de serviciul de monitorizare a alertelor, care decide când și prin ce canale trebuie transmisă o notificare, ținând cont de preferințele fiecărui utilizator.
+Sistemul de notificări implementează alertarea multi-canal descrisă conceptual în subcapitolul 2.4. Logica de declanșare este coordonată de serviciul de monitorizare a alertelor, care decide când și prin ce canale trebuie transmisă o notificare, ținând cont de preferințele fiecărui utilizator. Aceste preferințe sunt expuse într-o pagină dedicată de setări (figura~\ref{fig:setari-notificari}), unde fiecare canal (email, push, SMS) și raportul zilnic pot fi activate sau dezactivate independent printr-un comutator.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/setari-notificari.png}
+\caption{Pagina de setări pentru notificări: comutatoarele permit activarea independentă a email, push, SMS și raport zilnic.}
+\label{fig:setari-notificari}
+\end{figure}
 
 \subsubsection{Temporizarea alertelor}
 

@@ -77,12 +77,18 @@ namespace LifeAlertPlus.API.Controllers
             int spo2 = 0;
             string coordinates = payload.Neo6m ?? string.Empty;
             bool isFall = payload.IsFall;
+            // Firmware classifies movement over the last ~5s window from the same MPU
+            // stream the fall detector uses (50 Hz). Persist the label so the behavioral
+            // profile can compute movement rate / sleep probability per hour over 14 days.
+            string activity = string.IsNullOrWhiteSpace(payload.Activity)
+                ? string.Empty
+                : payload.Activity.Trim();
 
             var measurement = new Domain.Entities.Measurement
             {
                 Id = Guid.NewGuid(),
                 Name = "ESP Device",
-                Activity = string.Empty,
+                Activity = activity,
                 IsFall = isFall,
                 IdMonitored = monitored.Id,
                 Pulse = pulse,
@@ -95,6 +101,7 @@ namespace LifeAlertPlus.API.Controllers
 
             _ = alertMonitorService.ProcessMeasurementAsync(
                 monitored.Id, pulse, temperature, spo2, isFall: isFall,
+                activity: activity,
                 coordinates: coordinates);
 
             if (isFall)

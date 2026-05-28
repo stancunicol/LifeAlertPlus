@@ -167,81 +167,37 @@ namespace LifeAlertPlus.Application.Services
                 <html>
                 <head>
                     <style>
-                        body {{
-                            font-family: 'Arial', sans-serif;
-                            background-color: #f9f9f9;
-                            margin: 0;
-                            padding: 0;
-                        }}
-                        .container {{
-                            max-width: 600px;
-                            margin: 40px auto;
-                            background: white;
-                            border-radius: 10px;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                            overflow: hidden;
-                        }}
-                        .header {{
-                            background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-                            padding: 30px;
-                            text-align: center;
-                        }}
-                        .header h1 {{
-                            color: #000;
-                            margin: 0;
-                            font-size: 32px;
-                        }}
-                        .content {{
-                            padding: 40px 30px;
-                        }}
-                        .content p {{
-                            color: #333;
-                            line-height: 1.6;
-                            font-size: 16px;
-                        }}
-                        .button {{
-                            display: inline-block;
-                            padding: 14px 30px;
-                            margin: 20px 0;
-                            background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-                            color: #000;
-                            text-decoration: none;
-                            border-radius: 30px;
-                            font-weight: bold;
-                            font-size: 16px;
-                        }}
-                        .footer {{
-                            background: #f5f5f5;
-                            padding: 20px;
-                            text-align: center;
-                            color: #666;
-                            font-size: 14px;
-                        }}
-                        .warning {{
-                            color: #666;
-                            font-size: 14px;
-                            margin-top: 20px;
-                        }}
+                        body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+                        .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }}
+                        .header {{ background: linear-gradient(135deg, #81C784, #66BB6A); padding: 30px; text-align: center; color: white; }}
+                        .header h1 {{ margin: 0; font-size: 28px; }}
+                        .header p {{ margin: 10px 0 0; color: rgba(255,255,255,0.92); font-size: 14px; }}
+                        .body {{ padding: 30px; color: #444; line-height: 1.6; }}
+                        .body h2 {{ margin: 0 0 16px; color: #2e7d32; font-size: 20px; }}
+                        .body p {{ font-size: 16px; margin: 12px 0; }}
+                        .button {{ display: inline-block; padding: 12px 28px; background: #66BB6A; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 20px; }}
+                        .warning {{ color: #777; font-size: 13px; margin-top: 18px; }}
+                        .footer {{ padding: 20px 30px; background: #f9f9f9; text-align: center; font-size: 12px; color: #999; }}
                     </style>
                 </head>
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h1>LifeAlert+</h1>
-                            <p style='color: #000; margin-top: 10px;'>Because every heartbeat matters</p>
+                            <h1>Life Alert +</h1>
+                            <p>Because every heartbeat matters</p>
                         </div>
-                        <div class='content'>
+                        <div class='body'>
                             <h2>Welcome, {recipientName}!</h2>
                             <p>Thank you for registering with LifeAlert+. Your account has been successfully created.</p>
                             <p>To complete your registration, please verify your email address by clicking the button below:</p>
-                            <div style='text-align: center;'>
+                            <p style='text-align:center;'>
                                 <a href='{verificationUrl}' class='button'>Verify Email Address</a>
-                            </div>
+                            </p>
                             <p class='warning'>This verification link will expire in 24 hours.</p>
                             <p>If you did not create an account, please ignore this email.</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; 2026 LifeAlert+. All rights reserved.</p>
+                            <p>This is an automated message from LifeAlert+. Please do not reply to this email.</p>
                         </div>
                     </div>
                 </body>
@@ -258,79 +214,90 @@ namespace LifeAlertPlus.Application.Services
                     <style>
                         body {{
                             font-family: 'Arial', sans-serif;
-                            background-color: #f9f9f9;
+                            background-color: #f4f4f4;
                             margin: 0;
-                            padding: 0;
+                            padding: 20px;
                         }}
                         .container {{
                             max-width: 600px;
-                            margin: 40px auto;
+                            margin: 0 auto;
                             background: white;
-                            border-radius: 10px;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            border-radius: 12px;
                             overflow: hidden;
+                            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
                         }}
                         .header {{
-                            background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
+                            background: linear-gradient(135deg, #81C784, #66BB6A);
                             padding: 30px;
                             text-align: center;
+                            color: white;
                         }}
                         .header h1 {{
-                            color: #000;
                             margin: 0;
-                            font-size: 32px;
+                            font-size: 28px;
                         }}
-                        .content {{
-                            padding: 40px 30px;
+                        .header p {{
+                            margin: 10px 0 0;
+                            color: rgba(255,255,255,0.92);
+                            font-size: 14px;
                         }}
-                        .content p {{
-                            color: #333;
+                        .body {{
+                            padding: 30px;
+                            color: #444;
                             line-height: 1.6;
+                        }}
+                        .body h2 {{
+                            margin: 0 0 16px;
+                            color: #2e7d32;
+                            font-size: 20px;
+                        }}
+                        .body p {{
                             font-size: 16px;
+                            margin: 12px 0;
                         }}
                         .button {{
                             display: inline-block;
-                            padding: 14px 30px;
-                            margin: 20px 0;
-                            background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-                            color: #000;
+                            padding: 12px 28px;
+                            background: #66BB6A;
+                            color: white;
+                            border-radius: 6px;
                             text-decoration: none;
-                            border-radius: 30px;
                             font-weight: bold;
                             font-size: 16px;
-                        }}
-                        .footer {{
-                            background: #f5f5f5;
-                            padding: 20px;
-                            text-align: center;
-                            color: #666;
-                            font-size: 14px;
+                            margin-top: 20px;
                         }}
                         .warning {{
-                            color: #666;
-                            font-size: 14px;
-                            margin-top: 20px;
+                            color: #777;
+                            font-size: 13px;
+                            margin-top: 18px;
+                        }}
+                        .footer {{
+                            padding: 20px 30px;
+                            background: #f9f9f9;
+                            text-align: center;
+                            font-size: 12px;
+                            color: #999;
                         }}
                     </style>
                 </head>
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h1>LifeAlert+</h1>
-                            <p style='color: #000; margin-top: 10px;'>Because every heartbeat matters</p>
+                            <h1>Life Alert +</h1>
+                            <p>Because every heartbeat matters</p>
                         </div>
-                        <div class='content'>
+                        <div class='body'>
                             <h2>Hello, {recipientName}!</h2>
                             <p>We received a request to reset your password for your LifeAlert+ account.</p>
-                            <p>Click the button below to reset your password:</p>
-                            <div style='text-align: center;'>
+                            <p>Click the button below to choose a new password:</p>
+                            <p style='text-align:center;'>
                                 <a href='{resetUrl}' class='button'>Reset Your Password</a>
-                            </div>
+                            </p>
                             <p class='warning'>This password reset link will expire in 24 hours.</p>
                             <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; 2026 LifeAlert+. All rights reserved.</p>
+                            <p>This is an automated message from LifeAlert+. Please do not reply to this email.</p>
                         </div>
                     </div>
                 </body>
@@ -345,95 +312,44 @@ namespace LifeAlertPlus.Application.Services
                 <html>
                 <head>
                     <style>
-                        body {{
-                            font-family: 'Arial', sans-serif;
-                            background-color: #f9f9f9;
-                            margin: 0;
-                            padding: 0;
-                        }}
-                        .container {{
-                            max-width: 600px;
-                            margin: 40px auto;
-                            background: white;
-                            border-radius: 10px;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                            overflow: hidden;
-                        }}
-                        .header {{
-                            background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-                            padding: 30px;
-                            text-align: center;
-                        }}
-                        .header h1 {{
-                            color: #000;
-                            margin: 0;
-                            font-size: 32px;
-                        }}
-                        .content {{
-                            padding: 40px 30px;
-                        }}
-                        .content p {{
-                            color: #333;
-                            line-height: 1.6;
-                            font-size: 16px;
-                        }}
-                        .button {{
-                            display: inline-block;
-                            padding: 14px 30px;
-                            margin: 20px 0;
-                            background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-                            color: #000;
-                            text-decoration: none;
-                            border-radius: 30px;
-                            font-weight: bold;
-                            font-size: 16px;
-                        }}
-                        .footer {{
-                            background: #f5f5f5;
-                            padding: 20px;
-                            text-align: center;
-                            color: #666;
-                            font-size: 14px;
-                        }}
-                        .warning {{
-                            color: #666;
-                            font-size: 14px;
-                            margin-top: 20px;
-                        }}
-                        .email-info {{
-                            background: #f8f9fa;
-                            padding: 15px;
-                            border-radius: 8px;
-                            margin: 20px 0;
-                            border-left: 4px solid #E8A5C8;
-                        }}
+                        body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+                        .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }}
+                        .header {{ background: linear-gradient(135deg, #81C784, #66BB6A); padding: 30px; text-align: center; color: white; }}
+                        .header h1 {{ margin: 0; font-size: 28px; }}
+                        .header p {{ margin: 10px 0 0; color: rgba(255,255,255,0.92); font-size: 14px; }}
+                        .body {{ padding: 30px; color: #444; line-height: 1.6; }}
+                        .body h2 {{ margin: 0 0 16px; color: #2e7d32; font-size: 20px; }}
+                        .body p {{ font-size: 16px; margin: 12px 0; }}
+                        .button {{ display: inline-block; padding: 12px 28px; background: #66BB6A; color: white; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 20px; }}
+                        .warning {{ color: #777; font-size: 13px; margin-top: 18px; }}
+                        .email-info {{ background: #f1f8e9; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #66BB6A; }}
+                        .email-info p {{ margin: 6px 0; font-size: 15px; }}
+                        .footer {{ padding: 20px 30px; background: #f9f9f9; text-align: center; font-size: 12px; color: #999; }}
                     </style>
                 </head>
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h1>LifeAlert+</h1>
-                            <p style='color: #000; margin-top: 10px;'>Because every heartbeat matters</p>
+                            <h1>Life Alert +</h1>
+                            <p>Because every heartbeat matters</p>
                         </div>
-                        <div class='content'>
+                        <div class='body'>
                             <h2>Email Address Change Request</h2>
                             <p>Hello {recipientName},</p>
                             <p>You have requested to change your email address on your LifeAlert+ account.</p>
-                            
                             <div class='email-info'>
                                 <p><strong>Previous email:</strong> {oldEmail}</p>
                                 <p><strong>New email:</strong> {newEmail}</p>
                             </div>
-                            
                             <p>To complete this change and verify your new email address, please click the button below:</p>
-                            <div style='text-align: center;'>
+                            <p style='text-align:center;'>
                                 <a href='{verificationUrl}' class='button'>Verify New Email Address</a>
-                            </div>
+                            </p>
                             <p class='warning'>This verification link will expire in 24 hours.</p>
                             <p><strong>Important:</strong> If you did not request this change, please contact our support team immediately.</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; 2026 LifeAlert+. All rights reserved.</p>
+                            <p>This is an automated message from LifeAlert+. Please do not reply to this email.</p>
                         </div>
                     </div>
                 </body>
@@ -448,116 +364,50 @@ namespace LifeAlertPlus.Application.Services
                 <html>
                 <head>
                     <style>
-                        body {{
-                            font-family: 'Arial', sans-serif;
-                            background-color: #f9f9f9;
-                            margin: 0;
-                            padding: 0;
-                        }}
-                        .container {{
-                            max-width: 600px;
-                            margin: 40px auto;
-                            background: white;
-                            border-radius: 10px;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-                            overflow: hidden;
-                        }}
-                        .header {{
-                            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
-                            padding: 30px;
-                            text-align: center;
-                        }}
-                        .header h1 {{
-                            color: #fff;
-                            margin: 0;
-                            font-size: 32px;
-                        }}
-                        .content {{
-                            padding: 40px 30px;
-                        }}
-                        .content p {{
-                            color: #333;
-                            line-height: 1.6;
-                            font-size: 16px;
-                        }}
-                        .button {{
-                            display: inline-block;
-                            padding: 14px 30px;
-                            margin: 20px 0;
-                            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
-                            color: #fff;
-                            text-decoration: none;
-                            border-radius: 30px;
-                            font-weight: bold;
-                            font-size: 16px;
-                        }}
-                        .safe-button {{
-                            background: linear-gradient(135deg, #E8A5C8 0%, #D88BB7 100%);
-                            color: #000;
-                        }}
-                        .footer {{
-                            background: #f5f5f5;
-                            padding: 20px;
-                            text-align: center;
-                            color: #666;
-                            font-size: 14px;
-                        }}
-                        .warning {{
-                            color: #666;
-                            font-size: 14px;
-                            margin-top: 20px;
-                        }}
-                        .email-info {{
-                            background: #fff3cd;
-                            padding: 15px;
-                            border-radius: 8px;
-                            margin: 20px 0;
-                            border-left: 4px solid #ff6b6b;
-                        }}
-                        .alert {{
-                            background: #f8d7da;
-                            color: #721c24;
-                            padding: 15px;
-                            border-radius: 8px;
-                            margin: 20px 0;
-                            border-left: 4px solid #f5c6cb;
-                        }}
+                        body {{ font-family: 'Arial', sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }}
+                        .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }}
+                        .header {{ background: linear-gradient(135deg, #81C784, #66BB6A); padding: 30px; text-align: center; color: white; }}
+                        .header h1 {{ margin: 0; font-size: 28px; }}
+                        .header p {{ margin: 10px 0 0; color: rgba(255,255,255,0.92); font-size: 14px; }}
+                        .body {{ padding: 30px; color: #444; line-height: 1.6; }}
+                        .body h2 {{ margin: 0 0 16px; color: #2e7d32; font-size: 20px; }}
+                        .body p {{ font-size: 16px; margin: 12px 0; }}
+                        /* Cancel-request button is the destructive action: keep it warning-red so it is unambiguous. */
+                        .button {{ display: inline-block; padding: 12px 28px; background: #d32f2f; color: #fff; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 20px; }}
+                        .warning {{ color: #777; font-size: 13px; margin-top: 18px; }}
+                        .email-info {{ background: #f1f8e9; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #66BB6A; }}
+                        .email-info p {{ margin: 6px 0; font-size: 15px; }}
+                        .alert {{ background: #fff3cd; color: #6e4a00; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffb300; }}
+                        .footer {{ padding: 20px 30px; background: #f9f9f9; text-align: center; font-size: 12px; color: #999; }}
                     </style>
                 </head>
                 <body>
                     <div class='container'>
                         <div class='header'>
-                            <h1>🔒 Security Alert</h1>
-                            <p style='color: #fff; margin-top: 10px;'>LifeAlert+ Account Protection</p>
+                            <h1>Life Alert +</h1>
+                            <p>Security notification</p>
                         </div>
-                        <div class='content'>
+                        <div class='body'>
                             <h2>Email Change Request Detected</h2>
                             <p>Hello {recipientName},</p>
-                            
                             <div class='alert'>
                                 <strong>⚠️ Important Security Notice:</strong> Someone has requested to change the email address associated with your LifeAlert+ account.
                             </div>
-                            
                             <div class='email-info'>
                                 <p><strong>Current email:</strong> {oldEmail}</p>
                                 <p><strong>Requested new email:</strong> {newEmail}</p>
                                 <p><strong>Request time:</strong> {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC</p>
                             </div>
-                            
                             <p><strong>If this was you:</strong> No action is needed. You will receive a verification email at your new address to complete the change.</p>
-                            
                             <p><strong>If this was NOT you:</strong> Your account security may be compromised. Click the button below immediately to cancel this request and secure your account:</p>
-                            
-                            <div style='text-align: center; margin: 30px 0;'>
-                                <a href='{cancelUrl}' class='button'>🚫 This Wasn't Me - Cancel Request</a>
-                            </div>
-                            
+                            <p style='text-align:center;'>
+                                <a href='{cancelUrl}' class='button'>🚫 This Wasn't Me — Cancel Request</a>
+                            </p>
                             <p class='warning'>This security link will expire in 24 hours. If you don't take action, the email change will proceed.</p>
-                            
                             <p>If you're experiencing issues, please contact our support team immediately.</p>
                         </div>
                         <div class='footer'>
-                            <p>&copy; 2026 LifeAlert+. All rights reserved.</p>
+                            <p>This is an automated message from LifeAlert+. Please do not reply to this email.</p>
                         </div>
                     </div>
                 </body>

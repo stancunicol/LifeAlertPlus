@@ -43,6 +43,24 @@ namespace LifeAlertPlus.Client.Pages.Login
         {
             Version = AppVersion.Version;
             _returnUrl = GetQueryParam("returnUrl");
+
+            // Surface Google OAuth / callback failures so the user understands why they
+            // landed back on the login page instead of the dashboard. Without this, every
+            // OAuth failure looks like a silent redirect.
+            var oauthError = GetQueryParam("error");
+            if (!string.IsNullOrWhiteSpace(oauthError))
+            {
+                ErrorMessage = oauthError switch
+                {
+                    "GoogleAuthFailed"        => T("login.error.googleAuthFailed"),
+                    "GoogleAuthNoEmail"       => T("login.error.googleNoEmail"),
+                    "GoogleUserCreateFailed"  => T("login.error.googleUserCreate"),
+                    "GoogleExchangeFailed"    => T("login.error.googleExchange"),
+                    "GoogleEmailConflict"     => T("login.error.googleEmailConflict"),
+                    _                          => string.Format(T("login.error.googleGeneric"), oauthError)
+                };
+            }
+
             return Task.CompletedTask;
         }
 

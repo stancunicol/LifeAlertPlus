@@ -253,9 +253,10 @@
 
 .error-message {
     font-family: var(--font-body);
-    font-size: 0.70rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
     text-align: center;
-    padding: 0.5rem;
+    padding: 0.7rem 0.8rem;
     border-radius: 10px;
     width: 100%;
     background: rgba(255, 0, 0, 0.1);

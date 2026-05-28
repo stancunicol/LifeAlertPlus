@@ -55,10 +55,15 @@ window.chartTooltip = {
 
         function onMove(e) {
             var rect = svgEl.getBoundingClientRect();
-            var scaleX = 800 / rect.width;
+            // Read viewBox at hover time so the math stays correct after a zoom
+            // change (viewBox X grows with the zoom factor).
+            var vb = svgEl.viewBox && svgEl.viewBox.baseVal;
+            var vbWidth = (vb && vb.width) || 800;
+            var rightEdge = vbWidth - 15;
+            var scaleX = vbWidth / rect.width;
             var svgX = (e.clientX - rect.left) * scaleX;
 
-            if (svgX < 90 || svgX > 785) {
+            if (svgX < 90 || svgX > rightEdge) {
                 g.style.display = 'none';
                 return;
             }

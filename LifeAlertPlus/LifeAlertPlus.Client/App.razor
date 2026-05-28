@@ -28,7 +28,11 @@
         "register",
         "reset-password",
         "invite/accept", // backward-compatible
-        "invite/patient"
+        "invite/patient",
+        // OAuth callback lands here AFTER Google but BEFORE the JWT is in sessionStorage.
+        // Without this entry, the router's auth guard sees "no token" and force-loads /login,
+        // which cancels the in-flight exchange-token fetch and burns the one-time code.
+        "auth/callback"
     };
 
     // Routes that should clear any stale auth data when opened intentionally.

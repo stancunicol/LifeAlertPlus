@@ -56,9 +56,12 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private ElementReference _hrSvgRef;
         private ElementReference _tempSvgRef;
+        private ElementReference _hrScrollRef;
+        private ElementReference _tempScrollRef;
         private ElementReference _mapRef;
         private bool _tooltipsInitialized;
         private bool _mapInitialized;
+        private bool _scrollSyncInitialized;
 
         private DayOfWeek _firstDayOfWeek = DayOfWeek.Monday;
         private PersonDetail? Person { get; set; }
@@ -94,6 +97,78 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private int _refreshInFlight; // 0 = idle, 1 = a RefreshDataAsync is currently running
         private DateTime _lastRefreshUtc = DateTime.MinValue;
         private static readonly TimeSpan MinRefreshInterval = TimeSpan.FromSeconds(5);
+
+        // Chart horizontal zoom — scales ONLY the X axis. The viewBox X width grows with
+        // zoom (so the data spreads over more SVG units), and the CSS width follows
+        // proportionally so the rendered text/curve size stays unchanged. Height stays at
+        // 275 px regardless of zoom, so the card never grows vertically.
+        private double _chartZoom = 1.0;
+        private const double ChartMinZoom = 1.0;
+        private const double ChartMaxZoom = 4.0;
+        private const double ChartZoomStep = 0.5;
+        private const double ChartViewBoxBaseWidth = 2400;
+        private const double ChartViewBoxHeight = 200;
+        private const double ChartCssHeight = 275;
+        private const double ChartPaddingLeft = 90;
+        private const double ChartPaddingRight = 15;
+        private const double ChartCssScale = ChartCssHeight / ChartViewBoxHeight; // 1.375 — preserved aspect
+
+        private double ChartViewBoxWidth => ChartViewBoxBaseWidth * _chartZoom;
+        private double ChartCssWidth => ChartViewBoxWidth * ChartCssScale;
+
+        private string ChartViewBoxAttr =>
+            $"0 0 {ChartViewBoxWidth.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)} {ChartViewBoxHeight.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}";
+
+        private string ChartSvgStyle =>
+            $"width:{ChartCssWidth.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}px;"
+            + $"height:{ChartCssHeight.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)}px;";
+
+        // Right edge of the chart area inside the viewBox (used by grid lines, axis line).
+        private string ChartRightEdge =>
+            (ChartViewBoxWidth - ChartPaddingRight).ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
+
+        // Width of the chart background rect inside the viewBox.
+        private string ChartBgWidth =>
+            (ChartViewBoxWidth - ChartPaddingLeft - ChartPaddingRight).ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
+
+        private string ChartZoomLabel => $"{(int)Math.Round(_chartZoom * 100)}%";
+
+        private async Task ZoomChartIn()
+        {
+            if (_chartZoom >= ChartMaxZoom) return;
+            _chartZoom = Math.Min(ChartMaxZoom, _chartZoom + ChartZoomStep);
+            RecomputeChartPoints();
+            await InvokeAsync(StateHasChanged);
+            await InitTooltipsAsync();
+        }
+
+        private async Task ZoomChartOut()
+        {
+            if (_chartZoom <= ChartMinZoom) return;
+            _chartZoom = Math.Max(ChartMinZoom, _chartZoom - ChartZoomStep);
+            RecomputeChartPoints();
+            await InvokeAsync(StateHasChanged);
+            await InitTooltipsAsync();
+        }
+
+        private async Task ResetChartZoom()
+        {
+            _chartZoom = 1.0;
+            RecomputeChartPoints();
+            await InvokeAsync(StateHasChanged);
+            await InitTooltipsAsync();
+        }
+
+        // Re-project HeartRateHistory / TemperatureHistory onto the new (zoom-aware) X axis.
+        // No re-fetch from the API is needed — the underlying data hasn't changed.
+        private void RecomputeChartPoints()
+        {
+            HeartRatePoints = ComputePointsWithRange(HeartRateHistory, 40, 140);
+            TemperaturePoints = ComputePointsWithRange(TemperatureHistory, 35, 39);
+            HrTooltipData = ComputeTooltipData(HeartRateHistory, 40, 120);
+            TempTooltipData = ComputeTooltipData(TemperatureHistory, 35, 39);
+            _tooltipsInitialized = false;
+        }
 
         private void OnPushNotificationReceived(string message, string severity)
         {
@@ -649,7 +724,6 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             var prevDay = targetDay.AddDays(-1);
             _hasPrevDayData = measurements.Any(m => m.CreatedAt.ToLocalTime().Date == prevDay);
 
-            // For daily view we want to show every measurement of the day (no aggregation by buckets).
             var todayMs = measurements
                 .Where(m => m.CreatedAt.ToLocalTime().Date == targetDay)
                 .OrderBy(m => m.CreatedAt)
@@ -657,21 +731,40 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
             if (!todayMs.Any()) { LoadEmptyChartData(); return; }
 
-            HeartRateHistory = todayMs.Select(m => new ChartDataPoint
-            {
-                Day = m.CreatedAt.ToLocalTime().ToString("HH:mm"),
-                ActualValue = m.Pulse,
-                HasData = true,
-                XFraction = m.CreatedAt.ToLocalTime().TimeOfDay.TotalHours / 24.0
-            }).ToList();
+            // One point per measurement — the wide, zoomable chart gives them enough room
+            // to be readable as distinct dots, and each one is hover-tooltip addressable.
+            // Sensor-failure readings (= 0) are excluded per metric.
+            HeartRateHistory = todayMs
+                .Where(m => m.Pulse > 0)
+                .Select(m =>
+                {
+                    var t = m.CreatedAt.ToLocalTime();
+                    return new ChartDataPoint
+                    {
+                        Day = t.ToString("HH:mm"),
+                        ActualValue = m.Pulse,
+                        HasData = true,
+                        XFraction = t.TimeOfDay.TotalHours / 24.0
+                    };
+                })
+                .OrderBy(p => p.XFraction)
+                .ToList();
 
-            TemperatureHistory = todayMs.Select(m => new ChartDataPoint
-            {
-                Day = m.CreatedAt.ToLocalTime().ToString("HH:mm"),
-                ActualValue = m.Temperature,
-                HasData = true,
-                XFraction = m.CreatedAt.ToLocalTime().TimeOfDay.TotalHours / 24.0
-            }).ToList();
+            TemperatureHistory = todayMs
+                .Where(m => m.Temperature > 0)
+                .Select(m =>
+                {
+                    var t = m.CreatedAt.ToLocalTime();
+                    return new ChartDataPoint
+                    {
+                        Day = t.ToString("HH:mm"),
+                        ActualValue = m.Temperature,
+                        HasData = true,
+                        XFraction = t.TimeOfDay.TotalHours / 24.0
+                    };
+                })
+                .OrderBy(p => p.XFraction)
+                .ToList();
         }
 
         private static List<T> SampleEvenly<T>(List<T> source, int count)
@@ -823,7 +916,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             const double paddingLeft = 90;
             const double paddingRight = 15;
             const double paddingTop = 15;
-            var usableWidth = 800 - paddingLeft - paddingRight;  // 695
+            var usableWidth = ChartViewBoxWidth - paddingLeft - paddingRight;  // grows with zoom
             var usableHeight = 145.0;  // 200 - 15 - 40
 
             double minVal, maxVal;
@@ -871,7 +964,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         {
             const double paddingLeft = 90;
             const double paddingRight = 15;
-            var usableWidth = 800 - paddingLeft - paddingRight;
+            var usableWidth = ChartViewBoxWidth - paddingLeft - paddingRight;
 
             if (CurrentChartView == ChartViewMode.Daily)
             {
@@ -1291,6 +1384,21 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             // Try map init on every render — Person data loads async so it may
             // not be available on firstRender; InitMapAsync is idempotent.
             await InitMapAsync();
+
+            // Pair the two SVG scroll wrappers so HR and Temp pan together on the X axis.
+            if (firstRender && !_scrollSyncInitialized)
+            {
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("chartSync.attach", $"selected-{PersonId}",
+                        new object[] { _hrScrollRef, _tempScrollRef });
+                    _scrollSyncInitialized = true;
+                }
+                catch
+                {
+                    // chartSync.js may not be loaded yet during prerender — retry on next render
+                }
+            }
         }
 
         private async Task InitMapAsync()
@@ -1441,6 +1549,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             {
                 await JSRuntime.InvokeVoidAsync("chartTooltip.dispose", "hr");
                 await JSRuntime.InvokeVoidAsync("chartTooltip.dispose", "temp");
+                await JSRuntime.InvokeVoidAsync("chartSync.detach", $"selected-{PersonId}");
             }
             catch { }
         }
@@ -2523,7 +2632,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             const double paddingLeft = 90;
             const double paddingRight = 15;
             const double paddingTop = 15;
-            var usableWidth = 800 - paddingLeft - paddingRight;
+            var usableWidth = ChartViewBoxWidth - paddingLeft - paddingRight;
             var usableHeight = 145.0;
 
             double minVal = fixedMin;

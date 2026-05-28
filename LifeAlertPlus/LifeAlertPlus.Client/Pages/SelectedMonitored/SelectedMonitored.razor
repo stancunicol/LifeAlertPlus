@@ -434,6 +434,16 @@
                                     <span>▶</span>
                                 </button>
                             }
+                            <div class="chart-zoom-controls">
+                                <button class="btn-zoom" @onclick="ZoomChartOut"
+                                        disabled="@(_chartZoom <= ChartMinZoom)"
+                                        title="@T("selected.zoomOut")">−</button>
+                                <button class="btn-zoom-reset" @onclick="ResetChartZoom"
+                                        title="@T("selected.zoomReset")">@ChartZoomLabel</button>
+                                <button class="btn-zoom" @onclick="ZoomChartIn"
+                                        disabled="@(_chartZoom >= ChartMaxZoom)"
+                                        title="@T("selected.zoomIn")">+</button>
+                            </div>
                         </div>
                         <div class="charts-scroll-outer">
                         <!-- Heart Rate -->
@@ -443,21 +453,22 @@
                                 @T("selected.heartRate")
                                 <span class="chart-unit-badge">bpm</span>
                             </div>
-                            <svg @ref="_hrSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
+                            <div class="chart-svg-scroll" @ref="_hrScrollRef">
+                            <svg @ref="_hrSvgRef" class="chart-svg" style="@ChartSvgStyle" viewBox="@ChartViewBoxAttr" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="hrGradient" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stop-color="#66BB6A" stop-opacity="0.35" />
                                         <stop offset="100%" stop-color="#66BB6A" stop-opacity="0.03" />
                                     </linearGradient>
                                 </defs>
-                                <rect x="90" y="15" width="695" height="145" rx="3" class="chart-bg" />
-                                <line x1="90" y1="15" x2="785" y2="15" class="grid-line" />
-                                <line x1="90" y1="51" x2="785" y2="51" class="grid-line" />
-                                <line x1="90" y1="88" x2="785" y2="88" class="grid-line" />
-                                <line x1="90" y1="124" x2="785" y2="124" class="grid-line" />
-                                <line x1="90" y1="160" x2="785" y2="160" class="grid-line" />
+                                <rect x="90" y="15" width="@ChartBgWidth" height="145" rx="3" class="chart-bg" />
+                                <line x1="90" y1="15" x2="@ChartRightEdge" y2="15" class="grid-line" />
+                                <line x1="90" y1="51" x2="@ChartRightEdge" y2="51" class="grid-line" />
+                                <line x1="90" y1="88" x2="@ChartRightEdge" y2="88" class="grid-line" />
+                                <line x1="90" y1="124" x2="@ChartRightEdge" y2="124" class="grid-line" />
+                                <line x1="90" y1="160" x2="@ChartRightEdge" y2="160" class="grid-line" />
                                 <line x1="90" y1="15" x2="90" y2="160" class="axis-line" />
-                                <line x1="90" y1="160" x2="785" y2="160" class="axis-line" />
+                                <line x1="90" y1="160" x2="@ChartRightEdge" y2="160" class="axis-line" />
                                 <g>@((MarkupString)"<text x=\"58\" y=\"19\" class=\"chart-y-label\">140</text>")</g>
                                 <g>@((MarkupString)"<text x=\"58\" y=\"55\" class=\"chart-y-label\">115</text>")</g>
                                 <g>@((MarkupString)"<text x=\"58\" y=\"92\" class=\"chart-y-label\">90</text>")</g>
@@ -465,13 +476,14 @@
                                 <g>@((MarkupString)"<text x=\"58\" y=\"164\" class=\"chart-y-label\">40</text>")</g>
                                 @if (HeartRatePoints.Count >= 1)
                                 {
+                                    var dotRadius = CurrentChartView == ChartViewMode.Weekly ? "4.5" : "3";
                                     <path d="@GenerateAreaPath(HeartRatePoints)" class="chart-area" fill="url(#hrGradient)" />
                                     <path d="@GenerateSmoothPath(HeartRatePoints)" class="chart-line hr-line" />
                                     @foreach (var pt in HeartRatePoints)
                                     {
                                         var cx = pt.X.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
                                         var cy = pt.Y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
-                                        <circle cx="@cx" cy="@cy" r="4.5" class="chart-dot hr-dot" />
+                                        <circle cx="@cx" cy="@cy" r="@dotRadius" class="chart-dot hr-dot" />
                                     }
                                 }
                                 @foreach (var lbl in GetXAxisLabels())
@@ -481,6 +493,7 @@
                                     <g>@((MarkupString)$"<text x=\"{lx}\" y=\"180\" class=\"chart-x-label\" text-anchor=\"middle\">{lbl.Label}</text>")</g>
                                 }
                             </svg>
+                            </div>
                         </div>
 
                         <!-- Temperature -->
@@ -490,21 +503,22 @@
                                 @T("selected.temperature")
                                 <span class="chart-unit-badge">°C</span>
                             </div>
-                            <svg @ref="_tempSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
+                            <div class="chart-svg-scroll" @ref="_tempScrollRef">
+                            <svg @ref="_tempSvgRef" class="chart-svg" style="@ChartSvgStyle" viewBox="@ChartViewBoxAttr" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stop-color="#FF7043" stop-opacity="0.35" />
                                         <stop offset="100%" stop-color="#FF7043" stop-opacity="0.03" />
                                     </linearGradient>
                                 </defs>
-                                <rect x="90" y="15" width="695" height="145" rx="3" class="chart-bg" />
-                                <line x1="90" y1="15" x2="785" y2="15" class="grid-line" />
-                                <line x1="90" y1="51" x2="785" y2="51" class="grid-line" />
-                                <line x1="90" y1="88" x2="785" y2="88" class="grid-line" />
-                                <line x1="90" y1="124" x2="785" y2="124" class="grid-line" />
-                                <line x1="90" y1="160" x2="785" y2="160" class="grid-line" />
+                                <rect x="90" y="15" width="@ChartBgWidth" height="145" rx="3" class="chart-bg" />
+                                <line x1="90" y1="15" x2="@ChartRightEdge" y2="15" class="grid-line" />
+                                <line x1="90" y1="51" x2="@ChartRightEdge" y2="51" class="grid-line" />
+                                <line x1="90" y1="88" x2="@ChartRightEdge" y2="88" class="grid-line" />
+                                <line x1="90" y1="124" x2="@ChartRightEdge" y2="124" class="grid-line" />
+                                <line x1="90" y1="160" x2="@ChartRightEdge" y2="160" class="grid-line" />
                                 <line x1="90" y1="15" x2="90" y2="160" class="axis-line" />
-                                <line x1="90" y1="160" x2="785" y2="160" class="axis-line" />
+                                <line x1="90" y1="160" x2="@ChartRightEdge" y2="160" class="axis-line" />
                                 <g>@((MarkupString)"<text x=\"58\" y=\"19\" class=\"chart-y-label\">39°</text>")</g>
                                 <g>@((MarkupString)"<text x=\"58\" y=\"55\" class=\"chart-y-label\">38°</text>")</g>
                                 <g>@((MarkupString)"<text x=\"58\" y=\"92\" class=\"chart-y-label\">37°</text>")</g>
@@ -512,13 +526,14 @@
                                 <g>@((MarkupString)"<text x=\"58\" y=\"164\" class=\"chart-y-label\">35°</text>")</g>
                                 @if (TemperaturePoints.Count >= 1)
                                 {
+                                    var tempDotRadius = CurrentChartView == ChartViewMode.Weekly ? "4.5" : "3";
                                     <path d="@GenerateAreaPath(TemperaturePoints)" class="chart-area" fill="url(#tempGradient)" />
                                     <path d="@GenerateSmoothPath(TemperaturePoints)" class="chart-line temp-line" />
                                     @foreach (var pt in TemperaturePoints)
                                     {
                                         var cx = pt.X.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
                                         var cy = pt.Y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
-                                        <circle cx="@cx" cy="@cy" r="4.5" class="chart-dot temp-dot" />
+                                        <circle cx="@cx" cy="@cy" r="@tempDotRadius" class="chart-dot temp-dot" />
                                     }
                                 }
                                 @foreach (var lbl in GetXAxisLabels())
@@ -528,6 +543,7 @@
                                     <g>@((MarkupString)$"<text x=\"{lx}\" y=\"180\" class=\"chart-x-label\" text-anchor=\"middle\">{lbl.Label}</text>")</g>
                                 }
                             </svg>
+                            </div>
                         </div>
                         </div>
                     </div>

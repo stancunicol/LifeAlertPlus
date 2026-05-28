@@ -203,6 +203,26 @@ static volatile bool     g_finger_on     = false; // IR peste prag
 // Fall detector — setat de fall_task, citit (şi resetat) de build_json
 static volatile bool g_fall_detected = false;
 
+// ─── Movement summary (umple fall_task la 50 Hz, citeşte build_json la fiecare POST) ──
+// Folosim acelaşi flux de samples al fall_task ca să clasificăm la fiecare ciclu de POST
+// dacă persoana se mişcă sau e nemişcată — fără să facem un al doilea task / al doilea
+// read pe MPU. La fiecare POST: media abaterii |a-1g| peste fereastra de samples + maximul;
+// build_json combină valorile cu un prag şi pune "activity":"moving" sau "stationary".
+typedef struct {
+    uint32_t sample_count;
+    float    dev_sum;   // suma cumulată |mag - 1g|
+    float    dev_max;   // max |mag - 1g| din fereastră
+} movement_accumulator_t;
+
+static movement_accumulator_t g_movement       = {0, 0.0f, 0.0f};
+static SemaphoreHandle_t      s_movement_lock  = NULL;
+
+// Praguri pentru clasificarea în firmware. Zgomotul senzorului la repaus rămâne ~0.02-0.05g,
+// mersul produce 0.1-0.3g abatere medie, alergarea 0.4g+; vârfuri scurte de 0.2g indică
+// mişcări izolate (ridicat în picioare, întins de braţ) chiar dacă media e mică.
+#define MOVEMENT_MEAN_THRESHOLD_G  0.05f
+#define MOVEMENT_PEAK_THRESHOLD_G  0.20f
+
 // Netif handle — necesar pentru a seta DNS backup după connect
 static esp_netif_t *s_wifi_netif = NULL;
 
@@ -506,6 +526,17 @@ static void fall_task(void *)
         float ay  = accel[1] / 16384.0f;
         float az  = accel[2] / 16384.0f;
         float mag = sqrtf(ax * ax + ay * ay + az * az);
+
+        // Acumulăm abaterea de la 1g (gravitaţie) pentru clasificarea activităţii.
+        // build_json consumă acumulatorul atomic la fiecare POST şi îl resetează.
+        // Eşec la take (timeout 0) = sărim sample-ul, nu blocăm fall detector-ul.
+        float dev = fabsf(mag - 1.0f);
+        if (s_movement_lock && xSemaphoreTake(s_movement_lock, 0) == pdTRUE) {
+            g_movement.sample_count++;
+            g_movement.dev_sum += dev;
+            if (dev > g_movement.dev_max) g_movement.dev_max = dev;
+            xSemaphoreGive(s_movement_lock);
+        }
 
         int64_t now_ms = esp_timer_get_time() / 1000;
 
@@ -1756,12 +1787,38 @@ static void build_json(char *buf, size_t sz,
     bool is_fall = g_fall_detected;
     if (is_fall) g_fall_detected = false;
 
+    // Consum atomic al acumulatorului de mişcare: snapshot + reset, ca să următoarea fereastră
+    // să fie independentă (~5s, deci ~250 sample-uri la 50 Hz prin fall_task).
+    movement_accumulator_t snap = {0, 0.0f, 0.0f};
+    if (s_movement_lock && xSemaphoreTake(s_movement_lock, pdMS_TO_TICKS(50)) == pdTRUE) {
+        snap = g_movement;
+        g_movement.sample_count = 0;
+        g_movement.dev_sum      = 0.0f;
+        g_movement.dev_max      = 0.0f;
+        xSemaphoreGive(s_movement_lock);
+    }
+
+    // Default conservativ: dacă nu avem destule sample-uri (MPU oprit, sleep) NU declarăm
+    // ceva — server-ul tratează absenţa câmpului ca lipsă de date.
+    const char *activity = NULL;
+    if (snap.sample_count >= 10) {
+        float mean_dev = snap.dev_sum / (float)snap.sample_count;
+        // Combinăm media + peak: mers susţinut creşte media; un peak izolat (ridicat în
+        // picioare, întors în pat) NU ridică media dar e captat de dev_max.
+        bool is_moving = (mean_dev > MOVEMENT_MEAN_THRESHOLD_G) ||
+                         (snap.dev_max > MOVEMENT_PEAK_THRESHOLD_G);
+        activity = is_moving ? "moving" : "stationary";
+    }
+
     int n = snprintf(buf, sz,
         "{\"serial\":\"%s\",\"date\":%llu,\"isAvailable\":true,\"isFall\":%s,"
         "\"mpu6050\":[%d,%d,%d],\"gyro\":[%d,%d,%d],",
         g_serial, (unsigned long long)ts, is_fall ? "true" : "false",
         mpu_ok ? accel[0] : 0, mpu_ok ? accel[1] : 0, mpu_ok ? accel[2] : 0,
         mpu_ok ? gyro[0]  : 0, mpu_ok ? gyro[1]  : 0, mpu_ok ? gyro[2]  : 0);
+
+    if (activity)
+        n += snprintf(buf+n, sz-n, "\"activity\":\"%s\",", activity);
 
     if (max_ok) n += snprintf(buf+n, sz-n, "\"max30100\":[%u,%u],\"bpm\":%d,", ir, red, g_bpm);
     else        n += snprintf(buf+n, sz-n, "\"max30100\":null,\"bpm\":0,");
@@ -1784,6 +1841,9 @@ extern "C" void app_main(void)
 
     // Mutex I2C recursiv — creat înainte de orice acces I2C concurent
     s_i2c_lock = xSemaphoreCreateRecursiveMutex();
+
+    // Mutex pentru acumulatorul de mişcare (fall_task scrie 50 Hz, build_json citeşte la POST)
+    s_movement_lock = xSemaphoreCreateMutex();
 
     printf("\n=== LifeAlertPlus | ESP32-C3 Mini ===\n\n");
 

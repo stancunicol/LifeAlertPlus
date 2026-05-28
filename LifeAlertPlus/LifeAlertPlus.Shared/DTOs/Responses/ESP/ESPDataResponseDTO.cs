@@ -14,5 +14,10 @@ namespace LifeAlertPlus.Shared.DTOs.Responses.ESP
         public string? Neo6m { get; set; }
         public double? Temperature { get; set; }
         public double? Battery { get; set; }
+
+        // Firmware-computed activity label for the last measurement window
+        // ("moving" / "stationary"). Null when MPU was unavailable or sample
+        // count too low to classify confidently.
+        public string? Activity { get; set; }
     }
 }

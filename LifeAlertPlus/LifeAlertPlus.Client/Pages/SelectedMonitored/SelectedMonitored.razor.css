@@ -454,6 +454,7 @@
     display: flex;
     flex-direction: column;
     gap: 25px;
+    min-width: 0; /* grid items default to min-width:auto and would grow to fit the wide SVG inside, breaking the page layout. */
 }
 
 .sidebar-section {
@@ -468,6 +469,7 @@
     padding: 30px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     border-top: 3px solid var(--color-primary-accent);
+    min-width: 0; /* prevent wide chart SVG inside from forcing the card (and the rest of the page) to grow */
 }
 
 .sidebar-section .section-card:nth-child(1) { border-top-color: var(--color-pink); }
@@ -550,32 +552,51 @@
     flex-direction: column;
     gap: 20px;
     padding-top: 4px;
+    min-width: 0;
 }
 
 /* ── Scrollable chart container ─────────────────────────── */
+/* Cards keep their layout width; horizontal scroll lives inside each card on .chart-svg-scroll. */
 .charts-scroll-outer {
-    overflow-x: auto;
-    overflow-y: visible;
     display: flex;
     flex-direction: column;
     gap: 28px;
-    padding-bottom: 14px;
+    min-width: 0;
+}
+
+/* Each SVG sits inside this scrollable strip so the (wide, zoom-aware) chart can pan
+   horizontally without changing the card's outer dimensions. The wrappers for HR and
+   Temp are paired via chartSync.attach so they pan together.
+   `min-width: 0` is critical: without it, the wide SVG inside would force this element
+   (and every flex/grid ancestor) to grow to its content width, breaking the page layout. */
+.chart-svg-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     scrollbar-width: thin;
     scrollbar-color: #A5D6A7 #f0f0f0;
 }
 
-.charts-scroll-outer::-webkit-scrollbar {
-    height: 6px;
+.charts-scroll-outer .chart-item {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
-.charts-scroll-outer::-webkit-scrollbar-track {
+.chart-svg-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.chart-svg-scroll::-webkit-scrollbar-track {
     background: #f4f5f7;
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
-.charts-scroll-outer::-webkit-scrollbar-thumb {
+.chart-svg-scroll::-webkit-scrollbar-thumb {
     background: linear-gradient(90deg, #A5D6A7, #66BB6A);
-    border-radius: 3px;
+    border-radius: 4px;
 }
 
 .chart-week-nav {
@@ -622,6 +643,70 @@
     color: #555;
     min-width: 160px;
     text-align: center;
+}
+
+.chart-zoom-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 20px;
+    padding: 4px 6px;
+    background: #F4F9F5;
+    border: 1px solid #E0EBE2;
+    border-radius: 20px;
+}
+
+.btn-zoom {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    color: #4CAF50;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.btn-zoom:hover:not(:disabled) {
+    background: linear-gradient(135deg, #A5D6A7 0%, #81C784 100%);
+    color: white;
+    transform: scale(1.08);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.25);
+}
+
+.btn-zoom:disabled {
+    background: #F0F0F0;
+    color: #CCC;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.btn-zoom-reset {
+    min-width: 52px;
+    height: 30px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 15px;
+    background: white;
+    color: #4CAF50;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.btn-zoom-reset:hover {
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+    color: #2E7D32;
 }
 
 .chart-item {
@@ -677,8 +762,10 @@
 }
 
 /* ── SVG base ───────────────────────────────────────────── */
+/* Width/height set via inline style="@ChartSvgStyle" so zoom only stretches X axis;
+   these defaults are the zoom-1x render size and act as fallback. */
 .chart-svg {
-    width: 1100px;
+    width: 3300px;
     height: 275px;
     overflow: visible;
     display: block;

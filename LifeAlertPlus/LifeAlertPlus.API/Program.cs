@@ -125,7 +125,16 @@ builder.Services
         options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
         options.DefaultSignInScheme = "Cookies";
     })
-    .AddCookie("Cookies")
+    .AddCookie("Cookies", options =>
+    {
+        // The Google handler temporarily signs in to this scheme between /signin-google
+        // and our /google-response action. SameSite=Lax ensures the auth cookie survives
+        // the top-level redirect Google issues back to our domain. SecurePolicy=SameAsRequest
+        // keeps it working in HTTP-only local dev while still going Secure in production.
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.HttpOnly = true;
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -167,6 +176,12 @@ builder.Services
         googleOptions.ClientSecret = googleAuthNSection["ClientSecret"] ?? "";
         googleOptions.CallbackPath = "/signin-google";
         googleOptions.Scope.Add("profile");
+        // Correlation cookie travels back from Google. Lax is required so the browser
+        // includes it on the top-level redirect from accounts.google.com → /signin-google.
+        // Without an explicit policy, recent Chromium builds can drop it and produce
+        // a "correlation failed" → silent redirect to /login.
+        googleOptions.CorrelationCookie.SameSite = SameSiteMode.Lax;
+        googleOptions.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     });
 
 var app = builder.Build();

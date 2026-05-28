@@ -46,7 +46,17 @@ namespace LifeAlertPlus.API.Controllers
             var authenticateResult = await HttpContext.AuthenticateAsync("Cookies");
             if (!authenticateResult.Succeeded || authenticateResult.Principal == null)
             {
-                logger.LogWarning("Google authentication failed");
+                // Log enough context to tell apart common failure modes (cookie missing,
+                // SameSite drop, expired correlation, etc.) instead of a generic "failed".
+                logger.LogWarning(
+                    "Google authentication failed at /google-response. Succeeded={Succeeded}, Failure={Failure}, " +
+                    "HasPrincipal={HasPrincipal}, RequestScheme={Scheme}, RequestHost={Host}, HasCookieHeader={HasCookie}",
+                    authenticateResult.Succeeded,
+                    authenticateResult.Failure?.Message,
+                    authenticateResult.Principal != null,
+                    Request.Scheme,
+                    Request.Host.Value,
+                    Request.Headers.ContainsKey("Cookie"));
                 return Redirect($"{getUrlService.GetClientBaseUrl()}/login?error=GoogleAuthFailed");
             }
 
@@ -64,7 +74,19 @@ namespace LifeAlertPlus.API.Controllers
                 return Redirect($"{getUrlService.GetClientBaseUrl()}/login?error=GoogleAuthNoEmail");
             }
 
-            var user = await userService.FindOrCreateGoogleUserAsync(email, name, googleId, givenName, familyName, profilePictureUrl);
+            Domain.Entities.User? user;
+            try
+            {
+                user = await userService.FindOrCreateGoogleUserAsync(email, name, googleId, givenName, familyName, profilePictureUrl);
+            }
+            catch (Application.Services.GoogleEmailConflictException)
+            {
+                // Existing classic (email/password) account with the same email — refuse to
+                // merge and tell the user to log in with their password.
+                logger.LogWarning("Google sign-in blocked: email {Email} is already registered with a different provider.", email);
+                return Redirect($"{getUrlService.GetClientBaseUrl()}/login?error=GoogleEmailConflict");
+            }
+
             if (user == null)
             {
                 logger.LogError("Failed to find or create Google user for email {Email}", email);

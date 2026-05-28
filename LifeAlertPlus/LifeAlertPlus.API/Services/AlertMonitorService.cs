@@ -35,6 +35,13 @@ namespace LifeAlertPlus.API.Services
         private const int MaxBufferSize = 100;
         private readonly ConcurrentDictionary<Guid, MetricBuffer> _metricBuffers = new();
 
+        // Throttle for the orphan-feedback recovery sweep (handles the case where
+        // _alertStates was lost — e.g. backend restart mid-alert — so notifications
+        // sent in a previous process never got their FeedbackRequestedAt set).
+        private readonly ConcurrentDictionary<Guid, DateTime> _lastFeedbackSweep = new();
+        private static readonly TimeSpan FeedbackSweepThrottle = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan FeedbackSweepLookback = TimeSpan.FromHours(6);
+
         private class MetricBuffer
         {
             public Queue<(DateTime Timestamp, double Value)> Pulse = new();
@@ -150,8 +157,23 @@ namespace LifeAlertPlus.API.Services
             {
                 if (_alertStates.TryRemove(monitoredId, out var resolvedState))
                 {
+                    // Happy path: this process started the alert, so we know exactly
+                    // which episode just resolved and can run the sweep right away.
                     _logger.LogInformation("Monitored {MonitoredId} returned to normal and alert state was cleared.", monitoredId);
+                    _lastFeedbackSweep[monitoredId] = now;
                     _ = Task.Run(() => MarkFeedbackRequestedAsync(monitoredId, resolvedState.FirstDetected));
+                }
+                else if (!_lastFeedbackSweep.TryGetValue(monitoredId, out var lastSweep)
+                         || (now - lastSweep) > FeedbackSweepThrottle)
+                {
+                    // Recovery sweep: covers the case where the backend was restarted
+                    // (or the process otherwise lost _alertStates) while the patient
+                    // was in alert/critical state. Without this, notifications sent
+                    // before the restart would stay with FeedbackRequestedAt == null
+                    // forever and the user-facing popup would never appear on next login.
+                    // Throttled per-monitored so we don't query on every Normal sample.
+                    _lastFeedbackSweep[monitoredId] = now;
+                    _ = Task.Run(() => MarkFeedbackRequestedAsync(monitoredId, now - FeedbackSweepLookback));
                 }
                 _lastNotificationSent.TryRemove(monitoredId, out _);
                 return;
