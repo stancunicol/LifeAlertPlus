@@ -43,6 +43,7 @@
 #include "lwip/inet.h"
 #include "lwip/dns.h"
 #include "cJSON.h"
+#include "esp_http_server.h"
 
 // ─── WiFi / API ───────────────────────────────────────────────────────────────
 // All secrets / deployment-specific values come from sdkconfig (gitignored),
@@ -341,7 +342,7 @@ static bool max_setup(void)
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     d[0] = M30_SPO2_CFG; d[1] = 0x27;   // 1600 Hz, 16-bit ADC
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
-    d[0] = M30_LED_CFG;  d[1] = 0x4F;   // RED=4.4mA, IR=50mA (max) — semnal PPG puternic
+    d[0] = M30_LED_CFG;  d[1] = 0x47;   // RED=4.4mA, IR=27.1mA — semnal PPG bun, consum redus pe baterie
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     d[0] = M30_FIFO_WR;  d[1] = 0x00;   // clear FIFO
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
@@ -1020,6 +1021,197 @@ static void gps_setup(void)
 }
 
 // =============================================================================
+// WiFi Provisioning — SoftAP + HTTP server
+// Dacă nu există nicio rețea configurată în NVS, ESP pornește ca hotspot
+// (fără parolă), servește un formular la 192.168.4.1 și salvează credențialele
+// introduse de utilizator în NVS, după care se repornește normal.
+// =============================================================================
+
+// Pagina principală — formular SSID + parolă
+static const char PROV_PAGE[] =
+    "<!DOCTYPE html><html><head>"
+    "<meta charset='utf-8'>"
+    "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+    "<title>LifeAlertPlus</title>"
+    "<style>"
+    "body{font-family:sans-serif;max-width:380px;margin:32px auto;padding:0 16px;background:#f5f5f5;}"
+    "h2{color:#1565c0;margin-bottom:4px;}p{color:#555;font-size:14px;}"
+    "label{font-size:13px;color:#333;display:block;margin-top:12px;}"
+    "input{width:100%;padding:10px;margin-top:4px;box-sizing:border-box;"
+    "border:1px solid #ccc;border-radius:6px;font-size:15px;background:#fff;}"
+    "button{width:100%;padding:13px;margin-top:20px;background:#1565c0;"
+    "color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer;}"
+    "button:active{background:#0d47a1;}"
+    ".card{background:#fff;border-radius:10px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.1);}"
+    "</style></head><body>"
+    "<div class='card'>"
+    "<h2>LifeAlertPlus</h2>"
+    "<p>Introduceti datele retelei WiFi la care sa se conecteze dispozitivul.</p>"
+    "<form method='POST' action='/save'>"
+    "<label>Nume retea (SSID)</label>"
+    "<input name='ssid' type='text' placeholder='WiFi_Acasa' required maxlength='32' autocomplete='off'>"
+    "<label>Parola WiFi</label>"
+    "<input name='pass' type='password' placeholder='(lasati gol daca nu are parola)' maxlength='64'>"
+    "<button type='submit'>Salveaza si conecteaza</button>"
+    "</form></div></body></html>";
+
+// Pagina afișată după salvare
+static const char PROV_DONE[] =
+    "<!DOCTYPE html><html><head>"
+    "<meta charset='utf-8'>"
+    "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+    "<title>Salvat!</title>"
+    "<style>body{font-family:sans-serif;max-width:380px;margin:60px auto;padding:0 16px;text-align:center;}"
+    "h2{color:#2e7d32;}p{color:#555;font-size:14px;line-height:1.5;}"
+    ".card{background:#fff;border-radius:10px;padding:30px;box-shadow:0 2px 8px rgba(0,0,0,.1);}"
+    "</style></head><body>"
+    "<div class='card'>"
+    "<h2>&#10003; Salvat!</h2>"
+    "<p>Dispozitivul se va reporni si va incerca sa se conecteze la reteaua configurata.</p>"
+    "<p>Puteti deconecta telefonul de la hotspot-ul LifeAlertPlus.</p>"
+    "</div></body></html>";
+
+// Decodează URL-encoding in-place (ex: %20 → ' ', + → ' ')
+static void url_decode(char *dst, const char *src, int dst_sz)
+{
+    int i = 0, j = 0;
+    while (src[i] && j < dst_sz - 1) {
+        if (src[i] == '%' && src[i+1] && src[i+2]) {
+            char hex[3] = { src[i+1], src[i+2], 0 };
+            dst[j++] = (char)strtol(hex, NULL, 16);
+            i += 3;
+        } else {
+            dst[j++] = (src[i] == '+') ? ' ' : src[i];
+            i++;
+        }
+    }
+    dst[j] = 0;
+}
+
+// Extrage valoarea unui câmp dintr-un body URL-encoded (ex: "ssid=Acasa&pass=1234")
+static bool form_field(const char *body, const char *key, char *out, int out_sz)
+{
+    char search[40];
+    snprintf(search, sizeof(search), "%s=", key);
+    const char *p = strstr(body, search);
+    if (!p) { out[0] = 0; return false; }
+    p += strlen(search);
+    const char *end = strchr(p, '&');
+    char raw[128] = {};
+    int n = end ? (int)(end - p) : (int)strlen(p);
+    if (n >= (int)sizeof(raw)) n = (int)sizeof(raw) - 1;
+    memcpy(raw, p, n);
+    url_decode(out, raw, out_sz);
+    return true;
+}
+
+static esp_err_t prov_get_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    httpd_resp_send(req, PROV_PAGE, HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+}
+
+static esp_err_t prov_save_handler(httpd_req_t *req)
+{
+    char body[256] = {};
+    int len = httpd_req_recv(req, body, sizeof(body) - 1);
+    if (len <= 0) { httpd_resp_send_500(req); return ESP_FAIL; }
+    body[len] = 0;
+
+    char ssid[33] = {}, pass[65] = {};
+    form_field(body, "ssid", ssid, sizeof(ssid));
+    form_field(body, "pass", pass, sizeof(pass));
+
+    if (ssid[0] == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "SSID required");
+        return ESP_FAIL;
+    }
+
+    nvs_handle_t h;
+    if (nvs_open("wifi_cfg", NVS_READWRITE, &h) == ESP_OK) {
+        nvs_set_u8(h,  "n",  1);
+        nvs_set_str(h, "s0", ssid);
+        nvs_set_str(h, "p0", pass);
+        nvs_commit(h);
+        nvs_close(h);
+        printf("[PROV] Salvat: SSID='%s' — repornire...\n", ssid);
+    }
+
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    httpd_resp_send(req, PROV_DONE, HTTPD_RESP_USE_STRLEN);
+
+    vTaskDelay(pdMS_TO_TICKS(1500));   // permite răspunsul să fie trimis
+    esp_restart();
+    return ESP_OK;
+}
+
+// Intră în modul de provisionare — nu se întoarce niciodată (esp_restart() la final)
+static void provisioning_mode(void)
+{
+    // SSID hotspot: "LifeAlert-XXXXXX" (ultimele 6 caractere din serial)
+    char ap_ssid[24];
+    const char *suffix = g_serial + strlen(g_serial) - 6;
+    snprintf(ap_ssid, sizeof(ap_ssid), "LifeAlert-%.6s", suffix);
+
+    printf("\n[PROV] Nicio retea configurata — pornesc hotspot: \"%s\"\n", ap_ssid);
+    printf("[PROV] Conectati-va la hotspot si accesati http://192.168.4.1\n");
+
+    if (g_oled_ok) {
+        oled_clear();
+        oled_write_str(0, 10, "-- CONFIGURARE --");
+        oled_write_str(2, 0,  "WiFi hotspot:");
+        oled_write_str(3, 0,  ap_ssid);
+        oled_write_str(5, 0,  "192.168.4.1");
+        oled_write_str(7, 0,  "Conecteaza-te!");
+    }
+
+    // LED galben pornit fix în timpul provisionarii
+    gpio_set_level((gpio_num_t)LED_GREEN_PIN,  0);
+    gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);
+
+    // Inițializare WiFi în mod AP
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_ap();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+
+    wifi_config_t ap_cfg = {};
+    strncpy((char *)ap_cfg.ap.ssid, ap_ssid, sizeof(ap_cfg.ap.ssid) - 1);
+    ap_cfg.ap.ssid_len       = (uint8_t)strlen(ap_ssid);
+    ap_cfg.ap.channel        = 1;
+    ap_cfg.ap.authmode       = WIFI_AUTH_OPEN;   // fără parolă pe hotspot
+    ap_cfg.ap.max_connection = 4;
+
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_cfg));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    // Server HTTP pe portul 80
+    httpd_handle_t server = NULL;
+    httpd_config_t srv_cfg = HTTPD_DEFAULT_CONFIG();
+    srv_cfg.lru_purge_enable = true;
+    ESP_ERROR_CHECK(httpd_start(&server, &srv_cfg));
+
+    httpd_uri_t get_uri  = { "/",     HTTP_GET,  prov_get_handler,  NULL };
+    httpd_uri_t save_uri = { "/save", HTTP_POST, prov_save_handler, NULL };
+    httpd_register_uri_handler(server, &get_uri);
+    httpd_register_uri_handler(server, &save_uri);
+
+    printf("[PROV] Server HTTP pornit. Astept credentiale...\n");
+
+    // Clipire LED galben cât așteptăm (prov_save_handler face esp_restart)
+    while (true) {
+        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);
+        vTaskDelay(pdMS_TO_TICKS(600));
+        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);
+        vTaskDelay(pdMS_TO_TICKS(600));
+    }
+}
+
+// =============================================================================
 // WiFi
 // =============================================================================
 static void on_wifi_event(void *, esp_event_base_t base, int32_t id, void *data)
@@ -1094,7 +1286,8 @@ static bool wifi_try_connect(uint8_t idx)
     wifi_config_t wc = {};
     strncpy((char *)wc.sta.ssid,     s_wifi_ssids[idx],  sizeof(wc.sta.ssid)  - 1);
     strncpy((char *)wc.sta.password, s_wifi_passes[idx], sizeof(wc.sta.password) - 1);
-    wc.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    // Rețelele fără parolă (open) nu trec de WPA2 — folosim WPA doar dacă există parolă
+    wc.sta.threshold.authmode = (s_wifi_passes[idx][0] != '\0') ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
 
     esp_wifi_disconnect();
     esp_wifi_set_config(WIFI_IF_STA, &wc);
@@ -1118,6 +1311,12 @@ static bool wifi_setup(void)
     ESP_ERROR_CHECK(ret);
 
     wifi_load_credentials();
+
+    // Nicio rețea configurată și nicio valoare implicită la compilare → provisioning mode.
+    // provisioning_mode() nu se întoarce: servește formularul, salvează în NVS, face restart.
+    if (s_wifi_net_count == 0) {
+        provisioning_mode();
+    }
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());

@@ -427,3 +427,108 @@
         gap: 0.5rem;
     }
 }
+
+/* ── First Time Setup ─────────────────────────────────── */
+.setup-section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    border-left: 4px solid #1565c0;
+}
+
+.setup-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    margin-top: 1.2rem;
+}
+
+.setup-step {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.step-badge {
+    min-width: 32px;
+    height: 32px;
+    background: #1565c0;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.step-body {
+    flex: 1;
+}
+
+.step-body strong {
+    display: block;
+    font-size: 1rem;
+    color: #1a1a1a;
+    margin-bottom: 0.25rem;
+}
+
+.step-body p {
+    margin: 0 0 0.5rem 0;
+    color: #555;
+    font-size: 0.95rem;
+}
+
+/* OLED display mockup */
+.oled-preview {
+    display: inline-flex;
+    flex-direction: column;
+    background: #111;
+    color: #00e676;
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    margin-top: 0.4rem;
+    line-height: 1.6;
+    letter-spacing: 0.03em;
+}
+
+.oled-highlight {
+    color: #fff;
+    font-weight: bold;
+}
+
+.setup-note {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.88rem;
+    color: #5d4037;
+    margin-top: 0.4rem;
+}
+
+.setup-url {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #0d47a1;
+    border-radius: 4px;
+    padding: 0.25rem 0.6rem;
+    font-size: 1rem;
+    margin-top: 0.3rem;
+    letter-spacing: 0.02em;
+}
+
+.setup-tip {
+    margin-top: 1.4rem;
+    background: #e8f5e9;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.92rem;
+    color: #2e7d32;
+}
