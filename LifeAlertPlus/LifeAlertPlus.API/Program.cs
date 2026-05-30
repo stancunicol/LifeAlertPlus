@@ -194,7 +194,15 @@ builder.Services
 
 var app = builder.Build();
 
-await UserSeed.SeedAsync(app.Services);
+try
+{
+    await UserSeed.SeedAsync(app.Services);
+}
+catch (Exception seedEx)
+{
+    var seedLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    seedLogger.LogError(seedEx, "Database seed/migration failed at startup — app will continue. Check ConnectionStrings__Default in Azure App Settings.");
+}
 
 // Must run before any other middleware so that X-Forwarded-Proto / X-Forwarded-For
 // from Azure's reverse proxy are honoured. Without this the OAuth middleware generates
