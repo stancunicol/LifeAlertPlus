@@ -617,11 +617,11 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     private string GetCardStatus(MonitoredCard card)
     {
-        if (card.LastData == null || !card.LastData.IsAvailable || card.LastData.Max30100 == null || card.LastData.Max30100.Count < 2)
+        if (card.LastData == null || !card.LastData.IsAvailable)
             return "NoData";
 
-        var pulse = card.LastData?.Max30100?.ElementAtOrDefault(0) ?? 0;
-        var spo2  = card.LastData?.Max30100?.ElementAtOrDefault(1) ?? 0;
+        var pulse = card.LastData?.Bpm ?? 0;
+        var spo2  = 0; // SpO2 algorithm not yet implemented in firmware
         var temp  = card.LastData?.Temperature;
 
         // Use patient-specific thresholds if set, otherwise use defaults

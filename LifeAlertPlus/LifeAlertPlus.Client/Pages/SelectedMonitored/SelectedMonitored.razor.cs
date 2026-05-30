@@ -345,11 +345,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
                 if (espData?.IsAvailable == true)
                 {
-                    if (espData.Max30100 != null && espData.Max30100.Count >= 2)
-                    {
-                        heartRate = espData.Max30100.ElementAtOrDefault(0);
-                        spO2 = espData.Max30100.ElementAtOrDefault(1);
-                    }
+                    heartRate = espData.Bpm ?? 0;
+                    spO2 = espData.Spo2 ?? 0;
                     
                     temperature = espData.Temperature ?? 0;
                     gps = espData.Neo6m ?? "No data";

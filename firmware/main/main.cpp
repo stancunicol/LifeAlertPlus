@@ -199,6 +199,7 @@ static inline void i2c_unlock(void) { if (s_i2c_lock) xSemaphoreGiveRecursive(s_
 static volatile uint16_t g_last_ir       = 0;
 static volatile uint16_t g_last_red      = 0;
 static volatile int      g_bpm           = 0;     // 0 = necalculat / fără deget
+static volatile int      g_spo2          = 0;     // 0 = necalculat / fără deget
 static volatile bool     g_finger_on     = false; // IR peste prag
 
 // Fall detector — setat de fall_task, citit (şi resetat) de build_json
@@ -404,25 +405,27 @@ static void max_wake(void)
 // =============================================================================
 static void pulse_task(void *)
 {
-    float dc_ir         = 0.0f;          // tracker DC
-    const float DC_ALPHA = 0.01f;        // ~100 samples (~1s) time constant
-    bool   above        = false;          // hist state pentru detecţia muchiei
-    int    last_peak_ms = 0;
-    int    intervals[6] = {0};            // ultimele 6 intervale între vârfuri (ms)
-    int    int_idx      = 0;
-    int    int_filled   = 0;
+    float dc_ir          = 0.0f;
+    float dc_red         = 0.0f;
+    const float DC_ALPHA = 0.01f;   // ~100 samples (~1s) time constant
+    bool  above          = false;
+    int   last_peak_ms   = 0;
+    int   intervals[6]   = {0};
+    int   int_idx        = 0;
+    int   int_filled     = 0;
+
+    // Peak/valley trackers per bătaie — pentru calculul amplitudinii AC
+    float ir_min  = 0.0f, ir_max  = 0.0f;
+    float red_min = 0.0f, red_max = 0.0f;
+    bool  beat_started = false;
 
     while (true) {
-        // În sleep mode sau dacă MAX nu a iniţializat: stăm pe loc
         if (g_sleep_mode || !g_max_ok) {
-            g_bpm = 0;
+            g_bpm = 0; g_spo2 = 0;
             g_finger_on = false;
-            // Reset stare DSP la trezire
-            dc_ir = 0.0f;
-            above = false;
-            int_filled = 0;
-            int_idx = 0;
-            last_peak_ms = 0;
+            dc_ir = 0.0f; dc_red = 0.0f;
+            above = false; int_filled = 0; int_idx = 0;
+            last_peak_ms = 0; beat_started = false;
             vTaskDelay(pdMS_TO_TICKS(300));
             continue;
         }
@@ -439,44 +442,68 @@ static void pulse_task(void *)
         g_finger_on = finger;
 
         if (!finger) {
-            // Reset state — degetul nu e pe senzor
-            g_bpm = 0;
-            dc_ir = 0.0f;
-            above = false;
-            int_filled = 0;
-            int_idx = 0;
-            last_peak_ms = 0;
+            g_bpm = 0; g_spo2 = 0;
+            dc_ir = 0.0f; dc_red = 0.0f;
+            above = false; int_filled = 0; int_idx = 0;
+            last_peak_ms = 0; beat_started = false;
             vTaskDelay(pdMS_TO_TICKS(50));
             continue;
         }
 
-        // DC tracking (EMA)
-        if (dc_ir == 0.0f) dc_ir = (float)ir;
-        dc_ir = dc_ir * (1.0f - DC_ALPHA) + (float)ir * DC_ALPHA;
+        // DC tracking (EMA) pentru IR și RED
+        if (dc_ir  == 0.0f) { dc_ir  = (float)ir;  }
+        if (dc_red == 0.0f) { dc_red = (float)red; }
+        dc_ir  = dc_ir  * (1.0f - DC_ALPHA) + (float)ir  * DC_ALPHA;
+        dc_red = dc_red * (1.0f - DC_ALPHA) + (float)red * DC_ALPHA;
+
         float ac = (float)ir - dc_ir;
 
-        // Prag auto-adaptiv: 0.5% din DC (min 50) — semnalul PPG variază cu
-        // intensitatea LED-ului şi presiunea degetului
+        // Tracking peak/valley per bătaie pentru SpO2
+        if (!beat_started) {
+            ir_min = ir_max = (float)ir;
+            red_min = red_max = (float)red;
+            beat_started = true;
+        } else {
+            if ((float)ir  > ir_max)  ir_max  = (float)ir;
+            if ((float)ir  < ir_min)  ir_min  = (float)ir;
+            if ((float)red > red_max) red_max = (float)red;
+            if ((float)red < red_min) red_min = (float)red;
+        }
+
         float peak_th = dc_ir * 0.005f;
         if (peak_th < 50.0f) peak_th = 50.0f;
 
         int now_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
-        // Detecţie vârfuri — rising edge peste prag (cu histeresis pe ac < -peak_th)
         if (!above && ac > peak_th) {
             above = true;
             if (last_peak_ms > 0) {
                 int dt = now_ms - last_peak_ms;
-                if (dt > 300 && dt < 1500) {  // 40-200 BPM = interval 300-1500 ms
+                if (dt > 300 && dt < 1500) {
                     intervals[int_idx] = dt;
                     int_idx = (int_idx + 1) % 6;
                     if (int_filled < 6) int_filled++;
-                    // BPM = media intervalelor recente
                     int sum = 0;
                     for (int i = 0; i < int_filled; i++) sum += intervals[i];
                     int avg_dt = sum / int_filled;
                     int bpm = 60000 / avg_dt;
                     if (bpm >= 40 && bpm <= 200) g_bpm = bpm;
+
+                    // SpO2 = R = (RED_AC/RED_DC) / (IR_AC/IR_DC)
+                    // SpO2% ≈ 110 - 25*R  (model liniar empiric)
+                    float ir_ac  = ir_max  - ir_min;
+                    float red_ac = red_max - red_min;
+                    if (dc_ir > 500.0f && dc_red > 100.0f && ir_ac > 30.0f && red_ac > 10.0f) {
+                        float R = (red_ac / dc_red) / (ir_ac / dc_ir);
+                        int spo2 = (int)(110.0f - 25.0f * R + 0.5f);
+                        if (spo2 > 100) spo2 = 100;
+                        if (spo2 <  70) spo2 =  70;
+                        g_spo2 = spo2;
+                    }
+
+                    // Reset trackerele pentru următoarea bătaie
+                    ir_min = ir_max = (float)ir;
+                    red_min = red_max = (float)red;
                 }
             }
             last_peak_ms = now_ms;
@@ -2019,7 +2046,7 @@ static void build_json(char *buf, size_t sz,
     if (activity)
         n += snprintf(buf+n, sz-n, "\"activity\":\"%s\",", activity);
 
-    if (max_ok) n += snprintf(buf+n, sz-n, "\"max30100\":[%u,%u],\"bpm\":%d,", ir, red, g_bpm);
+    if (max_ok) n += snprintf(buf+n, sz-n, "\"max30100\":[%u,%u],\"bpm\":%d,\"spo2\":%d,", ir, red, g_bpm, g_spo2);
     else        n += snprintf(buf+n, sz-n, "\"max30100\":null,\"bpm\":0,");
 
     if (ds_ok) n += snprintf(buf+n, sz-n, "\"temperature\":%.2f,", temp);

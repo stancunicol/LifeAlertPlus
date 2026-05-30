@@ -104,7 +104,7 @@ namespace LifeAlertPlus.API.Controllers
 
             int pulse = payload.Bpm ?? 0;
             double temperature = payload.Temperature ?? 0;
-            int spo2 = 0;
+            int spo2 = payload.Spo2 ?? 0;
             string coordinates = payload.Neo6m ?? string.Empty;
             bool isFall = payload.IsFall;
             // Firmware classifies movement over the last ~5s window from the same MPU
