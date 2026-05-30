@@ -13,7 +13,7 @@ RUN dotnet restore LifeAlertPlus/LifeAlertPlus.Client/LifeAlertPlus.Client.cspro
 
 COPY LifeAlertPlus/ LifeAlertPlus/
 WORKDIR /src/LifeAlertPlus/LifeAlertPlus.Client
-RUN dotnet publish -c Release --no-restore -o /app/publish
+RUN dotnet publish -c Release --no-restore -p:WasmBuildNative=false -o /app/publish
 
 FROM nginx:alpine
 COPY .github/workflows/nginx.conf /etc/nginx/conf.d/default.conf
