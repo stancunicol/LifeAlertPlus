@@ -258,11 +258,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseCors("AllowBlazorClient");
+
 app.UseResponseCompression();
 app.UseRateLimiter();
 app.UseHttpsRedirection();
-
-app.UseCors("AllowBlazorClient");
 
 app.UseStaticFiles();
 
