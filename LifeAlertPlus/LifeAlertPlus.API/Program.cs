@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 // Npgsql ≥6 rejects DateTime with Kind=Unspecified for `timestamp with time zone`.
@@ -194,6 +195,24 @@ builder.Services
 
 var app = builder.Build();
 
+// Step 1: apply migrations first, separately from seed data
+try
+{
+    using var migScope = app.Services.CreateScope();
+    var db = migScope.ServiceProvider.GetRequiredService<LifeAlertPlus.Infrastructure.Context.LifeAlertPlusDbContext>();
+    var startLogger = migScope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    startLogger.LogInformation("Applying pending migrations...");
+    await db.Database.MigrateAsync();
+    startLogger.LogInformation("Migrations applied successfully.");
+}
+catch (Exception migEx)
+{
+    var migLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    migLogger.LogError(migEx, "MIGRATION FAILED — check ConnectionStrings__Default in Azure App Settings. Connection string in use: {ConnString}",
+        builder.Configuration.GetConnectionString("Default")?.Split(';').FirstOrDefault() ?? "not set");
+}
+
+// Step 2: seed data (idempotent)
 try
 {
     await UserSeed.SeedAsync(app.Services);
@@ -201,7 +220,7 @@ try
 catch (Exception seedEx)
 {
     var seedLogger = app.Services.GetRequiredService<ILogger<Program>>();
-    seedLogger.LogError(seedEx, "Database seed/migration failed at startup — app will continue. Check ConnectionStrings__Default in Azure App Settings.");
+    seedLogger.LogError(seedEx, "Seed failed — app will continue without seed data.");
 }
 
 // Must run before any other middleware so that X-Forwarded-Proto / X-Forwarded-For
