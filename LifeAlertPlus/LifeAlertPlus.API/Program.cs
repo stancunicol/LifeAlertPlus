@@ -266,9 +266,7 @@ app.UseExceptionHandler(errorApp =>
         }
         catch { /* best-effort — don't let audit writing crash the error handler */ }
 
-        var errorMsg = ex?.Message ?? "Unknown error";
-        var errorType = ex?.GetType().Name ?? "Unknown";
-        await context.Response.WriteAsync($"{{\"success\":false,\"message\":\"An internal server error occurred.\",\"debug\":\"{errorType}: {errorMsg.Replace("\"", "'")}\"}}");
+        await context.Response.WriteAsync("{\"success\":false,\"message\":\"An internal server error occurred.\"}");
 
     });
 });
