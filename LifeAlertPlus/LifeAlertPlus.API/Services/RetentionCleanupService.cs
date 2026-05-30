@@ -28,8 +28,9 @@ namespace LifeAlertPlus.API.Services
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
 
+                // Active persons: apply DataRetentionDays (measurements only).
                 var monitoreds = await db.Monitoreds
-                    .Where(m => m.DeletedAt == null)
+                    .Where(m => m.DeletedAt == null && !m.IsArchived)
                     .Select(m => new { m.Id, m.DataRetentionDays })
                     .ToListAsync(ct);
 
@@ -66,6 +67,27 @@ namespace LifeAlertPlus.API.Services
                         _logger.LogInformation(
                             "[Retention] Monitored {Id}: retention={Days}d, deleted measurements={M}, notifications={N}, dailyHistories={D}, weeklyHistories={W}",
                             monitored.Id, retention, deletedM, deletedN, deletedD, deletedW);
+                }
+
+                // Archived persons: apply ArchiveRetentionDays measured from ArchivedAt.
+                // When the archive window expires the entire monitored record is hard-deleted,
+                // which cascades to measurements, notifications and history via EF Core Cascade.
+                var archivedExpired = await db.Monitoreds
+                    .Where(m => m.IsArchived
+                             && m.DeletedAt == null
+                             && m.ArchiveRetentionDays != null
+                             && m.ArchivedAt != null
+                             && m.ArchivedAt.Value.AddDays((double)m.ArchiveRetentionDays) < now)
+                    .ToListAsync(ct);
+
+                if (archivedExpired.Any())
+                {
+                    db.Monitoreds.RemoveRange(archivedExpired);
+                    await db.SaveChangesAsync(ct);
+                    totalDeleted += archivedExpired.Count;
+                    _logger.LogInformation(
+                        "[Retention] Permanently deleted {Count} archived monitored person(s) whose archive retention window expired.",
+                        archivedExpired.Count);
                 }
             }
             catch (Exception ex)

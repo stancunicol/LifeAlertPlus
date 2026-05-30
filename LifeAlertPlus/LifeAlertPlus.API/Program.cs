@@ -15,6 +15,12 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 
+// Npgsql ≥6 rejects DateTime with Kind=Unspecified for `timestamp with time zone`.
+// Our DTOs (Birthdate, dates parsed from JSON) come in as Unspecified, so we opt
+// into the legacy "Unspecified is treated as UTC" behavior for the whole process.
+// Must be set before the first Npgsql connection is created.
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddResponseCompression(opts =>
@@ -58,6 +64,8 @@ builder.Services.AddScoped<DailyReportService>();
 builder.Services.AddHostedService<DailyReportBackgroundService>();
 builder.Services.AddScoped<RetentionCleanupService>();
 builder.Services.AddHostedService<RetentionCleanupBackgroundService>();
+builder.Services.AddHostedService<ActivityProfileRebuildBackgroundService>();
+builder.Services.AddSingleton<AuditService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -214,9 +222,22 @@ app.UseExceptionHandler(errorApp =>
         context.Response.StatusCode  = StatusCodes.Status500InternalServerError;
         context.Response.ContentType = "application/json";
 
-        var ex     = context.Features.Get<IExceptionHandlerPathFeature>()?.Error;
-        var logger = context.RequestServices.GetService<ILogger<Program>>();
+        var feature = context.Features.Get<IExceptionHandlerPathFeature>();
+        var ex      = feature?.Error;
+        var logger  = context.RequestServices.GetService<ILogger<Program>>();
         logger?.LogError(ex, "Unhandled exception");
+
+        // Write to SystemError log for the admin ErrorLog page.
+        try
+        {
+            var audit = context.RequestServices.GetService<LifeAlertPlus.API.Services.AuditService>();
+            audit?.LogErrorAsync(
+                source:  feature?.Path ?? "Unknown",
+                message: ex?.Message ?? "Unhandled exception",
+                details: ex?.ToString() ?? string.Empty,
+                level:   "Error");
+        }
+        catch { /* best-effort — don't let audit writing crash the error handler */ }
 
         await context.Response.WriteAsync("{\"success\":false,\"message\":\"An internal server error occurred.\"}");
     });

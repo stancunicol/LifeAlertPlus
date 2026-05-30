@@ -23,5 +23,6 @@ namespace LifeAlertPlus.Shared.DTOs.Requests.Monitored
         public int? MaxSpO2 { get; set; }
         public int? UpdateFrequency { get; set; }
         public int? DataRetentionDays { get; set; }
+        public int? ArchiveRetentionDays { get; set; }
     }
 }

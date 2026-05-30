@@ -567,5 +567,71 @@ namespace LifeAlertPlus.Application.Services
                 </body>
                 </html>";
         }
+
+        public async Task SendDoctorNoteNotificationEmailAsync(string recipientEmail, string recipientName, string patientName, string doctorEmail, string notePreview, string lang = "ro")
+        {
+            using var smtpClient = CreateSmtpClient();
+            var isEn = lang == "en";
+            var subject = isEn
+                ? $"LifeAlert+ - New medical note for {patientName}"
+                : $"LifeAlert+ - Notiță medicală nouă pentru {patientName}";
+
+            var mailMessage = new MailMessage
+            {
+                From = GetSenderAddress(),
+                Subject = subject,
+                Body = GenerateDoctorNoteNotificationEmailBody(recipientName, patientName, doctorEmail, notePreview, isEn),
+                IsBodyHtml = true
+            };
+            mailMessage.To.Add(recipientEmail);
+            await smtpClient.SendMailAsync(mailMessage);
+        }
+
+        private string GenerateDoctorNoteNotificationEmailBody(string recipientName, string patientName, string doctorEmail, string notePreview, bool isEn)
+        {
+            var headerTitle = isEn ? "📝 Medical Note" : "📝 Notiță medicală";
+            var greeting = isEn ? $"Hello <strong>{recipientName}</strong>," : $"Bună ziua, <strong>{recipientName}</strong>,";
+            var bodyText = isEn
+                ? $"Doctor <strong>{doctorEmail}</strong> has added a medical note for <strong>{patientName}</strong>:"
+                : $"Doctorul <strong>{doctorEmail}</strong> a adăugat o notiță medicală pentru <strong>{patientName}</strong>:";
+            var ctaText = isEn ? "View Patient Data" : "Vezi datele pacientului";
+            var disclaimer = isEn
+                ? "You are receiving this because you enabled email notifications in LifeAlert+. You can disable them in Settings."
+                : "Primiți acest email deoarece ați activat notificările prin email în LifeAlert+. Le puteți dezactiva din Setări.";
+            var footerText = isEn ? "&copy; 2026 LifeAlert+. All rights reserved." : "&copy; 2026 LifeAlert+. Toate drepturile rezervate.";
+
+            return $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }}
+                        .container {{ max-width: 520px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }}
+                        .header {{ background: linear-gradient(135deg, #2196F3, #1976D2); padding: 28px 24px; text-align: center; }}
+                        .header h1 {{ color: #fff; margin: 0; font-size: 22px; }}
+                        .body {{ padding: 28px 24px; }}
+                        .note-box {{ background: #f0f7ff; border-left: 4px solid #2196F3; padding: 14px 18px; border-radius: 6px; margin: 16px 0; font-size: 14px; color: #333; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }}
+                        .footer {{ background: #fafafa; padding: 16px 24px; text-align: center; font-size: 12px; color: #999; }}
+                        .button {{ display: inline-block; padding: 10px 20px; background: #2196F3; color: white; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 14px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class='container'>
+                        <div class='header'>
+                            <h1>{headerTitle}</h1>
+                        </div>
+                        <div class='body'>
+                            <p>{greeting}</p>
+                            <p>{bodyText}</p>
+                            <div class='note-box'>{notePreview}</div>
+                            <p style='font-size:13px;color:#777;'>{disclaimer}</p>
+                        </div>
+                        <div class='footer'>
+                            <p>{footerText}</p>
+                        </div>
+                    </div>
+                </body>
+                </html>";
+        }
     }
 }

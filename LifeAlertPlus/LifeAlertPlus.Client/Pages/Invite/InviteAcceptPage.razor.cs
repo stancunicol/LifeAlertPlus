@@ -157,6 +157,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
 
                 Patient = await patientResp.Content.ReadFromJsonAsync<LifeAlertPlus.Domain.Entities.Monitored>();
 
+                await LoadNoteAsync();
+
                 var measResp = await measTask;
                 if (measResp.IsSuccessStatusCode)
                 {
@@ -953,5 +955,58 @@ namespace LifeAlertPlus.Client.Pages.Invite
 
             return string.Join("", parts.Select(p => char.ToUpper(p[0])));
         }
+
+        // ── Doctor notes ────────────────────────────────────────────────────
+        private string _noteContent = string.Empty;
+        private string _noteStatus = string.Empty;
+        private bool _noteSaving;
+        private DateTime? _noteUpdatedAt;
+
+        private async Task LoadNoteAsync()
+        {
+            if (string.IsNullOrWhiteSpace(_token)) return;
+            try
+            {
+                using var resp = await Http.GetAsync($"api/invitations/notes?token={Uri.EscapeDataString(_token)}");
+                if (!resp.IsSuccessStatusCode) return;
+                var notes = await resp.Content.ReadFromJsonAsync<List<NoteDTO>>();
+                // Show the current doctor's own note (matched by email from InvitationInfo).
+                var mine = notes?.FirstOrDefault(n =>
+                    string.Equals(n.DoctorEmail, InvitationInfo?.DoctorEmail, StringComparison.OrdinalIgnoreCase));
+                if (mine != null)
+                {
+                    _noteContent  = mine.Content;
+                    _noteUpdatedAt = mine.UpdatedAt ?? mine.CreatedAt;
+                }
+            }
+            catch { /* best-effort */ }
+        }
+
+        private async Task SaveNoteAsync()
+        {
+            if (_noteSaving || string.IsNullOrWhiteSpace(_token)) return;
+            _noteSaving = true;
+            _noteStatus = string.Empty;
+            StateHasChanged();
+            try
+            {
+                var resp = await Http.PostAsJsonAsync(
+                    $"api/invitations/notes?token={Uri.EscapeDataString(_token)}",
+                    new { Content = _noteContent });
+                if (resp.IsSuccessStatusCode)
+                {
+                    _noteStatus    = T("selected.doctorNotesSaved");
+                    _noteUpdatedAt = DateTime.UtcNow;
+                }
+                else
+                    _noteStatus = T("selected.doctorNotesFailed");
+            }
+            catch { _noteStatus = T("selected.doctorNotesFailed"); }
+            finally { _noteSaving = false; StateHasChanged(); }
+        }
+
+        private sealed record NoteDTO(
+            Guid Id, string DoctorEmail, string DoctorName,
+            string Content, DateTime CreatedAt, DateTime? UpdatedAt);
     }
 }

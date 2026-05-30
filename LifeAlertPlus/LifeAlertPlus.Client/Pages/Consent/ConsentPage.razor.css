@@ -1,0 +1,117 @@
+.consent-page-wrapper {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
+
+.consent-page-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    width: 100%;
+    max-width: 520px;
+    overflow: hidden;
+}
+
+.consent-page-header {
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+    padding: 2rem 2rem 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(165, 214, 167, 0.4);
+}
+
+.consent-page-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1b5e20;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.5px;
+}
+
+.consent-page-logo span {
+    color: #66BB6A;
+}
+
+.consent-page-header h2 {
+    margin: 0 0 0.4rem;
+    font-size: 1.2rem;
+    color: #1b5e20;
+    font-family: var(--font-heading, inherit);
+}
+
+.consent-page-subtitle {
+    margin: 0;
+    font-size: 0.88rem;
+    color: #4caf50;
+}
+
+.consent-page-body {
+    padding: 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.consent-error {
+    color: #c62828;
+    font-size: 0.88rem;
+    margin: 0;
+    background: #FFEBEE;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    border-left: 3px solid #e53935;
+}
+
+.consent-page-footer {
+    padding: 1rem 2rem 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    border-top: 1px solid #f0f0f0;
+}
+
+.consent-cancel-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 30px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #555;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-family: var(--font-body, inherit);
+}
+
+.consent-cancel-btn:hover:not(:disabled) {
+    background: #f5f5f5;
+}
+
+.consent-accept-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 30px;
+    border: none;
+    background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
+    color: #1b5e20;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(165, 214, 167, 0.4);
+    transition: all 0.2s ease;
+    font-family: var(--font-body, inherit);
+}
+
+.consent-accept-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 187, 106, 0.45);
+}
+
+.consent-accept-btn:disabled,
+.consent-cancel-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}

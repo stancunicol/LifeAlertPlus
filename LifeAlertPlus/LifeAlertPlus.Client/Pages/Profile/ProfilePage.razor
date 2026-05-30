@@ -115,6 +115,27 @@
 
         <div class="profile-section danger-section">
             <div class="section-header">
+                <h2>🔒 @T("profile.gdprZone")</h2>
+            </div>
+            <div class="section-content">
+                <div class="danger-item">
+                    <div class="danger-info">
+                        <h3>@T("profile.gdprExportTitle")</h3>
+                        <p>@T("profile.gdprExportDesc")</p>
+                    </div>
+                    <button class="btn-secondary-action" @onclick="DownloadGdprExport" disabled="@_gdprExporting">
+                        @(_gdprExporting ? T("profile.gdprExporting") : T("profile.gdprExportBtn"))
+                    </button>
+                </div>
+                @if (!string.IsNullOrEmpty(_gdprExportError))
+                {
+                    <p class="gdpr-error">@_gdprExportError</p>
+                }
+            </div>
+        </div>
+
+        <div class="profile-section danger-section">
+            <div class="section-header">
                 <h2>⚠️ @T("profile.dangerZone")</h2>
             </div>
             <div class="section-content">

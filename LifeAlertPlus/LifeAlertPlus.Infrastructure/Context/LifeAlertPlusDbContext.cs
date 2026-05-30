@@ -21,6 +21,9 @@ namespace LifeAlertPlus.Infrastructure.Context
         public DbSet<ActivityProfile> ActivityProfiles { get; set; } = default!;
         public DbSet<MonitoredCondition> MonitoredConditions { get; set; } = default!;
         public DbSet<WifiNetwork> WifiNetworks { get; set; } = default!;
+        public DbSet<AuditLog> AuditLogs { get; set; } = default!;
+        public DbSet<SystemError> SystemErrors { get; set; } = default!;
+        public DbSet<DoctorNote> DoctorNotes { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -114,6 +117,23 @@ namespace LifeAlertPlus.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<WifiNetwork>()
                 .HasIndex(w => w.IdMonitored);
+
+            modelBuilder.Entity<AuditLog>().HasKey(a => a.Id);
+            modelBuilder.Entity<AuditLog>()
+                .HasIndex(a => a.Timestamp);
+
+            modelBuilder.Entity<SystemError>().HasKey(e => e.Id);
+            modelBuilder.Entity<SystemError>()
+                .HasIndex(e => e.Timestamp);
+
+            modelBuilder.Entity<DoctorNote>().HasKey(n => n.Id);
+            modelBuilder.Entity<DoctorNote>()
+                .HasOne(n => n.Monitored)
+                .WithMany()
+                .HasForeignKey(n => n.IdMonitored)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<DoctorNote>()
+                .HasIndex(n => n.IdMonitored);
         }
     }
 }

@@ -1,4 +1,5 @@
 using LifeAlertPlus.API.Helpers;
+using LifeAlertPlus.API.Services;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Application.IServices;
 using Microsoft.AspNetCore.Mvc;
@@ -15,13 +16,17 @@ namespace LifeAlertPlus.API.Controllers
     {
         private readonly IMonitoredService _monitoredService;
         private readonly IUserMonitoredService _userMonitoredService;
+        private readonly AlertMonitorService _alertMonitorService;
         private readonly ILogger<MonitoredController> _logger;
+        private readonly AuditService _auditService;
 
-        public MonitoredController(IMonitoredService monitoredService, IUserMonitoredService userMonitoredService, ILogger<MonitoredController> logger)
+        public MonitoredController(IMonitoredService monitoredService, IUserMonitoredService userMonitoredService, AlertMonitorService alertMonitorService, ILogger<MonitoredController> logger, AuditService auditService)
         {
             _monitoredService = monitoredService;
             _userMonitoredService = userMonitoredService;
+            _alertMonitorService = alertMonitorService;
             _logger = logger;
+            _auditService = auditService;
         }
 
         [HttpPost("add")]
@@ -144,6 +149,7 @@ namespace LifeAlertPlus.API.Controllers
             existing.MaxSpO2 = dto.MaxSpO2;
             existing.UpdateFrequency = dto.UpdateFrequency;
             existing.DataRetentionDays = dto.DataRetentionDays;
+            existing.ArchiveRetentionDays = dto.ArchiveRetentionDays;
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _monitoredService.UpdateMonitoredPersonAsync(existing);
@@ -151,5 +157,88 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { Message = "Monitored person updated successfully.", MonitoredPerson = existing });
         }
 
+        // ── Archive / Restore / Permanent delete ────────────────────────────────
+
+        [HttpPut("archive/{id:guid}")]
+        public async Task<IActionResult> ArchiveMonitoredPerson([FromRoute] Guid id)
+        {
+            var callerId = GetCallerId();
+            if (callerId == null)
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
+
+            var existing = await _monitoredService.GetMonitoredPersonByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
+
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
+            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
+                return Forbid();
+
+            if (existing.IsArchived)
+                return Ok(new { Message = "Monitored person is already archived.", MonitoredPerson = existing });
+
+            var ok = await _monitoredService.ArchiveMonitoredPersonAsync(id);
+            if (!ok)
+                return StatusCode(500, new { Message = "Failed to archive monitored person." });
+
+            _alertMonitorService.InvalidateArchivedCache(id);
+            _logger.LogInformation("User {UserId} archived monitored {MonitoredId}", callerId, id);
+            _auditService.LogAsync(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? callerId!.Value.ToString(), "ArchivePatient", $"Archived patient {existing.FirstName} {existing.LastName} (id={id})", "Patient");
+            return Ok(new { Message = "Monitored person archived successfully." });
+        }
+
+        [HttpPut("restore/{id:guid}")]
+        public async Task<IActionResult> RestoreMonitoredPerson([FromRoute] Guid id)
+        {
+            var callerId = GetCallerId();
+            if (callerId == null)
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
+
+            var existing = await _monitoredService.GetMonitoredPersonByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
+
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
+            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
+                return Forbid();
+
+            if (!existing.IsArchived)
+                return Ok(new { Message = "Monitored person is not archived.", MonitoredPerson = existing });
+
+            var ok = await _monitoredService.RestoreMonitoredPersonAsync(id);
+            if (!ok)
+                return StatusCode(500, new { Message = "Failed to restore monitored person." });
+
+            _alertMonitorService.InvalidateArchivedCache(id);
+            _logger.LogInformation("User {UserId} restored monitored {MonitoredId} from archive", callerId, id);
+            _auditService.LogAsync(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? callerId!.Value.ToString(), "RestorePatient", $"Restored patient {existing.FirstName} {existing.LastName} (id={id}) from archive", "Patient");
+            return Ok(new { Message = "Monitored person restored successfully." });
+        }
+
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> DeleteMonitoredPerson([FromRoute] Guid id)
+        {
+            var callerId = GetCallerId();
+            if (callerId == null)
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
+
+            var existing = await _monitoredService.GetMonitoredPersonByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
+
+            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
+            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
+                return Forbid();
+
+            // Permanent delete is only allowed from the archive — guard against accidental
+            // deletes of actively-monitored people.
+            if (!existing.IsArchived)
+                return BadRequest(new { Message = "Person must be archived before permanent deletion." });
+
+            await _monitoredService.DeleteMonitoredPersonAsync(id);
+            _logger.LogWarning("User {UserId} permanently deleted monitored {MonitoredId}", callerId, id);
+            _auditService.LogAsync(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? callerId!.Value.ToString(), "DeletePatient", $"Permanently deleted patient {existing.FirstName} {existing.LastName} (id={id})", "Patient");
+            return Ok(new { Message = "Monitored person permanently deleted." });
+        }
     }
 }

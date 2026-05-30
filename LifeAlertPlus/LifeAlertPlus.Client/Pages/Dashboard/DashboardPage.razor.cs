@@ -231,10 +231,28 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                 });
             }
 
-            // Sort by last update time (most recent first) and take top 4
+            // Statistics reflect the FULL set of monitored people, not just the
+            // recent slice — otherwise the counts would silently drift below the
+            // Total when fewer than 4 people had measurements.
+            OfflineCount   = cards.Count(c => !(c.EspData?.IsAvailable ?? false));
+            ActiveAlerts   = cards.Count(c => GetStatus(
+                                c.EspData?.Max30100?.Count >= 1 ? c.EspData.Max30100[0] : 0,
+                                c.EspData?.Max30100?.Count >= 2 ? c.EspData.Max30100[1] : 0,
+                                c.EspData?.Temperature,
+                                c.EspData?.IsAvailable ?? false) == "Critical");
+            StableCount    = cards.Count(c => GetStatus(
+                                c.EspData?.Max30100?.Count >= 1 ? c.EspData.Max30100[0] : 0,
+                                c.EspData?.Max30100?.Count >= 2 ? c.EspData.Max30100[1] : 0,
+                                c.EspData?.Temperature,
+                                c.EspData?.IsAvailable ?? false) == "OK");
+
+            // Show only the top 3 people who have at least one persisted measurement,
+            // ordered by most recent. People with no data yet stay off the dashboard
+            // (they're still counted in TotalMonitored / OfflineCount).
             var recentCards = cards
+                .Where(c => c.LastUpdatedUtc != DateTime.MinValue)
                 .OrderByDescending(c => c.LastUpdatedUtc)
-                .Take(4)
+                .Take(3)
                 .ToList();
 
             MonitoredSamples = recentCards.Select(card =>
@@ -271,10 +289,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                 );
             }).ToList();
 
-            // Update statistics
-            OfflineCount = MonitoredSamples.Count(m => !m.Online);
-            ActiveAlerts = MonitoredSamples.Count(m => m.Status == "Critical");
-            StableCount = MonitoredSamples.Count(m => m.Status == "OK");
+            // (Statistics already computed above from the full cards list.)
 
             await InvokeAsync(StateHasChanged);
         }

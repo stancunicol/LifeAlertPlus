@@ -43,6 +43,18 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private bool ShowAddPersonModal;
     private string ErrorMessage = string.Empty;
 
+    // Archive view state
+    private enum ViewMode { Active, Archive }
+    private ViewMode CurrentView = ViewMode.Active;
+    private bool _isLoadingArchive;
+    private IReadOnlyList<LifeAlertPlus.Domain.Entities.Monitored> _archivedPeople = Array.Empty<LifeAlertPlus.Domain.Entities.Monitored>();
+    private bool _showArchiveConfirm;
+    private bool _showRestoreConfirm;
+    private bool _showDeleteConfirm;
+    private LifeAlertPlus.Domain.Entities.Monitored? _personPendingAction;
+    private string _actionError = string.Empty;
+    private bool _isProcessingAction;
+
     private Guid _currentUserId;
     private string? CurrentUserEmail;
     private IReadOnlyList<LifeAlertPlus.Domain.Entities.Monitored> _monitoredPeople = Array.Empty<LifeAlertPlus.Domain.Entities.Monitored>();
@@ -95,7 +107,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             return;
         }
 
-        await LoadMonitoredPeopleAsync();
+        // Load both lists in parallel so the archive tab count is correct from the start.
+        await Task.WhenAll(LoadMonitoredPeopleAsync(), LoadArchivedPeopleAsync());
         StartPolling();
     }
 
@@ -140,6 +153,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
                 return;
             }
 
+            // Active list excludes archived people by default.
             _monitoredPeople = await UserMonitoredApiClient.GetMonitoredPeopleAsync(_currentUserId);
             await RefreshEspDataAsync(CancellationToken.None);
         }
@@ -153,6 +167,153 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             await InvokeAsync(StateHasChanged);
         }
     }
+
+    private async Task LoadArchivedPeopleAsync()
+    {
+        _isLoadingArchive = true;
+        _dataError = string.Empty;
+
+        try
+        {
+            if (_currentUserId == Guid.Empty)
+            {
+                _archivedPeople = Array.Empty<LifeAlertPlus.Domain.Entities.Monitored>();
+                return;
+            }
+
+            _archivedPeople = await UserMonitoredApiClient.GetArchivedMonitoredPeopleAsync(_currentUserId);
+        }
+        catch (Exception ex)
+        {
+            _dataError = $"Failed to load archived people: {ex.Message}";
+        }
+        finally
+        {
+            _isLoadingArchive = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SwitchViewAsync(ViewMode mode)
+    {
+        if (CurrentView == mode) return;
+        CurrentView = mode;
+        // Stop polling while in the archive view; archived data is static.
+        if (mode == ViewMode.Archive)
+        {
+            _pollingCts?.Cancel();
+            await LoadArchivedPeopleAsync();
+        }
+        else
+        {
+            await LoadMonitoredPeopleAsync();
+            StartPolling();
+        }
+    }
+
+    // ── Archive / Restore / Delete actions ──────────────────────────────────
+
+    private void OpenArchiveConfirm(LifeAlertPlus.Domain.Entities.Monitored person)
+    {
+        _personPendingAction = person;
+        _actionError = string.Empty;
+        _showArchiveConfirm = true;
+    }
+
+    private void OpenRestoreConfirm(LifeAlertPlus.Domain.Entities.Monitored person)
+    {
+        _personPendingAction = person;
+        _actionError = string.Empty;
+        _showRestoreConfirm = true;
+    }
+
+    private void OpenDeleteConfirm(LifeAlertPlus.Domain.Entities.Monitored person)
+    {
+        _personPendingAction = person;
+        _actionError = string.Empty;
+        _showDeleteConfirm = true;
+    }
+
+    private void CloseActionModal()
+    {
+        _showArchiveConfirm = false;
+        _showRestoreConfirm = false;
+        _showDeleteConfirm = false;
+        _personPendingAction = null;
+        _actionError = string.Empty;
+    }
+
+    private async Task ConfirmArchiveAsync()
+    {
+        if (_personPendingAction == null) return;
+        _isProcessingAction = true;
+        _actionError = string.Empty;
+        try
+        {
+            var ok = await MonitoredApiClient.ArchiveMonitoredPersonAsync(_personPendingAction.Id);
+            if (!ok)
+            {
+                _actionError = T("archive.actionFailed");
+                return;
+            }
+            CloseActionModal();
+            await LoadMonitoredPeopleAsync();
+        }
+        finally
+        {
+            _isProcessingAction = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ConfirmRestoreAsync()
+    {
+        if (_personPendingAction == null) return;
+        _isProcessingAction = true;
+        _actionError = string.Empty;
+        try
+        {
+            var ok = await MonitoredApiClient.RestoreMonitoredPersonAsync(_personPendingAction.Id);
+            if (!ok)
+            {
+                _actionError = T("archive.actionFailed");
+                return;
+            }
+            CloseActionModal();
+            await LoadArchivedPeopleAsync();
+        }
+        finally
+        {
+            _isProcessingAction = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_personPendingAction == null) return;
+        _isProcessingAction = true;
+        _actionError = string.Empty;
+        try
+        {
+            var ok = await MonitoredApiClient.DeleteMonitoredPersonAsync(_personPendingAction.Id);
+            if (!ok)
+            {
+                _actionError = T("archive.actionFailed");
+                return;
+            }
+            CloseActionModal();
+            await LoadArchivedPeopleAsync();
+        }
+        finally
+        {
+            _isProcessingAction = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string FormatArchivedDate(DateTime? archivedAt)
+        => archivedAt.HasValue ? archivedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm") : "—";
 
     private void StartPolling()
     {
@@ -457,22 +618,33 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private string GetCardStatus(MonitoredCard card)
     {
         if (card.LastData == null || !card.LastData.IsAvailable || card.LastData.Max30100 == null || card.LastData.Max30100.Count < 2)
-        {
             return "NoData";
-        }
 
         var pulse = card.LastData?.Max30100?.ElementAtOrDefault(0) ?? 0;
-        var spo2 = card.LastData?.Max30100?.ElementAtOrDefault(1) ?? 0;
+        var spo2  = card.LastData?.Max30100?.ElementAtOrDefault(1) ?? 0;
+        var temp  = card.LastData?.Temperature;
 
-        if (IsFallEvent(card) || pulse > 100 || pulse < 50 || spo2 < 90)
-        {
+        // Use patient-specific thresholds if set, otherwise use defaults
+        int minHR = card.Person.MinHeartRate ?? 50;
+        int maxHR = card.Person.MaxHeartRate ?? 100;
+        double minTemp = card.Person.MinTemperature ?? 36.0;
+        double maxTemp = card.Person.MaxTemperature ?? 39.0;
+        int minSpO2 = card.Person.MinSpO2 ?? 90;
+        int maxSpO2 = card.Person.MaxSpO2 ?? 100;
+
+        // Critical: fall, or readings exceed patient's threshold boundaries
+        if (IsFallEvent(card) || pulse < minHR || pulse > maxHR || spo2 < minSpO2 ||
+            (temp.HasValue && (temp < minTemp || temp > maxTemp)))
             return "Critical";
-        }
 
-        if (pulse > 90 || pulse < 60 || spo2 < 95)
-        {
+        // Warning: readings approaching boundaries (10% margin)
+        int hrMargin = (int)((maxHR - minHR) * 0.1);
+        int spo2Margin = (int)((maxSpO2 - minSpO2) * 0.1);
+        double tempMargin = (maxTemp - minTemp) * 0.1;
+
+        if (pulse <= minHR + hrMargin || pulse >= maxHR - hrMargin || spo2 <= minSpO2 + spo2Margin ||
+            (temp.HasValue && (temp <= minTemp + tempMargin || temp >= maxTemp - tempMargin)))
             return "Warning";
-        }
 
         return "OK";
     }

@@ -23,7 +23,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		[Inject]
 		private LanguageService Lang { get; set; } = default!;
 
-		private string T(string key) => Lang.T(key);
+		private string T(string key) => Lang.TEnglish(key);
 
 		protected bool IsLoading { get; private set; } = true;
 		protected string? ErrorMessage { get; private set; }
@@ -105,6 +105,9 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 					foreach (var person in user.MonitoredPeople)
 					{
 						if (string.IsNullOrWhiteSpace(person.DeviceSerialNumber))
+							continue;
+
+						if (person.IsArchived)
 							continue;
 
 						Persons.Add(new SimPerson
@@ -243,6 +246,19 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			person.LastStatus = SimStatus.Warn("Error starting");
 		}
 		StateHasChanged();
+	}
+
+	protected async Task ClearDataAsync(SimPerson person)
+	{
+		if (person.IsRunning || person.IsSending) return;
+		person.IsSending = true;
+		StateHasChanged();
+		try
+		{
+			var ok = await SimulationService.ClearSimulatedDataAsync(person.Serial);
+			person.LastStatus = ok ? SimStatus.Ok(T("sim.clearDataDone")) : SimStatus.Warn("Clear failed");
+		}
+		finally { person.IsSending = false; StateHasChanged(); }
 	}
 
 	protected async Task StopAutoAsync(SimPerson person)

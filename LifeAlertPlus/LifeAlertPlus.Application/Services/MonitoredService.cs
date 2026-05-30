@@ -59,5 +59,15 @@ namespace LifeAlertPlus.Application.Services
         {
             await _monitoredRepository.UpdateMonitoredPersonAsync(monitoredPerson);
         }
+
+        public async Task<bool> ArchiveMonitoredPersonAsync(Guid id)
+        {
+            return await _monitoredRepository.ArchiveMonitoredPersonAsync(id, DateTime.UtcNow);
+        }
+
+        public async Task<bool> RestoreMonitoredPersonAsync(Guid id)
+        {
+            return await _monitoredRepository.RestoreMonitoredPersonAsync(id);
+        }
     }
 }

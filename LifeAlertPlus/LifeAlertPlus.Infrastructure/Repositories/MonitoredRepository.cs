@@ -52,5 +52,27 @@ namespace LifeAlertPlus.Infrastructure.Repositories
             _context.Monitoreds.Update(monitoredPerson);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<bool> ArchiveMonitoredPersonAsync(Guid id, DateTime archivedAt)
+        {
+            var monitored = await _context.Monitoreds.FindAsync(id);
+            if (monitored == null) return false;
+            monitored.IsArchived = true;
+            monitored.ArchivedAt = archivedAt;
+            monitored.UpdatedAt = archivedAt;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreMonitoredPersonAsync(Guid id)
+        {
+            var monitored = await _context.Monitoreds.FindAsync(id);
+            if (monitored == null) return false;
+            monitored.IsArchived = false;
+            monitored.ArchivedAt = null;
+            monitored.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

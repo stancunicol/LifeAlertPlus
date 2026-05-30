@@ -42,6 +42,14 @@ namespace LifeAlertPlus.API.Services
             _simulatedData[payload.Serial.Trim()] = payload;
         }
 
+        public bool ClearData(string serial)
+        {
+            var key = serial.Trim();
+            var removed = _simulatedData.TryRemove(key, out _);
+            _heartbeats.TryRemove(key, out _);
+            return removed;
+        }
+
         public void SetHeartbeat(string serial, ESPHeartbeatDTO data)
             => _heartbeats[serial] = (DateTime.UtcNow, data);
 

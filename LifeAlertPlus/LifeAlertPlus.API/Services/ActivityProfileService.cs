@@ -12,8 +12,15 @@ namespace LifeAlertPlus.API.Services
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<ActivityProfileService> _logger;
 
-        // Last 15 minutes of activity readings per person: (timestamp, isMoving)
-        private readonly ConcurrentDictionary<Guid, Queue<(DateTime Timestamp, bool IsMoving)>> _activityBuffers = new();
+        // Last 15 minutes of activity readings per person, kept in a synchronized
+        // buffer so concurrent CheckAnomalyAsync calls for the same patient (e.g. a burst
+        // of ESP packets) don't corrupt the underlying Queue<T>.
+        private sealed class ActivityBuffer
+        {
+            public readonly object Sync = new();
+            public Queue<(DateTime Timestamp, bool IsMoving)> Readings = new();
+        }
+        private readonly ConcurrentDictionary<Guid, ActivityBuffer> _activityBuffers = new();
         private static readonly TimeSpan ActivityWindow = TimeSpan.FromMinutes(15);
 
         // Profile cache: avoid hitting DB on every measurement
@@ -52,10 +59,16 @@ namespace LifeAlertPlus.API.Services
         {
             bool moving = IsMoving(activity);
 
-            var buf = _activityBuffers.GetOrAdd(monitoredId, _ => new Queue<(DateTime, bool)>());
-            buf.Enqueue((now, moving));
-            while (buf.Count > 0 && (now - buf.Peek().Timestamp) > ActivityWindow)
-                buf.Dequeue();
+            var buf = _activityBuffers.GetOrAdd(monitoredId, _ => new ActivityBuffer());
+            bool[] recentReadings;
+            lock (buf.Sync)
+            {
+                buf.Readings.Enqueue((now, moving));
+                while (buf.Readings.Count > 0 && (now - buf.Readings.Peek().Timestamp) > ActivityWindow)
+                    buf.Readings.Dequeue();
+                // Snapshot under the lock so the rest of the method can read freely.
+                recentReadings = buf.Readings.Select(x => x.IsMoving).ToArray();
+            }
 
             if (_anomalyCooldowns.TryGetValue(monitoredId, out var lastAnomaly) &&
                 (now - lastAnomaly) < AnomalyCooldown)
@@ -71,7 +84,6 @@ namespace LifeAlertPlus.API.Services
             // Person usually active at this hour but hasn't moved in 15 minutes
             if (hourProfile.MovementRate > ActiveHourThreshold)
             {
-                var recentReadings = buf.Select(x => x.IsMoving).ToArray();
                 if (recentReadings.Length >= MinInactiveReadings && recentReadings.All(m => !m))
                 {
                     _anomalyCooldowns[monitoredId] = now;
@@ -96,7 +108,11 @@ namespace LifeAlertPlus.API.Services
             return (false, null, null, null);
         }
 
-        // Builds or rebuilds the hourly profile from the last 14 days of measurements
+        // Sliding-window length used by BuildProfileAsync. The profile is recomputed
+        // daily so that each new build "rolls forward" by one day.
+        public static readonly TimeSpan ProfileWindow = TimeSpan.FromDays(7);
+
+        // Builds or rebuilds the hourly profile from the last 7 days of measurements
         public async Task BuildProfileAsync(Guid monitoredId)
         {
             try
@@ -105,7 +121,17 @@ namespace LifeAlertPlus.API.Services
                 var db = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
                 var repo = scope.ServiceProvider.GetRequiredService<IActivityProfileRepository>();
 
-                var cutoff = DateTime.UtcNow.AddDays(-14);
+                var monitored = await db.Monitoreds
+                    .Where(m => m.Id == monitoredId)
+                    .Select(m => new { m.IsArchived })
+                    .FirstOrDefaultAsync();
+                if (monitored == null || monitored.IsArchived)
+                {
+                    _logger.LogDebug("BuildProfile skipped for {MonitoredId} — archived or missing", monitoredId);
+                    return;
+                }
+
+                var cutoff = DateTime.UtcNow - ProfileWindow;
                 var measurements = await db.Measurements
                     .Where(m => m.IdMonitored == monitoredId && m.CreatedAt >= cutoff)
                     .ToListAsync();
@@ -151,6 +177,38 @@ namespace LifeAlertPlus.API.Services
             {
                 _buildInProgress.TryRemove(monitoredId, out _);
             }
+        }
+
+        // Rolls the 7-day profile window forward by rebuilding every non-archived
+        // monitored person. Intended for the daily background job.
+        public async Task<int> RebuildAllActiveAsync(CancellationToken ct = default)
+        {
+            int rebuilt = 0;
+            try
+            {
+                List<Guid> ids;
+                using (var scope = _scopeFactory.CreateScope())
+                {
+                    var db = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
+                    ids = await db.Monitoreds
+                        .Where(m => !m.IsArchived && m.DeletedAt == null)
+                        .Select(m => m.Id)
+                        .ToListAsync(ct);
+                }
+
+                foreach (var id in ids)
+                {
+                    if (ct.IsCancellationRequested) break;
+                    if (!_buildInProgress.TryAdd(id, 0)) continue; // skip if already building
+                    await BuildProfileAsync(id);
+                    rebuilt++;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "RebuildAllActiveAsync failed");
+            }
+            return rebuilt;
         }
 
         public async Task<List<ActivityProfile>> GetProfileAsync(Guid monitoredId)

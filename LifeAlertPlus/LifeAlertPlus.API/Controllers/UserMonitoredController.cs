@@ -23,12 +23,24 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         [HttpGet("{userId}/monitored")]
-        public async Task<IActionResult> GetMonitoredPeopleByUserId(Guid userId)
+        public async Task<IActionResult> GetMonitoredPeopleByUserId(Guid userId, [FromQuery] bool includeArchived = false)
         {
             if (GetCallerId() != userId && !IsAdminRole())
                 return Forbid();
 
-            var monitoredPeople = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(userId);
+            var monitoredPeople = includeArchived
+                ? await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(userId)
+                : await _userMonitoredService.GetActiveMonitoredPeopleByUserIdAsync(userId);
+            return Ok(monitoredPeople);
+        }
+
+        [HttpGet("{userId}/monitored/archived")]
+        public async Task<IActionResult> GetArchivedMonitoredPeopleByUserId(Guid userId)
+        {
+            if (GetCallerId() != userId && !IsAdminRole())
+                return Forbid();
+
+            var monitoredPeople = await _userMonitoredService.GetArchivedMonitoredPeopleByUserIdAsync(userId);
             return Ok(monitoredPeople);
         }
 
@@ -68,6 +80,8 @@ namespace LifeAlertPlus.API.Controllers
                         LastName = m.LastName,
                         DeviceSerialNumber = m.DeviceSerialNumber,
                         IsActive = m.IsActive,
+                        IsArchived = m.IsArchived,
+                        ArchivedAt = m.ArchivedAt,
                         CreatedAt = m.CreatedAt,
                         UpdatedAt = m.UpdatedAt,
                         DeletedAt = m.DeletedAt

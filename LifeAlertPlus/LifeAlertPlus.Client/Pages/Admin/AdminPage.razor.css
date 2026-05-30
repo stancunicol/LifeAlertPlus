@@ -476,22 +476,38 @@
     color: #666;
     font-size: 0.95rem;
 }
-.notifications-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.notifications-list, .notif-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .notif-item {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: flex-start;
-    padding: 10px 12px;
+    gap: 12px;
+    padding: 12px 14px;
     border-radius: 8px;
     background: #fbfbff;
     border: 1px solid #f0f0f5;
+}
+.notif-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.notif-body {
+    flex: 1;
+    min-width: 0;
+}
+.notif-title {
+    font-family: var(--font-body);
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
 }
 .notif-item.critical { background: #fff5f5; border-color: #ffd6d6; }
 .notif-item.warning { background: #fffaf0; border-color: #fff0c8; }
 .notif-item.info { background: #f3f7ff; border-color: #d6e4ff; }
 .notif-main { max-width: 78%; }
-.notif-message { color: #555; font-size: 0.95rem; margin-top: 4px; }
-.notif-time { color: #888; font-size: 0.85rem; margin-left: 12px; white-space: nowrap; }
+.notif-message { color: #666; font-size: 0.88rem; margin-top: 3px; line-height: 1.4; }
+.notif-time { color: #999; font-size: 0.8rem; white-space: nowrap; flex-shrink: 0; }
 .no-notifs { color: #666; padding: 12px; }
 
 /* Small responsive tweak to stack stats and notifications on narrow screens */
@@ -546,4 +562,108 @@
 	.notif-time {
 		margin-left: 0;
 	}
+}
+
+/* Device status table */
+.device-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-family: var(--font-body);
+	font-size: 0.9rem;
+}
+
+.device-table th {
+	text-align: left;
+	padding: 10px 12px;
+	border-bottom: 2px solid var(--border, #e9e7ee);
+	color: #666;
+	font-weight: 600;
+	font-size: 0.82rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	white-space: nowrap;
+}
+
+.device-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--border, #e9e7ee);
+	vertical-align: middle;
+}
+
+.device-table code {
+	background: #f4f6f8;
+	padding: 2px 6px;
+	border-radius: 4px;
+	font-size: 0.82rem;
+}
+
+.device-table .row-offline td { color: #999; }
+.device-table .row-archived td { color: #bbb; font-style: italic; }
+
+.badge-online  { background: #e8f5e9; color: #2e7d32; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+.badge-offline { background: #fff3e0; color: #e65100; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+.badge-archived{ background: #eceff1; color: #607d8b; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+
+/* Pagination Controls */
+.pagination-controls {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	font-family: var(--font-body);
+	font-size: 0.9rem;
+}
+
+.pagination-controls select {
+	padding: 4px 8px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	font-family: var(--font-body);
+	font-size: 0.9rem;
+	background: white;
+	cursor: pointer;
+}
+
+.pagination-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 0;
+	border-top: 1px solid #f0f0f5;
+	margin-top: 12px;
+	font-family: var(--font-body);
+	font-size: 0.9rem;
+	color: #666;
+}
+
+.pagination-info {
+	color: #999;
+	font-size: 0.85rem;
+}
+
+.pagination-buttons {
+	display: flex;
+	gap: 8px;
+}
+
+.btn-pagination {
+	padding: 6px 12px;
+	border: 1px solid #ddd;
+	background: white;
+	border-radius: 4px;
+	font-family: var(--font-body);
+	font-size: 0.85rem;
+	cursor: pointer;
+	color: #333;
+	transition: all 0.2s ease;
+}
+
+.btn-pagination:hover:not(:disabled) {
+	background: #f5f5f5;
+	border-color: #999;
+	color: #000;
+}
+
+.btn-pagination:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }

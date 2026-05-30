@@ -19,5 +19,11 @@ namespace LifeAlertPlus.Shared.DTOs.Responses.ESP
         // ("moving" / "stationary"). Null when MPU was unavailable or sample
         // count too low to classify confidently.
         public string? Activity { get; set; }
+
+        // Device diagnostics from the latest heartbeat packet (null = no heartbeat yet).
+        public int? RssiDbm       { get; set; }
+        public int? FreeHeapBytes { get; set; }
+        public int? UptimeSeconds { get; set; }
+        public int? HeartbeatAge  { get; set; }
     }
 }

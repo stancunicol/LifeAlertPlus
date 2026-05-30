@@ -428,5 +428,35 @@ namespace LifeAlertPlus.Client.Pages.Profile
             ShowDeleteConfirmModalBool = false;
             ShowDeleteInfoModal = true;
         }
+
+        // ── GDPR export ──────────────────────────────────────────────────────────
+        private bool _gdprExporting;
+        private string _gdprExportError = string.Empty;
+
+        private async Task DownloadGdprExport()
+        {
+            if (CurrentUser == null) return;
+            _gdprExporting = true;
+            _gdprExportError = string.Empty;
+            try
+            {
+                var (data, fileName) = await UserApiClient.GdprExportAsync(CurrentUser.Id);
+                if (data == null || data.Length == 0)
+                {
+                    _gdprExportError = T("profile.gdprExportFailed");
+                    return;
+                }
+                var base64 = Convert.ToBase64String(data);
+                await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, "application/json", base64);
+            }
+            catch
+            {
+                _gdprExportError = T("profile.gdprExportFailed");
+            }
+            finally
+            {
+                _gdprExporting = false;
+            }
+        }
     }
 }

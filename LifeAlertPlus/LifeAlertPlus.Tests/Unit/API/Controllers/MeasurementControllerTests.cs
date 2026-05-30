@@ -24,7 +24,7 @@ public class MeasurementControllerTests
 
     public MeasurementControllerTests()
     {
-        _sut = new MeasurementController(_measurementSvc.Object, BuildAlertMonitor(), _userMonitoredSvc.Object);
+        _sut = new MeasurementController(_measurementSvc.Object, BuildAlertMonitor(), _userMonitoredSvc.Object, TestDataFactory.CreateLogger<MeasurementController>());
 
         // Provide an authenticated user so UserOwnsMonitoredAsync can read the caller id
         var claims = new[] { new Claim(ClaimTypes.NameIdentifier, _callerId.ToString()) };

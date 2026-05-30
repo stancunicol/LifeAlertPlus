@@ -20,6 +20,16 @@ namespace LifeAlertPlus.Client.Services
 		}
 
 		/// <summary>
+		public async Task<bool> ClearSimulatedDataAsync(string serial)
+		{
+			try
+			{
+				var response = await _httpClient.DeleteAsync($"api/esp/simulate/{Uri.EscapeDataString(serial)}");
+				return response.IsSuccessStatusCode;
+			}
+			catch { return false; }
+		}
+
 		/// Send a single simulated payload manually (for "Generate once" feature)
 		/// </summary>
 		public async Task<bool> SendSimulationAsync(ESPDataResponseDTO payload)

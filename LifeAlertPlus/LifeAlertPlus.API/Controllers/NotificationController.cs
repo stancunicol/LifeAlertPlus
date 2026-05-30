@@ -159,6 +159,7 @@ namespace LifeAlertPlus.API.Controllers
                     (n, m) => new PendingFeedbackDTO
                     {
                         Id = n.Id,
+                        IdMonitored = m.Id,
                         NotificationType = n.NotificationType,
                         Message = n.Message,
                         CreatedAt = n.CreatedAt,

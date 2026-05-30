@@ -63,10 +63,16 @@ namespace LifeAlertPlus.API.Services
             if (monitoredIds.Count == 0)
                 return;
 
-            // Get monitored people info
+            // Get monitored people info — archived persons are excluded from daily reports
+            // (no active monitoring => no report content).
             var monitored = await db.Monitoreds
-                .Where(m => monitoredIds.Contains(m.Id))
+                .Where(m => monitoredIds.Contains(m.Id) && !m.IsArchived)
                 .ToListAsync();
+
+            if (monitored.Count == 0)
+                return;
+
+            monitoredIds = monitored.Select(m => m.Id).ToList();
 
             var yesterdayEnd = yesterday.AddDays(1);
 

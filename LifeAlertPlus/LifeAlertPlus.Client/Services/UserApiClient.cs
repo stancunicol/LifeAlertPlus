@@ -50,8 +50,18 @@ namespace LifeAlertPlus.Client.Services
         public async Task<bool> DeleteUserAsync(Guid userId)
         {
             var response = await _httpClient.DeleteAsync($"api/user/delete/{userId}");
-
             return response.IsSuccessStatusCode;
+        }
+
+        public async Task<(byte[]? Data, string FileName)> GdprExportAsync(Guid userId)
+        {
+            var response = await _httpClient.GetAsync($"api/user/{userId}/gdpr-export");
+            if (!response.IsSuccessStatusCode) return (null, string.Empty);
+            var data = await response.Content.ReadAsByteArrayAsync();
+            var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+                ?? response.Content.Headers.ContentDisposition?.FileName
+                ?? $"gdpr-export-{DateTime.Now:yyyyMMdd}.json";
+            return (data, fileName.Trim('"'));
         }
 
         public async Task<string?> UploadProfilePictureAsync(Guid userId, Stream imageStream, string fileName)

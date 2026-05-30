@@ -23,9 +23,23 @@ namespace LifeAlertPlus.Client.Services
             return response.IsSuccessStatusCode;
         }
 
-        public async Task<IReadOnlyList<Monitored>> GetMonitoredPeopleAsync(Guid userId)
+        public async Task<IReadOnlyList<Monitored>> GetMonitoredPeopleAsync(Guid userId, bool includeArchived = false)
         {
-            var response = await _httpClient.GetAsync($"api/usermonitored/{userId}/monitored");
+            var query = includeArchived ? "?includeArchived=true" : string.Empty;
+            var response = await _httpClient.GetAsync($"api/usermonitored/{userId}/monitored{query}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return Array.Empty<Monitored>();
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<List<Monitored>>();
+            return result == null ? Array.Empty<Monitored>() : result;
+        }
+
+        public async Task<IReadOnlyList<Monitored>> GetArchivedMonitoredPeopleAsync(Guid userId)
+        {
+            var response = await _httpClient.GetAsync($"api/usermonitored/{userId}/monitored/archived");
 
             if (!response.IsSuccessStatusCode)
             {

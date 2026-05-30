@@ -4,6 +4,9 @@ using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using LifeAlertPlus.Infrastructure.Context;
+using LifeAlertPlus.API.Services;
 
 namespace LifeAlertPlus.API.Controllers
 {
@@ -14,11 +17,15 @@ namespace LifeAlertPlus.API.Controllers
     {
         private readonly IUserService _userService;
         private readonly ILogger<UserController> _logger;
+        private readonly LifeAlertPlusDbContext _db;
+        private readonly AuditService _auditService;
 
-        public UserController(IUserService userService, ILogger<UserController> logger)
+        public UserController(IUserService userService, ILogger<UserController> logger, LifeAlertPlusDbContext db, AuditService auditService)
         {
             _userService = userService;
             _logger = logger;
+            _db = db;
+            _auditService = auditService;
         }
 
         private bool CallerOwns(Guid id) => GetCallerId() == id;
@@ -81,7 +88,7 @@ namespace LifeAlertPlus.API.Controllers
         [HttpPatch("deactivate/{id}")]
         public async Task<IActionResult> DeactivateUser(Guid id)
         {
-            if (!CallerOwns(id))
+            if (!CallerOwns(id) && !IsAdminRole())
                 return Forbid();
 
             var user = await _userService.GetUserByIdAsync(id);
@@ -105,7 +112,7 @@ namespace LifeAlertPlus.API.Controllers
         [HttpPatch("activate/{id}")]
         public async Task<IActionResult> ActivateUser(Guid id)
         {
-            if (!CallerOwns(id))
+            if (!CallerOwns(id) && !IsAdminRole())
                 return Forbid();
 
             var user = await _userService.GetUserByIdAsync(id);
@@ -126,29 +133,6 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { Message = "User activated successfully." });
         }
 
-        [HttpDelete("delete/{id}")]
-        public async Task<IActionResult> DeleteUser(Guid id)
-        {
-            if (!CallerOwns(id))
-                return Forbid();
-
-            var user = await _userService.GetUserByIdAsync(id);
-            if (user == null)
-            {
-                return NotFound(new { Message = "User not found." });
-            }
-
-            TryDeleteProfileImageFile(user.ProfilePictureUrl);
-
-            var result = await _userService.DeleteUserAsync(id);
-            
-            if (!result)
-            {
-                return StatusCode(500, new { Message = "Failed to delete user." });
-            }
-
-            return Ok(new { Message = "User deleted successfully." });
-        }
 
         private static void TryDeleteProfileImageFile(string? profilePictureUrl)
         {
@@ -345,6 +329,194 @@ namespace LifeAlertPlus.API.Controllers
             }
 
             return Ok(response);
+        }
+
+        // ── GDPR consent — records first-time acceptance ────────────────────────
+        [HttpPost("{id}/consent")]
+        public async Task<IActionResult> RecordConsent(Guid id)
+        {
+            if (!CallerOwns(id)) return Forbid();
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null) return NotFound();
+            if (user.DataProcessingConsentAt != null)
+                return Ok(new { Message = "Consent already recorded." });
+            user.DataProcessingConsentAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userService.UpdateUserAsync(user);
+            _logger.LogInformation("GDPR consent recorded for user {UserId} (Google first login)", id);
+            // Issue a new token without the needsConsent flag.
+            return Ok(new { Message = "Consent recorded." });
+        }
+
+        // ── GDPR Art. 20 — Data portability export ──────────────────────────────
+        [HttpGet("{id}/gdpr-export")]
+        public async Task<IActionResult> GdprExport(Guid id)
+        {
+            if (!CallerOwns(id)) return Forbid();
+
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null) return NotFound();
+
+            var monitoredIds = await _db.UserMonitoreds
+                .Where(um => um.IdUser == id)
+                .Select(um => um.IdMonitored)
+                .ToListAsync();
+
+            var monitoreds = await _db.Monitoreds
+                .Where(m => monitoredIds.Contains(m.Id))
+                .ToListAsync();
+
+            var measurements = await _db.Measurements
+                .Where(m => monitoredIds.Contains(m.IdMonitored))
+                .OrderByDescending(m => m.CreatedAt)
+                .ToListAsync();
+
+            var notifications = await _db.Notifications
+                .Where(n => n.IdUser == id || monitoredIds.Contains(n.IdMonitored))
+                .OrderByDescending(n => n.CreatedAt)
+                .ToListAsync();
+
+            var activityProfiles = await _db.ActivityProfiles
+                .Where(ap => monitoredIds.Contains(ap.IdMonitored))
+                .ToListAsync();
+
+            var export = new
+            {
+                ExportedAt = DateTime.UtcNow,
+                GdprNote = "This file contains all personal data held by LifeAlertPlus about you and the persons you monitor, exported under GDPR Art. 20 (right to data portability).",
+                Account = new
+                {
+                    user.Id,
+                    user.FirstName,
+                    user.LastName,
+                    user.Email,
+                    user.PhoneNumber,
+                    user.Provider,
+                    user.Language,
+                    user.CreatedAt,
+                    user.DataProcessingConsentAt
+                },
+                MonitoredPersons = monitoreds.Select(m => new
+                {
+                    m.Id,
+                    m.FirstName,
+                    m.LastName,
+                    m.Birthdate,
+                    m.Gender,
+                    m.Address,
+                    m.DeviceSerialNumber,
+                    m.DataRetentionDays,
+                    m.ArchiveRetentionDays,
+                    m.IsArchived,
+                    m.ArchivedAt,
+                    m.CreatedAt
+                }),
+                Measurements = measurements.Select(m => new
+                {
+                    m.IdMonitored,
+                    m.Pulse,
+                    m.Temperature,
+                    m.SpO2,
+                    m.IsFall,
+                    m.Activity,
+                    m.Coordinates,
+                    m.CreatedAt
+                }),
+                Notifications = notifications.Select(n => new
+                {
+                    n.IdMonitored,
+                    n.NotificationType,
+                    n.Message,
+                    n.IsRead,
+                    n.CreatedAt
+                }),
+                ActivityProfiles = activityProfiles.Select(ap => new
+                {
+                    ap.IdMonitored,
+                    ap.HourOfDay,
+                    ap.AveragePulse,
+                    ap.MovementRate,
+                    ap.SleepProbability,
+                    ap.DataPoints,
+                    ap.LastUpdated
+                })
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(export,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+            var fileName = $"lifealertplus-gdpr-export-{DateTime.UtcNow:yyyyMMdd}.json";
+
+            _logger.LogInformation("GDPR export generated for user {UserId}", id);
+            return File(bytes, "application/json", fileName);
+        }
+
+        // ── GDPR Art. 17 — Right to erasure (account + all personal data) ───────
+        [HttpDelete("delete/{id}")]
+        public async Task<IActionResult> DeleteUser(Guid id)
+        {
+            if (!CallerOwns(id) && !IsAdminRole()) return Forbid();
+
+            var user = await _userService.GetUserByIdAsync(id);
+            if (user == null) return NotFound(new { Message = "User not found." });
+
+            TryDeleteProfileImageFile(user.ProfilePictureUrl);
+
+            // Delete monitored persons that have no other caregiver.
+            // Persons shared with other users lose only this user's link — their data is preserved.
+            var ownedLinks = await _db.UserMonitoreds
+                .Where(um => um.IdUser == id)
+                .ToListAsync();
+
+            foreach (var link in ownedLinks)
+            {
+                var otherOwners = await _db.UserMonitoreds
+                    .CountAsync(um => um.IdMonitored == link.IdMonitored && um.IdUser != id);
+
+                if (otherOwners == 0)
+                {
+                    // No other caregiver — hard-delete the person and all cascade data.
+                    var monitored = await _db.Monitoreds.FindAsync(link.IdMonitored);
+                    if (monitored != null)
+                        _db.Monitoreds.Remove(monitored);
+                }
+                else
+                {
+                    // Shared — only remove the link.
+                    _db.UserMonitoreds.Remove(link);
+                }
+            }
+
+            // Remove notifications addressed to this user for monitored persons
+            // that are NOT being fully deleted (i.e. shared persons — the monitored
+            // person stays but this user's notifications for them should go).
+            var remainingMonitoredIds = ownedLinks
+                .Where(l => _db.UserMonitoreds.Any(um => um.IdMonitored == l.IdMonitored && um.IdUser != id))
+                .Select(l => l.IdMonitored)
+                .ToHashSet();
+            if (remainingMonitoredIds.Count > 0)
+            {
+                var sharedNotifs = await _db.Notifications
+                    .Where(n => n.IdUser == id && remainingMonitoredIds.Contains(n.IdMonitored))
+                    .ToListAsync();
+                _db.Notifications.RemoveRange(sharedNotifs);
+            }
+
+            await _db.SaveChangesAsync();
+
+            var result = await _userService.DeleteUserAsync(id);
+            if (!result) return StatusCode(500, new { Message = "Failed to delete user account." });
+
+            var byAdmin = IsAdminRole() && !CallerOwns(id);
+            var actorEmail = byAdmin
+                ? (User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? "admin")
+                : user.Email;
+            var auditDetails = byAdmin
+                ? $"Account permanently deleted by administrator (deleted user: {user.Email})"
+                : "User deleted their own account (GDPR Art. 17)";
+            _logger.LogWarning("Account {Email} permanently deleted (by admin: {ByAdmin})", user.Email, byAdmin);
+            _auditService.LogAsync(actorEmail, "DeleteAccount", auditDetails, "Account");
+            return Ok(new { Message = "Account and all associated data permanently deleted." });
         }
 
         [HttpPatch("{id}/daily-report")]

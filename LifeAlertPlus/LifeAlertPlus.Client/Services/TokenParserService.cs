@@ -12,7 +12,8 @@ namespace LifeAlertPlus.Client.Services
         string LastName,
         string ProfilePictureUrl,
         string Provider,
-        string Role
+        string Role,
+        bool NeedsConsent = false
     );
 
     public class TokenParserService
@@ -117,7 +118,10 @@ namespace LifeAlertPlus.Client.Services
                 if (string.IsNullOrEmpty(profilePictureUrl) && !string.IsNullOrEmpty(storedPicture))
                     profilePictureUrl = storedPicture;
 
-                return new TokenClaims(userId, email, firstName, lastName, profilePictureUrl, provider, role);
+                var needsConsentStr = jsonToken.Claims.FirstOrDefault(c => c.Type == "needsConsent")?.Value;
+                var needsConsent = string.Equals(needsConsentStr, "true", StringComparison.OrdinalIgnoreCase);
+
+                return new TokenClaims(userId, email, firstName, lastName, profilePictureUrl, provider, role, needsConsent);
             }
             catch
             {

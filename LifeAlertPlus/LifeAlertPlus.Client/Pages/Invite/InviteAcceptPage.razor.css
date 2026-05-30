@@ -1208,3 +1208,59 @@
         text-align: center;
     }
 }
+
+/* Doctor sticky note (reused from ViewSelectedMonitored) */
+.doctor-note-card {
+    background: #FFFDE7;
+    border: 1px solid #FDD835;
+    border-left: 5px solid #F9A825;
+    border-radius: 14px;
+    padding: 1.1rem 1.3rem;
+    box-shadow: 2px 3px 10px rgba(249,168,37,0.12);
+}
+.doctor-note-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.7rem;
+    font-size: 0.95rem;
+    color: #5d4037;
+}
+.doctor-note-icon { font-size: 1.1rem; }
+.doctor-note-textarea {
+    width: 100%;
+    border: 1px solid #FFE082;
+    border-radius: 8px;
+    padding: 0.7rem;
+    font-family: var(--font-body, inherit);
+    font-size: 0.92rem;
+    background: #FFFEF5;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    color: #3e2723;
+}
+.doctor-note-textarea:focus { border-color: #F9A825; box-shadow: 0 0 0 2px rgba(249,168,37,0.2); }
+.doctor-note-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 0.6rem;
+}
+.doctor-note-status { font-size: 0.85rem; color: #388e3c; }
+.doctor-note-save {
+    background: linear-gradient(135deg,#FFF9C4 0%,#FFD740 100%);
+    color: #4e3200;
+    border: none;
+    padding: 0.55rem 1.2rem;
+    border-radius: 20px;
+    font-family: var(--font-body, inherit);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(249,168,37,0.35);
+}
+.doctor-note-save:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 10px rgba(249,168,37,0.5); }
+.doctor-note-save:disabled { opacity:.55; cursor:not-allowed; }

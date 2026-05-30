@@ -2043,3 +2043,316 @@
     color: #ea580c;
     font-family: var(--font-body);
 }
+
+/* ── Chart empty state ─────────────────────────────────────────────── */
+.chart-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 120px;
+    color: #90a4ae;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+}
+
+.chart-empty-state .chart-empty-icon {
+    font-size: 2rem;
+    opacity: 0.5;
+}
+
+.chart-empty-state p {
+    margin: 0;
+}
+
+.chart-svg-hidden {
+    display: none;
+}
+
+/* ── Archived person notice ──────────────────────────────────────────── */
+.archived-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.2rem 1.4rem;
+    background: linear-gradient(135deg, #ECEFF1 0%, #F8F9FA 100%);
+    border-left: 4px solid #B0BEC5;
+    border-radius: 14px;
+    color: #455a64;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+}
+
+.archived-notice-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.archived-notice strong {
+    font-size: 1rem;
+    color: #263238;
+}
+
+.archived-notice p {
+    margin: 0.3rem 0 0;
+    color: #607d8b;
+    font-size: 0.9rem;
+}
+
+/* GDPR retention transparency banner */
+.retention-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 1.2rem;
+    background: #FFF8E1;
+    border-left: 4px solid #FFD54F;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    color: #5d4037;
+    margin-bottom: 0.5rem;
+}
+
+.retention-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+/* Device diagnostics card */
+.stat-card-device-diag {
+    background: white;
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    margin-top: 0.75rem;
+}
+
+.device-diag-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #546e7a;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.device-diag-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+}
+
+.device-diag-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: #455a64;
+}
+
+.diag-icon { font-size: 0.9rem; }
+.diag-label { color: #78909c; }
+.diag-val { font-weight: 600; }
+.diag-val-ok      { color: #388e3c; }
+.diag-val-warn    { color: #f57c00; }
+.diag-val-danger  { color: #c62828; }
+
+/* Behavioral profile warmup / onboarding card */
+.profile-warmup-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.2rem 1.4rem;
+    background: linear-gradient(135deg, #F1F8E9 0%, #FFFFFF 70%);
+    border-left: 4px solid #81C784;
+    border-radius: 12px;
+    font-family: var(--font-body);
+    color: #33691e;
+}
+
+.profile-warmup-icon { font-size: 1.8rem; flex-shrink: 0; margin-top: 2px; }
+
+.profile-warmup-card strong { font-size: 0.97rem; display: block; margin-bottom: 0.3rem; }
+.profile-warmup-card p { margin: 0 0 0.4rem; font-size: 0.88rem; color: #558b2f; line-height: 1.45; }
+.profile-warmup-progress { font-size: 0.82rem; color: #7cb342; font-weight: 500; }
+
+/* Inline false-alarm feedback banner */
+.feedback-inline-banner {
+    background: linear-gradient(135deg, #FFF8E1 0%, #FFF3CD 100%);
+    border: 1px solid #FFD54F;
+    border-left: 5px solid #F9A825;
+    border-radius: 14px;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 1.5rem;
+    font-family: var(--font-body);
+}
+
+.feedback-inline-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+}
+
+.feedback-inline-icon { font-size: 1.2rem; }
+.feedback-inline-header strong { font-size: 1rem; color: #5d4037; }
+.feedback-inline-time { margin-left: auto; font-size: 0.82rem; color: #8d6e63; }
+
+.feedback-inline-msg {
+    font-size: 0.9rem;
+    color: #4e342e;
+    margin: 0 0 0.4rem;
+    font-weight: 500;
+}
+
+.feedback-inline-prompt {
+    font-size: 0.88rem;
+    color: #6d4c41;
+    margin: 0 0 0.8rem;
+}
+
+.feedback-inline-actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.feedback-inline-btn {
+    padding: 0.55rem 1.2rem;
+    border-radius: 20px;
+    border: none;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.feedback-inline-btn.real {
+    background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
+    color: #1b5e20;
+    box-shadow: 0 2px 6px rgba(165,214,167,0.4);
+}
+
+.feedback-inline-btn.real:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(102,187,106,0.45);
+}
+
+.feedback-inline-btn.false {
+    background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+    color: #b71c1c;
+    box-shadow: 0 2px 6px rgba(239,154,154,0.4);
+}
+
+.feedback-inline-btn.false:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(239,154,154,0.5);
+}
+
+.feedback-inline-btn:disabled, .feedback-inline-skip:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.feedback-inline-skip {
+    background: none;
+    border: none;
+    color: #a1887f;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-decoration: underline;
+    font-family: var(--font-body);
+    padding: 0.3rem 0.5rem;
+}
+
+.feedback-inline-skip:hover:not(:disabled) { color: #6d4c41; }
+
+/* ── Doctor Notes ──────────────────────────────────── */
+.doctor-notes-section {
+    margin-bottom: 24px;
+}
+
+.doctor-notes-loading {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.doctor-notes-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 24px;
+    color: #aaa;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+}
+
+.doctor-notes-empty-icon {
+    font-size: 2rem;
+}
+
+.doctor-notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.doctor-note-card {
+    border-radius: 8px;
+    padding: 14px 16px;
+    border-left: 4px solid #2196f3;
+    background: #f0f7ff;
+    border: 1px solid #bbdefb;
+}
+
+.doctor-note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 12px;
+}
+
+.doctor-note-doctor {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.doctor-note-name {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1565c0;
+}
+
+.doctor-note-email {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.doctor-note-date {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: #999;
+    white-space: nowrap;
+}
+
+.doctor-note-content {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

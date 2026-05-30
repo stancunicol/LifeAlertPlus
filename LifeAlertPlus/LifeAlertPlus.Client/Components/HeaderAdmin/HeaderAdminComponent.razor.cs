@@ -29,7 +29,7 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
         [Inject]
         private LanguageService Lang { get; set; } = default!;
 
-        private string T(string key) => Lang.T(key);
+        private string T(string key) => Lang.TEnglish(key);
 
         private bool ShowProfileMenu { get; set; } = false;
         private bool ShowMobileMenu { get; set; } = false;

@@ -30,19 +30,35 @@ namespace LifeAlertPlus.API.Controllers
             if (monitored == null)
                 return NotFound(new { Message = "Device not found." });
 
-            var owned = await userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
-            if (!owned.Any(m => m.Id == monitored.Id))
-                return Forbid();
+            if (!IsAdminRole())
+            {
+                var owned = await userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
+                if (!owned.Any(m => m.Id == monitored.Id))
+                    return Forbid();
+            }
 
             var data = simulationManager.GetData(serial);
             if (data != null)
             {
                 data.IsAvailable = true;
                 data.ErrorMessage = null;
-                return Ok(data);
+            }
+            else
+            {
+                data = CreateUnavailableResponse(serial, "No data yet — waiting for device.");
             }
 
-            return Ok(CreateUnavailableResponse(serial, "No data yet — waiting for device."));
+            // Attach latest heartbeat diagnostics (battery, RSSI, uptime) if available.
+            var hb = simulationManager.GetHeartbeat(serial.Trim());
+            if (hb.HasValue)
+            {
+                data.RssiDbm        = hb.Value.Data.RssiDbm;
+                data.FreeHeapBytes  = hb.Value.Data.FreeHeapBytes;
+                data.UptimeSeconds  = (int)Math.Min(hb.Value.Data.UptimeSeconds, int.MaxValue);
+                data.HeartbeatAge   = (int)(DateTime.UtcNow - hb.Value.ReceivedAt).TotalSeconds;
+            }
+
+            return Ok(data);
         }
 
         [HttpPost("ingest")]
@@ -59,6 +75,14 @@ namespace LifeAlertPlus.API.Controllers
                 return BadRequest(new { Message = "Serial is required." });
 
             payload.Serial = payload.Serial.Trim();
+
+            // Rate limit: max 4 ingest calls per 60 s per serial to prevent data flooding.
+            if (!alertMonitorService.IsIngestAllowed(payload.Serial))
+            {
+                logger.LogWarning("Ingest rate limit exceeded for serial {Serial}", payload.Serial);
+                return StatusCode(429, new { Message = "Rate limit exceeded. Please slow down." });
+            }
+
             if (payload.Date == 0) payload.Date = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             payload.IsAvailable = true;
             payload.ErrorMessage = null;
@@ -72,6 +96,12 @@ namespace LifeAlertPlus.API.Controllers
                 return Ok();
             }
 
+            if (monitored.IsArchived)
+            {
+                logger.LogInformation("ESP data from {Serial} ignored — monitored {MonitoredId} is archived", payload.Serial, monitored.Id);
+                return Ok(new { Message = "Monitored person is archived. Data not persisted." });
+            }
+
             int pulse = payload.Bpm ?? 0;
             double temperature = payload.Temperature ?? 0;
             int spo2 = 0;
@@ -79,7 +109,7 @@ namespace LifeAlertPlus.API.Controllers
             bool isFall = payload.IsFall;
             // Firmware classifies movement over the last ~5s window from the same MPU
             // stream the fall detector uses (50 Hz). Persist the label so the behavioral
-            // profile can compute movement rate / sleep probability per hour over 14 days.
+            // profile can compute movement rate / sleep probability per hour over 7 days.
             string activity = string.IsNullOrWhiteSpace(payload.Activity)
                 ? string.Empty
                 : payload.Activity.Trim();
@@ -99,15 +129,31 @@ namespace LifeAlertPlus.API.Controllers
             };
             await measurementService.AddMeasurementAsync(measurement);
 
-            _ = alertMonitorService.ProcessMeasurementAsync(
-                monitored.Id, pulse, temperature, spo2, isFall: isFall,
-                activity: activity,
-                coordinates: coordinates);
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await alertMonitorService.ProcessMeasurementAsync(
+                        monitored.Id, pulse, temperature, spo2, isFall: isFall,
+                        activity: activity,
+                        coordinates: coordinates);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "ProcessMeasurementAsync failed for serial {Serial} (monitored {MonitoredId})",
+                        payload.Serial, monitored.Id);
+                }
+            });
 
             if (isFall)
                 logger.LogWarning("ESP {Serial} reported FALL — triggering critical alert flow", payload.Serial);
             else
                 logger.LogDebug("ESP data ingested from {Serial}: pulse={Pulse} temp={Temp}", payload.Serial, pulse, temperature);
+
+            // Battery low check — fires a push notification when below threshold.
+            if (payload.Battery.HasValue)
+                _ = alertMonitorService.CheckBatteryAsync(monitored.Id, payload.Serial, payload.Battery.Value);
+
             return Ok();
         }
 
@@ -126,6 +172,12 @@ namespace LifeAlertPlus.API.Controllers
             var monitored = await monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(payload.Serial.Trim());
             if (monitored == null)
                 return NotFound(new { Message = "Device not found." });
+
+            if (monitored.IsArchived)
+            {
+                logger.LogInformation("Panic alert from {Serial} ignored — monitored {MonitoredId} is archived", payload.Serial, monitored.Id);
+                return Ok(new { Message = "Monitored person is archived. Panic alert not triggered." });
+            }
 
             await alertMonitorService.TriggerPanicAlertAsync(monitored.Id, payload.Coordinates);
             logger.LogWarning("Panic alert triggered by device {Serial}", payload.Serial);
@@ -167,6 +219,18 @@ namespace LifeAlertPlus.API.Controllers
             logger.LogDebug("Heartbeat from {Serial}: RSSI={Rssi} heap={Heap} uptime={Uptime}s queue={Queue}",
                 payload.Serial, payload.RssiDbm, payload.FreeHeapBytes, payload.UptimeSeconds, payload.QueuedMeasurements);
             return Ok();
+        }
+
+        [HttpDelete("simulate/{serial}")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult ClearSimulatedData(string serial)
+        {
+            if (string.IsNullOrWhiteSpace(serial))
+                return BadRequest(new { Message = "Serial is required." });
+
+            simulationManager.ClearData(serial.Trim());
+            logger.LogInformation("Simulated data cleared for serial {Serial}", serial);
+            return Ok(new { Message = "Simulated data cleared." });
         }
 
         [HttpPost("simulate")]

@@ -94,7 +94,8 @@ namespace LifeAlertPlus.Application.Services
                 Language = "ro",
                 UpdateFrequency = 30,
                 NotifyByEmail = true,
-                NotifyByPush = true
+                NotifyByPush = true,
+                DataProcessingConsentAt = user.DataProcessingConsent ? DateTime.UtcNow : null
             };
 
             var result = await _userRepository.CreateUserAsync(newUser);

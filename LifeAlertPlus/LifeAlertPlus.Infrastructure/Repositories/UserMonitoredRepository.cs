@@ -25,6 +25,24 @@ namespace LifeAlertPlus.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Monitored>> GetActiveMonitoredPeopleByUserIdAsync(Guid userId)
+        {
+            return await _context.UserMonitoreds
+                .Where(um => um.IdUser == userId)
+                .Select(um => um.Monitored)
+                .Where(m => !m.IsArchived && m.DeletedAt == null)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Monitored>> GetArchivedMonitoredPeopleByUserIdAsync(Guid userId)
+        {
+            return await _context.UserMonitoreds
+                .Where(um => um.IdUser == userId)
+                .Select(um => um.Monitored)
+                .Where(m => m.IsArchived && m.DeletedAt == null)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<UserMonitored>> GetAllUserMonitoredWithDetailsAsync()
         {
             return await _context.UserMonitoreds

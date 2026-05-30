@@ -21,6 +21,16 @@ namespace LifeAlertPlus.Application.Services
             return await _userMonitoredRepository.GetMonitoredPeopleWithDetailsByUserIdAsync(userId);
         }
 
+        public async Task<IEnumerable<Monitored>> GetActiveMonitoredPeopleByUserIdAsync(Guid userId)
+        {
+            return await _userMonitoredRepository.GetActiveMonitoredPeopleByUserIdAsync(userId);
+        }
+
+        public async Task<IEnumerable<Monitored>> GetArchivedMonitoredPeopleByUserIdAsync(Guid userId)
+        {
+            return await _userMonitoredRepository.GetArchivedMonitoredPeopleByUserIdAsync(userId);
+        }
+
         public async Task<IEnumerable<UserMonitored>> GetAllUserMonitoredWithDetailsAsync()
         {
             return await _userMonitoredRepository.GetAllUserMonitoredWithDetailsAsync();

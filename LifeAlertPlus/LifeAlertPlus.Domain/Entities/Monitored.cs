@@ -19,7 +19,12 @@ namespace LifeAlertPlus.Domain.Entities
         public int? MinSpO2 { get; set; }
         public int? MaxSpO2 { get; set; }
         public int? DataRetentionDays { get; set; }
+        // GDPR — how long to keep data after the person is archived (longer than
+        // active retention; null = indefinite, must be manually deleted).
+        public int? ArchiveRetentionDays { get; set; }
         public bool IsActive { get; set; }
+        public bool IsArchived { get; set; }
+        public DateTime? ArchivedAt { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }

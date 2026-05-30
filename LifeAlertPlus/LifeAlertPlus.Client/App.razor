@@ -32,7 +32,10 @@
         // OAuth callback lands here AFTER Google but BEFORE the JWT is in sessionStorage.
         // Without this entry, the router's auth guard sees "no token" and force-loads /login,
         // which cancels the in-flight exchange-token fetch and burns the one-time code.
-        "auth/callback"
+        "auth/callback",
+        // GDPR consent page for first-time Google users: token is already in sessionStorage
+        // but the route guard must not redirect to login before the user can consent.
+        "consent"
     };
 
     // Routes that should clear any stale auth data when opened intentionally.

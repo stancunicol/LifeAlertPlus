@@ -67,7 +67,21 @@ namespace LifeAlertPlus.Client.Pages.Login
                 if (response?.Token is not null)
                 {
                     await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
-                    Navigation.NavigateTo(returnUrl);
+
+                    // GDPR: first-time Google users haven't given explicit consent yet.
+                    var needsConsent = false;
+                    try
+                    {
+                        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                        var jwt = handler.ReadJwtToken(response.Token);
+                        var val = jwt.Claims.FirstOrDefault(c => c.Type == "needsConsent")?.Value;
+                        needsConsent = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+                    }
+                    catch { /* best-effort; on parse failure fall through to returnUrl */ }
+
+                    Navigation.NavigateTo(needsConsent
+                        ? $"/consent?returnUrl={Uri.EscapeDataString(returnUrl)}"
+                        : returnUrl);
                 }
                 else
                 {

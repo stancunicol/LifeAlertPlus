@@ -115,6 +115,9 @@
 									<button class="danger" @onclick="() => StopAutoAsync(p)" disabled="@(!p.IsRunning)">
 										@T("sim.stop")
 									</button>
+									<button class="secondary" @onclick="() => ClearDataAsync(p)" disabled="@(p.IsRunning || p.IsSending)" title="@T("sim.clearData")">
+										🗑
+									</button>
 									@if (p.LastStatus != null)
 									{
 										<span class="status-chip @(p.LastStatus.Success ? "ok" : "warn")">@p.LastStatus.Message</span>

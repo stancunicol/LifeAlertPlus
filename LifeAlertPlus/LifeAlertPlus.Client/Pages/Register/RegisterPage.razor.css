@@ -464,3 +464,204 @@ a.form-link:visited {
         transform: translateY(0);
     }
 
+
+
+.consent-row {
+    margin: 0.75rem 0 0.5rem;
+}
+
+.consent-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #555;
+    line-height: 1.4;
+}
+
+.consent-checkbox {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    accent-color: #66BB6A;
+    cursor: pointer;
+}
+
+/* ── Consent modal ──────────────────────────────────────────────────────── */
+.consent-overlay {
+    z-index: 1100;
+}
+
+.consent-modal {
+    max-width: 520px;
+    width: 94%;
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.consent-modal .modal-header {
+    background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+    padding: 1.2rem 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(165, 214, 167, 0.4);
+}
+
+.consent-modal .modal-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-family: var(--font-heading, inherit);
+    color: #1b5e20;
+}
+
+.consent-close-btn {
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    color: #558b2f;
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
+    line-height: 1;
+    transition: background 0.15s;
+}
+
+.consent-close-btn:hover {
+    background: rgba(165, 214, 167, 0.35);
+}
+
+.consent-body {
+    padding: 1.3rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.consent-lead {
+    margin: 0;
+    font-size: 0.92rem;
+    color: #444;
+    line-height: 1.5;
+}
+
+.consent-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.consent-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    font-size: 0.88rem;
+    color: #333;
+    line-height: 1.45;
+}
+
+.consent-item-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.consent-art9-box {
+    background: #FFF8E1;
+    border-left: 4px solid #FFD54F;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    font-size: 0.87rem;
+    color: #4e3a00;
+    line-height: 1.45;
+}
+
+.consent-art9-box strong {
+    display: block;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+    color: #5d4037;
+}
+
+.consent-art9-box p {
+    margin: 0;
+}
+
+.consent-checkbox-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    font-size: 0.9rem;
+    color: #222;
+    line-height: 1.45;
+    cursor: pointer;
+    padding: 0.65rem 0.8rem;
+    background: #F1F8E9;
+    border-radius: 10px;
+    border: 1px solid #C5E1A5;
+}
+
+.consent-footer {
+    padding: 1rem 1.4rem;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    border-top: 1px solid #eee;
+}
+
+.consent-cancel {
+    background: white;
+    color: #555;
+    border: 1px solid #ddd;
+}
+
+.consent-cancel:hover {
+    background: #f5f5f5;
+}
+
+.consent-accept {
+    background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
+    color: #1b5e20;
+    border: none;
+    box-shadow: 0 2px 8px rgba(165, 214, 167, 0.4);
+}
+
+.consent-accept:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 187, 106, 0.45);
+}
+
+.consent-accept:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Password strength bar */
+.password-strength-bar {
+    height: 5px;
+    background: #eee;
+    border-radius: 3px;
+    margin: 6px 0 2px;
+    overflow: hidden;
+}
+
+.strength-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.strength-label { font-size: 0.78rem; margin: 0 0 6px; font-weight: 500; }
+
+.strength-weak   .strength-fill, .strength-fill.strength-weak   { background: #e53935; }
+.strength-fair   .strength-fill, .strength-fill.strength-fair   { background: #fb8c00; }
+.strength-good   .strength-fill, .strength-fill.strength-good   { background: #fdd835; }
+.strength-strong .strength-fill, .strength-fill.strength-strong { background: #43a047; }
+
+.strength-weak   { color: #e53935; }
+.strength-fair   { color: #fb8c00; }
+.strength-good   { color: #f9a825; }
+.strength-strong { color: #2e7d32; }

@@ -12,5 +12,6 @@ namespace LifeAlertPlus.Application.IServices
         Task SendAlertNotificationEmailAsync(string recipientEmail, string recipientName, string patientName, string severity, string details, string lang = "ro");
         Task SendDailyReportEmailAsync(string recipientEmail, string recipientName, string reportHtmlBody, DateTime reportDate, string lang = "ro");
         Task SendDoctorInvitationEmailAsync(string doctorEmail, string patientName, string invitationLink);
+        Task SendDoctorNoteNotificationEmailAsync(string recipientEmail, string recipientName, string patientName, string doctorEmail, string notePreview, string lang = "ro");
     }
 }

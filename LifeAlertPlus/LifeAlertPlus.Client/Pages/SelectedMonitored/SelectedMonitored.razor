@@ -69,7 +69,34 @@
             </div>
         </div>
 
+        @* ── False-alarm feedback banner ── *@
+        @if (_pendingFeedback != null)
+        {
+            <div class="feedback-inline-banner">
+                <div class="feedback-inline-header">
+                    <span class="feedback-inline-icon">@(_pendingFeedback.NotificationType == "Critical" ? "🚨" : "⚠️")</span>
+                    <strong>@T("feedback.title")</strong>
+                    <span class="feedback-inline-time">@_pendingFeedback.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</span>
+                </div>
+                <p class="feedback-inline-msg">@_pendingFeedback.Message</p>
+                <p class="feedback-inline-prompt">@T("feedback.prompt")</p>
+                <div class="feedback-inline-actions">
+                    <button class="feedback-inline-btn real" @onclick='() => SubmitFeedbackAsync(true)' disabled="@_feedbackSubmitting">
+                        ✓ @T("feedback.wasReal")
+                    </button>
+                    <button class="feedback-inline-btn false" @onclick='() => SubmitFeedbackAsync(false)' disabled="@_feedbackSubmitting">
+                        ✗ @T("feedback.wasFalse")
+                    </button>
+                    <button class="feedback-inline-skip" @onclick="DismissFeedback" disabled="@_feedbackSubmitting">
+                        @T("feedback.skip")
+                    </button>
+                </div>
+            </div>
+        }
+
         <div class="stats-overview">
+            @if (!Person.IsArchived)
+            {
             <div class="stat-card-large heart-rate @(Person.HeartRate <= 0 ? "no-data" : "")">
                 <div class="stat-icon-huge">❤️</div>
                 <div class="stat-content">
@@ -133,8 +160,87 @@
                     }
                 </div>
             </div>
+            } @* end !IsArchived vital signs *@
+
+            @* Device diagnostics card — shown only when at least one heartbeat field is present *@
+            @if (!Person.IsArchived && _espData != null && (_espData.RssiDbm.HasValue || _espData.Battery.HasValue))
+            {
+                <div class="stat-card-device-diag">
+                    <div class="device-diag-title">
+                        <span>📡</span> @T("selected.deviceDiag")
+                    </div>
+                    <div class="device-diag-grid">
+                        @if (_espData.Battery.HasValue)
+                        {
+                            var bat = (int)_espData.Battery.Value;
+                            var batClass = bat < 20 ? "diag-val-danger" : bat < 50 ? "diag-val-warn" : "diag-val-ok";
+                            <div class="device-diag-item">
+                                <span class="diag-icon">🔋</span>
+                                <span class="diag-label">@T("selected.battery")</span>
+                                <span class="diag-val @batClass">@bat%</span>
+                            </div>
+                        }
+                        @if (_espData.RssiDbm.HasValue)
+                        {
+                            var rssi = _espData.RssiDbm.Value;
+                            var rssiClass = rssi < -80 ? "diag-val-danger" : rssi < -65 ? "diag-val-warn" : "diag-val-ok";
+                            var rssiLabel = rssi < -80 ? T("selected.signalWeak") : rssi < -65 ? T("selected.signalFair") : T("selected.signalGood");
+                            <div class="device-diag-item">
+                                <span class="diag-icon">📶</span>
+                                <span class="diag-label">WiFi</span>
+                                <span class="diag-val @rssiClass">@rssi dBm (@rssiLabel)</span>
+                            </div>
+                        }
+                        @if (_espData.UptimeSeconds.HasValue)
+                        {
+                            var up = _espData.UptimeSeconds.Value;
+                            var upStr = up < 3600 ? $"{up/60}m" : $"{up/3600}h {(up%3600)/60}m";
+                            <div class="device-diag-item">
+                                <span class="diag-icon">⏱</span>
+                                <span class="diag-label">@T("selected.uptime")</span>
+                                <span class="diag-val diag-val-ok">@upStr</span>
+                            </div>
+                        }
+                        @if (_espData.HeartbeatAge.HasValue)
+                        {
+                            var age = _espData.HeartbeatAge.Value;
+                            var ageClass = age > 120 ? "diag-val-danger" : age > 60 ? "diag-val-warn" : "diag-val-ok";
+                            <div class="device-diag-item">
+                                <span class="diag-icon">🕐</span>
+                                <span class="diag-label">@T("selected.lastHeartbeat")</span>
+                                <span class="diag-val @ageClass">@age s @T("selected.ago")</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
         </div>
 
+        @if (Person.IsArchived)
+        {
+            <div class="archived-notice section-card">
+                <span class="archived-notice-icon">📦</span>
+                <div>
+                    <strong>@T("archive.statusArchived")</strong>
+                    @if (Person.ArchivedAt.HasValue)
+                    {
+                        <span> — @T("archive.archivedAt"): @Person.ArchivedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                    }
+                    <p>@T("archive.selectedNotice")</p>
+                </div>
+            </div>
+        }
+
+        @if (GetRetentionExpiryText() is string retentionText)
+        {
+            <div class="retention-banner">
+                <span class="retention-icon">🗓️</span>
+                <span>@retentionText</span>
+            </div>
+        }
+
+        @if (!Person.IsArchived)
+        {
         <div class="ai-prediction-section section-card">
             <div class="section-header">
                 <h2>🤖 @T("selected.aiPrediction")</h2>
@@ -295,9 +401,19 @@
             }
             else if (ActivityProfile == null || !ActivityProfile.HourlyProfiles.Any())
             {
-                <div class="trend-no-data">
-                    <span class="trend-no-data-icon">📊</span>
-                    <p>@T("selected.activityProfileNoData")</p>
+                @* Show a friendly onboarding message for new patients instead of a bare "no data" *@
+                <div class="profile-warmup-card">
+                    <span class="profile-warmup-icon">🌱</span>
+                    <div>
+                        <strong>@T("selected.profileWarmupTitle")</strong>
+                        <p>@T("selected.profileWarmupBody")</p>
+                        @if (RecentMeasurements.Count > 0)
+                        {
+                            <span class="profile-warmup-progress">
+                                @string.Format(T("selected.profileWarmupMeasurements"), RecentMeasurements.Count)
+                            </span>
+                        }
+                    </div>
                 </div>
             }
             else
@@ -376,6 +492,49 @@
             }
         </div>
 
+        <div class="doctor-notes-section section-card">
+            <div class="section-header">
+                <h2>📝 @T("doctorNotes.title")</h2>
+                @if (_isDoctorUser)
+                {
+                    <button class="btn-action-secondary" @onclick="OpenDoctorNotesModal">✏️ @T("doctorNotes.add")</button>
+                }
+            </div>
+
+            @if (_doctorNotesLoading)
+            {
+                <div class="doctor-notes-loading">
+                    <div class="ai-spinner"></div>
+                </div>
+            }
+            else if (_doctorNotes.Count == 0)
+            {
+                <div class="doctor-notes-empty">
+                    <span class="doctor-notes-empty-icon">📝</span>
+                    <p>@T("doctorNotes.none")</p>
+                </div>
+            }
+            else
+            {
+                <div class="doctor-notes-list">
+                    @foreach (var note in _doctorNotes.OrderByDescending(n => n.CreatedAt))
+                    {
+                        <div class="doctor-note-card">
+                            <div class="doctor-note-header">
+                                <div class="doctor-note-doctor">
+                                    <span class="doctor-note-email">@note.DoctorEmail</span>
+                                </div>
+                                <span class="doctor-note-date">@note.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</span>
+                            </div>
+                            <div class="doctor-note-content">@note.Content</div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (!Person.IsArchived)
+        {
         <div class="map-section section-card">
             <div class="section-header">
                 <h2>📍 @T("selected.currentLocation")</h2>
@@ -394,6 +553,8 @@
                 }
             </div>
         </div>
+        } @* end !IsArchived map *@
+        } @* end !IsArchived ai/trend/activity/map *@
 
         <div class="content-grid">
             <div class="chart-section">
@@ -453,7 +614,14 @@
                                 @T("selected.heartRate")
                                 <span class="chart-unit-badge">bpm</span>
                             </div>
-                            <div class="chart-svg-scroll" @ref="_hrScrollRef">
+                            @if (HeartRatePoints.Count == 0 && !IsLoading)
+                            {
+                                <div class="chart-empty-state">
+                                    <span class="chart-empty-icon">📈</span>
+                                    <p>@T("selected.noChartData")</p>
+                                </div>
+                            }
+                            <div class="chart-svg-scroll @(HeartRatePoints.Count == 0 ? "chart-svg-hidden" : "")" @ref="_hrScrollRef">
                             <svg @ref="_hrSvgRef" class="chart-svg" style="@ChartSvgStyle" viewBox="@ChartViewBoxAttr" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="hrGradient" x1="0" y1="0" x2="0" y2="1">
@@ -503,7 +671,14 @@
                                 @T("selected.temperature")
                                 <span class="chart-unit-badge">°C</span>
                             </div>
-                            <div class="chart-svg-scroll" @ref="_tempScrollRef">
+                            @if (TemperaturePoints.Count == 0 && !IsLoading)
+                            {
+                                <div class="chart-empty-state">
+                                    <span class="chart-empty-icon">🌡️</span>
+                                    <p>@T("selected.noChartData")</p>
+                                </div>
+                            }
+                            <div class="chart-svg-scroll @(TemperaturePoints.Count == 0 ? "chart-svg-hidden" : "")" @ref="_tempScrollRef">
                             <svg @ref="_tempSvgRef" class="chart-svg" style="@ChartSvgStyle" viewBox="@ChartViewBoxAttr" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
@@ -707,6 +882,17 @@
                         <option value="90">@T("settings.90days")</option>
                         <option value="180">@T("settings.6months")</option>
                         <option value="365">@T("settings.1year")</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>@T("selected.archiveRetention")</label>
+                    <p class="form-hint">@T("selected.archiveRetentionDesc")</p>
+                    <select @bind="_editArchiveRetentionDays">
+                        <option value="">@T("selected.archiveRetentionIndefinite")</option>
+                        <option value="365">@T("settings.1year")</option>
+                        <option value="730">@T("settings.2years")</option>
+                        <option value="1825">@T("settings.5years")</option>
+                        <option value="3650">@T("settings.10years")</option>
                     </select>
                 </div>
             </div>
@@ -946,6 +1132,30 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" @onclick="CloseWifiModal">@T("common.close")</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showDoctorNotesModal)
+{
+    <div class="modal-overlay" @onclick="CloseDoctorNotesModal">
+        <div class="modal-content email-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>📝 @T("doctorNotes.addNote")</h2>
+                <button class="modal-close" @onclick="CloseDoctorNotesModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>@T("doctorNotes.noteContent")</label>
+                    <textarea @bind="_doctorNoteContent" placeholder="@T("doctorNotes.placeholder")" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseDoctorNotesModal">@T("common.cancel")</button>
+                <button class="btn-save" @onclick="SaveDoctorNoteAsync" disabled="@(_isSavingDoctorNote || string.IsNullOrWhiteSpace(_doctorNoteContent))">
+                    @(_isSavingDoctorNote ? T("doctorNotes.saving") : "💾 " + T("common.save"))
+                </button>
             </div>
         </div>
     </div>

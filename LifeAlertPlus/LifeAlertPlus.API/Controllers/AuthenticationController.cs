@@ -21,8 +21,9 @@ namespace LifeAlertPlus.API.Controllers
         private readonly ILogger<AuthenticationController> _logger;
         private readonly GetUrlService _getUrlService;
         private readonly IRoleService _roleService;
+        private readonly AuditService _auditService;
 
-        public AuthenticationController(IUserService userService, IConfiguration configuration, IAuthenticationService authenticationService, IJwtService jwtService, IEmailService emailService, ILogger<AuthenticationController> logger, GetUrlService getUrlService, IRoleService roleService)
+        public AuthenticationController(IUserService userService, IConfiguration configuration, IAuthenticationService authenticationService, IJwtService jwtService, IEmailService emailService, ILogger<AuthenticationController> logger, GetUrlService getUrlService, IRoleService roleService, AuditService auditService)
         {
             _userService = userService;
             _configuration = configuration;
@@ -32,6 +33,7 @@ namespace LifeAlertPlus.API.Controllers
             _logger = logger;
             _getUrlService = getUrlService;
             _roleService = roleService;
+            _auditService = auditService;
         }
 
         [HttpPost("login")]
@@ -63,13 +65,14 @@ namespace LifeAlertPlus.API.Controllers
 
             var token = _jwtService.GenerateToken(user, roleName);
 
+            _auditService.LogAsync(user.Email, "Login", $"Successful login (provider: {user.Provider ?? "Local"})", "Security");
+
             return Ok(new UserLoginResponseDTO
             {
                 Success = true,
                 Message = "Login successful.",
                 Token = token,
                 IsAdmin = isAdmin
-
             });
         }
 
@@ -91,6 +94,9 @@ namespace LifeAlertPlus.API.Controllers
                     return Conflict(new UserResponseDTO { Success = false, Message = "This phone number is already associated with another account." });
                 }
             }
+
+            if (!request.DataProcessingConsent)
+                return BadRequest(new UserResponseDTO { Success = false, Message = "You must consent to data processing to create an account." });
 
             var passwordValidation = await _authenticationService.VerifyPassword(request.Password);
             if (!passwordValidation.Success)
@@ -119,6 +125,7 @@ namespace LifeAlertPlus.API.Controllers
                 _logger.LogError(ex, "Failed to send registration email for {Email}", request.Email);
             }
 
+            _auditService.LogAsync(request.Email, "Register", "New account created via email registration", "Account");
             return Ok(new UserResponseDTO { Success = true, Message = "Registration successful." });
         }
 

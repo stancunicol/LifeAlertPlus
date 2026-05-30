@@ -13,12 +13,14 @@ namespace LifeAlertPlus.API.Controllers
         private readonly IMeasurementService _measurementService;
         private readonly Services.AlertMonitorService _alertMonitor;
         private readonly IUserMonitoredService _userMonitoredService;
+        private readonly ILogger<MeasurementController> _logger;
 
-        public MeasurementController(IMeasurementService measurementService, Services.AlertMonitorService alertMonitor, IUserMonitoredService userMonitoredService)
+        public MeasurementController(IMeasurementService measurementService, Services.AlertMonitorService alertMonitor, IUserMonitoredService userMonitoredService, ILogger<MeasurementController> logger)
         {
             _measurementService = measurementService;
             _alertMonitor = alertMonitor;
             _userMonitoredService = userMonitoredService;
+            _logger = logger;
         }
 
         private async Task<bool> UserOwnsMonitoredAsync(Guid monitoredId)
@@ -65,14 +67,25 @@ namespace LifeAlertPlus.API.Controllers
             await _measurementService.AddMeasurementAsync(measurement);
 
             // Feed the measurement to the alert monitor for sustained-alert detection
-            _ = _alertMonitor.ProcessMeasurementAsync(
-                measurementDto.IdMonitored,
-                measurementDto.Pulse,
-                measurementDto.Temperature,
-                measurementDto.SpO2,
-                measurementDto.IsFall,
-                measurementDto.Activity,
-                measurementDto.Coordinates);
+            var monitoredId = measurementDto.IdMonitored;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _alertMonitor.ProcessMeasurementAsync(
+                        monitoredId,
+                        measurementDto.Pulse,
+                        measurementDto.Temperature,
+                        measurementDto.SpO2,
+                        measurementDto.IsFall,
+                        measurementDto.Activity,
+                        measurementDto.Coordinates);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "ProcessMeasurementAsync failed for monitored {MonitoredId}", monitoredId);
+                }
+            });
 
             return Ok(new { Message = "Measurement added successfully." });
         }
@@ -87,7 +100,7 @@ namespace LifeAlertPlus.API.Controllers
                 return Forbid();
 
             pageNumber = Math.Max(1, pageNumber);
-            pageSize = Math.Clamp(pageSize, 1, 100);
+            pageSize = Math.Clamp(pageSize, 1, 10000);
             var measurements = await _measurementService.GetMeasurementsByMonitoredIdAsync(idMonitored, pageNumber, pageSize);
             return Ok(measurements);
         }

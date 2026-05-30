@@ -42,8 +42,13 @@ namespace LifeAlertPlus.API.Services
         private static readonly TimeSpan FeedbackSweepThrottle = TimeSpan.FromMinutes(5);
         private static readonly TimeSpan FeedbackSweepLookback = TimeSpan.FromHours(6);
 
+        // Per-monitored short-window buffer of recent vital readings.
+        // Concurrent ProcessMeasurementAsync calls for the same patient (e.g. simulation
+        // overlapping with real ESP ingest, or a burst of ESP packets) would otherwise
+        // race on the internal Queue<T> arrays. All access goes through the Sync object.
         private class MetricBuffer
         {
+            public readonly object Sync = new();
             public Queue<(DateTime Timestamp, double Value)> Pulse = new();
             public Queue<(DateTime Timestamp, double Value)> Temp = new();
             public Queue<(DateTime Timestamp, double Value)> SpO2 = new();
@@ -67,6 +72,93 @@ namespace LifeAlertPlus.API.Services
         }
 
         public void InvalidateThresholdCache(Guid monitoredId) => _thresholdCache.TryRemove(monitoredId, out _);
+
+        // Cached "is the monitored person archived?" check — archived persons are skipped
+        // by all alert/measurement flows. State changes rarely so a short cache is fine.
+        private readonly ConcurrentDictionary<Guid, (DateTime CachedAt, bool IsArchived)> _archivedCache = new();
+        private static readonly TimeSpan ArchivedCacheDuration = TimeSpan.FromMinutes(5);
+
+        public void InvalidateArchivedCache(Guid monitoredId) => _archivedCache.TryRemove(monitoredId, out _);
+
+        // Battery low notification: fire at most once per 6 hours per device serial.
+        private static readonly TimeSpan BatteryNotifCooldown = TimeSpan.FromHours(6);
+        private static readonly double BatteryLowThreshold = 20.0;
+        private readonly ConcurrentDictionary<string, DateTime> _lastBatteryNotif = new(StringComparer.OrdinalIgnoreCase);
+
+        public async Task CheckBatteryAsync(Guid monitoredId, string serial, double battery)
+        {
+            if (battery >= BatteryLowThreshold) return;
+            if (_lastBatteryNotif.TryGetValue(serial, out var last) && (DateTime.UtcNow - last) < BatteryNotifCooldown) return;
+            _lastBatteryNotif[serial] = DateTime.UtcNow;
+
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
+                var monitored = await db.Monitoreds.FindAsync(monitoredId);
+                if (monitored == null) return;
+                var patientName = $"{monitored.FirstName} {monitored.LastName}".Trim();
+                var messageRo = $"Bateria dispozitivului lui {patientName} este la {battery:F0}%. Încărcați dispozitivul.";
+                var messageEn = $"Battery for {patientName}'s device is at {battery:F0}%. Please charge the device.";
+
+                var links = await db.UserMonitoreds.Where(um => um.IdMonitored == monitoredId).Include(um => um.User).ToListAsync();
+                foreach (var um in links)
+                {
+                    var user = um.User;
+                    if (user == null || user.DeletedAt.HasValue) continue;
+                    var msg = string.Equals(user.Language, "en", StringComparison.OrdinalIgnoreCase) ? messageEn : messageRo;
+                    db.Notifications.Add(new Domain.Entities.Notification { Id = Guid.NewGuid(), IdUser = user.Id, IdMonitored = monitoredId, NotificationType = "Info", Message = msg, CreatedAt = DateTime.UtcNow });
+                    if (user.NotifyByPush)
+                        FireAndForget(async () => await _pushNotificationService.SendPushNotificationAsync(user.Id, $"🔋 {msg}", "Info"), "BatteryLowPush", monitoredId);
+                }
+                await db.SaveChangesAsync();
+                _logger.LogInformation("Battery low notification sent for {Serial} ({Battery}%)", serial, battery);
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Battery low notification failed for {Serial}", serial); }
+        }
+
+        // Per-serial ingest rate limiter: max 4 requests per 60 s window.
+        private const int IngestMaxPerWindow = 4;
+        private static readonly TimeSpan IngestWindow = TimeSpan.FromSeconds(60);
+        private readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _ingestRates = new(StringComparer.OrdinalIgnoreCase);
+
+        public bool IsIngestAllowed(string serial)
+        {
+            var now = DateTime.UtcNow;
+            var entry = _ingestRates.GetOrAdd(serial, _ => (0, now));
+            if ((now - entry.WindowStart) >= IngestWindow)
+            {
+                _ingestRates[serial] = (1, now);
+                return true;
+            }
+            if (entry.Count >= IngestMaxPerWindow)
+                return false;
+            _ingestRates[serial] = (entry.Count + 1, entry.WindowStart);
+            return true;
+        }
+
+        private async Task<bool> IsArchivedAsync(Guid monitoredId)
+        {
+            if (_archivedCache.TryGetValue(monitoredId, out var cached) &&
+                (DateTime.UtcNow - cached.CachedAt) < ArchivedCacheDuration)
+                return cached.IsArchived;
+
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
+                var isArchived = await db.Monitoreds
+                    .Where(m => m.Id == monitoredId)
+                    .Select(m => (bool?)m.IsArchived)
+                    .FirstOrDefaultAsync() ?? false;
+                _archivedCache[monitoredId] = (DateTime.UtcNow, isArchived);
+                return isArchived;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         private async Task<(int? MaxHr, int? MinHr, double? MaxTemp, double? MinTemp, int? MinSpO2, int? MaxSpO2)> GetPatientThresholdsAsync(Guid monitoredId)
         {
@@ -98,39 +190,80 @@ namespace LifeAlertPlus.API.Services
         private void UpdateMetricBuffer(Guid id, DateTime now, double pulse, double temp, double spo2)
         {
             var buf = _metricBuffers.GetOrAdd(id, _ => new MetricBuffer());
-            void Enqueue(Queue<(DateTime, double)> q, double v)
+            lock (buf.Sync)
             {
-                q.Enqueue((now, v));
-                while (q.Count > 0 && (now - q.Peek().Item1) > BufferWindow) q.Dequeue();
-                while (q.Count > MaxBufferSize) q.Dequeue();
+                static void EnqueueAndTrim(Queue<(DateTime Timestamp, double Value)> q, DateTime now, double v)
+                {
+                    q.Enqueue((now, v));
+                    while (q.Count > 0 && (now - q.Peek().Timestamp) > BufferWindow) q.Dequeue();
+                    while (q.Count > MaxBufferSize) q.Dequeue();
+                }
+                EnqueueAndTrim(buf.Pulse, now, pulse);
+                EnqueueAndTrim(buf.Temp, now, temp);
+                EnqueueAndTrim(buf.SpO2, now, spo2);
             }
-            Enqueue(buf.Pulse, pulse);
-            Enqueue(buf.Temp, temp);
-            Enqueue(buf.SpO2, spo2);
         }
 
-        private static (double avg, double slope) ComputeStats(Queue<(DateTime Timestamp, double Value)> q)
+        // Returns immutable arrays so the rest of ProcessMeasurementAsync can read
+        // without holding the buffer lock.
+        private static ((DateTime Timestamp, double Value)[] Pulse, (DateTime Timestamp, double Value)[] Temp, (DateTime Timestamp, double Value)[] SpO2) SnapshotBuffer(MetricBuffer buf)
         {
-            if (q.Count < 2) return (q.Count == 1 ? q.Peek().Value : 0, 0);
-            var arr = q.ToArray();
+            lock (buf.Sync)
+            {
+                return (buf.Pulse.ToArray(), buf.Temp.ToArray(), buf.SpO2.ToArray());
+            }
+        }
+
+        private static (double avg, double slope) ComputeStatsFromArray((DateTime Timestamp, double Value)[] arr)
+        {
+            if (arr.Length < 2) return (arr.Length == 1 ? arr[0].Value : 0, 0);
             double avg = arr.Average(x => x.Value);
-            double dt = (arr.Last().Timestamp - arr.First().Timestamp).TotalSeconds;
-            double slope = dt > 0 ? (arr.Last().Value - arr.First().Value) / dt : 0;
+            double dt = (arr[^1].Timestamp - arr[0].Timestamp).TotalSeconds;
+            double slope = dt > 0 ? (arr[^1].Value - arr[0].Value) / dt : 0;
             return (avg, slope);
+        }
+
+        // Wraps fire-and-forget work so background failures are logged instead of
+        // disappearing into a forgotten Task. Used for behavioral checks, notification
+        // sends, hospital lookups, etc.
+        private void FireAndForget(Func<Task> work, string operation, Guid? monitoredId = null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await work();
+                }
+                catch (Exception ex)
+                {
+                    if (monitoredId.HasValue)
+                        _logger.LogError(ex, "Fire-and-forget {Operation} failed for monitored {MonitoredId}", operation, monitoredId.Value);
+                    else
+                        _logger.LogError(ex, "Fire-and-forget {Operation} failed", operation);
+                }
+            });
         }
 
         public async Task ProcessMeasurementAsync(Guid monitoredId, double pulse, double temperature, double spo2, bool isFall, string activity = "", string coordinates = "")
         {
+            if (await IsArchivedAsync(monitoredId))
+            {
+                _logger.LogDebug("ProcessMeasurement skipped — monitored {MonitoredId} is archived", monitoredId);
+                return;
+            }
+
             var now = DateTime.UtcNow;
             UpdateMetricBuffer(monitoredId, now, pulse, temperature, spo2);
 
             if (!string.IsNullOrWhiteSpace(activity))
-                _ = Task.Run(() => CheckBehavioralAnomalyAsync(monitoredId, activity, pulse, now));
+                FireAndForget(() => CheckBehavioralAnomalyAsync(monitoredId, activity, pulse, now),
+                              "CheckBehavioralAnomalyAsync", monitoredId);
 
             var buf = _metricBuffers.GetOrAdd(monitoredId, _ => new MetricBuffer());
-            var (pulseAvg, pulseSlope) = ComputeStats(buf.Pulse);
-            var (tempAvg, tempSlope) = ComputeStats(buf.Temp);
-            var (spo2Avg, spo2Slope) = ComputeStats(buf.SpO2);
+            var (pulseArr, tempArr, spo2Arr) = SnapshotBuffer(buf);
+            var (pulseAvg, pulseSlope) = ComputeStatsFromArray(pulseArr);
+            var (tempAvg, tempSlope) = ComputeStatsFromArray(tempArr);
+            var (spo2Avg, spo2Slope) = ComputeStatsFromArray(spo2Arr);
 
             var (maxHr, minHr, maxTemp, minTemp, minSpO2, maxSpO2) = await GetPatientThresholdsAsync(monitoredId);
             int effectiveMinSpO2 = minSpO2 ?? 95;
@@ -161,7 +294,8 @@ namespace LifeAlertPlus.API.Services
                     // which episode just resolved and can run the sweep right away.
                     _logger.LogInformation("Monitored {MonitoredId} returned to normal and alert state was cleared.", monitoredId);
                     _lastFeedbackSweep[monitoredId] = now;
-                    _ = Task.Run(() => MarkFeedbackRequestedAsync(monitoredId, resolvedState.FirstDetected));
+                    FireAndForget(() => MarkFeedbackRequestedAsync(monitoredId, resolvedState.FirstDetected),
+                                  "MarkFeedbackRequested(resolved)", monitoredId);
                 }
                 else if (!_lastFeedbackSweep.TryGetValue(monitoredId, out var lastSweep)
                          || (now - lastSweep) > FeedbackSweepThrottle)
@@ -173,7 +307,8 @@ namespace LifeAlertPlus.API.Services
                     // forever and the user-facing popup would never appear on next login.
                     // Throttled per-monitored so we don't query on every Normal sample.
                     _lastFeedbackSweep[monitoredId] = now;
-                    _ = Task.Run(() => MarkFeedbackRequestedAsync(monitoredId, now - FeedbackSweepLookback));
+                    FireAndForget(() => MarkFeedbackRequestedAsync(monitoredId, now - FeedbackSweepLookback),
+                                  "MarkFeedbackRequested(sweep)", monitoredId);
                 }
                 _lastNotificationSent.TryRemove(monitoredId, out _);
                 return;
@@ -185,115 +320,122 @@ namespace LifeAlertPlus.API.Services
                 Severity = severity
             });
 
-            if (severity > state.Severity)
+            // All decisions + mutations on this patient's AlertState happen under one
+            // lock so concurrent ProcessMeasurementAsync calls (same patient, different
+            // threads) can't shred ConsecutiveCount, escalate Severity inconsistently,
+            // or double-fire notifications.
+            lock (state.Sync)
             {
-                _logger.LogInformation("Monitored {MonitoredId} severity escalated from {OldSeverity} to {NewSeverity}.", monitoredId, state.Severity, severity);
-                state.Severity = severity;
-                state.FirstDetected = now;
-                state.ConsecutiveCount = 1;
-            }
-            else
-            {
-                state.ConsecutiveCount++;
-            }
-
-            state.LastDetected = now;
-            state.LastPulse = pulse;
-            state.LastTemperature = temperature;
-            state.LastSpO2 = spo2;
-            state.IsFall = isFall;
-            state.MinSpO2 = minSpO2;
-            state.ConditionRecommendations = conditionRecommendations;
-            state.ImmediateAction = immediateAction;
-            if (!string.IsNullOrWhiteSpace(coordinates))
-            {
-                state.LastCoordinates = coordinates;
-                // Pre-fetch the nearest hospital in background as soon as alert/critical starts.
-                // This gives the Overpass API the full alert persistence window (~1-2 min) to respond
-                // and cache the result before the notification is actually sent.
-                if (severity >= AlertSeverity.Alert && state.NearestHospital == null)
+                if (severity > state.Severity)
                 {
-                    var (hLat, hLon) = ParseCoordinates(coordinates);
-                    if (hLat != 0 || hLon != 0)
-                        _ = Task.Run(async () =>
+                    _logger.LogInformation("Monitored {MonitoredId} severity escalated from {OldSeverity} to {NewSeverity}.", monitoredId, state.Severity, severity);
+                    state.Severity = severity;
+                    state.FirstDetected = now;
+                    state.ConsecutiveCount = 1;
+                }
+                else
+                {
+                    state.ConsecutiveCount++;
+                }
+
+                state.LastDetected = now;
+                state.LastPulse = pulse;
+                state.LastTemperature = temperature;
+                state.LastSpO2 = spo2;
+                state.IsFall = isFall;
+                state.MinSpO2 = minSpO2;
+                state.ConditionRecommendations = conditionRecommendations;
+                state.ImmediateAction = immediateAction;
+                if (!string.IsNullOrWhiteSpace(coordinates))
+                {
+                    state.LastCoordinates = coordinates;
+                    // Pre-fetch the nearest hospital in background as soon as alert/critical starts.
+                    // This gives the Overpass API the full alert persistence window (~1-2 min) to respond
+                    // and cache the result before the notification is actually sent.
+                    if (severity >= AlertSeverity.Alert && state.NearestHospital == null)
+                    {
+                        var (hLat, hLon) = ParseCoordinates(coordinates);
+                        if (hLat != 0 || hLon != 0)
+                            FireAndForget(async () =>
+                            {
+                                var hosp = await _nearestHospitalService.FindNearestAsync(hLat, hLon);
+                                lock (state.Sync) { state.NearestHospital = hosp; }
+                            }, "NearestHospitalLookup", monitoredId);
+                    }
+                }
+
+                if (immediateAction && severity == AlertSeverity.Critical)
+                {
+                    _lastNotificationSent[monitoredId] = now;
+                    state.ConsecutiveCount = 0;
+                    _logger.LogInformation("ImmediateAction triggered for {MonitoredId} (condition-based fall detection). Bypassing all cooldowns.", monitoredId);
+                    FireAndForget(() => SendNotificationsAsync(monitoredId, state), "SendNotifications(immediate)", monitoredId);
+                    return;
+                }
+
+                var elapsed = now - state.FirstDetected;
+
+                if (state.Severity == AlertSeverity.Critical)
+                {
+                    if (!_sendCriticalSmsImmediately)
+                    {
+                        if (elapsed < CriticalSmsThreshold)
                         {
-                            try { state.NearestHospital = await _nearestHospitalService.FindNearestAsync(hLat, hLon); }
-                            catch { }
-                        });
-                }
-            }
-
-            if (immediateAction && severity == AlertSeverity.Critical)
-            {
-                _lastNotificationSent[monitoredId] = now;
-                state.ConsecutiveCount = 0;
-                _logger.LogInformation("ImmediateAction triggered for {MonitoredId} (condition-based fall detection). Bypassing all cooldowns.", monitoredId);
-                _ = Task.Run(() => SendNotificationsAsync(monitoredId, state));
-                return;
-            }
-
-            var elapsed = now - state.FirstDetected;
-
-            if (state.Severity == AlertSeverity.Critical)
-            {
-                if (!_sendCriticalSmsImmediately)
-                {
-                    if (elapsed < CriticalSmsThreshold)
-                    {
-                        _logger.LogDebug("Monitored {MonitoredId} is critical for {Elapsed}. Waiting for threshold {Threshold}.", monitoredId, elapsed, CriticalSmsThreshold);
+                            _logger.LogDebug("Monitored {MonitoredId} is critical for {Elapsed}. Waiting for threshold {Threshold}.", monitoredId, elapsed, CriticalSmsThreshold);
+                            return;
+                        }
+                        if (_lastNotificationSent.TryGetValue(monitoredId, out var lastSent) && (now - lastSent) < CriticalSmsThreshold)
+                        {
+                            _logger.LogDebug("Waiting for next 2-minute interval for monitored {MonitoredId}. Last sent {LastSent}.", monitoredId, lastSent);
+                            return;
+                        }
+                        _lastNotificationSent[monitoredId] = now;
+                        state.ConsecutiveCount = 0;
+                        _logger.LogInformation("Triggering notification send for monitored {MonitoredId} with severity {Severity} (every 2 minutes while critical persists).", monitoredId, state.Severity);
+                        FireAndForget(() => SendNotificationsAsync(monitoredId, state), "SendNotifications(critical)", monitoredId);
                         return;
                     }
-                    if (_lastNotificationSent.TryGetValue(monitoredId, out var lastSent) && (now - lastSent) < CriticalSmsThreshold)
+                    if (_sendCriticalSmsImmediately || elapsed >= CriticalSmsThreshold)
                     {
-                        _logger.LogDebug("Waiting for next 2-minute interval for monitored {MonitoredId}. Last sent {LastSent}.", monitoredId, lastSent);
-                        return;
+                        if (_lastNotificationSent.TryGetValue(monitoredId, out var lastSentCritical) && (now - lastSentCritical) < CriticalSmsThreshold)
+                        {
+                            _logger.LogDebug("Notification cooldown active for monitored {MonitoredId}. Last sent {LastSent}, threshold {Threshold}.", monitoredId, lastSentCritical, CriticalSmsThreshold);
+                            return;
+                        }
+                        _lastNotificationSent[monitoredId] = now;
+                        state.ConsecutiveCount = 0;
+                        _logger.LogInformation("Triggering notification send for monitored {MonitoredId} with severity {Severity} (every 2 minutes while critical persists, test mode).", monitoredId, state.Severity);
+                        FireAndForget(() => SendNotificationsAsync(monitoredId, state), "SendNotifications(critical-immediate)", monitoredId);
                     }
-                    _lastNotificationSent[monitoredId] = now;
-                    state.ConsecutiveCount = 0;
-                    _logger.LogInformation("Triggering notification send for monitored {MonitoredId} with severity {Severity} (every 2 minutes while critical persists).", monitoredId, state.Severity);
-                    _ = Task.Run(() => SendNotificationsAsync(monitoredId, state));
-                    return;
-                }
-                if (_sendCriticalSmsImmediately || elapsed >= CriticalSmsThreshold)
-                {
-                    if (_lastNotificationSent.TryGetValue(monitoredId, out var lastSentCritical) && (now - lastSentCritical) < CriticalSmsThreshold)
-                    {
-                        _logger.LogDebug("Notification cooldown active for monitored {MonitoredId}. Last sent {LastSent}, threshold {Threshold}.", monitoredId, lastSentCritical, CriticalSmsThreshold);
-                        return;
-                    }
-                    _lastNotificationSent[monitoredId] = now;
-                    state.ConsecutiveCount = 0;
-                    _logger.LogInformation("Triggering notification send for monitored {MonitoredId} with severity {Severity} (every 2 minutes while critical persists, test mode).", monitoredId, state.Severity);
-                    _ = Task.Run(() => SendNotificationsAsync(monitoredId, state));
-                }
-                return;
-            }
-
-            if (state.Severity != AlertSeverity.Critical)
-            {
-                if (elapsed < PersistenceThreshold || state.ConsecutiveCount < 2)
-                {
-                    if (!_sendAlertSmsImmediately)
-                    {
-                        _logger.LogDebug("Monitored {MonitoredId} is alert for {Elapsed} with count {Count}. Waiting for persistence threshold {Threshold}.", monitoredId, elapsed, state.ConsecutiveCount, PersistenceThreshold);
-                        return;
-                    }
-                    _logger.LogInformation("Monitored {MonitoredId} is alert for {Elapsed}, but immediate alert SMS test mode is enabled. Sending now.", monitoredId, elapsed);
-                }
-
-                if (_lastNotificationSent.TryGetValue(monitoredId, out var lastSentAlert) && (now - lastSentAlert) < NotificationCooldown)
-                {
-                    _logger.LogDebug("Notification cooldown active for monitored {MonitoredId}. Last sent {LastSent}, cooldown {Cooldown}.", monitoredId, lastSentAlert, NotificationCooldown);
                     return;
                 }
 
-                _lastNotificationSent[monitoredId] = now;
-                state.ConsecutiveCount = 0;
-                state.FirstDetected = now;
+                if (state.Severity != AlertSeverity.Critical)
+                {
+                    if (elapsed < PersistenceThreshold || state.ConsecutiveCount < 2)
+                    {
+                        if (!_sendAlertSmsImmediately)
+                        {
+                            _logger.LogDebug("Monitored {MonitoredId} is alert for {Elapsed} with count {Count}. Waiting for persistence threshold {Threshold}.", monitoredId, elapsed, state.ConsecutiveCount, PersistenceThreshold);
+                            return;
+                        }
+                        _logger.LogInformation("Monitored {MonitoredId} is alert for {Elapsed}, but immediate alert SMS test mode is enabled. Sending now.", monitoredId, elapsed);
+                    }
 
-                _logger.LogInformation("Triggering notification send for monitored {MonitoredId} with severity {Severity}.", monitoredId, state.Severity);
-                _ = Task.Run(() => SendNotificationsAsync(monitoredId, state));
-            }
+                    if (_lastNotificationSent.TryGetValue(monitoredId, out var lastSentAlert) && (now - lastSentAlert) < NotificationCooldown)
+                    {
+                        _logger.LogDebug("Notification cooldown active for monitored {MonitoredId}. Last sent {LastSent}, cooldown {Cooldown}.", monitoredId, lastSentAlert, NotificationCooldown);
+                        return;
+                    }
+
+                    _lastNotificationSent[monitoredId] = now;
+                    state.ConsecutiveCount = 0;
+                    state.FirstDetected = now;
+
+                    _logger.LogInformation("Triggering notification send for monitored {MonitoredId} with severity {Severity}.", monitoredId, state.Severity);
+                    FireAndForget(() => SendNotificationsAsync(monitoredId, state), "SendNotifications(alert)", monitoredId);
+                }
+            } // lock(state.Sync)
         }
 
         public TrendPredictionResponseDTO GetTrendPredictions(Guid monitoredId)
@@ -303,9 +445,9 @@ namespace LifeAlertPlus.API.Services
             if (!_metricBuffers.TryGetValue(monitoredId, out var buf))
                 return result;
 
-            var tempArr = buf.Temp.ToArray();
-            var pulseArr = buf.Pulse.ToArray();
-            var spo2Arr = buf.SpO2.ToArray();
+            // Read the buffer atomically — concurrent UpdateMetricBuffer may be
+            // enqueuing/trimming on the same Queue<T>.
+            var (pulseArr, tempArr, spo2Arr) = SnapshotBuffer(buf);
 
             result.BufferDataPoints = tempArr.Length;
             if (tempArr.Length > 1)
@@ -317,7 +459,7 @@ namespace LifeAlertPlus.API.Services
             // Temperature
             if (tempArr.Length >= 3)
             {
-                var (tempAvg, tempSlope) = ComputeStats(buf.Temp);
+                var (tempAvg, tempSlope) = ComputeStatsFromArray(tempArr);
                 double lastTemp = tempArr.Last().Value;
 
                 if (tempSlope > 0.005 && tempAvg >= 36.5)
@@ -365,7 +507,7 @@ namespace LifeAlertPlus.API.Services
             // Pulse
             if (pulseArr.Length >= 3)
             {
-                var (pulseAvg, pulseSlope) = ComputeStats(buf.Pulse);
+                var (pulseAvg, pulseSlope) = ComputeStatsFromArray(pulseArr);
                 double lastPulse = pulseArr.Last().Value;
 
                 if (pulseSlope > 0.03 && pulseAvg > 85)
@@ -413,7 +555,7 @@ namespace LifeAlertPlus.API.Services
             // SpO2
             if (spo2Arr.Length >= 3)
             {
-                var (spo2Avg, spo2Slope) = ComputeStats(buf.SpO2);
+                var (spo2Avg, spo2Slope) = ComputeStatsFromArray(spo2Arr);
                 double lastSpo2 = spo2Arr.Last().Value;
 
                 int? cachedMinSpO2 = null;
@@ -715,6 +857,9 @@ namespace LifeAlertPlus.API.Services
 
         private class AlertState
         {
+            // Sync root for serializing concurrent same-patient mutations.
+            // ConcurrentDictionary protects the dict, not the value object.
+            public readonly object Sync = new();
             public DateTime FirstDetected { get; set; }
             public DateTime LastDetected { get; set; }
             public AlertSeverity Severity { get; set; }
@@ -753,6 +898,7 @@ namespace LifeAlertPlus.API.Services
             {
                 using var scope = _scopeFactory.CreateScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
+                var emailService = scope.ServiceProvider.GetService<Application.IServices.IEmailService>();
 
                 var monitored = await dbContext.Monitoreds.FindAsync(monitoredId);
                 var patientName = monitored != null ? $"{monitored.FirstName} {monitored.LastName}".Trim() : "Unknown";
@@ -769,6 +915,7 @@ namespace LifeAlertPlus.API.Services
 
                     bool isEn = string.Equals(user.Language, "en", StringComparison.OrdinalIgnoreCase);
                     string message = isEn ? messageEn : messageRo;
+                    string lang = isEn ? "en" : "ro";
 
                     dbContext.Notifications.Add(new Domain.Entities.Notification
                     {
@@ -789,6 +936,26 @@ namespace LifeAlertPlus.API.Services
                         catch (Exception ex)
                         {
                             _logger.LogWarning(ex, "Failed to send behavioral push notification to user {UserId}.", user.Id);
+                        }
+                    }
+
+                    // Email: best-effort, fired separately so a slow SMTP doesn't block other watchers.
+                    if (user.NotifyByEmail && !string.IsNullOrWhiteSpace(user.Email) && emailService != null)
+                    {
+                        string severity = isEn ? "Behavioral anomaly" : "Anomalie comportamentală";
+                        try
+                        {
+                            await emailService.SendAlertNotificationEmailAsync(
+                                user.Email,
+                                user.FirstName,
+                                patientName,
+                                severity,
+                                message,
+                                lang);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to send behavioral email to user {UserId}.", user.Id);
                         }
                     }
                 }
@@ -848,6 +1015,12 @@ namespace LifeAlertPlus.API.Services
 
                 var monitored = await dbContext.Monitoreds.FindAsync(monitoredId);
                 if (monitored == null) return;
+
+                if (monitored.IsArchived)
+                {
+                    _logger.LogInformation("Panic alert ignored for archived monitored {MonitoredId}", monitoredId);
+                    return;
+                }
 
                 var patientName = $"{monitored.FirstName} {monitored.LastName}".Trim();
 

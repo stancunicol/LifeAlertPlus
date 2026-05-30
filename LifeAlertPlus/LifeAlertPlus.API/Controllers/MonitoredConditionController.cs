@@ -79,6 +79,7 @@ namespace LifeAlertPlus.API.Controllers
 
         private async Task<bool> HasAccess(Guid monitoredId)
         {
+            if (IsAdminRole()) return true;
             var userId = GetCallerId();
             if (userId == null) return false;
             return await _db.UserMonitoreds

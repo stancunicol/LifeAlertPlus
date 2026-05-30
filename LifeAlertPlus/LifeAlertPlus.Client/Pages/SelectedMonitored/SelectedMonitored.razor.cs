@@ -11,6 +11,7 @@ using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Shared.DTOs.Responses.ActivityProfile;
 using LifeAlertPlus.Shared.DTOs.Responses.Monitoring;
 using LifeAlertPlus.Shared.DTOs.Responses.Wifi;
+using LifeAlertPlus.Shared.DTOs.Responses.DoctorNote;
 
 namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 {
@@ -44,6 +45,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private PushNotificationClientService PushService { get; set; } = default!;
 
         [Inject]
+        private NotificationService NotificationSvc { get; set; } = default!;
+
+        [Inject]
         private LanguageService Lang { get; set; } = default!;
 
         [Inject]
@@ -66,6 +70,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private DayOfWeek _firstDayOfWeek = DayOfWeek.Monday;
         private PersonDetail? Person { get; set; }
         private bool IsLoading { get; set; } = true;
+        private LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO? _espData;
         private string? LoadError { get; set; }
 
         private List<ChartDataPoint> HeartRateHistory { get; set; } = new();
@@ -94,6 +99,38 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _hasPrevDayData = false;
         private System.Threading.Timer? _refreshTimer;
         private bool _disposed = false;
+
+        // ── False-alarm feedback ──────────────────────────────────────────────
+        private LifeAlertPlus.Shared.DTOs.Responses.Notification.PendingFeedbackDTO? _pendingFeedback;
+        private bool _feedbackSubmitting;
+
+        private async Task LoadPendingFeedbackAsync()
+        {
+            try
+            {
+                var all = await NotificationSvc.GetPendingFeedbackAsync();
+                _pendingFeedback = all.FirstOrDefault(f => f.IdMonitored == PersonId);
+            }
+            catch { _pendingFeedback = null; }
+        }
+
+        private async Task SubmitFeedbackAsync(bool wasReal)
+        {
+            if (_pendingFeedback == null || _feedbackSubmitting) return;
+            _feedbackSubmitting = true;
+            try
+            {
+                await NotificationSvc.SubmitFeedbackAsync(_pendingFeedback.Id, wasReal);
+                _pendingFeedback = null;
+            }
+            finally { _feedbackSubmitting = false; StateHasChanged(); }
+        }
+
+        private void DismissFeedback()
+        {
+            _pendingFeedback = null;
+            StateHasChanged();
+        }
         private int _refreshInFlight; // 0 = idle, 1 = a RefreshDataAsync is currently running
         private DateTime _lastRefreshUtc = DateTime.MinValue;
         private static readonly TimeSpan MinRefreshInterval = TimeSpan.FromSeconds(5);
@@ -219,6 +256,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private int? _editMaxSpO2;
         private int? _editUpdateFrequency;
         private int? _editDataRetentionDays;
+        private int? _editArchiveRetentionDays;
 
         // Condition threshold preview (client-side mirror of ConditionThresholdAdjuster)
         private int _previewMinHr = 60;
@@ -263,6 +301,14 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _wifiSuccess;
         private const int MaxWifiNetworks = 3;
 
+        // Doctor notes state
+        private List<DoctorNoteDTO> _doctorNotes = new();
+        private bool _doctorNotesLoading;
+        private bool _showDoctorNotesModal;
+        private string _doctorNoteContent = string.Empty;
+        private bool _isSavingDoctorNote;
+        private bool _isDoctorUser = false; // True if accessing via /doctor/patient route
+
         private static SelectedMonitored? _instance;
 
         private enum ChartViewMode
@@ -287,8 +333,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     return;
                 }
 
-                // Get ESP data
+                // Get ESP data (stored as field so the device diagnostics card can access it)
                 var espData = await MonitoredApiClient.GetEspDataAsync(monitored.DeviceSerialNumber);
+                _espData = espData;
                 
                 int heartRate = 0;
                 int spO2 = 0;
@@ -355,18 +402,25 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     MaxTemperature = monitored.MaxTemperature ?? _userMaxTemp,
                     MinSpO2 = monitored.MinSpO2 ?? 95,
                     MaxSpO2 = monitored.MaxSpO2 ?? 100,
-                    UpdateFrequency = monitored.UpdateFrequency ?? _userUpdateFrequency
+                    UpdateFrequency = monitored.UpdateFrequency ?? _userUpdateFrequency,
+                    IsArchived = monitored.IsArchived,
+                    ArchivedAt = monitored.ArchivedAt,
+                    DataRetentionDays = monitored.DataRetentionDays,
+                    ArchiveRetentionDays = monitored.ArchiveRetentionDays
                 };
 
-                // Load AI prediction
-                if (espData?.IsAvailable == true)
+                // Skip live/predictive features for archived persons — they have no active
+                // monitoring, so AI predictions, trend predictions and activity profile
+                // would always show stale or empty data.
+                if (!monitored.IsArchived)
                 {
-                    _ = LoadAIPredictionAsync(espData);
+                    if (espData?.IsAvailable == true)
+                        _ = LoadAIPredictionAsync(espData);
+                    _ = LoadTrendPredictionsAsync(PersonId);
+                    _ = LoadActivityProfileAsync(PersonId);
                 }
-
-                _ = LoadTrendPredictionsAsync(PersonId);
-                _ = LoadActivityProfileAsync(PersonId);
                 _ = LoadConditionsAsync(PersonId);
+                _ = LoadDoctorNotesAsync(PersonId);
 
                 IsLoading = false;
             }
@@ -638,6 +692,56 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             finally
             {
                 _isSavingConditions = false;
+                StateHasChanged();
+            }
+        }
+
+        private async Task LoadDoctorNotesAsync(Guid monitoredId)
+        {
+            _doctorNotesLoading = true;
+            StateHasChanged();
+            try
+            {
+                var response = await HttpClient.GetAsync($"api/monitored/{monitoredId}/notes");
+                _doctorNotes = response.IsSuccessStatusCode
+                    ? (await response.Content.ReadFromJsonAsync<List<DoctorNoteDTO>>()) ?? new()
+                    : new();
+            }
+            catch { _doctorNotes = new(); }
+            finally
+            {
+                _doctorNotesLoading = false;
+                StateHasChanged();
+            }
+        }
+
+        private void OpenDoctorNotesModal()
+        {
+            _doctorNoteContent = string.Empty;
+            _showDoctorNotesModal = true;
+        }
+
+        private void CloseDoctorNotesModal() => _showDoctorNotesModal = false;
+
+        private async Task SaveDoctorNoteAsync()
+        {
+            if (string.IsNullOrWhiteSpace(_doctorNoteContent)) return;
+            _isSavingDoctorNote = true;
+            StateHasChanged();
+            try
+            {
+                var response = await HttpClient.PostAsJsonAsync($"api/monitored/{PersonId}/notes", new { Content = _doctorNoteContent.Trim() });
+                if (response.IsSuccessStatusCode)
+                {
+                    _doctorNoteContent = string.Empty;
+                    _showDoctorNotesModal = false;
+                    await LoadDoctorNotesAsync(PersonId);
+                }
+            }
+            catch { }
+            finally
+            {
+                _isSavingDoctorNote = false;
                 StateHasChanged();
             }
         }
@@ -1285,10 +1389,12 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         protected override async Task OnInitializedAsync()
         {
             _instance = this;
-            // Read query parameter to decide whether the Edit button should be displayed
+            // Detect if user is accessing as a doctor (via /doctor/patient route)
             try
             {
                 var uri = new Uri(NavigationManager.Uri);
+                _isDoctorUser = uri.AbsolutePath.Contains("/doctor/patient/");
+
                 var qs = ParseQueryString(uri.Query);
                 if (qs.TryGetValue("showEdit", out var sval))
                 {
@@ -1331,6 +1437,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             PushService.OnNotificationReceived += OnPushNotificationReceived;
             MeasurementApiClient.OnMeasurementAdded += OnMeasurementAdded;
 
+            _ = LoadPendingFeedbackAsync();
+
             // Start auto-refresh timer (uses user-configured update frequency)
             _refreshTimer = new System.Threading.Timer(_ => _ = RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
         }
@@ -1358,6 +1466,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     // Reset map so it re-initializes with fresh GPS coordinates
                     _mapInitialized = false;
                     _ = LoadTrendPredictionsAsync(PersonId);
+                    _ = LoadDoctorNotesAsync(PersonId);
                     StateHasChanged();
                     await InitTooltipsAsync();
                     await InitMapAsync();
@@ -1642,6 +1751,26 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 }
             }
             return dict;
+        }
+
+        private string? GetRetentionExpiryText()
+        {
+            if (Person == null) return null;
+            if (Person.IsArchived)
+            {
+                if (!Person.ArchiveRetentionDays.HasValue || !Person.ArchivedAt.HasValue) return null;
+                var exp = Person.ArchivedAt.Value.ToLocalTime().AddDays(Person.ArchiveRetentionDays.Value);
+                var daysLeft = (int)(exp - DateTime.Now).TotalDays;
+                return daysLeft <= 0
+                    ? T("selected.retentionExpired")
+                    : string.Format(T("selected.archiveExpiresOn"), exp.ToString("dd.MM.yyyy"), daysLeft);
+            }
+            else
+            {
+                var days = Person.DataRetentionDays ?? 365; // matches RetentionCleanupService.DefaultRetentionDays
+                var exp = DateTime.Now.AddDays(days).Date;
+                return string.Format(T("selected.dataExpiresOn"), exp.ToString("dd.MM.yyyy"), days);
+            }
         }
 
         private string GetAlertIcon(string severity)
@@ -2521,6 +2650,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 _editMaxSpO2 = monitored.MaxSpO2;
                 _editUpdateFrequency = monitored.UpdateFrequency;
                 _editDataRetentionDays = monitored.DataRetentionDays;
+                _editArchiveRetentionDays = monitored.ArchiveRetentionDays;
             }
             _showEditModal = true;
             StateHasChanged();
@@ -2564,7 +2694,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     MinSpO2 = _editMinSpO2,
                     MaxSpO2 = _editMaxSpO2,
                     UpdateFrequency = _editUpdateFrequency,
-                    DataRetentionDays = _editDataRetentionDays
+                    DataRetentionDays = _editDataRetentionDays,
+                    ArchiveRetentionDays = _editArchiveRetentionDays
                 };
 
                 var success = await MonitoredApiClient.UpdateMonitoredPersonAsync(PersonId, dto);
@@ -2611,6 +2742,10 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             public int MinSpO2 { get; set; } = 95;
             public int MaxSpO2 { get; set; } = 100;
             public int UpdateFrequency { get; set; } = 30;
+            public bool IsArchived { get; set; }
+            public DateTime? ArchivedAt { get; set; }
+            public int? DataRetentionDays { get; set; }
+            public int? ArchiveRetentionDays { get; set; }
         }
 
         public class ChartDataPoint

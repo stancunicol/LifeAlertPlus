@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.UserMonitored;
@@ -28,7 +29,13 @@ public partial class AdminPage : ComponentBase
 	[Inject]
 	private LanguageService Lang { get; set; } = default!;
 
-	private string T(string key) => Lang.T(key);
+	[Inject]
+	private AdminApiClient AdminApi { get; set; } = default!;
+
+	[Inject]
+	private HttpClient Http { get; set; } = default!;
+
+	private string T(string key) => Lang.TEnglish(key);
 
 	protected string UserFullName { get; set; } = "Admin";
 	protected string ProfilePictureUrl { get; set; } = string.Empty;
@@ -52,6 +59,16 @@ public partial class AdminPage : ComponentBase
 	protected int MeasurementsNoneCount { get; set; }
 	protected int MeasurementsTodayCount { get; set; }
 	protected List<NotificationItem> Notifications { get; set; } = new();
+	protected List<DeviceStatusRow> DeviceStatuses { get; set; } = new();
+	protected List<AdminApiClient.AuditEntryDTO> RecentAudit { get; set; } = new();
+
+	// Pagination for device status table
+	protected int DevicePageSize = 10;
+	protected int DeviceCurrentPage = 1;
+	protected IEnumerable<DeviceStatusRow> PaginatedDevices => DeviceStatuses
+		.Skip((DeviceCurrentPage - 1) * DevicePageSize)
+		.Take(DevicePageSize);
+	protected int DeviceTotalPages => (DeviceStatuses.Count + DevicePageSize - 1) / DevicePageSize;
 
 	// Per-person status map
 	protected Dictionary<Guid, PersonStatus> PersonStatuses { get; set; } = new();
@@ -216,6 +233,11 @@ public partial class AdminPage : ComponentBase
 				.OrderByDescending(n => n.Time ?? DateTime.MinValue)
 				.Take(10)
 				.ToList();
+
+			// Load device status table and recent audit in parallel.
+			var deviceTask = LoadDeviceStatusesAsync();
+			var auditTask  = LoadRecentAuditAsync();
+			await Task.WhenAll(deviceTask, auditTask);
 		}
 		catch (Exception ex)
 		{
@@ -225,6 +247,35 @@ public partial class AdminPage : ComponentBase
 		{
 			IsLoading = false;
 		}
+	}
+
+	private async Task LoadDeviceStatusesAsync()
+	{
+		try
+		{
+			var rows = await Http.GetFromJsonAsync<List<DeviceStatusRow>>("api/admin/device-status");
+			DeviceStatuses = rows ?? new List<DeviceStatusRow>();
+		}
+		catch { DeviceStatuses = new List<DeviceStatusRow>(); }
+	}
+
+	private async Task LoadRecentAuditAsync()
+	{
+		try
+		{
+			var entries = await AdminApi.GetAuditLogAsync(10);
+			RecentAudit = entries;
+		}
+		catch { RecentAudit = new List<AdminApiClient.AuditEntryDTO>(); }
+	}
+
+	protected static string FormatUptime(int? seconds)
+	{
+		if (!seconds.HasValue) return "-";
+		var s = seconds.Value;
+		if (s < 60) return $"{s}s";
+		if (s < 3600) return $"{s / 60}m {s % 60}s";
+		return $"{s / 3600}h {(s % 3600) / 60}m";
 	}
 
 	protected class PersonStatus
@@ -289,4 +340,40 @@ public partial class AdminPage : ComponentBase
 		string MeasurementStatus);
 
 	protected sealed record NotificationItem(Guid PersonId, string Title, string Message, string Level, DateTime? Time);
+
+	protected sealed class DeviceStatusRow
+	{
+		public Guid Id { get; set; }
+		public string PatientName { get; set; } = string.Empty;
+		public string DeviceSerialNumber { get; set; } = string.Empty;
+		public bool IsArchived { get; set; }
+		public bool IsOnline { get; set; }
+		public double? Battery { get; set; }
+		public int? RssiDbm { get; set; }
+		public int? UptimeSeconds { get; set; }
+		public int? HeartbeatAgeSec { get; set; }
+		public long? LastDataDate { get; set; }
+	}
+
+	protected void GoToDevicePage(int page)
+	{
+		if (page >= 1 && page <= DeviceTotalPages)
+		{
+			DeviceCurrentPage = page;
+		}
+	}
+
+	protected void ChangeDevicePageSize(int newSize)
+	{
+		DevicePageSize = newSize;
+		DeviceCurrentPage = 1;
+	}
+
+	protected void OnDevicePageSizeChanged(ChangeEventArgs e)
+	{
+		if (int.TryParse(e.Value?.ToString(), out int newSize))
+		{
+			ChangeDevicePageSize(newSize);
+		}
+	}
 }

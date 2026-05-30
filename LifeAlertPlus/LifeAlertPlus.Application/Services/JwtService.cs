@@ -40,7 +40,11 @@ namespace LifeAlertPlus.Application.Services
                 new Claim(ClaimTypes.Role, roleName),
                 new Claim("role", roleName),
                 new Claim("lastChangedPasswordAt", user.LastChangedPasswordAt?.ToString("o") ?? string.Empty),
-                new Claim("profilePictureUrl", user.ProfilePictureUrl ?? string.Empty)
+                new Claim("profilePictureUrl", user.ProfilePictureUrl ?? string.Empty),
+                // GDPR: signals to the client that consent has not been given yet.
+                // After the user accepts on the /consent page this claim disappears
+                // from subsequent tokens.
+                new Claim("needsConsent", user.DataProcessingConsentAt == null ? "true" : "false")
             };
 
             int.TryParse(_config["Jwt:ExpiresInMinutes"], out var expiresInMinutes);

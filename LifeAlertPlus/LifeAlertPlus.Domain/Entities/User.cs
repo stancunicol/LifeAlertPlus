@@ -38,6 +38,9 @@
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
+        // GDPR Art. 7 / Art. 9 — records when the user explicitly consented to
+        // processing their (and their monitored persons') health data.
+        public DateTime? DataProcessingConsentAt { get; set; }
 
         public Role Role { get; set; } = default!;
     }

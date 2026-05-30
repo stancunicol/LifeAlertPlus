@@ -187,6 +187,12 @@
     padding: 1.5rem;
 }
 
+    /* Reserve room for the absolute archive button so the status text
+       ("Fără date ESP", "Necesită verificare", etc.) can't slip beneath it. */
+    .person-card-detailed:not(.archived-card) .card-header-colored {
+        padding-right: 4rem;
+    }
+
     .card-header-colored.ok {
         background: linear-gradient(135deg, #d4f4dd 0%, #b8e6c3 100%);
     }
@@ -294,6 +300,24 @@
 
 .card-header-colored.nodata .status-text {
     color: #495057;
+}
+
+.status-row.archived-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 0.5rem;
+}
+
+.archived-text {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #666;
+    background: #f0f0f0;
+    padding: 0.4rem 0.8rem;
+    border-radius: 12px;
+    display: inline-block;
 }
 
 .card-body-white {
@@ -624,6 +648,291 @@
         .modal-btn.secondary:hover {
             background: rgba(165, 214, 167, 0.1);
         }
+
+    .modal-btn.danger {
+        background: linear-gradient(135deg, #FFCDD2 0%, #EF9A9A 100%);
+        color: #4a0a0a;
+        box-shadow: 0 2px 8px rgba(239, 154, 154, 0.35);
+    }
+
+        .modal-btn.danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 154, 154, 0.5);
+        }
+
+    .modal-btn[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+/* ── Archive UI ─────────────────────────────────────────────── */
+
+.view-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    background: white;
+    padding: 0.4rem;
+    border-radius: 30px;
+    width: fit-content;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.view-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.4rem;
+    border: none;
+    background: transparent;
+    border-radius: 25px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 500;
+    color: #555;
+    transition: all 0.25s ease;
+}
+
+    .view-tab:hover {
+        color: #000;
+    }
+
+    .view-tab.active {
+        background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
+        color: #000;
+        box-shadow: 0 2px 6px rgba(165, 214, 167, 0.4);
+    }
+
+.tab-icon {
+    font-size: 1.1rem;
+}
+
+/* Polished archive trigger on each active card.
+   Subtle by default (compact circle, white-with-hint glass background), but reveals
+   itself on hover with a tooltip-style label so the action stays self-explanatory. */
+.card-archive-btn {
+    position: absolute;
+    top: auto;
+    bottom: 0.85rem;
+    right: 0.85rem;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(165, 214, 167, 0.6);
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 500;
+    color: #2e7d32;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    white-space: nowrap;
+    transition: width 0.25s ease, padding 0.25s ease, gap 0.25s ease,
+                background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+    .card-archive-btn .archive-btn-icon {
+        flex: 0 0 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .card-archive-btn .archive-btn-label {
+        max-width: 0;
+        opacity: 0;
+        transform: translateX(-4px);
+        transition: max-width 0.25s ease, opacity 0.2s ease, transform 0.25s ease;
+    }
+
+    .card-archive-btn:hover,
+    .card-archive-btn:focus-visible {
+        width: 150px;
+        padding-right: 1rem;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
+        color: #1b5e20;
+        border-color: transparent;
+        box-shadow: 0 6px 16px rgba(102, 187, 106, 0.35);
+        transform: translateY(-1px);
+    }
+
+        .card-archive-btn:hover .archive-btn-label,
+        .card-archive-btn:focus-visible .archive-btn-label {
+            max-width: 120px;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+    .card-archive-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(102, 187, 106, 0.4);
+    }
+
+.person-card-detailed {
+    position: relative;
+}
+
+/* Friendly explainer box at the top of the archive view */
+.archive-intro {
+    margin-bottom: 1.5rem;
+}
+
+.archive-explainer {
+    font-family: var(--font-body);
+    color: #455a64;
+    background: linear-gradient(135deg, #F1F8E9 0%, #FFFFFF 60%);
+    padding: 1rem 1.4rem;
+    border-radius: 14px;
+    border-left: 4px solid #81C784;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Archived-card styling: muted but readable, with an icon "Arhivat" chip */
+.card-header-colored.archived {
+    background: linear-gradient(135deg, #ECEFF1 0%, #CFD8DC 100%);
+    color: #263238;
+}
+
+.archived-card {
+    opacity: 0.96;
+    border: 1px solid rgba(176, 190, 197, 0.5);
+}
+
+    .archived-card:hover {
+        opacity: 1;
+        box-shadow: 0 8px 24px rgba(96, 125, 139, 0.18);
+    }
+
+/* Restore + Permanent-delete bar at the bottom of each archived card */
+.archive-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px dashed rgba(176, 190, 197, 0.5);
+    flex-wrap: wrap;
+}
+
+    .archive-actions .archive-action-btn {
+        flex: 1 1 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.65rem 1rem;
+        border-radius: 999px;
+        border: none;
+        font-family: var(--font-body);
+        font-size: 0.95rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+        .archive-actions .archive-action-btn.restore {
+            background: linear-gradient(135deg, #E8F5E9 0%, #A5D6A7 100%);
+            color: #1b5e20;
+            box-shadow: 0 2px 6px rgba(165, 214, 167, 0.35);
+        }
+
+            .archive-actions .archive-action-btn.restore:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 14px rgba(102, 187, 106, 0.4);
+            }
+
+        .archive-actions .archive-action-btn.delete {
+            background: white;
+            color: #b71c1c;
+            border: 1px solid rgba(239, 154, 154, 0.7);
+        }
+
+            .archive-actions .archive-action-btn.delete:hover {
+                background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+                border-color: transparent;
+                box-shadow: 0 6px 14px rgba(239, 154, 154, 0.4);
+                transform: translateY(-2px);
+            }
+
+        .archive-actions .archive-action-btn:active {
+            transform: translateY(0);
+        }
+
+        .archive-actions .archive-action-btn .archive-action-icon {
+            font-size: 1.05rem;
+            line-height: 1;
+        }
+
+.modal-content {
+    background: white;
+    border-radius: 18px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+}
+
+.modal-content.modal-confirm {
+    padding: 2rem;
+    position: relative;
+}
+
+.modal-icon-header {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 3rem;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.modal-icon-header.archive {
+    background: #E3F2FD;
+}
+
+.modal-icon-header.restore {
+    background: #E8F5E9;
+}
+
+.modal-icon-header.delete {
+    background: #FFEBEE;
+}
+
+.modal-message {
+    margin-top: 1.5rem;
+    font-size: 1.05rem;
+    line-height: 1.6 !important;
+    color: #333 !important;
+}
+
+.warning-text {
+    background: #FFF3E0;
+    color: #BF360C;
+    border-left: 4px solid #FF8A65;
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    margin: 0.6rem 0 0 0;
+}
 
 @media (max-width: 1024px) {
     .people-grid {

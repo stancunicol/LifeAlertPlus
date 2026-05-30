@@ -48,7 +48,6 @@
 
             <div class="person-profile-header invite-hero">
                 <div class="profile-left">
-                    <div class="person-avatar-huge">@GetInitials(patientName)</div>
                     <div class="profile-info-main">
                         <span class="invite-eyebrow">@Ui("Shared patient view", "Vizualizare pacient partajata")</span>
                         <h1 class="person-name-main">@patientName</h1>
@@ -83,8 +82,8 @@
                         <strong>@(LatestMeasurement?.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm") ?? "-")</strong>
                     </div>
                     <div class="invite-meta-item">
-                        <span>@Ui("Doctor", "Doctor")</span>
-                        <strong>@InvitationInfo.DoctorEmail</strong>
+                        <span>@Ui("Caregiver", "Aparținător")</span>
+                        <strong>@(string.IsNullOrWhiteSpace(InvitationInfo.CaregiverEmail) ? "-" : InvitationInfo.CaregiverEmail)</strong>
                     </div>
                     <div class="invite-meta-item">
                         <span>@Ui("Device", "Dispozitiv")</span>
@@ -364,6 +363,32 @@
                     }
                 }
             </div>
+
+            @* ── Doctor sticky note ── *@
+            <div class="section-card doctor-note-card" style="margin-top:1.5rem;">
+                <div class="doctor-note-header">
+                    <span class="doctor-note-icon">📝</span>
+                    <strong>@T("selected.doctorNotes")</strong>
+                    @if (_noteUpdatedAt.HasValue)
+                    {
+                        <span style="margin-left:auto;font-size:0.8rem;color:#8d6e63;">@_noteUpdatedAt.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm")</span>
+                    }
+                </div>
+                <textarea class="doctor-note-textarea"
+                          placeholder="@T("selected.doctorNotesPlaceholder")"
+                          @bind="_noteContent"
+                          rows="5"></textarea>
+                <div class="doctor-note-footer">
+                    @if (!string.IsNullOrEmpty(_noteStatus))
+                    {
+                        <span class="doctor-note-status">@_noteStatus</span>
+                    }
+                    <button class="doctor-note-save" @onclick="SaveNoteAsync" disabled="@_noteSaving">
+                        @(_noteSaving ? T("selected.doctorNotesSaving") : T("selected.doctorNotesSave"))
+                    </button>
+                </div>
+            </div>
+
         }
     </div>
 </div>

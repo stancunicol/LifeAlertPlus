@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using LifeAlertPlus.Client.Services;
 using Microsoft.AspNetCore.Components;
+using static LifeAlertPlus.Client.Services.AdminApiClient;
 
 namespace LifeAlertPlus.Client.Pages.Admin;
 
@@ -18,7 +19,10 @@ public partial class AdminErrorLogPage : ComponentBase
 	[Inject]
 	private NavigationManager Navigation { get; set; } = default!;
 
-	private string T(string key) => Lang.T(key);
+	[Inject]
+	private AdminApiClient AdminApi { get; set; } = default!;
+
+	private string T(string key) => Lang.TEnglish(key);
 
 	protected string UserFullName { get; set; } = "Admin";
 	protected string ProfilePictureUrl { get; set; } = string.Empty;
@@ -57,21 +61,14 @@ public partial class AdminErrorLogPage : ComponentBase
 		ProfilePictureUrl = claims.ProfilePictureUrl ?? string.Empty;
 	}
 
-	protected Task LoadErrorsAsync()
+	protected async Task LoadErrorsAsync()
 	{
 		IsLoading = true;
 		ErrorMessage = null;
-
 		try
 		{
-			Entries = new List<ErrorLogEntry>
-			{
-				new(DateTime.UtcNow.AddMinutes(-18), "Error", "UserController", "Failed to delete user account.", "Database constraint violation while deleting user id 7d1f..."),
-				new(DateTime.UtcNow.AddHours(-2), "Warning", "AuthenticationController", "Multiple failed login attempts.", "IP 192.168.1.100 exceeded 5 invalid logins."),
-				new(DateTime.UtcNow.AddHours(-4), "Info", "SimulationManager", "Simulation batch completed.", "Generated 120 measurements for 8 devices."),
-				new(DateTime.UtcNow.AddDays(-1), "Error", "ESPController", "Device heartbeat missing.", "No heartbeat received from device F3A2-01 for 18 minutes."),
-				new(DateTime.UtcNow.AddDays(-1).AddHours(-3), "Warning", "EmailController", "SMTP relay slow.", "Delivery was delayed by 12 seconds for user jane@example.com."),
-			};
+			var raw = await AdminApi.GetErrorLogAsync(200);
+			Entries = raw.Select(e => new ErrorLogEntry(e.Timestamp, e.Level, e.Source, e.Message, e.Details)).ToList();
 		}
 		catch (Exception ex)
 		{
@@ -81,8 +78,6 @@ public partial class AdminErrorLogPage : ComponentBase
 		{
 			IsLoading = false;
 		}
-
-		return Task.CompletedTask;
 	}
 
 	protected void SetFilter(string filter)

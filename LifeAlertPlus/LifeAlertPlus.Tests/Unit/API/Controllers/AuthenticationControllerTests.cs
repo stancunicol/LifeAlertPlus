@@ -8,6 +8,7 @@ using LifeAlertPlus.Shared.DTOs.Responses.User;
 using LifeAlertPlus.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -31,9 +32,13 @@ public class AuthenticationControllerTests
 
         var getUrlSvc = new GetUrlService(config, httpContext.Object);
 
+        var scopeFactory = new Mock<IServiceScopeFactory>().Object;
+        var auditLogger  = Mock.Of<ILogger<LifeAlertPlus.API.Services.AuditService>>();
+        var auditSvc     = new LifeAlertPlus.API.Services.AuditService(scopeFactory, auditLogger);
+
         _sut = new AuthenticationController(
             _userSvc.Object, config, _authSvc.Object, _jwtSvc.Object,
-            _emailSvc.Object, logger, getUrlSvc, _roleSvc.Object);
+            _emailSvc.Object, logger, getUrlSvc, _roleSvc.Object, auditSvc);
     }
 
     // ── Login ────────────────────────────────────────────────────────────────
@@ -144,7 +149,8 @@ public class AuthenticationControllerTests
 
         var result = await _sut.Register(new UserRegisterRequestDTO
         {
-            FirstName = "A", LastName = "B", Email = "new@test.com", Password = "Valid@1234"
+            FirstName = "A", LastName = "B", Email = "new@test.com", Password = "Valid@1234",
+            DataProcessingConsent = true
         });
 
         result.Should().BeOfType<OkObjectResult>();

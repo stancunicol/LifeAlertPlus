@@ -65,5 +65,23 @@ namespace LifeAlertPlus.Client.Services
             var response = await _httpClient.PutAsJsonAsync($"api/monitored/update/{id}", dto);
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<bool> ArchiveMonitoredPersonAsync(Guid id)
+        {
+            var response = await _httpClient.PutAsync($"api/monitored/archive/{id}", null);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> RestoreMonitoredPersonAsync(Guid id)
+        {
+            var response = await _httpClient.PutAsync($"api/monitored/restore/{id}", null);
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DeleteMonitoredPersonAsync(Guid id)
+        {
+            var response = await _httpClient.DeleteAsync($"api/monitored/{id}");
+            return response.IsSuccessStatusCode;
+        }
     }
 }

@@ -31,6 +31,7 @@ builder.Services.AddScoped<UserStateService>();
 builder.Services.AddScoped<MeasurementApiClient>();
 builder.Services.AddScoped<WifiApiClient>();
 builder.Services.AddScoped<AIPredictionService>();
+builder.Services.AddScoped<AdminApiClient>();
 builder.Services.AddScoped<ChatbotClientService>();
 
 builder.Services.AddSingleton<LanguageService>();

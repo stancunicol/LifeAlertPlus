@@ -1,12 +1,9 @@
-% !TeX program = pdflatex
-% LifeAlertPlus - Lucrare de licență
-% Document reconstruit din documentatie.pdf, cu subcapitolele 2.3, 2.4 și 2.5 completate.
-\documentclass[12pt,a4paper]{article}
+﻿\documentclass[12pt,a4paper]{article}
 
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
+\usepackage{fontspec}
+\setmainfont{Calibri}
+\setsansfont{Calibri}
 \usepackage[romanian]{babel}
-\usepackage[sfdefault]{carlito}  % font sans-serif metric-compatibil cu Calibri
 \usepackage[a4paper,margin=2.5cm]{geometry}
 \usepackage{fancyhdr}
 \usepackage{graphicx}
@@ -21,8 +18,8 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, calc, backgrounds}
+\usepackage{pdfpages}
 
-% ===== Stiluri de titlu (1 INTRODUCERE, 1.1 CONTEXT ACTUAL, 1.1.1 ...) =====
 \titleformat{\section}{\Large\bfseries}{\thesection}{0.7em}{}
 \titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.7em}{}
 \titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{0.7em}{}
@@ -30,11 +27,9 @@
 \titlespacing*{\subsection}{0pt}{1.8ex plus 1ex minus .2ex}{1.0ex plus .2ex}
 \titlespacing*{\subsubsection}{0pt}{1.4ex plus 1ex minus .2ex}{0.8ex plus .2ex}
 
-% Numerotare extinsă: include subsubsection în corp şi în cuprins (1.1.1, 1.1.2...)
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 
-% ===== Antet / subsol =====
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\small LifeAlertPlus}
@@ -42,14 +37,10 @@
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
-% ===== Comenzi utilitare =====
 \newcommand{\spo}{SpO\textsubscript{2}}
 
-% Placeholder pentru figuri care urmează să fie inserate.
-% Înlocuiește apelul \figplaceholder{...} cu \includegraphics[width=0.9\textwidth]{nume-fisier}
 \newcommand{\figplaceholder}[1]{\fbox{\parbox[c][4.8cm][c]{0.88\textwidth}{\centering\itshape #1}}}
 
-% Titlul secțiunii de bibliografie generate automat de mediul thebibliography
 \addto\captionsromanian{\renewcommand{\refname}{Bibliografie}}
 
 \setlength{\parskip}{0.6em}
@@ -57,48 +48,12 @@
 
 \begin{document}
 
-% ====================== PAGINA DE TITLU ======================
-\begin{titlepage}
-\thispagestyle{empty}
-\begin{center}
+\includepdf[pages=-]{coperta.pdf}
 
-{\large Universitatea Transilvania din Brașov\\[0.3em]
-Facultatea de Matematică și Informatică}
-
-\vspace{0.6em}
-{\small Programul de studii: Informatică}
-
-\vfill
-
-{\Huge\bfseries Lucrare de licență\par}
-
-\vspace{1.2em}
-
-{\LARGE\bfseries LifeAlertPlus: sistem IoT inteligent pentru monitorizarea și siguranța persoanelor vârstnice\par}
-
-\vfill
-
-\begin{flushleft}
-\large
-\begin{tabular}{@{}ll@{}}
-Autor: & Stancu Nicol-Alexia\\[0.5em]
-Coordonator științific: & Lectr. Dr. Vasilescu Anca\\
-\end{tabular}
-\end{flushleft}
-
-\vfill
-
-{\large Brașov, 2026}
-
-\end{center}
-\end{titlepage}
-
-% ====================== CUPRINS ======================
 \newpage
 \tableofcontents
 \newpage
 
-% ====================== LISTĂ DE FIGURI ȘI TABELE ======================
 \phantomsection
 \addcontentsline{toc}{section}{Listă de figuri}
 \listoffigures
@@ -109,7 +64,6 @@ Coordonator științific: & Lectr. Dr. Vasilescu Anca\\
 \listoftables
 \newpage
 
-% ====================== LISTĂ DE ABREVIERI ======================
 \phantomsection
 \addcontentsline{toc}{section}{Listă de abrevieri}
 \section*{Listă de abrevieri}
@@ -170,10 +124,10 @@ USB-C & Universal Serial Bus Type-C\\
 WiFi & Tehnologie de rețea locală fără fir (standard IEEE 802.11)\\
 \end{longtable}
 }
+\addtocounter{table}{-1}
 
 \newpage
 
-% ====================== 1 INTRODUCERE ======================
 \section{Introducere}
 
 \subsection{Context actual}
@@ -248,7 +202,6 @@ Capitolul VI prezintă metodologia de testare și rezultatele obținute, cu acce
 
 Capitolul VII formulează concluziile lucrării, limitările identificate și direcțiile de dezvoltare ulterioară.
 
-% ====================== 2 FUNDAMENTE TEORETICE ======================
 \newpage
 \section{Fundamente teoretice și tehnologii}
 
@@ -335,17 +288,12 @@ Interacțiunea fizică cu dispozitivul este limitată la două butoane, în conc
 
 \begin{figure}[H]
 \centering
-% Înlocuiește cu fotografia reală, de exemplu:
-% \includegraphics[width=0.75\textwidth]{figuri/dispozitiv.jpg}
 \figplaceholder{[Spațiu pentru figură: fotografia dispozitivului portabil asamblat, cu senzorii, ecranul OLED și butoanele vizibile.]}
 \caption{Dispozitivul portabil LifeAlertPlus.}
 \label{fig:dispozitiv}
 \end{figure}
 
-% >>> FIGURĂ SUGERATĂ: schema electrică / de conexiuni a dispozitivului,
-% adică maparea pinilor GPIO ai ESP32-C3 către senzori, multiplexor, OLED și butoane.
 
-% ========== 2.3 (NOU) ==========
 \subsection{Prelucrarea datelor și inteligență artificială}
 
 Datele brute furnizate de senzorii biomedicali nu pot fi utilizate direct pentru a decide dacă starea pacientului este una normală sau una care necesită intervenție. Valorile individuale, precum o frecvență cardiacă de 105 bpm sau o temperatură de 37,8\textdegree C, sunt ambigue atunci când sunt interpretate izolat: ele pot indica fie o stare patologică, fie o reacție fiziologică firească la efort, stres sau temperatura ambientală. Din acest motiv, transformarea datelor în informație utilă din punct de vedere clinic presupune o etapă de prelucrare și o etapă de interpretare, în care intervine inteligența artificială.
@@ -379,38 +327,29 @@ O caracteristică importantă a soluției este faptul că decizia finală nu est
     proc/.style={rectangle, rounded corners, draw, minimum width=3.0cm, minimum height=1.0cm, align=center, fill=orange!15},
     rules/.style={rectangle, rounded corners, draw, minimum width=3.0cm, minimum height=1.0cm, align=center, fill=yellow!20},
     fuz/.style={rectangle, rounded corners, draw, minimum width=3.0cm, minimum height=1.5cm, align=center, fill=red!10},
-    out/.style={rectangle, rounded corners, draw, minimum width=3.0cm, minimum height=1.0cm, align=center, fill=green!15},
+    outp/.style={rectangle, rounded corners, draw, minimum width=3.0cm, minimum height=1.0cm, align=center, fill=green!15},
     merger/.style={rectangle, rounded corners, draw, fill=gray!12, font=\scriptsize\itshape, align=center, inner sep=4pt, minimum height=0.9cm, minimum width=1.6cm},
     arrow/.style={-{Latex[length=2mm]}, thick}]
 
-  % Column 1 — inputs (left)
   \node[input] (sens) at (-6.4, 1.3) {Valori senzori\\\scriptsize puls, \spo, T, IMU};
   \node[input] (prag) at (-6.4,-1.3) {Praguri + afecțiuni\\\scriptsize per pacient};
 
-  % Merge 1 — combined feature vector
   \node[merger] (m1) at (-3.6, 0) {vector\\de intrare};
 
-  % Column 2 — parallel processors (middle)
   \node[proc]  (rf) at (-0.6, 1.3) {\textbf{Random Forest}\\\scriptsize predicție + prob.};
   \node[rules] (rg) at (-0.6,-1.3) {\textbf{Reguli medicale}\\\scriptsize praguri absolute};
 
-  % Column 3 — fusion (center-right)
   \node[fuz] (fz) at ( 3.0, 0) {\textbf{Fuziune și}\\\textbf{severitate}\\\scriptsize + modificatori};
 
-  % Column 4 — outputs (right)
-  \node[out] (stare) at ( 6.6, 1.3) {Stare finală\\\scriptsize NORMAL/ALERT/CRITICAL};
-  \node[out] (score) at ( 6.6,-1.3) {Health score\\\scriptsize 0--100};
+  \node[outp] (stare) at ( 6.6, 1.3) {Stare finală\\\scriptsize NORMAL/ALERT/CRITICAL};
+  \node[outp] (score) at ( 6.6,-1.3) {Health score\\\scriptsize 0--100};
 
-  % Inputs converge into the shared feature vector
   \draw[arrow] (sens.east) -- (m1.north west);
   \draw[arrow] (prag.east) -- (m1.south west);
-  % Feature vector feeds both parallel processors
   \draw[arrow] (m1.north east) -- (rf.west);
   \draw[arrow] (m1.south east) -- (rg.west);
-  % Processors converge into the fusion layer
   \draw[arrow] (rf.east) -- (fz.north west);
   \draw[arrow] (rg.east) -- (fz.south west);
-  % Fusion fans out into the two outputs
   \draw[arrow] (fz.north east) -- (stare.west);
   \draw[arrow] (fz.south east) -- (score.west);
 \end{tikzpicture}}
@@ -426,11 +365,10 @@ Performanța modelului a fost estimată prin \textbf{validare încrucișată str
 
 \subsubsection{Clasificarea activității și arhitectura de tip microserviciu}
 
-Pe lângă evaluarea stării de sănătate, datele de mișcare furnizate de senzorul MPU6050 sunt prelucrate pentru a clasifica tipul de activitate al pacientului (mers, repaus, somn) și pentru a contribui la detectarea căderilor. Aceste informații stau la baza profilului de activitate zilnică, util atât pacientului, cât și aparținătorului sau medicului.
+Pe lângă evaluarea stării de sănătate, datele de mișcare furnizate de senzorul MPU6050 sunt prelucrate \textbf{pe dispozitiv} pentru a clasifica activitatea purtătorului ca \texttt{moving} sau \texttt{stationary}, și pentru a contribui la detectarea căderilor. Eticheta de activitate este derivată din acumularea abaterii magnitudinii acceleraţiei faţă de gravitaţie ($|\vec{a}| - 1\,g$) peste fereastra de ~5\,s între două POST-uri: media şi maximul abaterii peste această fereastră sunt comparate cu praguri empirice (0,05\,g pentru media de mişcare susţinută, 0,20\,g pentru un vârf izolat), iar eticheta rezultată este inclusă direct în payload-ul JSON trimis backend-ului. Această clasificare reutilizează exact aceleaşi sample-uri pe care fall-detector-ul le citește la 50\,Hz, fără overhead suplimentar. Pe baza acestei etichete, persistată pentru fiecare măsurătoare, backend-ul agregă \textbf{profilul de activitate zilnică} (rata de mişcare şi probabilitatea de somn per oră, pe o fereastră de 14 zile) şi detectează două tipuri de anomalii comportamentale: \textit{inactivitate prelungită} (peste 15 minute fără mişcare într-o oră în care pacientul e de obicei activ) şi \textit{activitate nocturnă} (mişcare detectată într-o oră în care pacientul doarme de obicei).
 
-Din punct de vedere arhitectural, componenta de inteligență artificială este implementată ca un \textbf{microserviciu} independent, scris în limbajul Python și expus printr-o interfață REST. Această separare a fost aleasă deliberat: ecosistemul Python oferă cele mai mature biblioteci de învățare automată, iar izolarea modulului AI într-un serviciu propriu permite actualizarea, înlocuirea sau scalarea modelului fără a afecta restul aplicației. Backend-ul aplicației comunică cu microserviciul AI prin cereri HTTP, transmițând valorile senzorilor și primind în răspuns starea prezisă, health score-ul și o explicație textuală a deciziei.
+Din punct de vedere arhitectural, componenta de inteligență artificială propriu-zisă (clasificarea stării vitale în NORMAL/ALERT/CRITICAL şi calculul health score-ului) este implementată ca un \textbf{microserviciu} independent, scris în limbajul Python și expus printr-o interfață REST. Această separare a fost aleasă deliberat: ecosistemul Python oferă cele mai mature biblioteci de învățare automată, iar izolarea modulului AI într-un serviciu propriu permite actualizarea, înlocuirea sau scalarea modelului fără a afecta restul aplicației. Backend-ul aplicației comunică cu microserviciul AI prin cereri HTTP, transmițând valorile senzorilor și primind în răspuns starea prezisă, health score-ul și o explicație textuală a deciziei.
 
-% ========== 2.4 (NOU) ==========
 \subsection{Sisteme de alertare}
 
 Un sistem de alertare reprezintă ansamblul de mecanisme prin care un sistem informatic semnalează automat apariția unei situații care necesită atenție. În contextul monitorizării medicale, sistemul de alertare este componenta care transformă o anomalie detectată într-o acțiune concretă: informarea unei persoane capabile să intervină. Funcționarea sa presupune trei etape succesive, anume detectarea evenimentului, decizia de a alerta și livrarea efectivă a notificării.
@@ -481,7 +419,6 @@ Combinarea celor trei canale asigură redundanță: dacă un canal eșuează sau
 \label{fig:multi-canal}
 \end{figure}
 
-% ========== 2.5 (NOU) ==========
 \subsection{Tehnologii utilizate (backend, frontend, Docker etc.)}
 
 Realizarea unui sistem IoT funcțional, dincolo de componenta hardware, presupune integrarea unui set coerent de tehnologii software. Această secțiune prezintă pe scurt tehnologiile pe care se sprijină aplicația, grupate pe niveluri arhitecturale.
@@ -514,7 +451,6 @@ Pentru asigurarea consistenței între mediul de dezvoltare și cel de producți
 
 Procesul de construire, testare și publicare a aplicației este automatizat printr-un flux de \textbf{integrare și livrare continuă (CI/CD)} configurat cu GitHub Actions, iar sistemul este deployat pe infrastructura cloud \textbf{Microsoft Azure}, asigurând disponibilitatea și accesul de la distanță.
 
-% ====================== 3 ANALIZA SOLUȚIILOR EXISTENTE ======================
 \newpage
 \section{Analiza soluțiilor existente}
 
@@ -627,7 +563,6 @@ Față de prototipurile academice, sistemul propus depășește stadiul de demon
 
 Această poziționare confirmă relevanța și originalitatea soluției propuse, care nu încearcă să concureze frontal cu ecosistemele comerciale mature, ci adresează un segment specific și insuficient acoperit: monitorizarea continuă, automată și inteligentă a persoanelor vârstnice, cu implicarea activă a aparținătorului prin tehnologii accesibile și fără costuri recurente semnificative.
 
-% ====================== 4 PROIECTAREA SISTEMULUI ======================
 \newpage
 \section{Proiectarea sistemului}
 
@@ -658,7 +593,7 @@ Spre deosebire de celelalte componente software, scrise în C\#, componenta de i
 
 \subsubsection{Comunicarea între componente}
 
-Componentele sistemului comunică prin trei mecanisme distincte. Dispozitivul IoT și aplicația web comunică cu backend-ul prin \textbf{API-ul REST}, peste HTTPS. Backend-ul comunică cu microserviciul AI tot prin HTTP. În fine, pentru actualizarea instantanee a interfeței și pentru livrarea notificărilor push, backend-ul comunică cu aplicația web printr-o conexiune permanentă \textbf{WebSocket}, gestionată de biblioteca SignalR. Cele trei componente principale, adică microserviciul AI, backend-ul și frontend-ul, sunt împachetate în containere Docker și orchestrate prin Docker Compose, ceea ce asigură consistența între mediul de dezvoltare și cel de producție. Ansamblul componentelor și al legăturilor dintre ele este prezentat în figura~\ref{fig:arhitectura}.
+Componentele sistemului comunică prin trei mecanisme distincte. Dispozitivul IoT și aplicația web comunică cu backend-ul prin \textbf{API-ul REST}, peste HTTPS. Backend-ul comunică cu microserviciul AI tot prin HTTP. Pentru actualizarea instantanee a interfeței și pentru livrarea notificărilor push, backend-ul comunică cu aplicația web printr-o conexiune permanentă \textbf{WebSocket}, gestionată de biblioteca SignalR. Cele trei componente principale, adică microserviciul AI, backend-ul și frontend-ul, sunt împachetate în containere Docker și orchestrate prin Docker Compose, ceea ce asigură consistența între mediul de dezvoltare și cel de producție. Ansamblul componentelor și al legăturilor dintre ele este prezentat în figura~\ref{fig:arhitectura}.
 
 \begin{figure}[H]
 \centering
@@ -740,7 +675,6 @@ Structura claselor principale ale aplicației, anume entități, servicii și co
     layerlabel/.style={font=\small\bfseries, anchor=east},
     arrow/.style={-{Latex[length=2mm]}, thick, gray!70}]
 
-  % ===== API layer (controllers) =====
   \node[ctrl] (cAuth)   at (-6.0, 6.6) {AuthController};
   \node[ctrl] (cMon)    at (-3.4, 6.6) {MonitoredController};
   \node[ctrl] (cMeas)   at (-0.8, 6.6) {MeasurementsCtrl};
@@ -755,7 +689,6 @@ Structura claselor principale ale aplicației, anume entități, servicii și co
     \node[layer, fit=(cAuth)(cAI)(cUsers)(cInv), label={[layerlabel]left:API}] (apiLayer) {};
   \end{scope}
 
-  % ===== Application layer (services) =====
   \node[svc] (sAuth)  at (-6.0, 3.0) {AuthService};
   \node[svc] (sMon)   at (-3.4, 3.0) {MonitoredService};
   \node[svc] (sMeas)  at (-0.8, 3.0) {MeasurementService};
@@ -769,7 +702,6 @@ Structura claselor principale ale aplicației, anume entități, servicii și co
     \node[layer, fit=(sAuth)(sDaily)(sRet)(sExt), label={[layerlabel]left:Application}] (appLayer) {};
   \end{scope}
 
-  % ===== Domain layer (entities) =====
   \node[ent] (eUser)  at (-6.0,-0.8) {User};
   \node[ent] (eRole)  at (-3.4,-0.8) {Role};
   \node[ent] (eMon)   at (-0.8,-0.8) {Monitored};
@@ -787,7 +719,6 @@ Structura claselor principale ale aplicației, anume entități, servicii și co
     \node[layer, fit=(eUser)(eNotif)(eCond)(eInv), label={[layerlabel]left:Domain}] (domLayer) {};
   \end{scope}
 
-  % ===== Inter-layer arrows (representative dependencies) =====
   \draw[arrow] (apiLayer.south) -- node[right, midway, font=\scriptsize]{folosesc} (appLayer.north);
   \draw[arrow] (appLayer.south) -- node[right, midway, font=\scriptsize]{operează pe} (domLayer.north);
 \end{tikzpicture}}
@@ -841,17 +772,13 @@ Diagrama entitate-relație a modelului de date este prezentată în figura~\ref{
     bus/.style={draw, very thick, gray!50},
     card/.style={font=\scriptsize\itshape, fill=white, inner sep=1pt}]
 
-  % Identity entities (left column)
   \node[ent] (role) at (-7.0, 3.0) {\textbf{Role}\\\scriptsize Id, Name};
   \node[ent] (user) at (-7.0, 0.0) {\textbf{User}\\\scriptsize Id, Email, preferințe};
 
-  % Central link table
   \node[link] (um) at (-3.5, 0.0) {\textbf{UserMonitored}\\\scriptsize UserId, MonitoredId};
 
-  % Central entity
   \node[central] (mon) at (0.0, 0.0) {\textbf{Monitored}\\\scriptsize Id, Nume,\\\scriptsize SerialNumber, praguri};
 
-  % Vertical positions on the right-side bus
   \def\yMeas{3.6}
   \def\yNotif{2.0}
   \def\yCond{0.4}
@@ -861,36 +788,30 @@ Diagrama entitate-relație a modelului de date este prezentată în figura~\ref{
   \def\yWeek{0.4}
   \def\yInv{-1.2}
 
-  % Right column - direct dependents
   \node[ent] (meas)  at ( 4.0, \yMeas)  {\textbf{Measurement}\\\scriptsize valori, isFall, GPS};
   \node[ent] (notif) at ( 4.0, \yNotif) {\textbf{Notification}\\\scriptsize mesaj, feedback};
   \node[ent] (cond)  at ( 4.0, \yCond)  {\textbf{MonitoredCondition}\\\scriptsize tip afecțiune};
   \node[ent] (act)   at ( 4.0, \yAct)   {\textbf{ActivityProfile}\\\scriptsize oră, valori};
   \node[ent] (wifi)  at ( 4.0, \yWifi)  {\textbf{WifiNetwork}\\\scriptsize SSID, parolă};
 
-  % Far-right column - aggregates & invitation
   \node[ent] (day)   at ( 8.5, \yDay)  {\textbf{DailyHistory}\\\scriptsize dată, min/max};
   \node[ent] (week)  at ( 8.5, \yWeek) {\textbf{WeeklyHistory}\\\scriptsize săptămână, medii};
   \node[ent] (inv)   at ( 8.5, \yInv)  {\textbf{Invitation}\\\scriptsize token, expirare};
 
-  % Identity relationships
   \draw[rel] (role.south) -- node[card, pos=0.2]{1} node[card, pos=0.8]{N} (user.north);
   \draw[rel] (user.east)  -- node[card, pos=0.15]{1} node[card, pos=0.85]{N} (um.west);
   \draw[rel] (um.east)    -- node[card, pos=0.15]{N} node[card, pos=0.85]{1} (mon.west);
 
-  % Vertical bus from mon.east to dependent entities (single shared trunk)
   \coordinate (bus) at (1.4,0);
   \draw[bus] (mon.east) -- (bus);
   \draw[bus] (1.4,\yWifi) -- (1.4,\yMeas);
 
-  % Branches from the bus to right-column dependents
   \draw[rel] (1.4,\yMeas)  -- node[card, pos=0.85]{1\,:\,N} (meas.west);
   \draw[rel] (1.4,\yNotif) -- node[card, pos=0.85]{1\,:\,N} (notif.west);
   \draw[rel] (1.4,\yCond)  -- node[card, pos=0.85]{1\,:\,N} (cond.west);
   \draw[rel] (1.4,\yAct)   -- node[card, pos=0.85]{1\,:\,N} (act.west);
   \draw[rel] (1.4,\yWifi)  -- node[card, pos=0.85]{1\,:\,3} (wifi.west);
 
-  % Branches from the right-column boxes to far-right (day/week/inv share bus at x=5.5)
   \coordinate (bus2) at (5.8,0);
   \draw[bus] (5.8,\yInv) -- (5.8,\yDay);
   \draw[bus] (cond.east) -- (bus2);
@@ -898,7 +819,6 @@ Diagrama entitate-relație a modelului de date este prezentată în figura~\ref{
   \draw[rel] (5.8,\yWeek) -- node[card, pos=0.85]{1\,:\,N} (week.west);
   \draw[rel] (5.8,\yInv)  -- node[card, pos=0.85]{1\,:\,N} (inv.west);
 
-  % Notification optional recipient (dashed)
   \draw[rel, dashed] (user.north) to[bend left=12] node[card, pos=0.5]{0..N (destinatar)} (notif.north);
 \end{tikzpicture}}
 \caption{Diagrama entitate-relație a bazei de date LifeAlertPlus. Relația centrală \textit{mulți-la-mulți} dintre \texttt{User} și \texttt{Monitored} se realizează prin tabela de legătură \texttt{UserMonitored}. Toate entitățile dependente sunt legate \textit{unu-la-mulți} de \texttt{Monitored}, iar relația punctată indică o legătură opțională (un destinatar pentru o notificare).}
@@ -982,6 +902,19 @@ Parkinson / epilepsie & Accelerație sub 0,5\,g & $+5$\\
 
 Scorul rezultat este limitat la intervalul $[0, 100]$. Avantajul acestui mecanism este că surprinde \textbf{corelația dintre mai mulți parametri}: mai multe abateri ușoare, fiecare insuficientă pentru a declanșa singură o alertă, se pot cumula într-un scor ridicat, semnalând o degradare globală a stării pacientului care altfel ar trece neobservată.
 
+\subsubsection{Predicția de tendințe}
+
+Pe lângă evaluarea stării instantanee, sistemul oferă o \textbf{predicție de tendințe pe termen scurt}, menită să anticipeze atingerea unui prag clinic înainte ca acesta să fie efectiv depășit. Serviciul de monitorizare păstrează, pentru fiecare pacient, un buffer cu măsurătorile din ultimele două minute și calculează, pentru fiecare parametru vital (puls, temperatură, \spo), media și \textbf{panta} (rata de variație) pe acest interval. Atunci când panta indică o evoluție constantă către o valoare critică, sistemul estimează timpul rămas până la atingerea pragului prin extrapolare liniară și produce o etichetă explicativă.
+
+De exemplu, o temperatură în creștere constantă generează predicția \textit{Posibilă febră} sau \textit{Febră în evoluție}, împreună cu numărul aproximativ de secunde până la pragul de 38,5\,\textdegree C; analog, se anticipează tahicardia, bradicardia sau hipoxia. Aceste predicții sunt afișate în interfața de vizualizare a pacientului (figura~\ref{fig:predictii-tendinte}) ca avertismente gradate (atenționare sau pericol) și au rol pur informativ pentru aparținător, fără a declanșa singure notificări, întrucât se bazează pe extrapolare și nu pe o depășire efectivă a pragului. Spre deosebire de health score, care reflectă starea curentă, predicția de tendințe priveşte în viitorul apropiat (de ordinul minutelor).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/predictii-tendinte.png}
+\caption{Predicțiile de tendințe afișate în pagina pacientului: etichetă, valoare curentă, rată de variație și timp estimat până la prag.}
+\label{fig:predictii-tendinte}
+\end{figure}
+
 \subsubsection{Declanșarea și escaladarea unei alerte}
 
 Detectarea unei situații de risc nu declanșează imediat o notificare. Serviciul de monitorizare a alertelor menține, pentru fiecare persoană monitorizată, un buffer cu măsurătorile recente și aplică un \textbf{prag de persistență}: o stare anormală trebuie să se mențină o durată minimă înainte de a genera o alertă, eliminând astfel valorile tranzitorii cauzate de un contact imperfect al senzorului. Severitatea de bază a alertei este apoi ajustată de motorul de reguli pe baza afecțiunilor pacientului, care poate ridica nivelul de severitate și poate adăuga recomandări specifice.
@@ -994,7 +927,7 @@ Odată confirmată, alerta este livrată simultan prin toate canalele activate �
     every node/.style={font=\small},
     box/.style={rectangle, rounded corners, draw, minimum width=4.6cm, minimum height=1.0cm, align=center, fill=blue!6},
     decide/.style={diamond, aspect=2.4, draw, align=center, fill=yellow!15, inner sep=2pt, minimum width=4.0cm},
-    out/.style={rectangle, rounded corners, draw, minimum width=2.8cm, minimum height=0.9cm, align=center, fill=green!12},
+    outp/.style={rectangle, rounded corners, draw, minimum width=2.8cm, minimum height=0.9cm, align=center, fill=green!12},
     arrow/.style={-{Latex[length=2mm]}, thick},
     label/.style={font=\scriptsize}]
 
@@ -1004,9 +937,9 @@ Odată confirmată, alerta este livrată simultan prin toate canalele activate �
   \node[box, below=of ai] (buf) {Buffer alerte\\\scriptsize ultimele măsurători};
   \node[decide, below=of buf] (pers) {Persistă $\geq$ 2 min?};
   \node[box, below=of pers] (sev) {Ajustare severitate\\\scriptsize reguli + afecțiuni};
-  \node[out, below=1.4cm of sev] (push) {Push (SignalR)};
-  \node[out, left=of push] (sms) {SMS (Twilio)};
-  \node[out, right=of push] (mail) {Email (SMTP)};
+  \node[outp, below=1.4cm of sev] (push) {Push (SignalR)};
+  \node[outp, left=of push] (sms) {SMS (Twilio)};
+  \node[outp, right=of push] (mail) {Email (SMTP)};
 
   \draw[arrow] (sens) -- (post);
   \draw[arrow] (post) -- (ai);
@@ -1014,10 +947,8 @@ Odată confirmată, alerta este livrată simultan prin toate canalele activate �
   \draw[arrow] (buf) -- (pers);
   \draw[arrow] (pers) -- node[right, label]{da} (sev);
 
-  % "nu" loop back to buffer (cleaner than going to AI)
   \draw[arrow] (pers.west) -- ++(-2.6,0) node[midway, above, label]{nu, mai aștept} |- (buf.west);
 
-  % Fan-out from severity to three channels via a junction
   \coordinate (junc) at ($(sev.south) + (0,-0.6)$);
   \draw[thick] (sev.south) -- (junc);
   \draw[thick] (sms.north |- junc) -- (mail.north |- junc);
@@ -1053,10 +984,8 @@ Detecția căderilor este realizată \textbf{integral pe dispozitiv}, ca task se
   \draw[edge] (ff) -- node[above, font=\scriptsize]{impact $\geq$ 2{,}5\,g} node[below, font=\scriptsize]{după $\geq$ 80\,ms FF} (st);
   \draw[edge] (st) -- node[right, font=\scriptsize]{stillness 1{,}5\,s} (conf);
 
-  % Abort: from ff back up and around to idle (above the main flow)
   \draw[edge] (ff.north) -- ++(0,0.8) node[above, font=\scriptsize]{abort (mișcare / timeout)} -| (idle.north);
 
-  % Reset: from confirmed back below to idle
   \draw[edge] (conf.south) -- ++(0,-0.8) node[below, font=\scriptsize]{reset} -| (idle.south);
 \end{tikzpicture}
 \caption{Mașina de stări a detectorului de căderi rulat pe dispozitiv.}
@@ -1064,6 +993,19 @@ Detecția căderilor este realizată \textbf{integral pe dispozitiv}, ca task se
 \end{figure}
 
 Pragurile au fost alese empiric pe baza literaturii de specialitate pentru detectori de tip prag: free-fall sub 0,5\,g susținut minim 80\,ms, impact peste 2,5\,g într-o fereastră de cel mult 800\,ms după free-fall, urmat de o perioadă de stillness de 1,5\,s în care magnitudinea acceleraţiei rămâne în jurul valorii de 1\,g (gravitaţia), cu variaţii sub 0,25\,g. La confirmare, task-ul setează un flag pe care bucla principală îl include în următoarea cerere către endpoint-ul de ingestie. Fluxul restant se identifică cu cel al unei măsurători obișnuite, însă serverul ridică automat severitatea la nivel critic atunci când indicatorul de cădere este activ, declanșând livrarea pe toate canalele activate.
+
+\subsubsection{Profilul de activitate și detecția anomaliilor comportamentale}
+
+Pe lângă măsurătorile instantanee, sistemul construiește pentru fiecare pacient un \textbf{profil de activitate zilnică} agregat pe orele zilei dintr-o fereastră glisantă de 14 zile. Sursa de date este eticheta de activitate (\texttt{moving} / \texttt{stationary}) calculată în firmware pentru fiecare măsurătoare (procedeu descris în subcapitolul de implementare a firmware-ului). Pentru fiecare oră a zilei, serviciul de profilare păstrează trei valori derivate: pulsul mediu, \textbf{rata de mişcare} (proporţia măsurătorilor etichetate \texttt{moving}) şi \textbf{probabilitatea de somn} (proporţia măsurătorilor etichetate \texttt{stationary} la care pulsul este sub 75\,bpm). Profilul este recalculat în fundal o singură dată per pacient, atunci când e folosit prima oară, şi păstrat într-o memorie locală cu expirare la 4 ore pentru a evita interogări repetate pe baza de date.
+
+Pe baza acestui profil, la fiecare măsurătoare nouă serviciul de monitorizare verifică dacă starea curentă se abate semnificativ de la tiparul obişnuit al pacientului la ora respectivă, declanşând una dintre două \textbf{anomalii comportamentale}:
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Inactivitate prelungită}: în ultimele 15 minute toate măsurătorile au fost etichetate \texttt{stationary}, deşi la ora curentă pacientul se mişcă în mod obişnuit cel puţin 65\% din timp (după profilul de 14 zile). Acest scenariu poate semnala o situaţie de risc (cădere nedetectată, leşin, imobilizare).
+\item \textbf{Activitate nocturnă}: măsurătoarea curentă este etichetată \texttt{moving} într-o oră în care pacientul doarme de obicei cel puţin 70\% din timp. Acest scenariu poate semnala agitaţie nocturnă, ridicare neaşteptată sau o stare alterată.
+\end{itemize}
+
+Atât profilul cât şi detecţia anomaliilor sunt activate numai dacă există suficiente date istorice pentru ora respectivă (minim 20 de măsurători); pentru pacienţi nou înregistraţi mecanismul rămâne inactiv până se acumulează suficiente date pentru un profil semnificativ statistic. Notificările comportamentale sunt limitate prin acelaşi mecanism de \textit{cooldown} (minim 30 de minute între două notificări de acelaşi tip pentru acelaşi pacient) ca să evite inundarea aparţinătorului.
 
 \subsubsection{Configurarea rețelelor WiFi de la distanță}
 
@@ -1113,7 +1055,6 @@ Atunci când dispozitivul funcționează fără conexiune la internet, măsurăt
 
 Un aparținător poate acorda unui medic acces la datele unei persoane monitorizate. Sistemul generează în acest scop o invitație identificată printr-un token unic, cu termen de expirare, transmisă medicului prin email; la acceptarea ei, medicul primește drept de vizualizare asupra datelor pacientului respectiv. În plus, istoricul de măsurători poate fi exportat în mod structurat și transmis medicului curant, pentru un interval de timp selectabil, facilitând consultarea datelor în afara aplicației.
 
-% ====================== 5 IMPLEMENTAREA APLICAȚIEI ======================
 \newpage
 \section{Implementarea aplicației}
 
@@ -1211,6 +1152,19 @@ Detectorul de căderi descris conceptual în subcapitolul 4.4 este implementat c
 
 Pragurile algoritmului (free-fall 0,5\,g, impact 2,5\,g, stillness 1,5\,s) sunt definite ca \textit{define}-uri C, astfel încât să poată fi recalibrate fără modificarea logicii.
 
+\subsubsection{Clasificarea activităţii pe dispozitiv}
+
+În paralel cu maşina de stări a detectorului de căderi, acelaşi flux de eşantioane MPU6050 alimentează un \textbf{acumulator de mişcare} folosit pentru a clasifica activitatea purtătorului între două POST-uri consecutive. Pentru fiecare sample se calculează abaterea magnitudinii faţă de gravitaţie, $\delta = | \, |\vec{a}| - 1\,g \, |$, iar valorile sunt agregate într-o structură protejată de mutex: numărul de sample-uri, suma cumulată a abaterilor şi valoarea maximă observată în fereastră. La fiecare ciclu de POST (5\,s, ~250 sample-uri la 50\,Hz), funcţia care construieşte payload-ul JSON face un snapshot atomic al acumulatorului, îl resetează şi clasifică:
+
+\begin{itemize}[leftmargin=1.5em]
+\item dacă media abaterii depăşeşte 0,05\,g (mers susţinut peste zgomotul senzorului de ~0,02\,g la repaus), sau
+\item dacă vârful izolat depăşeşte 0,20\,g (mişcare scurtă: ridicat în picioare, întors în pat)
+\end{itemize}
+
+atunci eticheta de activitate este \texttt{"moving"}; altfel, \texttt{"stationary"}. Sub un minim de 10 sample-uri (MPU oprit, sleep mode), câmpul este omis din JSON, astfel încât backend-ul să trateze absenţa lui ca lipsă de date în loc să interpreteze pe baza unei ferestre incomplete. Eticheta este apoi persistată pentru fiecare măsurătoare în baza de date şi alimentează profilul de activitate zilnică descris în subcapitolul 4.4.
+
+Avantajul acestei soluţii este că reutilizează exact aceleaşi eşantioane pe care detectorul de căderi le citeşte oricum la 50\,Hz, deci costul suplimentar este aproape zero (o operație de incrementare și o comparaţie per sample). În acelaşi timp, fereastra de ~5\,s este suficient de lungă pentru a netezi zgomotul senzorului şi suficient de scurtă pentru ca acumularea de stări (15 minute de inactivitate într-o oră de obicei activă, de exemplu) să rămână reactivă.
+
 \subsubsection{Sincronizarea configurației WiFi}
 
 Pe lângă transmiterea datelor, firmware-ul implementează și un mecanism de \textbf{sincronizare a configurației WiFi} cu backend-ul, conform fluxului din figura~\ref{fig:wifi-flow}. La fiecare \textit{heartbeat} (interval de 5 minute), dispozitivul efectuează o cerere GET către endpoint-ul de configurație, primește lista cu până la trei perechi SSID + parolă și o compară byte-cu-byte cu valorile salvate local în NVS. Dacă există diferență, lista nouă este scrisă în NVS (folosind aceleași chei pe care funcția de încărcare a credențialelor le citește la pornire), iar log-ul portului serial confirmă numărul de rețele actualizate. În caz contrar, scrierea este omisă pentru a evita uzura prematură a memoriei flash. Rețelele noi devin active la următoarea repornire a dispozitivului, mecanismul evitând astfel întreruperea voluntară a unei sesiuni de monitorizare active.
@@ -1225,9 +1179,6 @@ Atunci când transmiterea eșuează din cauza lipsei conexiunii, măsurătoarea 
 
 Interacțiunea cu utilizatorul se realizează prin ecranul OLED, care afișează în timp real parametrii vitali și starea conexiunii, prin două LED-uri de stare și prin două butoane: un buton de pornire/oprire și un buton de panică, a cărui apăsare declanșează o cerere dedicată către backend, independent de valorile senzorilor.
 
-% >>> FIGURI SUGERATE pentru această secțiune:
-%  - fotografie a dispozitivului în funcțiune, cu ecranul OLED afișând parametrii vitali;
-%  - schema de conexiuni / montajul pe breadboard al componentelor.
 
 \subsubsection{Configurarea rețelei}
 
@@ -1243,11 +1194,11 @@ Componentele backend-ului sunt înregistrate într-un container de \textbf{injec
 
 \subsubsection{Autentificare și securitate}
 
-Autentificarea este gestionată prin token-uri JWT, validate la fiecare cerere pe baza unei chei secrete. Aplicația acceptă și autentificarea prin OAuth folosind un cont Google. O particularitate de implementare o reprezintă conexiunile SignalR, care, spre deosebire de cererile HTTP obișnuite, transmit token-ul prin șirul de interogare al adresei; backend-ul tratează explicit acest caz. Securitatea este întărită prin mai multe mecanisme complementare. \textbf{Limitarea ratei} (\textit{rate limiting}) restricționează numărul de cereri de autentificare acceptate de la același client într-o fereastră de timp, atenuând atacurile de tip forță brută. Răspunsurile includ \textbf{antete HTTP de securitate}, precum \texttt{X-Content-Type-Options}, \texttt{X-Frame-Options} și \texttt{Referrer-Policy}, care reduc riscul atacurilor de tip \textit{clickjacking} sau de interpretare greșită a conținutului. O \textbf{politică CORS} restrictivă permite accesul la API doar din partea aplicației web autorizate. Un \textbf{gestionar global de excepții} interceptează erorile neprevăzute și returnează un mesaj generic, fără a expune detalii interne care ar putea fi exploatate. În fine, întrucât backend-ul este găzduit în spatele unui \textit{reverse proxy}, sunt procesate antetele transmise de acesta, pentru ca redirecționările și fluxul de autentificare OAuth să folosească corect protocolul HTTPS.
+Autentificarea este gestionată prin token-uri JWT, validate la fiecare cerere pe baza unei chei secrete. Aplicația acceptă și autentificarea prin OAuth folosind un cont Google. O particularitate de implementare o reprezintă conexiunile SignalR, care, spre deosebire de cererile HTTP obișnuite, transmit token-ul prin șirul de interogare al adresei; backend-ul tratează explicit acest caz. Securitatea este întărită prin mai multe mecanisme complementare. \textbf{Limitarea ratei} (\textit{rate limiting}) restricționează numărul de cereri de autentificare acceptate de la același client într-o fereastră de timp, atenuând atacurile de tip forță brută. Răspunsurile includ \textbf{antete HTTP de securitate}, precum \texttt{X-Content-Type-Options}, \texttt{X-Frame-Options} și \texttt{Referrer-Policy}, care reduc riscul atacurilor de tip \textit{clickjacking} sau de interpretare greșită a conținutului. O \textbf{politică CORS} restrictivă permite accesul la API doar din partea aplicației web autorizate. Un \textbf{gestionar global de excepții} interceptează erorile neprevăzute și returnează un mesaj generic, fără a expune detalii interne care ar putea fi exploatate. De asemenea, întrucât backend-ul este găzduit în spatele unui \textit{reverse proxy}, sunt procesate antetele transmise de acesta, pentru ca redirecționările și fluxul de autentificare OAuth să folosească corect protocolul HTTPS.
 
 \subsubsection{Serviciile de fundal}
 
-Pe lângă controlere, backend-ul include mai multe servicii de fundal care rulează independent de cereri. \textbf{Serviciul de monitorizare a alertelor} (\texttt{AlertMonitorService}) primește fiecare măsurătoare nou primită, ține un buffer cu valorile din ultimele minute pentru fiecare pacient și decide momentul exact de trimitere a notificărilor. \textbf{Serviciul de raportare zilnică} (\texttt{DailyReportBackgroundService}) rulează o dată pe zi, la miezul nopții în fusul orar local configurat, și trimite prin email un raport sintetic al zilei precedente utilizatorilor care au activat această opțiune. \textbf{Serviciul de retenție a datelor} (\texttt{RetentionCleanupBackgroundService}) rulează tot zilnic și execută ștergerea fizică a măsurătorilor, notificărilor și agregărilor mai vechi decât perioada de retenție configurată pentru fiecare pacient. La pornirea aplicației se execută, de asemenea, popularea inițială a bazei de date cu rolurile și datele de bază.
+Pe lângă controlere, backend-ul include mai multe servicii de fundal care rulează independent de cereri. \textbf{Serviciul de monitorizare a alertelor} (\texttt{AlertMonitorService}) primește fiecare măsurătoare nou primită, ține un buffer cu valorile din ultimele minute pentru fiecare pacient și decide momentul exact de trimitere a notificărilor. În paralel, \textbf{serviciul de profilare a activităţii} (\texttt{ActivityProfileService}) construieşte la prima nevoie un profil orar per pacient din ultimele 14 zile de măsurători şi verifică, la fiecare nouă măsurătoare, dacă eticheta de activitate primită de la dispozitiv abate de la tiparul obişnuit; abaterile semnificative declanşează notificările comportamentale descrise în subcapitolul 4.4. \textbf{Serviciul de raportare zilnică} (\texttt{DailyReportBackgroundService}) rulează o dată pe zi, la miezul nopții în fusul orar local configurat, și trimite prin email un raport sintetic al zilei precedente utilizatorilor care au activat această opțiune. \textbf{Serviciul de retenție a datelor} (\texttt{RetentionCleanupBackgroundService}) rulează tot zilnic și execută ștergerea fizică a măsurătorilor, notificărilor și agregărilor mai vechi decât perioada de retenție configurată pentru fiecare pacient. La pornirea aplicației se execută, de asemenea, popularea inițială a bazei de date cu rolurile și datele de bază.
 
 \subsubsection{Contractul cu clientul și optimizări}
 
@@ -1257,8 +1208,6 @@ Comunicarea cu aplicația web folosește obiecte de transfer de date (DTO) defin
 
 Fiecare cerere primită de API este validată înainte de a fi procesată: sunt verificate prezența câmpurilor obligatorii, încadrarea valorilor în intervale plauzibile și dreptul utilizatorului de a accesa resursa solicitată. O cerere invalidă este respinsă cu un mesaj explicativ, fără a ajunge la stratul de persistență. Pentru endpoint-urile dispozitivelor IoT, validarea include suplimentar verificarea cheii de dispozitiv transmisă în antetul cererii și existența unei persoane monitorizate asociate numărului de serie.
 
-% >>> FIGURI SUGERATE: captură cu structura soluției pe proiecte (Solution Explorer)
-% și/sau captură cu interfața Swagger a API-ului.
 
 \subsection{Microserviciul de inteligență artificială}
 
@@ -1306,7 +1255,7 @@ Accesul la pagini este controlat în funcție de rolul utilizatorului: paginile 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.45\textwidth]{figuri/chatbot.png}
+\includegraphics[width=0.32\textwidth]{figuri/chatbot.png}
 \caption{Asistentul conversațional integrat răspunde la întrebări despre utilizarea aplicației și despre praguri / afecțiuni medicale.}
 \label{fig:chatbot}
 \end{figure}
@@ -1326,14 +1275,14 @@ Tot din această pagină se accesează \textbf{modalul de editare a profilului p
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.55\textwidth]{figuri/modal-editare-profil.png}
+\includegraphics[width=0.4\textwidth]{figuri/modal-editare-profil.png}
 \caption{Modalul de editare a profilului unei persoane monitorizate, cu pragurile personalizate pentru ritm cardiac, temperatură și \spo, frecvența de actualizare și perioada de retenție.}
 \label{fig:modal-editare-profil}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.55\textwidth]{figuri/modal-wifi.png}
+\includegraphics[width=0.4\textwidth]{figuri/modal-wifi.png}
 \caption{Modalul de configurare a rețelelor WiFi pentru dispozitivul portabil al pacientului.}
 \label{fig:modal-wifi}
 \end{figure}
@@ -1345,11 +1294,11 @@ Reprezentarea grafică a istoricului parametrilor vitali este realizată direct 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{figuri/grafice-vitale.png}
-\caption{Graficele zilnice de puls și temperatură, cu tooltip-ul activ la hover (afișează valoarea --- ex. 82~bpm la 19:16 --- și ora) și scrollbar orizontal sincronizat sub fiecare grafic.}
+\caption{Graficele zilnice de puls și temperatură, cu tooltip-ul activ la hover (afișează valoarea, de exemplu 82~bpm la 19:16, și ora) și scrollbar orizontal sincronizat sub fiecare grafic.}
 \label{fig:grafice-vitale}
 \end{figure}
 
-Localizarea pacientului în scenarii de alertă este realizată tot prin interoperabilitate JavaScript, integrând harta Google Maps direct în vizualizarea persoanei monitorizate (figura~\ref{fig:harta-pacient}). Marcatorul este actualizat automat la fiecare nouă măsurătoare cu fix GPS valid. Exportul rapoartelor în format PDF folosește același mecanism de interoperabilitate.
+Localizarea pacientului în scenarii de alertă este realizată tot prin interoperabilitate JavaScript, integrând harta Google Maps direct în vizualizarea persoanei monitorizate (figura~\ref{fig:harta-pacient}). Marcatorul este actualizat automat la fiecare nouă măsurătoare cu fix GPS valid. Pentru a evita expunerea cheii API în codul client, aceasta nu este inclusă în pachetul aplicației, ci este obținută la nevoie de la backend printr-un endpoint dedicat (servit doar către cereri autentificate), apoi predată bibliotecii de hărți. Exportul rapoartelor în format PDF folosește același mecanism de interoperabilitate.
 
 \begin{figure}[H]
 \centering
@@ -1359,6 +1308,109 @@ Localizarea pacientului în scenarii de alertă este realizată tot prin interop
 \end{figure}
 
 Aplicația este configurată ca \textbf{PWA}: include un service worker, un fișier manifest care permite instalarea pe dispozitiv și o pagină dedicată modului offline.
+
+\subsubsection{Tabloul de bord și paginile aparținătorului}
+
+Pagina de start a aparținătorului după autentificare este \textbf{tabloul de bord} (figura~\ref{fig:dashboard}), care oferă o privire de ansamblu: numărul total de persoane monitorizate, câte se află în stare de alertă, câte sunt stabile, câte sunt offline și numărul de măsurători din ziua curentă, urmate de carduri rezumat pentru cele mai recent actualizate persoane. Tabloul de bord se reîmprospătează periodic, astfel încât starea afișată să rămână actuală fără reîncărcarea manuală a paginii.
+
+Pagina de \textbf{notificări} (figura~\ref{fig:notificari}) listează cronologic alertele și mesajele primite, cu posibilitatea de filtrare după tip și de marcare ca citite; un indicator în antet semnalează notificările necitite. Pagina de \textbf{istoric al măsurătorilor} (figura~\ref{fig:istoric-masuratori}) prezintă tabelar măsurătorile brute ale unei persoane, paginat, util pentru o consultare detaliată dincolo de reprezentarea grafică.
+
+Pagina de \textbf{profil} (figura~\ref{fig:profil}) permite utilizatorului să își editeze datele personale, fotografia de profil și parola, iar pagina de \textbf{setări} (figura~\ref{fig:setari}) grupează preferințele de cont: limba interfeței, preferințele de notificare (descrise în subcapitolul 5.5), pragurile vitale implicite și prima zi a săptămânii folosită în graficele săptămânale.
+
+\begin{figure}[H]
+\centering
+\figplaceholder{Captură: tabloul de bord al aparținătorului (figuri/dashboard.png) — de inserat.}
+\caption{Tabloul de bord al aparținătorului, cu statistici de ansamblu și carduri pentru persoanele recent actualizate.}
+\label{fig:dashboard}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/notificari.png}
+\caption{Pagina de notificări, cu filtrare după tip și marcarea notificărilor citite.}
+\label{fig:notificari}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/istoric-masuratori.png}
+\caption{Pagina de istoric al măsurătorilor, cu afișarea paginată a valorilor brute.}
+\label{fig:istoric-masuratori}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/profil.png}
+\caption{Pagina de profil a utilizatorului.}
+\label{fig:profil}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/setari.png}
+\caption{Pagina de setări a contului, cu preferințele de limbă, notificare și pragurile vitale implicite.}
+\label{fig:setari}
+\end{figure}
+
+\subsubsection{Paginile informative și suportul}
+
+Aplicația include și două pagini cu rol informativ, accesibile din meniul principal. Pagina \textbf{Despre noi} (figura~\ref{fig:despre-noi}) prezintă, sub formă de carduri, misiunea proiectului, problema pe care o adresează și principalele caracteristici. Pagina de \textbf{Suport} (figura~\ref{fig:suport}) oferă o imagine a dispozitivului, datele de contact prin email, o listă de verificări de bază (dispozitiv încărcat, repornit, conexiune la internet) și o secțiune de întrebări frecvente cu soluții pentru problemele comune (de exemplu, lipsa datelor de la dispozitiv).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/despre-noi.png}
+\caption{Pagina „Despre noi”, cu misiunea, problema adresată și caracteristicile proiectului.}
+\label{fig:despre-noi}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/suport.png}
+\caption{Pagina de suport, cu datele de contact, lista de verificări și întrebările frecvente.}
+\label{fig:suport}
+\end{figure}
+
+\subsubsection{Interfața de administrare}
+
+Pe lângă interfața destinată aparținătorilor și medicilor, aplicația include un set de pagini accesibile exclusiv rolului de \textbf{administrator}, protejate prin verificarea rolului din token-ul JWT la fiecare navigare. Acestea cuprind:
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Tabloul de bord de administrare} (figura~\ref{fig:admin-dashboard}), care prezintă statistici agregate la nivelul întregului sistem, calculate în timp real din datele reale: numărul total de utilizatori, numărul de persoane monitorizate, câte dispozitive sunt online sau offline, numărul de alerte active și numărul de măsurători din ziua curentă, alături de o listă a notificărilor recente din sistem.
+\item \textbf{Gestionarea utilizatorilor}, prin care administratorul poate vizualiza conturile, le poate edita sau șterge și poate consulta persoanele monitorizate asociate fiecăruia.
+\item \textbf{Jurnalul de activitate} (figura~\ref{fig:admin-istoric}) și \textbf{jurnalul de erori} (figura~\ref{fig:admin-erori}), două vizualizări tabelare cu filtrare și căutare, destinate urmăririi evenimentelor de cont și de sistem, respectiv a erorilor și avertismentelor backend-ului. În stadiul actual, aceste două vizualizări prezintă date reprezentative, structura lor fiind pregătită pentru conectarea ulterioară la un mecanism de audit persistent.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/admin-dashboard.png}
+\caption{Tabloul de bord de administrare, cu statisticile agregate la nivelul întregului sistem.}
+\label{fig:admin-dashboard}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/admin-istoric.png}
+\caption{Jurnalul de activitate (evenimente de cont și de sistem), cu filtrare și căutare.}
+\label{fig:admin-istoric}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/admin-erori.png}
+\caption{Jurnalul de erori al backend-ului, cu filtrare după nivel (eroare, avertisment, informativ).}
+\label{fig:admin-erori}
+\end{figure}
+
+\subsubsection{Vizualizarea medicului}
+
+Medicul invitat de un aparținător (prin mecanismul descris în subcapitolul 4.4) primește acces \textbf{în regim de citire} la datele pacientului respectiv, printr-o pagină dedicată similară celei a aparținătorului, dar fără controalele de editare a profilului, de configurare a rețelelor WiFi sau de modificare a pragurilor (figura~\ref{fig:vizualizare-medic}). Medicul poate consulta starea curentă, istoricul graficelor de parametri vitali, profilul de activitate și poate primi prin email un export structurat al măsurătorilor pentru un interval de timp selectabil, facilitând astfel evaluarea clinică în afara aplicației.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figuri/vizualizare-medic.png}
+\caption{Vizualizarea în regim de citire a datelor pacientului, disponibilă medicului invitat.}
+\label{fig:vizualizare-medic}
+\end{figure}
 
 \subsection{Sistemul de notificări}
 
@@ -1377,11 +1429,32 @@ Pentru a evita alertele false, serviciul de monitorizare aplică mai multe tempo
 
 \subsubsection{Notificările push}
 
-Notificările push sunt livrate prin \textbf{SignalR}, printr-un hub la care clienții se conectează după autentificare. Fiecare utilizator este asociat unui grup propriu, identificat prin identificatorul său, astfel încât o notificare să poată fi direcționată exact către destinatarul vizat. Mesajele sunt afișate instantaneu în interfață și salvate, totodată, în baza de date, pentru a putea fi consultate ulterior.
+Notificările push sunt livrate prin \textbf{SignalR}, printr-un hub la care clienții se conectează după autentificare. Fiecare utilizator este asociat unui grup propriu, identificat prin identificatorul său, astfel încât o notificare să poată fi direcționată exact către destinatarul vizat. Mesajele sunt afișate instantaneu în interfață sub forma unui \textit{toast} colorat în funcție de severitate (figura~\ref{fig:notificare-push}) și sunt salvate, totodată, în baza de date, pentru a putea fi consultate ulterior din pagina de notificări.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.6\textwidth]{figuri/notificare-push.png}
+\caption{Notificare push afișată în interfața web prin SignalR, imediat ce alerta este declanșată pe server.}
+\label{fig:notificare-push}
+\end{figure}
 
 \subsubsection{SMS și email}
 
-Trimiterea SMS-urilor este realizată prin integrarea cu platforma de comunicație în cloud \textbf{Twilio}, apelată prin biblioteca oficială a acesteia. Email-urile, atât notificările, cât și mesajele tranzacționale precum confirmarea contului sau resetarea parolei, sunt trimise printr-un server SMTP. Fiecare utilizator poate activa sau dezactiva independent fiecare canal din pagina de setări, iar sistemul respectă aceste preferințe la livrarea fiecărei alerte.
+Trimiterea SMS-urilor este realizată prin integrarea cu platforma de comunicație în cloud \textbf{Twilio}, apelată prin biblioteca oficială a acesteia. Mesajul SMS (figura~\ref{fig:notificare-sms}) conține tipul alertei, numele persoanei monitorizate și valorile vitale relevante, format compact pentru a se încadra într-un singur segment. Email-urile (figura~\ref{fig:notificare-email}), atât notificările, cât și mesajele tranzacționale precum confirmarea contului sau resetarea parolei, sunt trimise printr-un server SMTP, folosind un \textit{template} HTML cu identitatea vizuală a aplicației. Fiecare utilizator poate activa sau dezactiva independent fiecare canal din pagina de setări, iar sistemul respectă aceste preferințe la livrarea fiecărei alerte.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.45\textwidth]{figuri/notificare-sms.png}
+\caption{Alertă livrată prin SMS pe telefonul aparținătorului, prin platforma Twilio.}
+\label{fig:notificare-sms}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{figuri/notificare-email.png}
+\caption{Email de alertă cu \textit{template} HTML dedicat, livrat printr-un server SMTP configurat în aplicație.}
+\label{fig:notificare-email}
+\end{figure}
 
 \subsubsection{Raportul zilnic}
 
@@ -1391,10 +1464,6 @@ Pe lângă alertele declanșate de situații de risc, sistemul generează, pentr
 
 Pentru a îmbunătăți calitatea sistemului de alertare în timp și pentru a oferi date concrete despre rata reală de alerte false, aplicația implementează o buclă de feedback: atunci când o stare de alertă se rezolvă (vitalele revin la normal), ultima notificare a episodului este marcată automat în baza de date ca \textit{așteptând răspuns}. La următoarea vizită a aparținătorului în aplicație, o componentă plasată în layout-ul principal verifică existența unor notificări marcate și afișează un popup care întreabă explicit dacă alerta a fost reală sau falsă. Răspunsul (\textit{Da, reală}, \textit{Nu, alarmă falsă} sau \textit{Întreabă-mă mai târziu}) este înregistrat pe notificare, iar prima opțiune fixează răspunsul definitiv, în timp ce ultima lasă popup-ul să reapară la sesiunea următoare. Datele etichetate astfel permit, ulterior, calcularea ratei reale de alerte false raportate de utilizatori, metrică folosită și în capitolul de testare al lucrării.
 
-% >>> FIGURI SUGERATE: captură cu o notificare push afișată în interfață,
-% exemplu de SMS de alertă primit pe telefon și exemplu de email de notificare.
-
-% ====================== 6 TESTARE ȘI REZULTATE ======================
 \newpage
 \section{Testare și rezultate}
 
@@ -1445,7 +1514,6 @@ Comportamentul modelului pe fiecare clasă a fost analizat prin \textbf{matricea
 
 \begin{figure}[H]
 \centering
-% \includegraphics[width=0.7\textwidth]{figuri/matrice-confuzie.png}
 \figplaceholder{[Spațiu pentru figură: matricea de confuzie a modelului pe cele trei clase (NORMAL, ALERT, CRITICAL), generată de scriptul de antrenare.]}
 \caption{Matricea de confuzie a modelului Random Forest.}
 \label{fig:confuzie}
@@ -1453,7 +1521,6 @@ Comportamentul modelului pe fiecare clasă a fost analizat prin \textbf{matricea
 
 \begin{figure}[H]
 \centering
-% \includegraphics[width=0.8\textwidth]{figuri/shap.png}
 \figplaceholder{[Spațiu pentru figură: graficul SHAP cu importanța globală a parametrilor de intrare, generat de scriptul de antrenare.]}
 \caption{Importanța parametrilor de intrare (analiză SHAP).}
 \label{fig:shap}
@@ -1471,7 +1538,6 @@ Fiabilitatea mecanismului de alertare a fost evaluată din două perspective: ca
 
 Rezultatele au arătat că, din [\ \ ] scenarii de risc testate, sistemul a declanșat corect alerta în [\ \ ] cazuri, iar pragul de persistență a redus numărul de alerte false cu [\ \ ]\% față de o variantă fără acest mecanism. A fost testat separat și comportamentul la pierderea conexiunii: măsurătorile acumulate în coada locală a dispozitivului au fost transmise integral și în ordine corectă la revenirea semnalului, fără pierderi de date.
 
-% ====================== 7 CONCLUZII ȘI PERSPECTIVE ======================
 \newpage
 \section{Concluzii și perspective}
 
@@ -1505,46 +1571,43 @@ Sistemul dezvoltat constituie o bază solidă pentru extinderi viitoare. Printre
 \item integrarea de senzori suplimentari, de exemplu pentru măsurarea ECG sau a tensiunii arteriale, în scopul unei evaluări medicale mai cuprinzătoare;
 \item optimizarea consumului de energie al dispozitivului, pentru creșterea autonomiei bateriei;
 \item integrarea cu sistemele informatice medicale, pentru ca datele să poată fi consultate direct de medicul curant în fișa electronică a pacientului;
-\item extinderea mecanismului health score cu analiza tendințelor pe termen lung, pentru detectarea degradărilor lente ale stării de sănătate.
+\item extinderea predicției de tendințe (descrisă în subcapitolul 4.4 pentru orizontul de câteva minute) cu o analiză pe termen lung, pe zile și săptămâni, pentru detectarea degradărilor lente ale stării de sănătate.
 \end{itemize}
 
 În concluzie, LifeAlertPlus demonstrează că o soluție de monitorizare medicală accesibilă, fiabilă și inteligentă poate fi construită cu tehnologii open-source și hardware de uz general, adresând un segment real și insuficient acoperit: siguranța persoanelor vârstnice prin implicarea activă a aparținătorului.
 
-% ====================== BIBLIOGRAFIE ======================
-% Notă: intrările de mai jos corespund surselor citate în text;
-% completează detaliile lipsă (autori, editură, ediție, URL, dată de accesare).
 \newpage
 \phantomsection
 \addcontentsline{toc}{section}{Bibliografie}
 \begin{thebibliography}{99}
 
-\bibitem{who2023} World Health Organization, \textit{Noncommunicable diseases. Fact sheet}, 2023. \textit{[De completat: URL și dată de accesare.]}
+\bibitem{who2023} World Health Organization, \textit{Noncommunicable diseases. Fact sheet}, 2023. \url{https://www.who.int/news-room/fact-sheets/detail/noncommunicable-diseases} (accesat: 29.05.2026).
 
-\bibitem{fbi2023} Fortune Business Insights, \textit{Internet of Medical Things (IoMT) Market Size Report}, 2023. \textit{[De completat: URL și dată de accesare.]}
+\bibitem{fbi2023} Fortune Business Insights, \textit{Internet of Medical Things (IoMT) Market Size, Share \& Industry Analysis}, 2023. \url{https://www.fortunebusinessinsights.com/internet-of-medical-things-iomt-market-101844} (accesat: 29.05.2026).
 
-\bibitem{ashton1999} K. Ashton, \textit{That ``Internet of Things'' Thing}, RFID Journal, 1999. \textit{[De completat.]}
+\bibitem{ashton1999} K. Ashton, \textit{That ``Internet of Things'' Thing}, RFID Journal, 1999. \url{https://www.rfidjournal.com/that-internet-of-things-thing} (accesat: 29.05.2026).
 
-\bibitem{lundberg2017} S. M. Lundberg, S.-I. Lee, \textit{A Unified Approach to Interpreting Model Predictions}, Advances in Neural Information Processing Systems (NeurIPS), 2017.
+\bibitem{lundberg2017} S. M. Lundberg, S.-I. Lee, \textit{A Unified Approach to Interpreting Model Predictions}, în Advances in Neural Information Processing Systems (NeurIPS), 2017. \url{https://proceedings.neurips.cc/paper_files/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html} (accesat: 29.05.2026).
 
-\bibitem{scikit} F. Pedregosa et al., \textit{Scikit-learn: Machine Learning in Python}, Journal of Machine Learning Research, vol. 12, 2011.
+\bibitem{scikit} F. Pedregosa et al., \textit{Scikit-learn: Machine Learning in Python}, Journal of Machine Learning Research, vol. 12, pp. 2825--2830, 2011. \url{https://www.jmlr.org/papers/v12/pedregosa11a.html} (accesat: 29.05.2026).
 
-\bibitem{bidmc} PhysioNet, \textit{BIDMC PPG and Respiration Dataset}. \textit{[De completat: URL și dată de accesare.]}
+\bibitem{bidmc} PhysioNet, \textit{BIDMC PPG and Respiration Dataset}, v1.0.0. \url{https://physionet.org/content/bidmc/1.0.0/} (accesat: 29.05.2026).
 
-\bibitem{espressif} Espressif Systems, \textit{ESP32-C3 Datasheet}. \textit{[De completat.]}
+\bibitem{espressif} Espressif Systems, \textit{ESP32-C3 Series Datasheet}. \url{https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf} (accesat: 29.05.2026).
 
-\bibitem{max30100} Maxim Integrated, \textit{MAX30100. Pulse Oximeter and Heart-Rate Sensor Datasheet}. \textit{[De completat.]}
+\bibitem{max30100} Analog Devices (Maxim Integrated), \textit{MAX30100. Pulse Oximeter and Heart-Rate Sensor IC for Wearable Health Datasheet}. \url{https://www.analog.com/media/en/technical-documentation/data-sheets/MAX30100.pdf} (accesat: 29.05.2026).
 
-\bibitem{ds18b20} Maxim Integrated, \textit{DS18B20. Programmable Resolution 1-Wire Digital Thermometer Datasheet}. \textit{[De completat.]}
+\bibitem{ds18b20} Analog Devices (Maxim Integrated), \textit{DS18B20. Programmable Resolution 1-Wire Digital Thermometer Datasheet}. \url{https://www.analog.com/media/en/technical-documentation/data-sheets/DS18B20.pdf} (accesat: 29.05.2026).
 
-\bibitem{mpu6050} InvenSense, \textit{MPU-6050. Product Specification}. \textit{[De completat.]}
+\bibitem{mpu6050} InvenSense (TDK), \textit{MPU-6000 and MPU-6050 Product Specification, Revision 3.4}. \url{https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf} (accesat: 29.05.2026).
 
-\bibitem{neo6m} u-blox, \textit{NEO-6 GPS Modules Datasheet}. \textit{[De completat.]}
+\bibitem{neo6m} u-blox, \textit{NEO-6 u-blox 6 GPS Modules Data Sheet}. \url{https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_\%28GPS.G6-HW-09005\%29.pdf} (accesat: 29.05.2026).
 
-\bibitem{aspnetcore} Microsoft, \textit{ASP.NET Core documentation}. \textit{[De completat: URL și dată de accesare.]}
+\bibitem{aspnetcore} Microsoft, \textit{ASP.NET Core documentation}. \url{https://learn.microsoft.com/en-us/aspnet/core/} (accesat: 29.05.2026).
 
-\bibitem{blazor} Microsoft, \textit{Blazor WebAssembly documentation}. \textit{[De completat: URL și dată de accesare.]}
+\bibitem{blazor} Microsoft, \textit{Blazor documentation: Build client-side and server-side web apps with .NET}. \url{https://learn.microsoft.com/en-us/aspnet/core/blazor/} (accesat: 29.05.2026).
 
-\bibitem{docker} Docker Inc., \textit{Docker documentation}. \textit{[De completat: URL și dată de accesare.]}
+\bibitem{docker} Docker Inc., \textit{Docker Documentation}. \url{https://docs.docker.com/} (accesat: 29.05.2026).
 
 \end{thebibliography}
 

@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Globalization;
+using System.Net.Http.Json;
 using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
+using LifeAlertPlus.Shared.DTOs.Responses.DoctorNote;
 
 namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 {
@@ -33,6 +35,12 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         [Inject]
         private LanguageService Lang { get; set; } = default!;
 
+        [Inject]
+        private HttpClient HttpClient { get; set; } = default!;
+
+        [Inject]
+        private NotificationService NotificationSvc { get; set; } = default!;
+
         private string T(string key) => Lang.T(key);
 
         private ElementReference _hrSvgRef;
@@ -59,6 +67,17 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         private ChartViewMode CurrentChartView { get; set; } = ChartViewMode.Daily;
         private System.Threading.Timer? _refreshTimer;
         private bool _disposed = false;
+
+        // Doctor notes state
+        private List<DoctorNoteDTO> _doctorNotes = new();
+        private bool _doctorNotesLoading;
+        private bool _showDoctorNotesModal;
+        private string _doctorNoteContent = string.Empty;
+        private bool _isSavingDoctorNote;
+
+        // Feedback for false alarms
+        private LifeAlertPlus.Shared.DTOs.Responses.Notification.PendingFeedbackDTO? _pendingFeedback;
+        private bool _feedbackSubmitting;
 
         // User global vital range fallbacks
         private int _userMinHr = 60;
@@ -679,6 +698,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
 
             await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
+            _ = LoadDoctorNotesAsync(PersonId);
+            _ = LoadPendingFeedbackAsync();
 
             _refreshTimer = new System.Threading.Timer(_ => _ = RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
         }
@@ -1049,6 +1070,84 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             public string Type { get; set; } = string.Empty;
             public string Value { get; set; } = string.Empty;
             public string Time { get; set; } = string.Empty;
+        }
+
+        private async Task LoadDoctorNotesAsync(Guid monitoredId)
+        {
+            _doctorNotesLoading = true;
+            StateHasChanged();
+            try
+            {
+                var response = await HttpClient.GetAsync($"api/monitored/{monitoredId}/notes");
+                _doctorNotes = response.IsSuccessStatusCode
+                    ? (await response.Content.ReadFromJsonAsync<List<DoctorNoteDTO>>()) ?? new()
+                    : new();
+            }
+            catch { _doctorNotes = new(); }
+            finally
+            {
+                _doctorNotesLoading = false;
+                StateHasChanged();
+            }
+        }
+
+        private void OpenDoctorNotesModal()
+        {
+            _doctorNoteContent = string.Empty;
+            _showDoctorNotesModal = true;
+        }
+
+        private void CloseDoctorNotesModal() => _showDoctorNotesModal = false;
+
+        private async Task SaveDoctorNoteAsync()
+        {
+            if (string.IsNullOrWhiteSpace(_doctorNoteContent)) return;
+            _isSavingDoctorNote = true;
+            StateHasChanged();
+            try
+            {
+                var response = await HttpClient.PostAsJsonAsync($"api/monitored/{PersonId}/notes", new { Content = _doctorNoteContent.Trim() });
+                if (response.IsSuccessStatusCode)
+                {
+                    _doctorNoteContent = string.Empty;
+                    _showDoctorNotesModal = false;
+                    await LoadDoctorNotesAsync(PersonId);
+                }
+            }
+            catch { }
+            finally
+            {
+                _isSavingDoctorNote = false;
+                StateHasChanged();
+            }
+        }
+
+        private async Task LoadPendingFeedbackAsync()
+        {
+            try
+            {
+                var all = await NotificationSvc.GetPendingFeedbackAsync();
+                _pendingFeedback = all.FirstOrDefault(f => f.IdMonitored == PersonId);
+            }
+            catch { _pendingFeedback = null; }
+        }
+
+        private async Task SubmitFeedbackAsync(bool wasReal)
+        {
+            if (_pendingFeedback == null || _feedbackSubmitting) return;
+            _feedbackSubmitting = true;
+            try
+            {
+                await NotificationSvc.SubmitFeedbackAsync(_pendingFeedback.Id, wasReal);
+                _pendingFeedback = null;
+            }
+            finally { _feedbackSubmitting = false; StateHasChanged(); }
+        }
+
+        private void DismissFeedback()
+        {
+            _pendingFeedback = null;
+            StateHasChanged();
         }
     }
 }

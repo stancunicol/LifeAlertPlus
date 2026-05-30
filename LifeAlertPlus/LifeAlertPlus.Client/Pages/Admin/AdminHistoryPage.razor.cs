@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using LifeAlertPlus.Client.Services;
 using Microsoft.AspNetCore.Components;
+using static LifeAlertPlus.Client.Services.AdminApiClient;
 
 namespace LifeAlertPlus.Client.Pages.Admin;
 
@@ -18,7 +19,10 @@ public partial class AdminHistoryPage : ComponentBase
 	[Inject]
 	private NavigationManager Navigation { get; set; } = default!;
 
-	private string T(string key) => Lang.T(key);
+	[Inject]
+	private AdminApiClient AdminApi { get; set; } = default!;
+
+	private string T(string key) => Lang.TEnglish(key);
 
 	protected string UserFullName { get; set; } = "Admin";
 	protected string ProfilePictureUrl { get; set; } = string.Empty;
@@ -57,21 +61,14 @@ public partial class AdminHistoryPage : ComponentBase
 		ProfilePictureUrl = claims.ProfilePictureUrl ?? string.Empty;
 	}
 
-	protected Task LoadEntriesAsync()
+	protected async Task LoadEntriesAsync()
 	{
 		IsLoading = true;
 		ErrorMessage = null;
-
 		try
 		{
-			Entries = new List<AuditEntry>
-			{
-				new(Guid.NewGuid(), DateTime.UtcNow.AddMinutes(-5), "admin@lifealert.plus", "Deleted user alice@example.com", "Removed inactive account and revoked access.", "Account"),
-				new(Guid.NewGuid(), DateTime.UtcNow.AddHours(-1), "admin@lifealert.plus", "Updated user roles for bob@example.com", "Assigned role 'caretaker'.", "Account"),
-				new(Guid.NewGuid(), DateTime.UtcNow.AddHours(-4), "system", "Applied database migration", "Added audit log tables.", "System"),
-				new(Guid.NewGuid(), DateTime.UtcNow.AddDays(-1), "admin@lifealert.plus", "Changed password policy", "Increased minimum password length to 8.", "System"),
-				new(Guid.NewGuid(), DateTime.UtcNow.AddDays(-2), "admin@lifealert.plus", "Deleted user charlie@example.com", "Permanent account deletion due to support request.", "Account"),
-			};
+			var raw = await AdminApi.GetAuditLogAsync(200);
+			Entries = raw.Select(e => new AuditEntry(e.Id, e.Timestamp, e.User, e.Action, e.Details, e.Category)).ToList();
 		}
 		catch (Exception ex)
 		{
@@ -81,8 +78,6 @@ public partial class AdminHistoryPage : ComponentBase
 		{
 			IsLoading = false;
 		}
-
-		return Task.CompletedTask;
 	}
 
 	protected void SetFilter(string filter)

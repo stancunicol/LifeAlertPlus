@@ -103,5 +103,99 @@
 			</ul>
 		}
 	</div>
+
+	@* ── Device status table ── *@
+	@if (DeviceStatuses.Any())
+	{
+	<div class="section">
+		<div class="section-header">
+			<h2>📡 @T("admin.deviceStatus")</h2>
+			<div class="pagination-controls">
+				<label>Per page:
+					<select @onchange="OnDevicePageSizeChanged">
+						<option value="5" selected="@(DevicePageSize == 5)">5</option>
+						<option value="10" selected="@(DevicePageSize == 10)">10</option>
+						<option value="25" selected="@(DevicePageSize == 25)">25</option>
+						<option value="50" selected="@(DevicePageSize == 50)">50</option>
+					</select>
+				</label>
+			</div>
+		</div>
+		<div class="table-responsive">
+			<table class="device-table">
+				<thead>
+					<tr>
+						<th>@T("admin.patient")</th>
+						<th>@T("admin.serial")</th>
+						<th>@T("admin.status")</th>
+						<th>@T("admin.battery")</th>
+						<th>@T("admin.signal")</th>
+						<th>@T("admin.uptime")</th>
+						<th>@T("admin.heartbeatAge")</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var d in PaginatedDevices)
+					{
+						<tr class="@(d.IsArchived ? "row-archived" : d.IsOnline ? "" : "row-offline")">
+							<td>@d.PatientName @(d.IsArchived ? "(archived)" : "")</td>
+							<td><code>@d.DeviceSerialNumber</code></td>
+							<td>
+								@if (d.IsArchived)
+								{
+									<span class="badge-archived">Archived</span>
+								}
+								else if (d.IsOnline)
+								{
+									<span class="badge-online">Online</span>
+								}
+								else
+								{
+									<span class="badge-offline">Offline</span>
+								}
+							</td>
+							<td>@(d.Battery.HasValue ? $"{d.Battery:F0}%" : "-")</td>
+							<td>@(d.RssiDbm.HasValue ? $"{d.RssiDbm} dBm" : "-")</td>
+							<td>@FormatUptime(d.UptimeSeconds)</td>
+							<td>@(d.HeartbeatAgeSec.HasValue ? $"{d.HeartbeatAgeSec}s ago" : "-")</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+		<div class="pagination-footer">
+			<span class="pagination-info">Page @DeviceCurrentPage of @DeviceTotalPages (@DeviceStatuses.Count total)</span>
+			<div class="pagination-buttons">
+				<button @onclick="() => GoToDevicePage(DeviceCurrentPage - 1)" disabled="@(DeviceCurrentPage <= 1)" class="btn-pagination">← Previous</button>
+				<button @onclick="() => GoToDevicePage(DeviceCurrentPage + 1)" disabled="@(DeviceCurrentPage >= DeviceTotalPages)" class="btn-pagination">Next →</button>
+			</div>
+		</div>
+	</div>
+	}
+
+	@* ── Recent audit activity ── *@
+	@if (RecentAudit.Any())
+	{
+	<div class="section">
+		<div class="section-header">
+			<h2>📋 @T("admin.recentActivity")</h2>
+		</div>
+		<ul class="notif-list">
+			@foreach (var entry in RecentAudit)
+			{
+				<li class="notif-item">
+					<div class="notif-icon">
+						@(entry.Category == "Security" ? "🔐" : entry.Category == "Account" ? "👤" : entry.Category == "Patient" ? "🏥" : "⚙️")
+					</div>
+					<div class="notif-body">
+						<div class="notif-title">@entry.Action</div>
+						<div class="notif-message">@entry.User — @entry.Details</div>
+					</div>
+					<div class="notif-time">@entry.Timestamp.ToLocalTime().ToString("dd MMM HH:mm")</div>
+				</li>
+			}
+		</ul>
+	</div>
+	}
 	}
 </div>

@@ -37,9 +37,12 @@ namespace LifeAlertPlus.API.Controllers
             if (callerId == null)
                 return Unauthorized();
 
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
-            if (!owned.Any(m => m.Id == monitoredId))
-                return Forbid();
+            if (!IsAdminRole())
+            {
+                var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
+                if (!owned.Any(m => m.Id == monitoredId))
+                    return Forbid();
+            }
 
             var result = _alertMonitorService.GetTrendPredictions(monitoredId);
             return Ok(result);

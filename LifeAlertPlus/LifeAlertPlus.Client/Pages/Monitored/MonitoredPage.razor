@@ -11,12 +11,28 @@
             <h1>@T("monitored.title")</h1>
             <p class="monitored-subtitle">@T("monitored.subtitle")</p>
         </div>
-        <button class="add-person-btn" @onclick="OpenAddPersonModal">
-            <span class="btn-icon">➕</span>
-            @T("monitored.addPerson")
+        @if (CurrentView == ViewMode.Active)
+        {
+            <button class="add-person-btn" @onclick="OpenAddPersonModal">
+                <span class="btn-icon">➕</span>
+                @T("monitored.addPerson")
+            </button>
+        }
+    </div>
+
+    <div class="view-tabs">
+        <button class="view-tab @(CurrentView == ViewMode.Active ? "active" : "")"
+                @onclick='() => SwitchViewAsync(ViewMode.Active)'>
+            <span class="tab-icon">👥</span> @T("archive.tabActive") (@_monitoredCards.Count)
+        </button>
+        <button class="view-tab @(CurrentView == ViewMode.Archive ? "active" : "")"
+                @onclick='() => SwitchViewAsync(ViewMode.Archive)'>
+            <span class="tab-icon">📦</span> @T("archive.tabArchive") (@_archivedPeople.Count)
         </button>
     </div>
 
+@if (CurrentView == ViewMode.Active)
+{
     <div class="filters-section">
         <div class="filter-group">
             <label>@T("monitored.statusFilter")</label>
@@ -88,15 +104,31 @@
                 @foreach (var card in FilteredCards)
                 {
                     <div class="person-card-detailed @GetCardStatusClass(card)" @onclick="() => ViewDetails(card.Person.Id)">
+                        <button class="card-archive-btn"
+                                title="@T("archive.archiveAction")"
+                                @onclick="() => OpenArchiveConfirm(card.Person)"
+                                @onclick:stopPropagation="true">
+                            <span class="archive-btn-icon">📦</span>
+                            <span class="archive-btn-label">@T("archive.archiveAction")</span>
+                        </button>
                         <div class="card-header-colored @GetCardStatus(card).ToLower()">
                             <div class="header-top">
                                 <div class="person-avatar-big">@GetInitials($"{card.Person.FirstName} {card.Person.LastName}")</div>
                                 <div class="person-basic-info">
                                     <h3 class="person-name-big">@card.Person.FirstName @card.Person.LastName</h3>
-                                    <div class="status-row">
-                                        <span class="status-dot"></span>
-                                        <span class="status-text">@GetStatusText(GetCardStatus(card))</span>
-                                    </div>
+                                    @if (!card.Person.IsArchived)
+                                    {
+                                        <div class="status-row">
+                                            <span class="status-dot"></span>
+                                            <span class="status-text">@GetStatusText(GetCardStatus(card))</span>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="status-row archived-badge">
+                                            <span class="archived-text">📦 @T("monitored.archived")</span>
+                                        </div>
+                                    }
                                     <p class="person-details">
                                         @{
                                             var age = GetAge(card.Person);
@@ -153,7 +185,174 @@
             </div>
         }
     </div>
+}
+else
+{
+    <div class="archive-intro">
+        <p class="archive-explainer">@T("archive.explainer")</p>
+    </div>
+
+    <div class="live-updates">
+        @if (_isLoadingArchive)
+        {
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>@T("archive.loading")</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(_dataError))
+        {
+            <div class="error-state">
+                <p>@_dataError</p>
+            </div>
+        }
+        else if (_archivedPeople.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-icon">📦</div>
+                <h3>@T("archive.emptyTitle")</h3>
+                <p>@T("archive.emptyHint")</p>
+            </div>
+        }
+        else
+        {
+            <div class="people-grid">
+                @foreach (var person in _archivedPeople)
+                {
+                    <div class="person-card-detailed archived-card" @onclick="() => ViewDetails(person.Id)">
+                        <div class="card-header-colored archived">
+                            <div class="header-top">
+                                <div class="person-avatar-big">@GetInitials($"{person.FirstName} {person.LastName}")</div>
+                                <div class="person-basic-info">
+                                    <h3 class="person-name-big">@person.FirstName @person.LastName</h3>
+                                    <div class="status-row">
+                                        <span class="status-dot"></span>
+                                        <span class="status-text">@T("archive.statusArchived")</span>
+                                    </div>
+                                    <p class="person-details">
+                                        @{
+                                            var ageA = GetAge(person);
+                                            var ageAText = ageA > 0 ? $"{ageA} {T("selected.years")}" : T("monitored.ageNA");
+                                        }
+                                        @ageAText • @(person.Gender ?? "N/A") • @(person.Address ?? "N/A")
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body-white">
+                            <div class="additional-info">
+                                <div class="info-item">
+                                    <span class="info-label">@T("archive.archivedAt")</span>
+                                    <span class="info-value">@FormatArchivedDate(person.ArchivedAt)</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">@T("modal.deviceSerial")</span>
+                                    <span class="info-value">@person.DeviceSerialNumber</span>
+                                </div>
+                            </div>
+
+                            <div class="archive-actions">
+                                <button class="archive-action-btn restore"
+                                        @onclick="() => OpenRestoreConfirm(person)"
+                                        @onclick:stopPropagation="true">
+                                    <span class="archive-action-icon">↩️</span>
+                                    <span>@T("archive.restoreAction")</span>
+                                </button>
+                                <button class="archive-action-btn delete"
+                                        @onclick="() => OpenDeleteConfirm(person)"
+                                        @onclick:stopPropagation="true">
+                                    <span class="archive-action-icon">🗑️</span>
+                                    <span>@T("archive.deleteAction")</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
 </div>
+
+@if (_showArchiveConfirm && _personPendingAction != null)
+{
+    <div class="modal-overlay" @onclick="CloseActionModal">
+        <div class="modal-content modal-confirm" @onclick:stopPropagation="true">
+            <div class="modal-icon-header archive">📦</div>
+            <div class="modal-header">
+                <h3>@T("archive.confirmArchiveTitle")</h3>
+                <button class="close-btn" @onclick="CloseActionModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-message">@string.Format(T("archive.confirmArchiveBody"), $"{_personPendingAction.FirstName} {_personPendingAction.LastName}")</p>
+                @if (!string.IsNullOrEmpty(_actionError))
+                {
+                    <div class="error-alert">@_actionError</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn secondary" @onclick="CloseActionModal" disabled="@_isProcessingAction">@T("modal.cancel")</button>
+                <button type="button" class="modal-btn primary" @onclick="ConfirmArchiveAsync" disabled="@_isProcessingAction">
+                    @(_isProcessingAction ? T("archive.processing") : T("archive.archiveAction"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showRestoreConfirm && _personPendingAction != null)
+{
+    <div class="modal-overlay" @onclick="CloseActionModal">
+        <div class="modal-content modal-confirm" @onclick:stopPropagation="true">
+            <div class="modal-icon-header restore">✅</div>
+            <div class="modal-header">
+                <h3>@T("archive.confirmRestoreTitle")</h3>
+                <button class="close-btn" @onclick="CloseActionModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-message">@string.Format(T("archive.confirmRestoreBody"), $"{_personPendingAction.FirstName} {_personPendingAction.LastName}")</p>
+                @if (!string.IsNullOrEmpty(_actionError))
+                {
+                    <div class="error-alert">@_actionError</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn secondary" @onclick="CloseActionModal" disabled="@_isProcessingAction">@T("modal.cancel")</button>
+                <button type="button" class="modal-btn primary" @onclick="ConfirmRestoreAsync" disabled="@_isProcessingAction">
+                    @(_isProcessingAction ? T("archive.processing") : T("archive.restoreAction"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showDeleteConfirm && _personPendingAction != null)
+{
+    <div class="modal-overlay" @onclick="CloseActionModal">
+        <div class="modal-content modal-confirm" @onclick:stopPropagation="true">
+            <div class="modal-icon-header delete">🗑️</div>
+            <div class="modal-header">
+                <h3>@T("archive.confirmDeleteTitle")</h3>
+                <button class="close-btn" @onclick="CloseActionModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-message">@string.Format(T("archive.confirmDeleteBody"), $"{_personPendingAction.FirstName} {_personPendingAction.LastName}")</p>
+                <p class="warning-text">@T("archive.confirmDeleteWarning")</p>
+                @if (!string.IsNullOrEmpty(_actionError))
+                {
+                    <div class="error-alert">@_actionError</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn secondary" @onclick="CloseActionModal" disabled="@_isProcessingAction">@T("modal.cancel")</button>
+                <button type="button" class="modal-btn danger" @onclick="ConfirmDeleteAsync" disabled="@_isProcessingAction">
+                    @(_isProcessingAction ? T("archive.processing") : T("archive.deleteAction"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
 @if (ShowAddPersonModal)
 {

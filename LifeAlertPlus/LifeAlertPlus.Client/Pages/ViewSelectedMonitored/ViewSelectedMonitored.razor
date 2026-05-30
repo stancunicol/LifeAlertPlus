@@ -19,7 +19,6 @@
 
         <div class="person-profile-header">
             <div class="profile-left">
-                <div class="person-avatar-huge">@GetInitials(Person.Name)</div>
                 <div class="profile-info-main">
                     <h1 class="person-name-main">@Person.Name</h1>
                     <p class="person-meta">
@@ -56,8 +55,33 @@
             </div>
         </div>
 
+        @* ── False-alarm feedback banner ── *@
+        @if (_pendingFeedback != null)
+        {
+            <div class="feedback-inline-banner">
+                <div class="feedback-inline-header">
+                    <span class="feedback-inline-icon">@(_pendingFeedback.NotificationType == "Critical" ? "🚨" : "⚠️")</span>
+                    <strong>@T("feedback.title")</strong>
+                    <span class="feedback-inline-time">@_pendingFeedback.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</span>
+                </div>
+                <p class="feedback-inline-msg">@_pendingFeedback.Message</p>
+                <p class="feedback-inline-prompt">@T("feedback.prompt")</p>
+                <div class="feedback-inline-actions">
+                    <button class="feedback-inline-btn real" @onclick='() => SubmitFeedbackAsync(true)' disabled="@_feedbackSubmitting">
+                        ✓ @T("feedback.wasReal")
+                    </button>
+                    <button class="feedback-inline-btn false" @onclick='() => SubmitFeedbackAsync(false)' disabled="@_feedbackSubmitting">
+                        ✗ @T("feedback.wasFalse")
+                    </button>
+                    <button class="feedback-inline-skip" @onclick="DismissFeedback" disabled="@_feedbackSubmitting">
+                        @T("feedback.skip")
+                    </button>
+                </div>
+            </div>
+        }
+
         <div class="stats-overview">
-            <div class="stat-card-large heart-rate @(Person.HeartRate <= 0 ? "no-data" : "")">
+            <div class="stat-card-large heart-rate @(Person.HeartRate <= 0 ? "no-data" : "")"">
                 <div class="stat-icon-huge">❤️</div>
                 <div class="stat-content">
                     <h3>@T("selected.heartRate")</h3>
@@ -288,6 +312,44 @@
                         }
                     </div>
                 </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2>📝 @T("doctorNotes.title")</h2>
+                        <button class="btn-action-secondary" @onclick="OpenDoctorNotesModal">✏️ @T("doctorNotes.add")</button>
+                    </div>
+
+                    @if (_doctorNotesLoading)
+                    {
+                        <div class="doctor-notes-loading">
+                            <div class="ai-spinner"></div>
+                        </div>
+                    }
+                    else if (_doctorNotes.Count == 0)
+                    {
+                        <div class="doctor-notes-empty">
+                            <span class="doctor-notes-empty-icon">📝</span>
+                            <p>@T("doctorNotes.none")</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="doctor-notes-list">
+                            @foreach (var note in _doctorNotes.OrderByDescending(n => n.CreatedAt))
+                            {
+                                <div class="doctor-note-card">
+                                    <div class="doctor-note-header">
+                                        <div class="doctor-note-doctor">
+                                            <span class="doctor-note-email">@note.DoctorEmail</span>
+                                        </div>
+                                        <span class="doctor-note-date">@note.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</span>
+                                    </div>
+                                    <div class="doctor-note-content">@note.Content</div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     }
@@ -300,3 +362,27 @@
         <div class="message-card error">@LoadError</div>
     }
 </div>
+
+@if (_showDoctorNotesModal)
+{
+    <div class="modal-overlay" @onclick="CloseDoctorNotesModal">
+        <div class="modal-content email-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h2>📝 @T("doctorNotes.addNote")</h2>
+                <button class="modal-close" @onclick="CloseDoctorNotesModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>@T("doctorNotes.noteContent")</label>
+                    <textarea @bind="_doctorNoteContent" placeholder="@T("doctorNotes.placeholder")" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseDoctorNotesModal">@T("common.cancel")</button>
+                <button class="btn-save" @onclick="SaveDoctorNoteAsync" disabled="@(_isSavingDoctorNote || string.IsNullOrWhiteSpace(_doctorNoteContent))">
+                    @(_isSavingDoctorNote ? T("doctorNotes.saving") : "💾 " + T("common.save"))
+                </button>
+            </div>
+        </div>
+    </div>
+}

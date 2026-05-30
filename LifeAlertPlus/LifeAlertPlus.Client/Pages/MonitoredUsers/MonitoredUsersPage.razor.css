@@ -163,6 +163,28 @@
 	justify-content: flex-end;
 }
 
+.search {
+	padding: 10px 16px;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: var(--surface);
+	font-family: var(--font-body);
+	font-size: 0.95rem;
+	color: var(--ink);
+	outline: none;
+	min-width: 220px;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search:focus {
+	border-color: var(--accent-main);
+	box-shadow: 0 0 0 3px rgba(165, 214, 167, 0.25);
+}
+
+.search::placeholder {
+	color: var(--muted);
+}
+
 .filters {
 	display: inline-flex;
 	gap: 10px;
