@@ -232,7 +232,7 @@ Un aspect critic în sistemele IoT medicale este fiabilitatea comunicației. Spr
 
   \node[perc] (perc) {\textbf{Nivelul de percepție}\\\scriptsize dispozitiv portabil ESP32-C3 cu senzorii MAX30100, DS18B20, MPU6050 și NEO-6M};
   \node[ret, below=of perc] (ret) {\textbf{Nivelul de rețea}\\\scriptsize comunicație WiFi (HTTPS) și BLE pentru livrarea datelor către cloud};
-  \node[app, below=of ret] (app) {\textbf{Nivelul de aplicație}\\\scriptsize backend ASP.NET Core, microserviciu AI, bază de date SQLite și aplicație web Blazor pe Azure};
+  \node[app, below=of ret] (app) {\textbf{Nivelul de aplicație}\\\scriptsize backend ASP.NET Core, microserviciu AI, bază de date PostgreSQL (Neon) și aplicație web Blazor pe Azure};
 
   \draw[arrow] (perc) -- node[right, font=\scriptsize]{date brute de la senzori} (ret);
   \draw[arrow] (ret) -- node[right, font=\scriptsize]{cereri HTTPS / REST} (app);
@@ -457,7 +457,7 @@ Aplicația este, în plus, o \textbf{PWA (Progressive Web Application)}: include
 
 Pentru asigurarea consistenței între mediul de dezvoltare și cel de producție, componentele aplicației sunt împachetate folosind \textbf{Docker}, o tehnologie de containerizare care încapsulează o aplicație împreună cu toate dependențele sale într-o imagine portabilă. Cele trei componente principale ale sistemului, anume microserviciul AI, backend-ul și frontend-ul, sunt orchestrate prin \textbf{Docker Compose}, un instrument care permite definirea și pornirea coordonată a mai multor containere. Servirea fișierelor statice ale interfeței web este realizată printr-un server \textbf{nginx}.
 
-Procesul de construire, testare și publicare a aplicației este automatizat printr-un flux de \textbf{integrare și livrare continuă (CI/CD)} configurat cu GitHub Actions, iar sistemul este deployat pe infrastructura cloud \textbf{Microsoft Azure}, asigurând disponibilitatea și accesul de la distanță.
+Procesul de construire, testare și publicare a aplicației este automatizat printr-un flux de \textbf{integrare și livrare continuă (CI/CD)} configurat cu GitHub Actions: la fiecare push pe ramura principală, testele automate sunt rulate, imaginile Docker sunt construite și publicate pe Docker Hub, iar componentele sunt deployate automat pe \textbf{Microsoft Azure} (App Service pentru backend și client, Container Instances pentru microserviciul AI).
 
 \newpage
 \section{Analiza soluțiilor existente}
@@ -593,7 +593,7 @@ Partea software a sistemului a fost proiectată conform principiilor unei arhite
 \item \textbf{Shared}: conține obiectele de transfer de date (DTO) folosite în comun de backend și de client, asigurând un contract unic de comunicare.
 \end{itemize}
 
-Avantajul acestei separări este că logica de business rămâne independentă de tehnologiile concrete: baza de date SQLite, de exemplu, ar putea fi înlocuită fără a modifica straturile Domain și Application. Totodată, structura facilitează testarea izolată a fiecărui strat și întreținerea pe termen lung.
+Avantajul acestei separări este că logica de business rămâne independentă de tehnologiile concrete: furnizorul de baze de date (PostgreSQL, SQLite pentru teste) ar putea fi înlocuit fără a modifica straturile Domain și Application. Totodată, structura facilitează testarea izolată a fiecărui strat și întreținerea pe termen lung.
 
 \subsubsection{Microserviciul de inteligență artificială}
 
@@ -617,7 +617,7 @@ Componentele sistemului comunică prin trei mecanisme distincte. Dispozitivul Io
 
   \node[srv] (back) at (0,0) {\textbf{Backend}\\\scriptsize ASP.NET Core 8};
   \node[srv] (ai)   at (0,2.4) {\textbf{Microserviciu AI}\\\scriptsize Python / FastAPI};
-  \node[db]  (sql)  at (0,-2.4) {SQLite};
+  \node[db]  (sql)  at (0,-2.4) {PostgreSQL\\\scriptsize Neon cloud};
   \node[dev] (esp)  at (-5.0,0) {\textbf{Dispozitiv IoT}\\\scriptsize ESP32-C3 + senzori};
   \node[web] (cli)  at (5.0,0) {\textbf{Aplicație web}\\\scriptsize Blazor WebAssembly};
 
@@ -638,9 +638,9 @@ Componentele sistemului comunică prin trei mecanisme distincte. Dispozitivul Io
 
 \subsubsection{Modelul de deployment}
 
-Cele trei componente software ale sistemului, anume microserviciul AI, backend-ul și aplicația web, sunt împachetate fiecare într-o imagine Docker proprie și pornite coordonat. Această izolare a fost o decizie de proiectare deliberată: fiecare componentă poate fi actualizată, repornită sau scalată independent de celelalte, iar mediul de execuție rămâne identic în dezvoltare și în producție. Datele persistente, adică baza de date SQLite, sunt păstrate într-un volum separat de containere, astfel încât informația să nu se piardă la reconstruirea sau actualizarea acestora.
+Cele trei componente software ale sistemului sunt împachetate fiecare într-o imagine Docker proprie și publicate automat pe Docker Hub. Această izolare permite actualizarea, repornirea sau scalarea independentă a fiecărei componente, iar mediul de execuție rămâne identic între dezvoltare și producție.
 
-În producție, sistemul este găzduit pe infrastructura cloud Microsoft Azure. Procesul de construire și publicare a imaginilor este automatizat printr-un flux de integrare și livrare continuă (CI/CD): la fiecare modificare a codului, componentele sunt reconstruite și, după validare, publicate automat, ceea ce reduce riscul erorilor manuale și asigură consistența între versiuni.
+În producție, deploymentul se face pe infrastructura cloud \textbf{Microsoft Azure}, cu arhitecturi diferite per componentă: \textbf{backend-ul} și \textbf{aplicația web} sunt găzduite pe \textbf{Azure App Service} (Windows, publish direct din GitHub Actions fără Docker), iar \textbf{microserviciul AI} rulează pe \textbf{Azure Container Instances} (container Docker). Baza de date \textbf{PostgreSQL} este externalizată pe \textbf{Neon} (serviciu serverless, independent de infrastructura Azure). Această separare permite actualizarea fiecărei componente independent și asigură că baza de date nu este afectată la repornirea serverelor. Procesul de construire și publicare a imaginilor este automatizat printr-un flux de integrare și livrare continuă (CI/CD): la fiecare modificare a codului, componentele sunt reconstruite și, după validare, publicate automat, ceea ce reduce riscul erorilor manuale și asigură consistența între versiuni.
 
 \subsection{Componentele sistemului}
 
@@ -662,7 +662,7 @@ Aplicația web este interfața prin care utilizatorii umani interacționează cu
 
 \subsubsection{Baza de date}
 
-Persistența datelor este asigurată de o bază de date relațională SQLite, accesată prin ORM-ul Entity Framework Core. Baza de date stochează utilizatorii, persoanele monitorizate, istoricul măsurătorilor, notificările și datele agregate. Structura sa este detaliată în subcapitolul următor.
+Persistența datelor este asigurată de o bază de date relațională \textbf{PostgreSQL} găzduită în cloud (Neon serverless Postgres), accesată prin ORM-ul Entity Framework Core cu driverul Npgsql. Baza de date stochează utilizatorii, persoanele monitorizate, istoricul măsurătorilor, notificările și datele agregate. Structura sa este detaliată în subcapitolul următor.
 
 \subsubsection{Serviciile externe}
 
