@@ -57,8 +57,8 @@ namespace LifeAlertPlus.Infrastructure.Seed
             }
             await context.SaveChangesAsync();
 
-            var adminEmail = "admin@gmail.com";
-            var userEmail = "stancunicol3@gmail.com";
+            var adminEmail = "admin@lifealertplusiot.com";
+            var userEmail = "demo@lifealertplusiot.com";
 
             if (!await context.Users.AnyAsync(u => u.Email == adminEmail))
             {
@@ -71,7 +71,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     Email = adminEmail,
                     RoleId = adminRoleId,
                     IsEmailConfirmed = true,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("LifeAlert@Admin2026!"),
                     Provider = "Local",
                     CreatedAt = DateTime.UtcNow,
                     MinHeartRate = 60,
@@ -99,7 +99,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     Email = userEmail,
                     RoleId = userRoleId,
                     IsEmailConfirmed = true,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("20042005!Nicol"),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("LifeAlert@Demo2026!"),
                     Provider = "Local",
                     PhoneNumber = "+40746512348",
                     NotifyBySms = true,
