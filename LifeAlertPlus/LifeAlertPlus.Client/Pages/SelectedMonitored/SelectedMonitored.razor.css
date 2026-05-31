@@ -1116,6 +1116,43 @@
     .section-card {
         padding: 20px;
     }
+
+    /* Charts full-width on mobile */
+    .chart-item {
+        min-width: unset;
+        width: 100%;
+    }
+
+    .charts-wrapper {
+        gap: 1rem;
+    }
+
+    /* Stats 2 per row on small screens */
+    .stats-overview {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    /* Content grid stacked */
+    .content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Doctor notes full-width */
+    .doctor-notes-section {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-overview {
+        grid-template-columns: 1fr;
+    }
+
+    .stat-card-large {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
 }
 
 /* ── Edit Profile Modal ─────────────────────────────────── */
@@ -2197,6 +2234,21 @@
 .profile-warmup-card strong { font-size: 0.97rem; display: block; margin-bottom: 0.3rem; }
 .profile-warmup-card p { margin: 0 0 0.4rem; font-size: 0.88rem; color: #558b2f; line-height: 1.45; }
 .profile-warmup-progress { font-size: 0.82rem; color: #7cb342; font-weight: 500; }
+
+/* Stale data banner */
+.stale-data-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #fff3e0;
+    border: 1px solid #ffb74d;
+    border-left: 4px solid #f57c00;
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #5d4037;
+}
 
 /* Inline false-alarm feedback banner */
 .feedback-inline-banner {

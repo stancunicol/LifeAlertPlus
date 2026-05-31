@@ -17,6 +17,7 @@
     </PackageReference>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageReference Include="Twilio" Version="7.14.7" />
+    <PackageReference Include="WebPush" Version="1.0.12" />
   </ItemGroup>
 
 	<ItemGroup>

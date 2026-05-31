@@ -69,6 +69,19 @@
             </div>
         </div>
 
+        @* ── Stale data banner ── *@
+        @if (!Person.IsArchived && _espData?.Date > 0)
+        {
+            var dataAgeMinutes = (DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(_espData!.Date)).TotalMinutes;
+            if (dataAgeMinutes > 15)
+            {
+                <div class="stale-data-banner">
+                    <span>⚠️</span>
+                    <span>@string.Format(T("selected.staleData"), (int)dataAgeMinutes)</span>
+                </div>
+            }
+        }
+
         @* ── False-alarm feedback banner ── *@
         @if (_pendingFeedback != null)
         {

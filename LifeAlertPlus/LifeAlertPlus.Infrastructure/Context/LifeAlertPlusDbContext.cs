@@ -24,6 +24,7 @@ namespace LifeAlertPlus.Infrastructure.Context
         public DbSet<AuditLog> AuditLogs { get; set; } = default!;
         public DbSet<SystemError> SystemErrors { get; set; } = default!;
         public DbSet<DoctorNote> DoctorNotes { get; set; } = default!;
+        public DbSet<PushSubscription> PushSubscriptions { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -134,6 +135,18 @@ namespace LifeAlertPlus.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<DoctorNote>()
                 .HasIndex(n => n.IdMonitored);
+
+            modelBuilder.Entity<PushSubscription>().HasKey(p => p.Id);
+            modelBuilder.Entity<PushSubscription>()
+                .HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<PushSubscription>()
+                .HasIndex(p => p.UserId);
+            modelBuilder.Entity<PushSubscription>()
+                .HasIndex(p => p.Endpoint)
+                .IsUnique();
         }
     }
 }

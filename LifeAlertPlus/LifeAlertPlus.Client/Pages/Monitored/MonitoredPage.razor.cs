@@ -40,6 +40,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private MonitorCreateRequestDTO newPerson = new();
     private string FilterStatus = "All";
     private string FilterOnlineStatus = "All";
+    private string _searchQuery = string.Empty;
     private bool ShowAddPersonModal;
     private string ErrorMessage = string.Empty;
 
@@ -68,6 +69,14 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         get
         {
             var filtered = _monitoredCards.AsEnumerable();
+
+            // Apply name search
+            if (!string.IsNullOrWhiteSpace(_searchQuery))
+            {
+                var q = _searchQuery.Trim().ToLower();
+                filtered = filtered.Where(c =>
+                    $"{c.Person.FirstName} {c.Person.LastName}".ToLower().Contains(q));
+            }
 
             // Apply status filter
             if (FilterStatus != "All")

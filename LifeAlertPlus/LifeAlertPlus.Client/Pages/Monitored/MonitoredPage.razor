@@ -34,6 +34,16 @@
 @if (CurrentView == ViewMode.Active)
 {
     <div class="filters-section">
+        <div class="filter-group search-group">
+            <div class="search-input-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" placeholder="@T("monitored.search")" @bind="_searchQuery" @bind:event="oninput" />
+                @if (!string.IsNullOrEmpty(_searchQuery))
+                {
+                    <button class="search-clear" @onclick='() => _searchQuery = ""'>✕</button>
+                }
+            </div>
+        </div>
         <div class="filter-group">
             <label>@T("monitored.statusFilter")</label>
             <div class="filter-buttons">

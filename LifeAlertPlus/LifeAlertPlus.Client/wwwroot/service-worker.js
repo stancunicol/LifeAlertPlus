@@ -68,3 +68,32 @@ self.addEventListener('fetch', event => {
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
+
+// ── Web Push ────────────────────────────────────────────
+self.addEventListener('push', event => {
+  if (!event.data) return;
+  let payload;
+  try { payload = event.data.json(); } catch { payload = { title: 'LifeAlertPlus', body: event.data.text(), severity: 'Info' }; }
+
+  const title = payload.title || 'LifeAlertPlus';
+  const body  = payload.body  || '';
+  const icon  = payload.severity === 'Critical' ? '/icon-192.png' : '/icon-192.png';
+  const badge = '/favicon.png';
+  const tag   = payload.severity || 'info';
+
+  event.waitUntil(
+    self.registration.showNotification(title, { body, icon, badge, tag, renotify: true, data: { url: '/notifications' } })
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const existing = list.find(c => c.url.includes(self.location.origin));
+      if (existing) { existing.focus(); existing.navigate(url); }
+      else clients.openWindow(url);
+    })
+  );
+});

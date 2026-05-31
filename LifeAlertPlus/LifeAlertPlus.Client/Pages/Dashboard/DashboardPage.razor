@@ -140,3 +140,42 @@
         </div>
     </div>
 </div>
+
+@if (_showOnboarding)
+{
+    <div class="modal-overlay onboarding-overlay" @onclick="DismissOnboarding">
+        <div class="onboarding-modal" @onclick:stopPropagation="true">
+            <button class="onboarding-close" @onclick="DismissOnboarding">✕</button>
+            <div class="onboarding-icon">👋</div>
+            <h2>@T("onboarding.title")</h2>
+            <p>@T("onboarding.subtitle")</p>
+            <div class="onboarding-steps">
+                <div class="onboarding-step">
+                    <div class="onboarding-step-num">1</div>
+                    <div>
+                        <strong>@T("onboarding.step1Title")</strong>
+                        <p>@T("onboarding.step1Text")</p>
+                    </div>
+                </div>
+                <div class="onboarding-step">
+                    <div class="onboarding-step-num">2</div>
+                    <div>
+                        <strong>@T("onboarding.step2Title")</strong>
+                        <p>@T("onboarding.step2Text")</p>
+                    </div>
+                </div>
+                <div class="onboarding-step">
+                    <div class="onboarding-step-num">3</div>
+                    <div>
+                        <strong>@T("onboarding.step3Title")</strong>
+                        <p>@T("onboarding.step3Text")</p>
+                    </div>
+                </div>
+            </div>
+            <div class="onboarding-actions">
+                <a href="/monitored" class="onboarding-btn-primary" @onclick="DismissOnboarding">@T("onboarding.getStarted")</a>
+                <button class="onboarding-btn-secondary" @onclick="DismissOnboarding">@T("onboarding.later")</button>
+            </div>
+        </div>
+    </div>
+}

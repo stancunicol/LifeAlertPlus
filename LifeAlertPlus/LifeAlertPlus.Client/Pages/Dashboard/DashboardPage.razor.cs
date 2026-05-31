@@ -48,6 +48,8 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     protected IReadOnlyList<MonitoredSample> MonitoredSamples { get; private set; } = Array.Empty<MonitoredSample>();
     private Guid _currentUserId;
     private CancellationTokenSource? _pollingCts;
+    private bool _showOnboarding = false;
+    private const string OnboardingKey = "lifealert_onboarding_done";
 
     protected override async Task OnInitializedAsync()
     {
@@ -77,6 +79,11 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
             Navigation.NavigateTo("/login");
             return;
         }
+
+        // Show onboarding modal on first visit (checked via localStorage)
+        var onboardingDone = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", OnboardingKey);
+        if (string.IsNullOrEmpty(onboardingDone))
+            _showOnboarding = true;
 
         var apiFullName = $"{userFromApi.FirstName} {userFromApi.LastName}".Trim();
         if (!string.IsNullOrWhiteSpace(apiFullName))
@@ -402,6 +409,12 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     private void NavigateToMonitored(Guid personId)
     {
         Navigation.NavigateTo($"/monitored/{personId}");
+    }
+
+    private async Task DismissOnboarding()
+    {
+        _showOnboarding = false;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", OnboardingKey, "1");
     }
 
     protected async Task RequestLocation(Guid personId)
