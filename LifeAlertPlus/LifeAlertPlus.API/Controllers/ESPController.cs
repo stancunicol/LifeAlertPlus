@@ -184,6 +184,34 @@ namespace LifeAlertPlus.API.Controllers
             return Ok();
         }
 
+        // OTA endpoint — returnează URL-ul binarului dacă există o versiune mai nouă.
+        // Firmware-ul verifică la fiecare heartbeat (5 min).
+        // Setează Urls__OtaFirmwareUrl în Azure App Settings cu URL-ul .bin publicat.
+        [HttpGet("ota/{serial}")]
+        [AllowAnonymous]
+        public IActionResult GetOtaInfo(string serial, [FromQuery] string version)
+        {
+            var expectedKey = configuration["Urls:EspDeviceKey"];
+            var providedKey = Request.Headers["X-Device-Key"].ToString();
+            if (string.IsNullOrWhiteSpace(expectedKey) || providedKey != expectedKey)
+                return Unauthorized(new { Message = "Invalid device key." });
+
+            var firmwareUrl = configuration["Urls:OtaFirmwareUrl"];
+            var latestVersion = configuration["Urls:OtaFirmwareVersion"] ?? "1.1.0";
+
+            bool updateAvailable = !string.IsNullOrEmpty(firmwareUrl)
+                && !string.IsNullOrEmpty(latestVersion)
+                && !string.Equals(version?.Trim(), latestVersion.Trim(), StringComparison.Ordinal);
+
+            return Ok(new
+            {
+                updateAvailable,
+                url           = updateAvailable ? firmwareUrl : null,
+                latestVersion = latestVersion,
+                currentVersion = version
+            });
+        }
+
         [HttpGet("wifi-config/{serial}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetWifiConfig(string serial)

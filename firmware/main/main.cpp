@@ -44,6 +44,9 @@
 #include "lwip/dns.h"
 #include "cJSON.h"
 #include "esp_http_server.h"
+#include "esp_task_wdt.h"
+#include "esp_ota_ops.h"
+#include "esp_https_ota.h"
 
 // ─── WiFi / API ───────────────────────────────────────────────────────────────
 // All secrets / deployment-specific values come from sdkconfig (gitignored),
@@ -59,6 +62,7 @@
 #define API_PANIC_PATH       "/api/ESP/panic"
 #define API_HEARTBEAT_PATH   "/api/ESP/heartbeat"
 #define API_WIFI_CONFIG_PATH "/api/ESP/wifi-config/"  // serial appended at call site
+#define API_OTA_PATH         "/api/ESP/ota/"           // serial appended at call site
 #define API_DEVICE_KEY       CONFIG_LIFEALERT_API_DEVICE_KEY
 #define FIRMWARE_VERSION     "1.1.0"
 
@@ -225,6 +229,12 @@ static SemaphoreHandle_t      s_movement_lock  = NULL;
 #define MOVEMENT_MEAN_THRESHOLD_G  0.05f
 #define MOVEMENT_PEAK_THRESHOLD_G  0.20f
 
+// GPS timeout: dacă nu se obține fix în 5 minute, UART-ul GPS e oprit
+// pentru a economisi curent (~30mA). Se reactivează la fiecare heartbeat.
+#define GPS_FIX_TIMEOUT_MS  300000U
+static bool     s_gps_enabled   = true;
+static uint32_t s_gps_start_ms  = 0;
+
 // Netif handle — necesar pentru a seta DNS backup după connect
 static esp_netif_t *s_wifi_netif = NULL;
 
@@ -377,6 +387,25 @@ static void max_sleep(void)
     i2c_unlock();
 }
 
+// Ajustează curentul IR al MAX30100 în funcție de puterea semnalului.
+// Scade curentul când semnalul e puternic (economie baterie),
+// crește când e slab (fără deget apăsat ferm sau piele închisă la culoare).
+static void max_adjust_led(void)
+{
+    uint16_t ir, red;
+    if (!max_read(&ir, &red)) return;
+    if (ir == 0) return;
+
+    i2c_lock();
+    mux_open(MUX_CH_MAX30100);
+    uint8_t d[2] = { M30_LED_CFG, 0x47 };  // default: RED=4.4mA, IR=27.1mA
+    if      (ir > 40000) d[1] = 0x43;       // semnal foarte puternic → IR=11mA
+    else if (ir < 5000)  d[1] = 0x4B;       // semnal slab → IR=37mA
+    i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+    mux_close();
+    i2c_unlock();
+}
+
 static void max_wake(void)
 {
     i2c_lock();
@@ -384,7 +413,7 @@ static void max_wake(void)
     uint8_t d[2];
     d[0] = M30_MODE_CFG; d[1] = 0x03;   // SpO2 mode, clear SHDN
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
-    d[0] = M30_LED_CFG;  d[1] = 0x24;   // rescrie curentul LED (se poate reseta la SHDN)
+    d[0] = M30_LED_CFG;  d[1] = 0x47;   // curent inițial: IR=27.1mA
     i2c_master_write_to_device(I2C_PORT, M30_ADDR, d, 2, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
     mux_close();
     i2c_unlock();
@@ -418,6 +447,9 @@ static void pulse_task(void *)
     float ir_min  = 0.0f, ir_max  = 0.0f;
     float red_min = 0.0f, red_max = 0.0f;
     bool  beat_started = false;
+
+    // Ajustare curent LED la fiecare ~5s (500 sample-uri × 10ms)
+    int led_adjust_counter = 0;
 
     while (true) {
         if (g_sleep_mode || !g_max_ok) {
@@ -494,8 +526,10 @@ static void pulse_task(void *)
                     float ir_ac  = ir_max  - ir_min;
                     float red_ac = red_max - red_min;
                     if (dc_ir > 500.0f && dc_red > 100.0f && ir_ac > 30.0f && red_ac > 10.0f) {
-                        float R = (red_ac / dc_red) / (ir_ac / dc_ir);
-                        int spo2 = (int)(110.0f - 25.0f * R + 0.5f);
+                        float R    = (red_ac / dc_red) / (ir_ac / dc_ir);
+                        // Model pătratic empiric (mai precis decât liniar 110-25R):
+                        float spo2f = -45.060f * R * R + 30.354f * R + 94.845f;
+                        int spo2 = (int)(spo2f + 0.5f);
                         if (spo2 > 100) spo2 = 100;
                         if (spo2 <  70) spo2 =  70;
                         g_spo2 = spo2;
@@ -509,6 +543,11 @@ static void pulse_task(void *)
             last_peak_ms = now_ms;
         } else if (above && ac < -peak_th) {
             above = false;
+        }
+
+        if (++led_adjust_counter >= 500) {   // ~5s
+            led_adjust_counter = 0;
+            if (g_finger_on) max_adjust_led();
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));  // ~100 Hz polling
@@ -807,9 +846,12 @@ static void oled_show_data(bool ds_read_ok, float ds_temp)
              g_sleep_mode ? "SLP" : "ON");
     oled_write_str(4, 0, line);
 
-    // Page 5: Baterie + coadă (Bat = placeholder — ADC nelegat la VBAT)
-    snprintf(line, sizeof(line), "Bat: --   Q:%lu",
-             (unsigned long)s_q_count);
+    // Page 5: SpO2 + coadă offline
+    if (!g_max_ok || !g_finger_on || g_spo2 == 0) {
+        snprintf(line, sizeof(line), "SpO2:--  Q:%lu", (unsigned long)s_q_count);
+    } else {
+        snprintf(line, sizeof(line), "SpO2:%d%% Q:%lu", g_spo2, (unsigned long)s_q_count);
+    }
     oled_write_str(5, 0, line);
 
     // Page 7: stare globală — eroare doar dacă init la boot a eşuat sau wifi off
@@ -1706,8 +1748,46 @@ static void heartbeat_send(void *)
            rssi, (unsigned long)esp_get_free_heap_size(), (unsigned long)s_q_count);
 
     // Pull any updated WiFi networks configured from the web app.
-    // Diff against the currently loaded set; writes NVS only when something changed.
     wifi_config_fetch_and_store();
+
+    // OTA check — verifică dacă există firmware nou disponibil pe server
+    {
+        char ota_path[128];
+        snprintf(ota_path, sizeof(ota_path), "%s%s?version=%s", API_OTA_PATH, g_serial, FIRMWARE_VERSION);
+        char body[512] = {};
+        int  status    = 0;
+        if (http_get_to(ota_path, body, sizeof(body), &status) && status == 200) {
+            cJSON *root = cJSON_Parse(body);
+            cJSON *avail = root ? cJSON_GetObjectItem(root, "updateAvailable") : NULL;
+            cJSON *url   = root ? cJSON_GetObjectItem(root, "url")             : NULL;
+            if (cJSON_IsTrue(avail) && cJSON_IsString(url) && url->valuestring[0]) {
+                printf("[OTA] Firmware nou disponibil — descărcare din %s\n", url->valuestring);
+                esp_http_client_config_t ota_cfg = {};
+                ota_cfg.url               = url->valuestring;
+                ota_cfg.crt_bundle_attach = esp_crt_bundle_attach;
+                ota_cfg.timeout_ms        = 30000;
+                esp_https_ota_config_t https_cfg = { .http_config = &ota_cfg };
+                esp_err_t ota_err = esp_https_ota(&https_cfg);
+                if (ota_err == ESP_OK) {
+                    printf("[OTA] Succes — repornire...\n");
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    esp_restart();
+                } else {
+                    printf("[OTA] Eșuat: %s\n", esp_err_to_name(ota_err));
+                }
+            }
+            if (root) cJSON_Delete(root);
+        }
+    }
+
+    // Dacă GPS-ul a fost oprit din cauza timeout-ului, reactivăm la fiecare heartbeat
+    // pentru a încerca din nou obținerea unui fix (ex. dacă dispozitivul a ieșit afară).
+    if (!s_gps_enabled && !g_gps.valid) {
+        gps_setup();
+        s_gps_enabled  = true;
+        s_gps_start_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        printf("[GPS] Reactivat pentru o nouă încercare de fix\n");
+    }
 }
 
 // =============================================================================
@@ -2057,8 +2137,10 @@ static void build_json(char *buf, size_t sz,
     if (activity)
         n += snprintf(buf+n, sz-n, "\"activity\":\"%s\",", activity);
 
-    if (max_ok) n += snprintf(buf+n, sz-n, "\"max30100\":[%u,%u],\"bpm\":%d,\"spo2\":%d,", ir, red, g_bpm, g_spo2);
-    else        n += snprintf(buf+n, sz-n, "\"max30100\":null,\"bpm\":0,");
+    // Trimitem doar valorile calculate (BPM prin peak detection, SpO2 prin raport R).
+    // Valorile brute IR/RED nu mai sunt folosite de aplicație și consumă lățime de bandă.
+    if (max_ok) n += snprintf(buf+n, sz-n, "\"bpm\":%d,\"spo2\":%d,", g_bpm, g_spo2);
+    else        n += snprintf(buf+n, sz-n, "\"bpm\":0,\"spo2\":0,");
 
     if (ds_ok) n += snprintf(buf+n, sz-n, "\"temperature\":%.2f,", temp);
     else       n += snprintf(buf+n, sz-n, "\"temperature\":null,");
@@ -2185,6 +2267,20 @@ extern "C" void app_main(void)
     // Fall detection task — eşantionează MPU6050 la 50Hz şi rulează state machine free-fall/impact/stillness
     if (g_mpu_ok) xTaskCreate(fall_task, "fall", 4096, NULL, 5, NULL);
 
+    // Watchdog task — resetează ESP-ul dacă main loop-ul îngheață > 30s
+    {
+        esp_task_wdt_config_t wdt_cfg = {};
+        wdt_cfg.timeout_ms    = 30000;   // 30s timeout
+        wdt_cfg.idle_core_mask = 0;
+        wdt_cfg.trigger_panic  = false;  // reset, nu panic
+        esp_task_wdt_init(&wdt_cfg);
+        esp_task_wdt_add(NULL);          // înregistrează task-ul curent (app_main)
+        printf("[WDT] Task watchdog activ — timeout 30s\n");
+    }
+
+    // Timestamp GPS start pentru timeout
+    s_gps_start_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
+
     printf("\n[SYS] Monitoring active | POST every %d ms\n", API_POST_MS);
     printf("=====================================\n\n");
 
@@ -2210,8 +2306,18 @@ extern "C" void app_main(void)
         }
 
         // GPS — UART driver bufferează datele, citim pasiv
-        int gps_n = uart_read_bytes(GPS_UART_NUM, g_gps_rx, sizeof(g_gps_rx) - 1, pdMS_TO_TICKS(20));
-        if (gps_n > 0) gps_feed(g_gps_rx, gps_n);
+        // Dacă nu s-a obținut fix în GPS_FIX_TIMEOUT_MS, oprim UART-ul GPS
+        // pentru a economisi ~30mA. Se reactivează la heartbeat.
+        if (s_gps_enabled) {
+            int gps_n = uart_read_bytes(GPS_UART_NUM, g_gps_rx, sizeof(g_gps_rx) - 1, pdMS_TO_TICKS(20));
+            if (gps_n > 0) gps_feed(g_gps_rx, gps_n);
+            if (!g_gps.valid && (now - s_gps_start_ms) > GPS_FIX_TIMEOUT_MS) {
+                uart_driver_delete(GPS_UART_NUM);
+                s_gps_enabled = false;
+                printf("[GPS] Fără fix în %lus — UART oprit (economie curent)\n",
+                       GPS_FIX_TIMEOUT_MS / 1000);
+            }
+        }
 
         // La intervalul de POST: trezeşte MAX30100, citeşte, pune-l la somn,
         // actualizează OLED şi trimite datele (skipped complet în sleep mode)
@@ -2248,6 +2354,7 @@ extern "C" void app_main(void)
             }
         }
 
+        esp_task_wdt_reset();   // confirmă că main loop-ul rulează
         vTaskDelay(pdMS_TO_TICKS(SENSOR_READ_MS));
     }
 }
