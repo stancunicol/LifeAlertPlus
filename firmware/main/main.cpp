@@ -1832,6 +1832,17 @@ static void btn_task(void *)
                     }
                 }
         }
+        // Goleşte bounce-urile acumulate în coadă pe durata acţiunii.
+        // Fără asta, un bounce la eliberare (>50ms după ISR) pune un al doilea
+        // eveniment şi anulează primul toggle.
+        { int _p; while (xQueueReceive(s_btn_q, &_p, 0) == pdTRUE) {} }
+        // Resetează debounce-ul pentru butonul curent ca să blocheze şi bounce-urile
+        // care ar putea sosi imediat după golirea cozii.
+        s_btn_last_us[(pin == BUTTON1_PIN) ? 0 : 1] = esp_timer_get_time();
+        // Sincronizează starea de poll — fără asta, poll-ul următor vede last_bX=1
+        // stale şi declanşează un toggle suplimentar prin calea de polling.
+        last_b1 = gpio_get_level((gpio_num_t)BUTTON1_PIN);
+        last_b2 = gpio_get_level((gpio_num_t)BUTTON2_PIN);
     }
 }
 
