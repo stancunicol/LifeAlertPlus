@@ -122,6 +122,9 @@ TTFF & Time To First Fix, timpul până la primul fix GPS\\
 UART & Universal Asynchronous Receiver-Transmitter, interfață de comunicație serială\\
 USB-C & Universal Serial Bus Type-C\\
 WiFi & Tehnologie de rețea locală fără fir (standard IEEE 802.11)\\
+OTA & Over-The-Air, actualizare de firmware fără conexiune fizică\\
+VAPID & Voluntary Application Server Identification, standard de autentificare pentru Web Push\\
+WDT & Watchdog Timer, circuit de supraveghere a buclei principale\\
 \end{longtable}
 }
 \addtocounter{table}{-1}
@@ -387,9 +390,11 @@ Niciun canal de comunicație nu este, singur, suficient de fiabil pentru un scen
 
 \textbf{Email}: poșta electronică este potrivită pentru notificări mai puțin urgente și pentru transmiterea de conținut bogat: rapoarte, grafice, atașamente. Spre deosebire de SMS, livrarea email-ului nu este garantată în timp real și poate fi întârziată sau filtrată ca spam, motiv pentru care este utilizată ca un canal complementar, nu ca singura cale de alertare.
 
-\textbf{Notificările push}: acestea sunt mesaje livrate instantaneu în interfața aplicației web, atâta vreme cât aceasta este deschisă. Notificările push oferă cea mai mică latență dintre toate canalele și sunt ideale pentru actualizarea în timp real a tabloului de bord al aparținătorului. Ele depind însă de existența unei conexiuni active, motiv pentru care sunt dublate de SMS în situațiile critice.
+\textbf{Notificările push în aplicație (SignalR)}: mesaje livrate instantaneu în interfața web, atâta vreme cât aceasta este deschisă; oferă cea mai mică latență și actualizează tabloul de bord în timp real.
 
-Combinarea celor trei canale asigură redundanță: dacă un canal eșuează sau nu este observat, un altul preia rolul de informare, crescând probabilitatea ca aparținătorul să fie alertat la timp. Fluxul comparativ al celor trei canale este sintetizat în figura~\ref{fig:multi-canal}.
+\textbf{Notificările push în browser (Web Push)}: un al patrulea canal complementar, care livrează notificări direct în browser-ul aparținătorului chiar și atunci când aplicația nu este deschisă, prin protocolul Web Push standardizat (VAPID). La prima autentificare, aplicația solicită permisiunea browser-ului; dacă este acordată, subscripția este înregistrată pe server și utilizată ulterior la fiecare alertă. Astfel, aparținătorul este informat și în situațiile în care tabul aplicației este închis sau browserul rulează în fundal.
+
+Combinarea celor patru canale asigură redundanță: dacă un canal eșuează sau nu este observat, un altul preia rolul de informare, crescând probabilitatea ca aparținătorul să fie alertat la timp. Fluxul comparativ al celor trei canale este sintetizat în figura~\ref{fig:multi-canal}.
 
 \begin{figure}[H]
 \centering
@@ -402,20 +407,23 @@ Combinarea celor trei canale asigură redundanță: dacă un canal eșuează sau
 
   \node[src] (alerta) {Alertă confirmată};
 
-  \node[chan, right=2.0cm of alerta, yshift=1.6cm] (push) {Push (SignalR)\\\scriptsize latență mică, necesită app deschisă};
-  \node[chan, right=2.0cm of alerta] (sms) {SMS (Twilio)\\\scriptsize acoperire maximă, fără smartphone};
-  \node[chan, right=2.0cm of alerta, yshift=-1.6cm] (mail) {Email (SMTP)\\\scriptsize conținut bogat, livrare asincronă};
+  \node[chan, right=2.0cm of alerta, yshift=2.4cm] (push) {Push SignalR\\\scriptsize latență mică, app deschisă};
+  \node[chan, right=2.0cm of alerta, yshift=0.8cm] (webpush) {Web Push (VAPID)\\\scriptsize browser în fundal};
+  \node[chan, right=2.0cm of alerta, yshift=-0.8cm] (sms) {SMS (Twilio)\\\scriptsize acoperire maximă};
+  \node[chan, right=2.0cm of alerta, yshift=-2.4cm] (mail) {Email (SMTP)\\\scriptsize conținut bogat, asincron};
 
   \node[dest, right=1.8cm of sms] (apar) {Aparținător};
 
   \draw[arrow] (alerta.east) -- (push.west);
+  \draw[arrow] (alerta.east) -- (webpush.west);
   \draw[arrow] (alerta.east) -- (sms.west);
   \draw[arrow] (alerta.east) -- (mail.west);
   \draw[arrow] (push.east) -- (apar.west);
+  \draw[arrow] (webpush.east) -- (apar.west);
   \draw[arrow] (sms.east) -- (apar.west);
   \draw[arrow] (mail.east) -- (apar.west);
 \end{tikzpicture}
-\caption{Livrarea alertei prin trei canale complementare asigură redundanța mecanismului de notificare.}
+\caption{Livrarea alertei prin patru canale complementare asigură redundanța mecanismului de notificare.}
 \label{fig:multi-canal}
 \end{figure}
 
@@ -429,7 +437,7 @@ Backend-ul reprezintă nivelul de procesare al sistemului și a fost dezvoltat f
 
 Codul backend-ului este organizat conform principiilor unei \textbf{arhitecturi stratificate (clean architecture)}, separat în mai multe straturi cu responsabilități distincte: stratul de domeniu, care conține entitățile fundamentale; stratul de aplicație, care conține logica de business; stratul de infrastructură, responsabil cu accesul la date și cu serviciile externe; și stratul de prezentare a API-ului, care conține controlerele. Această separare facilitează testarea, întreținerea și extinderea ulterioară a sistemului.
 
-Persistența datelor este asigurată de o bază de date relațională \textbf{SQLite}, un sistem de baze de date încorporat, care stochează întreaga bază într-un singur fișier și nu necesită un server dedicat. Accesul la baza de date se realizează prin intermediul unui ORM (Object-Relational Mapper), anume \textbf{Entity Framework Core}, care mapează automat clasele din cod pe tabelele bazei de date și permite formularea interogărilor direct în limbajul C\#.
+Persistența datelor este asigurată de o bază de date relațională \textbf{PostgreSQL}, găzduită în cloud prin serviciul \textbf{Neon} (serverless Postgres), care oferă scalare automată și conectare securizată TLS. Accesul la baza de date se realizează prin intermediul unui ORM (Object-Relational Mapper), anume \textbf{Entity Framework Core} cu driverul \textbf{Npgsql}, care mapează automat clasele din cod pe tabelele bazei de date și permite formularea interogărilor direct în limbajul C\#.
 
 \subsubsection{Securitatea}
 
@@ -733,7 +741,7 @@ Modelul de date al sistemului este alcătuit din douăsprezece entități, fieca
 \begin{itemize}[leftmargin=1.5em]
 \item \textbf{User}: utilizatorul aplicației web (aparținător, medic sau administrator). Conține datele de identificare, credențialele, preferințele de afișare și de notificare (email, push, SMS, raport zilnic), precum și un set de praguri implicite pentru parametrii vitali.
 \item \textbf{Role}: rolul unui utilizator, care îi determină drepturile în aplicație.
-\item \textbf{Monitored}: persoana monitorizată (pacientul vârstnic). Conține datele personale, numărul de serie al dispozitivului asociat, frecvența de actualizare, \textbf{pragurile de alertă personalizate} pentru puls, temperatură și \spo, precum și \textbf{perioada de retenție a datelor} (în zile), după care măsurătorile, notificările și agregările pacientului sunt șterse definitiv.
+\item \textbf{Monitored}: persoana monitorizată (pacientul vârstnic). Conține datele personale, numărul de serie al dispozitivului asociat, frecvența de actualizare, \textbf{pragurile de alertă personalizate} pentru puls, temperatură și \spo, precum și \textbf{perioada de retenție a datelor} (în zile), după care măsurătorile, notificările și agregările pacientului sunt șterse definitiv. Pragurile individuale sunt folosite atât în modulul de alertare, cât și în clasificarea stării afișate pe cardurile de monitorizare (normal / avertizare / critic).
 \item \textbf{UserMonitored}: tabelă de legătură care modelează relația \textit{mulți-la-mulți} dintre utilizatori și persoanele monitorizate; un utilizator poate monitoriza mai multe persoane, iar o persoană poate fi monitorizată de mai mulți utilizatori (aparținător + medic invitat, de exemplu).
 \item \textbf{Measurement}: o măsurătoare individuală transmisă de dispozitiv, cu valorile de puls, temperatură, \spo, activitatea detectată, indicatorul de cădere și coordonatele geografice.
 \item \textbf{MonitoredCondition}: o afecțiune medicală preexistentă a unei persoane monitorizate (hipertensiune, aritmie, diabet etc.), folosită de modulul AI pentru ajustarea evaluării.
@@ -742,6 +750,9 @@ Modelul de date al sistemului este alcătuit din douăsprezece entități, fieca
 \item \textbf{WifiNetwork}: o rețea WiFi configurată pentru dispozitivul fizic al unei persoane monitorizate (SSID + parolă). O persoană poate avea până la trei rețele înregistrate (de exemplu rețeaua de acasă și un hotspot mobil), pe care dispozitivul le încearcă la conectare în ordinea înregistrării.
 \item \textbf{DailyHistory} și \textbf{WeeklyHistory}: date agregate zilnic, respectiv săptămânal (valori minime/maxime, medii, numărul de căderi și de alerte), folosite pentru rapoarte și statistici.
 \item \textbf{Invitation}: o invitație trimisă unui medic pentru a-i acorda acces la datele unui pacient, identificată printr-un token unic cu termen de expirare.
+\item \textbf{DoctorNote}: o notiță medicală adăugată de medicul invitat, asociată unei persoane monitorizate. Conține conținutul notei, data creării și ultimei actualizări, precum și identificatorul și adresa de email a medicului autor. La adăugarea sau actualizarea unei notițe, aparținătorii persoanei monitorizate primesc automat o notificare push în aplicație și prin email.
+\item \textbf{PushSubscription}: subscripția unui utilizator la notificările Web Push prin browser (VAPID), stocând endpoint-ul furnizat de browser, cheia publică și secretul de autentificare. Subscripțiile expirate sunt eliminate automat la prima eșuare a livrării.
+\item \textbf{AuditLog} și \textbf{SystemError}: jurnale de activitate și de erori ale sistemului, consultabile de administratori prin interfața de administrare.
 \end{itemize}
 
 \subsubsection{Relațiile dintre entități}
@@ -1101,9 +1112,16 @@ Microcontrollerul ESP32-C3 Mini dispune de un număr limitat de pini GPIO de uz 
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Spaţiu pentru figură: schema electrică a dispozitivului, prezentând ESP32-C3 Mini, multiplexorul TCA9548A, senzorii MAX30100/MPU6050/DS18B20/NEO-6M, ecranul OLED, butoanele şi LED-urile, cu pinii GPIO corespunzători şi rezistoarele de pull-up evidenţiate.]}
+\figplaceholder{[Spaţiu pentru figură: schema electrică a dispozitivului, prezentând ESP32-C3 Mini, multiplexorul TCA9548A, senzorii MAX30100/MPU6050/DS18B20/NEO-6M, ecranul OLED, butoanele şi LED-urile, cu pinii GPIO corespunzători şi rezistoarele de pull-up evidenţiate. Schema poate fi exportată din KiCad sau Fritzing.]}
 \caption{Schema de conexiuni a dispozitivului portabil.}
 \label{fig:schema}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\figplaceholder{[Spațiu pentru figură: fotografie a dispozitivului prototip asamblat pe breadboard sau PCB, cu senzorii, multiplexorul TCA9548A, ecranul OLED și cablajele vizibile. Fotografia trebuie realizată pe fundal alb sau neutru, cu lumină uniformă.]}
+\caption{Prototipul dispozitivului portabil asamblat, cu toți senzorii conectați la multiplexorul TCA9548A și la ESP32-C3 Mini.}
+\label{fig:prototip}
 \end{figure}
 
 \subsubsection{Magistrala I\textsuperscript{2}C şi multiplexarea TCA9548A}
@@ -1175,14 +1193,57 @@ Măsurătorile validate sunt acumulate și transmise periodic către backend, la
 
 Atunci când transmiterea eșuează din cauza lipsei conexiunii, măsurătoarea este salvată într-o \textbf{coadă locală} păstrată în memoria nevolatilă (NVS) a microcontrollerului. Coada are o capacitate maximă fixă, iar la depășirea acesteia cele mai vechi înregistrări sunt suprascrise. La revenirea conexiunii, înregistrările aflate în așteptare sunt transmise treptat, într-un număr limitat la fiecare ciclu de comunicație, pentru a nu suprasolicita rețeaua și a nu întârzia achiziția curentă de date.
 
+\subsubsection{Calculul saturației de oxigen (\texorpdfstring{\spo}{SpO2}) în firmware}
+
+Pe lângă pulsul calculat prin detectarea vârfurilor pe semnalul IR, firmware-ul calculează și saturația de oxigen \spo\ direct pe dispozitiv, fără a transmite valorile brute ADC către server. Algoritmul utilizează raportul \textbf{R} dintre amplitudinea AC și componenta DC a semnalului RED, respectiv IR, obținute prin urmărire exponențial-mobilă (EMA):
+
+\[
+R = \frac{(\text{RED}_{AC} / \text{RED}_{DC})}{(\text{IR}_{AC} / \text{IR}_{DC})}
+\]
+
+Valoarea \spo\ este estimată printr-un model pătratic empiric, mai precis decât aproximarea liniară clasică $110 - 25 \cdot R$:
+
+\[
+\text{SpO}_2 = -45{,}060 \cdot R^2 + 30{,}354 \cdot R + 94{,}845
+\]
+
+Rezultatul este limitat la intervalul $[70, 100]$\%, cu valoarea 0 indicând absența degetului pe senzor. Curentul LED-ului IR este ajustat adaptiv la fiecare ~5 secunde: dacă semnalul este prea slab (IR $<$ 5\,000 unități ADC), curentul crește la 37\,mA; dacă este prea puternic (IR $>$ 40\,000), scade la 11\,mA; altfel rămâne la 27\,mA implicit. Această ajustare reduce consumul de curent fără a sacrifica acuratețea semnalului.
+
+\begin{figure}[H]
+\centering
+\figplaceholder{[Spațiu pentru figură: captura ecranului OLED al dispozitivului, afișând valorile Puls, SpO2, Temperatură, starea rețelei și coada offline.]}
+\caption{Ecranul OLED al dispozitivului: pulsul, \spo\ și temperatura sunt afișate în timp real; SpO2 înlocuiește câmpul de baterie nefuncțional.}
+\label{fig:oled-display}
+\end{figure}
+
+\subsubsection{Watchdog și recuperarea automată}
+
+Pentru a garanta funcționarea continuă fără supraveghere, firmware-ul activează \textbf{Task Watchdog Timer (TWDT)} cu un timeout de 30 de secunde. Dacă bucla principală îngheață, de exemplu din cauza unui timeout I2C sau a unui blocaj de semaphore, watchdog-ul resetează microcontrollerul automat, fără a necesita intervenție fizică. Buca principală apelează \texttt{esp\_task\_wdt\_reset()} la fiecare ciclu de 500\,ms, confirmând că sistemul rulează normal.
+
+\subsubsection{OTA --- actualizare firmware prin rețea}
+
+Firmware-ul suportă actualizare \textbf{Over-The-Air (OTA)} prin protocolul HTTPS. La fiecare \textit{heartbeat} (5 minute), dispozitivul interoghează endpoint-ul \texttt{/api/ESP/ota/\{serial\}?version=x.y.z}; dacă serverul returnează \texttt{updateAvailable: true} și un URL valid, firmware-ul descarcă imaginea prin \texttt{esp\_https\_ota} și repornește automat în noua versiune. Dacă descărcarea eșuează, dispozitivul continuă să ruleze versiunea curentă fără a fi afectat. Mecanismul este activat prin configurarea a două variabile în Azure App Settings: \texttt{Urls\_\_OtaFirmwareUrl} (URL-ul binarului .bin) și \texttt{Urls\_\_OtaFirmwareVersion} (versiunea țintă, comparată cu \texttt{FIRMWARE\_VERSION} din cod).
+
+\subsubsection{Timeout GPS și economisire curent}
+
+Modulul GPS NEO-6M consumă aproximativ 30\,mA permanent, inutil în condiții de interior unde fixul GPS nu poate fi obținut. Firmware-ul implementează un \textbf{timeout de 5 minute}: dacă nu se obține niciun fix GPS valid în acest interval, driverul UART al modulului este oprit, economisind curentul. La fiecare \textit{heartbeat}, driverul este reactivat temporar pentru o nouă încercare (de exemplu, dacă pacientul a ieșit în exterior). Dacă un fix valid este obținut, coordonatele sunt incluse în payload-ul JSON; altfel, câmpul \texttt{neo6m} rămâne \texttt{null}.
+
 \subsubsection{Interfața locală}
 
-Interacțiunea cu utilizatorul se realizează prin ecranul OLED, care afișează în timp real parametrii vitali și starea conexiunii, prin două LED-uri de stare și prin două butoane: un buton de pornire/oprire și un buton de panică, a cărui apăsare declanșează o cerere dedicată către backend, independent de valorile senzorilor.
+Interacțiunea cu utilizatorul se realizează prin ecranul OLED, care afișează în timp real pulsul, \spo, temperatura, starea rețelei și numărul de măsurători aflate în coada offline. LED-ul verde indică funcționarea normală, iar cel galben semnalează erori, lipsa rețelei sau modul sleep. Butoanele de panică și de sleep au debounce software de 50\,ms și o cale de polling paralel cu întreruperea GPIO, pentru fiabilitate maximă.
 
+\subsubsection{Configurarea rețelei — modul de provizionare SoftAP}
 
-\subsubsection{Configurarea rețelei}
+La prima pornire, dacă nu există nicio rețea WiFi salvată în memoria nevolatilă (NVS), dispozitivul intră automat în \textbf{modul de provizionare}: pornește propriul hotspot WiFi cu SSID-ul \texttt{LifeAlert-XXXXXX} (ultimele 6 caractere din serialul MAC), fără parolă, și servește un server HTTP pe adresa \texttt{192.168.4.1}. Aparținătorul se conectează cu telefonul la acest hotspot și accesează adresa în browser, unde apare un formular simplu de introducere a SSID-ului și a parolei rețelei de acasă. La trimiterea formularului, credențialele sunt salvate în NVS și dispozitivul se repornește automat, conectându-se la rețeaua configurată.
 
-Datele de conectare la rețeaua WiFi sunt păstrate în memoria nevolatilă a dispozitivului, fiind preîncărcate la \textit{flash} cu o pereche SSID + parolă implicită folosită la prima pornire. Ulterior, aparținătorul poate înregistra prin aplicația web până la trei rețele WiFi suplimentare, transmise dispozitivului prin mecanismul de sincronizare descris în subsecțiunea anterioară. La fiecare pornire, dispozitivul încearcă pe rând rețelele salvate în NVS, în ordinea înregistrării lor; dacă niciuna nu răspunde, revine la credențialele implicite din \textit{firmware}. Această abordare respectă principiul simplității pentru utilizatorul vârstnic, prezentat în subcapitolul 2.1: după configurarea efectuată de aparținător din aplicația web, dispozitivul se reconectează automat la pornire în oricare dintre mediile pacientului (acasă, hotspot mobil, deplasare), fără a necesita vreo intervenție tehnică ulterioară.
+\begin{figure}[H]
+\centering
+\figplaceholder{[Spațiu pentru figură: captură de ecran de pe telefon a formularului de provizionare WiFi servit de dispozitiv la adresa 192.168.4.1 — fundal alb, câmpuri SSID și parolă, buton „Salvează și conectează".]}
+\caption{Pagina de provizionare WiFi afișată de dispozitiv la adresa \texttt{192.168.4.1}: aparținătorul introduce SSID-ul și parola rețelei de acasă direct din browser-ul telefonului.}
+\label{fig:prov-wifi}
+\end{figure}
+
+Ulterior, aparținătorul poate înregistra prin aplicația web până la trei rețele WiFi suplimentare, transmise dispozitivului prin mecanismul de sincronizare la \textit{heartbeat} descris în subcapitolul anterior. La fiecare pornire, dispozitivul încearcă pe rând rețelele salvate în NVS; dacă niciuna nu răspunde în 12 secunde, revine la modul de provizionare SoftAP.
 
 \subsection{Backend-ul și API-ul REST}
 
@@ -1197,6 +1258,8 @@ Componentele backend-ului sunt înregistrate într-un container de \textbf{injec
 Autentificarea este gestionată prin token-uri JWT, validate la fiecare cerere pe baza unei chei secrete. Aplicația acceptă și autentificarea prin OAuth folosind un cont Google. O particularitate de implementare o reprezintă conexiunile SignalR, care, spre deosebire de cererile HTTP obișnuite, transmit token-ul prin șirul de interogare al adresei; backend-ul tratează explicit acest caz. Securitatea este întărită prin mai multe mecanisme complementare. \textbf{Limitarea ratei} (\textit{rate limiting}) restricționează numărul de cereri de autentificare acceptate de la același client într-o fereastră de timp, atenuând atacurile de tip forță brută. Răspunsurile includ \textbf{antete HTTP de securitate}, precum \texttt{X-Content-Type-Options}, \texttt{X-Frame-Options} și \texttt{Referrer-Policy}, care reduc riscul atacurilor de tip \textit{clickjacking} sau de interpretare greșită a conținutului. O \textbf{politică CORS} restrictivă permite accesul la API doar din partea aplicației web autorizate. Un \textbf{gestionar global de excepții} interceptează erorile neprevăzute și returnează un mesaj generic, fără a expune detalii interne care ar putea fi exploatate. De asemenea, întrucât backend-ul este găzduit în spatele unui \textit{reverse proxy}, sunt procesate antetele transmise de acesta, pentru ca redirecționările și fluxul de autentificare OAuth să folosească corect protocolul HTTPS.
 
 \subsubsection{Serviciile de fundal}
+
+API-ul include endpoint-uri noi față de versiunea inițial proiectată. \textbf{Notițele medicale} (DoctorNote) sunt gestionate printr-un controler dedicat: medicul invitat poate adăuga sau actualiza o notiță per pacient, iar la fiecare salvare aparținătorii primesc notificare push în aplicație și prin email. \textbf{Subscripțiile Web Push} sunt gestionate de \texttt{PushController}, care expune endpoint-urile de abonare/dezabonare și un endpoint public pentru cheia VAPID. \textbf{OTA-ul firmware-ului} este gestionat de un endpoint în \texttt{ESPController} care compară versiunea curentă cu cea configurată în Azure App Settings și returnează URL-ul binarului dacă este disponibilă o versiune mai nouă. La pornire, \textbf{SimulationManager} este pre-populat cu ultima măsurătoare din baza de date pentru fiecare dispozitiv activ, astfel încât aplicația să afișeze date imediat după un restart al serverului, fără a aștepta o nouă transmitere de la ESP.
 
 Pe lângă controlere, backend-ul include mai multe servicii de fundal care rulează independent de cereri. \textbf{Serviciul de monitorizare a alertelor} (\texttt{AlertMonitorService}) primește fiecare măsurătoare nou primită, ține un buffer cu valorile din ultimele minute pentru fiecare pacient și decide momentul exact de trimitere a notificărilor. În paralel, \textbf{serviciul de profilare a activităţii} (\texttt{ActivityProfileService}) construieşte la prima nevoie un profil orar per pacient din ultimele 14 zile de măsurători şi verifică, la fiecare nouă măsurătoare, dacă eticheta de activitate primită de la dispozitiv abate de la tiparul obişnuit; abaterile semnificative declanşează notificările comportamentale descrise în subcapitolul 4.4. \textbf{Serviciul de raportare zilnică} (\texttt{DailyReportBackgroundService}) rulează o dată pe zi, la miezul nopții în fusul orar local configurat, și trimite prin email un raport sintetic al zilei precedente utilizatorilor care au activat această opțiune. \textbf{Serviciul de retenție a datelor} (\texttt{RetentionCleanupBackgroundService}) rulează tot zilnic și execută ștergerea fizică a măsurătorilor, notificărilor și agregărilor mai vechi decât perioada de retenție configurată pentru fiecare pacient. La pornirea aplicației se execută, de asemenea, popularea inițială a bazei de date cu rolurile și datele de bază.
 
@@ -1287,9 +1350,41 @@ Tot din această pagină se accesează \textbf{modalul de editare a profilului p
 \label{fig:modal-wifi}
 \end{figure}
 
+\subsubsection{Noi funcționalități ale interfeței}
+
+Pe parcursul dezvoltării au fost adăugate mai multe funcționalități față de concepția inițială.
+
+\textbf{Graficul \spo}: pe lângă graficele de puls și temperatură, pagina de detalii a pacientului include un al treilea grafic pentru saturația de oxigen (culoare albastru, interval 85--100\%), atât în vizualizarea zilnică, cât și în cea săptămânală. Graficul este afișat atât aparținătorului, cât și medicului invitat.
+
+\begin{figure}[H]
+\centering
+\figplaceholder{[Spațiu pentru figură: captură a paginii de detalii a pacientului, cu graficul SpO2 afișat sub graficele de puls și temperatură, cu axa Y la 85--100\%.]}
+\caption{Graficul \spo\ adăugat în pagina pacientului, sub graficele de puls și temperatură; valorile provin din calculul realizat în firmware.}
+\label{fig:grafic-spo2}
+\end{figure}
+
+\textbf{Notițe medicale}: medicul invitat poate adăuga notițe medicale direct din pagina pacientului, vizibile ulterior și aparținătorului. La fiecare salvare, aparținătorii primesc notificare push și email. Notițele sunt afișate cronologic, cu adresa de email a medicului și marcajul temporal.
+
+\begin{figure}[H]
+\centering
+\figplaceholder{[Spațiu pentru figură: captură a secțiunii „Notițe medicale" din pagina pacientului, cu lista notițelor și butonul de adăugare vizibil medicului.]}
+\caption{Secțiunea de notițe medicale: medicul invitat adaugă observații, aparținătorul le poate consulta, iar ambii primesc notificare la actualizare.}
+\label{fig:notite-medicale}
+\end{figure}
+
+\textbf{Indicator de date vechi}: dacă ultima măsurătoare primită are mai mult de 15 minute vechime, un banner de avertizare apare în pagina pacientului, semnalând că dispozitivul poate fi offline sau în afara rețelei.
+
+\textbf{Căutare după nume}: pagina cu persoanele monitorizate include un câmp de căutare live care filtrează cardurile după numele persoanei, util atunci când lista de pacienți este lungă.
+
+\textbf{Onboarding la prima conectare}: la primul login, un modal de bun venit prezintă cei trei pași de configurare inițială (achiziție dispozitiv, configurare WiFi prin SoftAP, adăugare pacient). Modalul nu reapare la sesiunile ulterioare (starea este persistată în \texttt{localStorage}).
+
+\textbf{Stare goală pentru utilizatori noi}: pe tabloul de bord, utilizatorii fără niciun pacient adăugat văd o stare goală informativă cu fotografia dispozitivului, pașii de configurare și adresa de email de suport pentru achiziție.
+
+\textbf{Layout responsiv pe mobil}: paginile de detalii ale pacientului și graficele se adaptează la ecrane mici prin reordonare verticală, fără scroll orizontal excesiv.
+
 \subsubsection{Vizualizarea datelor și funcționalitatea PWA}
 
-Reprezentarea grafică a istoricului parametrilor vitali este realizată direct în SVG, prin curbe Bézier monotone (Fritsch-Carlson) trasate peste o grilă cu axă temporală. Cele două grafice (puls și temperatură) sunt așezate într-un container cu \textbf{scroll orizontal sincronizat} și un control de \textbf{zoom} (1x--4x): wrapper-ul rămâne la lățimea cardului, iar SVG-ul intern se lungește, astfel încât citirile dense să nu se mai suprapună (figura~\ref{fig:grafice-vitale}). La trecerea mouse-ului peste oricare zonă a graficului, un tooltip arată valoarea exactă și ora la cel mai apropiat punct înregistrat.
+Reprezentarea grafică a istoricului parametrilor vitali este realizată direct în SVG, prin curbe Bézier monotone (Fritsch-Carlson) trasate peste o grilă cu axă temporală. Cele trei grafice (puls, temperatură și \spo) sunt așezate într-un container cu \textbf{scroll orizontal sincronizat} și un control de \textbf{zoom} (1x--4x): wrapper-ul rămâne la lățimea cardului, iar SVG-ul intern se lungește, astfel încât citirile dense să nu se mai suprapună (figura~\ref{fig:grafice-vitale}). La trecerea mouse-ului peste oricare zonă a graficului, un tooltip arată valoarea exactă și ora la cel mai apropiat punct înregistrat.
 
 \begin{figure}[H]
 \centering
@@ -1429,7 +1524,13 @@ Pentru a evita alertele false, serviciul de monitorizare aplică mai multe tempo
 
 \subsubsection{Notificările push}
 
-Notificările push sunt livrate prin \textbf{SignalR}, printr-un hub la care clienții se conectează după autentificare. Fiecare utilizator este asociat unui grup propriu, identificat prin identificatorul său, astfel încât o notificare să poată fi direcționată exact către destinatarul vizat. Mesajele sunt afișate instantaneu în interfață sub forma unui \textit{toast} colorat în funcție de severitate (figura~\ref{fig:notificare-push}) și sunt salvate, totodată, în baza de date, pentru a putea fi consultate ulterior din pagina de notificări.
+Sistemul implementează două tipuri complementare de notificări push.
+
+\textbf{Notificările în aplicație (SignalR)} sunt livrate printr-un hub WebSocket la care clienții se conectează după autentificare. Fiecare utilizator este asociat unui grup propriu, astfel încât o notificare să fie direcționată exact către destinatar. Mesajele sunt afișate instantaneu sub forma unui \textit{toast} colorat în funcție de severitate (figura~\ref{fig:notificare-push}) și salvate în baza de date pentru consultare ulterioară.
+
+\textbf{Notificările prin browser (Web Push / VAPID)} completează canalul SignalR cu livrarea prin service worker-ul aplicației, permițând primirea alertelor chiar și atunci când tabul aplicației este închis. La autentificare, aplicația verifică dacă browser-ul suportă Web Push și dacă permisiunea este acordată; dacă da, subscripția este înregistrată pe server împreună cu cheia publică și secretul de autentificare (p256dh/auth). La declanșarea unei alerte, serverul trimite notificarea prin WebPush client (biblioteca \texttt{WebPush}), care livrează payload-ul JSON criptat endpoint-ului browser-ului. Service worker-ul interceptează evenimentul \texttt{push}, afișează notificarea sistemului de operare și, la clic, deschide pagina de notificări a aplicației. Subscripțiile expirate (cod HTTP 410 de la furnizorul browser-ului) sunt eliminate automat din baza de date.
+
+Din pagina de profil, utilizatorul poate activa sau dezactiva independent notificările Web Push prin browser, cu indicarea vizuală a stării curente (activ / dezactivat / blocat de browser).
 
 \begin{figure}[H]
 \centering
@@ -1558,7 +1659,7 @@ Cu toate că sistemul este funcțional, dezvoltarea sa în cadrul unei lucrări 
 \item \textbf{Antrenarea pe date sintetice}: modelul de inteligență artificială a fost antrenat pe date generate pornind de la seturi publice, nu pe date clinice reale colectate de la pacienți, ceea ce limitează validitatea concluziilor în condiții reale.
 \item \textbf{Validare la scară redusă}: testarea a fost realizată în regim de laborator, pe un număr mic de dispozitive, fără un studiu de utilizare pe termen lung cu utilizatori reali.
 \item \textbf{Dependența de servicii externe}: funcționarea alertării prin SMS și a autentificării prin Google depinde de servicii terțe și de disponibilitatea acestora.
-\item \textbf{Baza de date}: soluția SQLite este potrivită pentru scara actuală, dar un număr foarte mare de utilizatori ar necesita migrarea către un sistem de baze de date de tip server.
+\item \textbf{Date de antrenare AI sintetice}: modelul de inteligență artificială a fost antrenat pe date sintetice, nu pe date clinice reale colectate de la pacienți, ceea ce limitează validitatea concluziilor în condiții reale.
 \end{itemize}
 
 \subsection{Direcții de dezvoltare ulterioară}
@@ -1571,7 +1672,9 @@ Sistemul dezvoltat constituie o bază solidă pentru extinderi viitoare. Printre
 \item integrarea de senzori suplimentari, de exemplu pentru măsurarea ECG sau a tensiunii arteriale, în scopul unei evaluări medicale mai cuprinzătoare;
 \item optimizarea consumului de energie al dispozitivului, pentru creșterea autonomiei bateriei;
 \item integrarea cu sistemele informatice medicale, pentru ca datele să poată fi consultate direct de medicul curant în fișa electronică a pacientului;
-\item extinderea predicției de tendințe (descrisă în subcapitolul 4.4 pentru orizontul de câteva minute) cu o analiză pe termen lung, pe zile și săptămâni, pentru detectarea degradărilor lente ale stării de sănătate.
+\item extinderea predicției de tendințe (descrisă în subcapitolul 4.4 pentru orizontul de câteva minute) cu o analiză pe termen lung, pe zile și săptămâni, pentru detectarea degradărilor lente ale stării de sănătate;
+\item validarea clinică a algoritmului de calcul \spo\ implementat în firmware pe un eșantion de pacienți, pentru calibrarea coeficienților modelului pătratic în funcție de caracteristicile specifice ale senzorului MAX30100;
+\item implementarea miniaturizată și certificată medical a dispozitivului portabil, cu integrarea unui modul de măsurare a tensiunii bateriei prin ADC, pentru afișarea nivelului real de încărcare în aplicație.
 \end{itemize}
 
 În concluzie, LifeAlertPlus demonstrează că o soluție de monitorizare medicală accesibilă, fiabilă și inteligentă poate fi construită cu tehnologii open-source și hardware de uz general, adresând un segment real și insuficient acoperit: siguranța persoanelor vârstnice prin implicarea activă a aparținătorului.
