@@ -121,6 +121,13 @@ namespace LifeAlertPlus.Client.Services
             ["dashboard.measurementsToday"] = "Total Measurements Today",
             ["dashboard.monitoredPeople"] = "Monitored People",
             ["dashboard.viewAll"] = "View All",
+            ["dashboard.emptyTitle"] = "No monitored people yet",
+            ["dashboard.emptyText"] = "To start monitoring, you need a LifeAlertPlus device. Follow these steps to get started:",
+            ["dashboard.emptyStep1"] = "Contact us to purchase a LifeAlertPlus device",
+            ["dashboard.emptyStep2"] = "Connect the device to your Wi-Fi using the setup instructions",
+            ["dashboard.emptyStep3"] = "Add a monitored person from the Monitored page and enter the device serial number",
+            ["dashboard.emptySupport"] = "To purchase a device, contact us at:",
+            ["dashboard.emptyAddBtn"] = "Add monitored person",
 
             // Shared card labels
             ["card.pulse"] = "Pulse (bpm)",
@@ -1165,6 +1172,13 @@ namespace LifeAlertPlus.Client.Services
             ["dashboard.measurementsToday"] = "Măsurători totale azi",
             ["dashboard.monitoredPeople"] = "Persoane monitorizate",
             ["dashboard.viewAll"] = "Vezi toate",
+            ["dashboard.emptyTitle"] = "Nicio persoană monitorizată",
+            ["dashboard.emptyText"] = "Pentru a începe monitorizarea, ai nevoie de un dispozitiv LifeAlertPlus. Urmează acești pași:",
+            ["dashboard.emptyStep1"] = "Contactează-ne pentru a achiziționa un dispozitiv LifeAlertPlus",
+            ["dashboard.emptyStep2"] = "Conectează dispozitivul la Wi-Fi urmând instrucțiunile de configurare",
+            ["dashboard.emptyStep3"] = "Adaugă o persoană monitorizată din pagina Monitorizați și introduceți numărul de serie al dispozitivului",
+            ["dashboard.emptySupport"] = "Pentru achiziționarea unui dispozitiv, contactează-ne la:",
+            ["dashboard.emptyAddBtn"] = "Adaugă persoană monitorizată",
 
             // Shared card labels
             ["card.pulse"] = "Puls (bpm)",

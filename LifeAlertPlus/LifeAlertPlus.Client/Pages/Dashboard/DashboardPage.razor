@@ -59,6 +59,26 @@
                 <a href="/monitored" class="view-all-link">@T("dashboard.viewAll")</a>
             </div>
 
+            @if (!MonitoredSamples.Any())
+            {
+                <div class="dashboard-empty-state">
+                    <img src="preview.webp" alt="LifeAlertPlus Device" class="empty-device-img" />
+                    <div class="empty-state-content">
+                        <h3>@T("dashboard.emptyTitle")</h3>
+                        <p>@T("dashboard.emptyText")</p>
+                        <ol class="empty-steps">
+                            <li>@T("dashboard.emptyStep1")</li>
+                            <li>@T("dashboard.emptyStep2")</li>
+                            <li>@T("dashboard.emptyStep3")</li>
+                        </ol>
+                        <div class="empty-support">
+                            <span>@T("dashboard.emptySupport")</span>
+                            <a href="mailto:support@lifealertplusiot.com" class="empty-email">support&#64;lifealertplusiot.com</a>
+                        </div>
+                        <a href="/monitored" class="btn-add-first">@T("dashboard.emptyAddBtn")</a>
+                    </div>
+                </div>
+            }
             <div class="monitored-grid">
                 @foreach (var person in MonitoredSamples)
                 {
