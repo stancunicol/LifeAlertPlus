@@ -860,7 +860,7 @@ Contribuțiile sunt agregate astfel:
 \item \textbf{Afecțiunile preexistente} aplică modificatori specifici: de exemplu, în cazul unei aritmii, un puls anormal adaugă o penalizare suplimentară, întrucât are o semnificație clinică mai gravă pentru acel pacient.
 \end{itemize}
 
-Ponderile concrete utilizate în agregare sunt sintetizate în tabelul~\ref{tab:healthscore}. Pragurile la care se raportează condițiile sunt cele personalizate ale pacientului; în lipsa configurării, se folosesc valori clinice implicite (frecvență cardiacă 50--130 bpm, temperatură 35--39\,\textdegree C, saturație minimă 95\%).
+Ponderile concrete utilizate în agregare sunt sintetizate în tabelul~\ref{tab:healthscore}. Pragurile la care se raportează condițiile sunt cele personalizate ale pacientului; în lipsa configurării, se folosesc valori clinice implicite (frecvență cardiacă 50--130 bpm, temperatură 35--39\,\textdegree C, saturație minimă 95\%). Token-ul JWT are o durată de valabilitate configurabilă, cu valoarea implicită de \textbf{60 de minute}. Perioada de retenție a datelor este configurabilă per pacient, cu valoarea implicită de \textbf{365 de zile}.
 
 \begin{table}[H]
 \centering
@@ -915,7 +915,7 @@ Scorul rezultat este limitat la intervalul $[0, 100]$. Avantajul acestui mecanis
 
 \subsubsection{Predicția de tendințe}
 
-Pe lângă evaluarea stării instantanee, sistemul oferă o \textbf{predicție de tendințe pe termen scurt}, menită să anticipeze atingerea unui prag clinic înainte ca acesta să fie efectiv depășit. Serviciul de monitorizare păstrează, pentru fiecare pacient, un buffer cu măsurătorile din ultimele două minute și calculează, pentru fiecare parametru vital (puls, temperatură, \spo), media și \textbf{panta} (rata de variație) pe acest interval. Atunci când panta indică o evoluție constantă către o valoare critică, sistemul estimează timpul rămas până la atingerea pragului prin extrapolare liniară și produce o etichetă explicativă.
+Pe lângă evaluarea stării instantanee, sistemul oferă o \textbf{predicție de tendințe pe termen scurt}. Serviciul de monitorizare păstrează, pentru fiecare pacient, un buffer circular cu măsurătorile din ultimele \textbf{120 de secunde} (maxim 100 de eșantioane per parametru) și calculează, pentru fiecare parametru vital (puls, temperatură, \spo), media și \textbf{panta} (rata de variație) pe acest interval. Atunci când panta indică o evoluție constantă către o valoare critică, sistemul estimează timpul rămas până la atingerea pragului prin extrapolare liniară și produce o etichetă explicativă.
 
 De exemplu, o temperatură în creștere constantă generează predicția \textit{Posibilă febră} sau \textit{Febră în evoluție}, împreună cu numărul aproximativ de secunde până la pragul de 38,5\,\textdegree C; analog, se anticipează tahicardia, bradicardia sau hipoxia. Aceste predicții sunt afișate în interfața de vizualizare a pacientului (figura~\ref{fig:predictii-tendinte}) ca avertismente gradate (atenționare sau pericol) și au rol pur informativ pentru aparținător, fără a declanșa singure notificări, întrucât se bazează pe extrapolare și nu pe o depășire efectivă a pragului. Spre deosebire de health score, care reflectă starea curentă, predicția de tendințe priveşte în viitorul apropiat (de ordinul minutelor).
 
@@ -930,7 +930,15 @@ De exemplu, o temperatură în creștere constantă generează predicția \texti
 
 Detectarea unei situații de risc nu declanșează imediat o notificare. Serviciul de monitorizare a alertelor menține, pentru fiecare persoană monitorizată, un buffer cu măsurătorile recente și aplică un \textbf{prag de persistență}: o stare anormală trebuie să se mențină o durată minimă înainte de a genera o alertă, eliminând astfel valorile tranzitorii cauzate de un contact imperfect al senzorului. Severitatea de bază a alertei este apoi ajustată de motorul de reguli pe baza afecțiunilor pacientului, care poate ridica nivelul de severitate și poate adăuga recomandări specifice.
 
-Odată confirmată, alerta este livrată simultan prin toate canalele activate în preferințele aparținătorului, anume notificare push, email și/sau SMS. Pragul de persistență este de aproximativ două minute în cazul stărilor critice; după ce este atins, toate canalele alese de utilizator primesc notificarea în același moment, fără ca SMS-ul să fie întârziat suplimentar față de celelalte. Atâta vreme cât starea critică persistă, sistemul retrimite notificarea la fiecare două minute; pentru alertele non-critice, un mecanism de \textbf{cooldown} împiedică retransmiterea aceleiași alerte pentru aceeași persoană într-un interval scurt, evitând inundarea destinatarului cu mesaje. În cazul alertelor critice, sistemul include în notificare și informații despre cel mai apropiat spital față de poziția pacientului. Întregul flux, de la achiziția măsurătorii până la livrarea alertei, este ilustrat în figura~\ref{fig:flux-alerta}.
+Odată confirmată, alerta este livrată simultan prin toate canalele activate. Valorile exacte ale pragurilor de temporizare sunt:
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Prag de persistență}: 1 minut — o stare anormală trebuie să se mențină cel puțin 2 măsurători consecutive înainte de a genera o notificare;
+\item \textbf{Prag SMS critic}: 2 minute — canalul SMS este activat doar dacă starea critică persistă cel puțin 2 minute, evitând trimiterea SMS pentru anomalii tranzitorii;
+\item \textbf{Cooldown notificări non-critice}: 10 minute — după o notificare, aceeași alertă nu se retrimite pentru același pacient timp de 10 minute.
+\end{itemize}
+
+Atâta vreme cât starea critică persistă, sistemul retrimite notificarea la fiecare 2 minute. Un mecanism separat de \textbf{cooldown} împiedică retransmiterea alertelor non-critice, evitând inundarea destinatarului. În cazul alertelor critice, sistemul include în notificare și informații despre cel mai apropiat spital față de poziția pacientului. Întregul flux, de la achiziția măsurătorii până la livrarea alertei, este ilustrat în figura~\ref{fig:flux-alerta}.
 
 \begin{figure}[H]
 \centering
@@ -1016,7 +1024,7 @@ Pe baza acestui profil, la fiecare măsurătoare nouă serviciul de monitorizare
 \item \textbf{Activitate nocturnă}: măsurătoarea curentă este etichetată \texttt{moving} într-o oră în care pacientul doarme de obicei cel puţin 70\% din timp. Acest scenariu poate semnala agitaţie nocturnă, ridicare neaşteptată sau o stare alterată.
 \end{itemize}
 
-Atât profilul cât şi detecţia anomaliilor sunt activate numai dacă există suficiente date istorice pentru ora respectivă (minim 20 de măsurători); pentru pacienţi nou înregistraţi mecanismul rămâne inactiv până se acumulează suficiente date pentru un profil semnificativ statistic. Notificările comportamentale sunt limitate prin acelaşi mecanism de \textit{cooldown} (minim 30 de minute între două notificări de acelaşi tip pentru acelaşi pacient) ca să evite inundarea aparţinătorului.
+Parametrii exacti ai mecanismului sunt: pragul de activitate (pacientul se mișcă în mod obișnuit $\geq$ 65\% din timp la ora respectivă), pragul de somn ($\geq$ 70\% din timp pacientul este staționar cu puls $<$ 75\,bpm), fereastra de inactivitate (ultimele 15 minute), iar detecția anomaliei necesită minimum 20 de înregistrări istorice pentru ora respectivă. Notificările comportamentale sunt limitate printr-un \textit{cooldown} de 30 de minute între două notificări de același tip pentru același pacient, ca să evite inundarea aparținătorului.
 
 \subsubsection{Configurarea rețelelor WiFi de la distanță}
 
@@ -1191,7 +1199,7 @@ Pe lângă transmiterea datelor, firmware-ul implementează și un mecanism de \
 
 Măsurătorile validate sunt acumulate și transmise periodic către backend, la un interval de ordinul zecilor de secunde, printr-o cerere HTTPS de tip POST către endpoint-ul de ingestie. Cererea este autentificată cu o cheie de dispozitiv inclusă într-un antet dedicat, iar conexiunea securizată TLS este validată pe baza unui pachet de certificate inclus în firmware. La un interval mai mare, de ordinul minutelor, dispozitivul trimite un mesaj de tip \textit{heartbeat}, care raportează starea sa tehnică: puterea semnalului WiFi, memoria liberă, timpul de funcționare și numărul de măsurători aflate în coada de așteptare.
 
-Atunci când transmiterea eșuează din cauza lipsei conexiunii, măsurătoarea este salvată într-o \textbf{coadă locală} păstrată în memoria nevolatilă (NVS) a microcontrollerului. Coada are o capacitate maximă fixă, iar la depășirea acesteia cele mai vechi înregistrări sunt suprascrise. La revenirea conexiunii, înregistrările aflate în așteptare sunt transmise treptat, într-un număr limitat la fiecare ciclu de comunicație, pentru a nu suprasolicita rețeaua și a nu întârzia achiziția curentă de date.
+Atunci când transmiterea eșuează din cauza lipsei conexiunii, măsurătoarea este salvată într-o \textbf{coadă locală} păstrată în memoria nevolatilă (NVS) a microcontrollerului. Coada are o capacitate maximă de \textbf{50 de înregistrări}; la depășire, cele mai vechi sunt suprascrise. La revenirea conexiunii, înregistrările se transmit treptat, câte \textbf{5 per ciclu de POST}, pentru a nu suprasolicita rețeaua. Alertele de panică sunt stocate într-o \textbf{coadă separată} cu capacitate maximă de 10 intrări și au prioritate la retransmitere față de măsurătorile obișnuite. Intervalele de funcționare sunt: citire senzori la fiecare \textbf{500\,ms}, POST date la fiecare \textbf{5\,s} și heartbeat la fiecare \textbf{5 minute}.
 
 \subsubsection{Calculul saturației de oxigen (\texorpdfstring{\spo}{SpO2}) în firmware}
 
@@ -1260,7 +1268,7 @@ Autentificarea este gestionată prin token-uri JWT, validate la fiecare cerere p
 Securitatea este întărită prin mai multe mecanisme complementare:
 
 \begin{itemize}[leftmargin=1.5em]
-\item \textbf{Limitarea ratei} (\textit{rate limiting}) restricționează numărul de cereri de autentificare de la același client, atenuând atacurile de tip forță brută;
+\item \textbf{Limitarea ratei} (\textit{rate limiting}) restricționează numărul de cereri de autentificare de la același client, atenuând atacurile de tip forță brută; pentru endpoint-urile IoT, un limitator separat permite maxim \textbf{4 cereri per 60 de secunde per număr de serie}, prevenind inundarea serverului de la un dispozitiv defect;
 \item \textbf{Antete HTTP de securitate} (\texttt{X-Content-Type-Options}, \texttt{X-Frame-Options}, \texttt{Referrer-Policy}, \texttt{X-XSS-Protection}) reduc riscul atacurilor de tip \textit{clickjacking} și XSS;
 \item \textbf{Politica CORS} restrictivă permite accesul la API doar din domeniul aplicației web autorizate; în producție, HTTPS Only este activat pe Azure App Service, astfel că orice cerere HTTP este redirecționată automat la HTTPS;
 \item \textbf{Cheia de dispozitiv ESP} (\texttt{X-Device-Key}): toate endpoint-urile expuse dispozitivelor IoT sunt protejate printr-o cheie secretă transmisă în antetul cererii, separată de sistemul JWT; cheia este configurată exclusiv în Azure App Settings și în memoria nevolatilă a dispozitivului;
@@ -1574,7 +1582,7 @@ Din pagina de profil, utilizatorul poate activa sau dezactiva independent notifi
 
 \subsubsection{SMS și email}
 
-Trimiterea SMS-urilor este realizată prin integrarea cu platforma de comunicație în cloud \textbf{Twilio}, apelată prin biblioteca oficială a acesteia. Mesajul SMS (figura~\ref{fig:notificare-sms}) conține tipul alertei, numele persoanei monitorizate și valorile vitale relevante, format compact pentru a se încadra într-un singur segment. Email-urile (figura~\ref{fig:notificare-email}), atât notificările, cât și mesajele tranzacționale precum confirmarea contului sau resetarea parolei, sunt trimise printr-un server SMTP, folosind un \textit{template} HTML cu identitatea vizuală a aplicației. Fiecare utilizator poate activa sau dezactiva independent fiecare canal din pagina de setări, iar sistemul respectă aceste preferințe la livrarea fiecărei alerte.
+Trimiterea SMS-urilor este realizată prin integrarea cu platforma de comunicație în cloud \textbf{Twilio}, apelată prin biblioteca oficială a acesteia. Mesajul SMS (figura~\ref{fig:notificare-sms}) conține tipul alertei, numele persoanei monitorizate și valorile vitale relevante, format compact pentru a se încadra într-un singur segment. Email-urile sunt trimise printr-un server SMTP, folosind \textit{template}-uri HTML dedicate cu identitatea vizuală a aplicației. Sistemul implementează \textbf{7 tipuri distincte de email}: (1) confirmarea adresei la înregistrare, (2) resetarea parolei, (3) verificarea noii adrese de email la schimbarea acesteia, (4) notificarea adresei vechi la schimbarea email-ului, (5) alertele medicale, (6) invitația medicului și (7) notificarea la adăugarea unei notițe medicale. Fiecare tip are un template separat, bilingv (română/engleză), selectat în funcție de preferința de limbă a destinatarului. Fiecare utilizator poate activa sau dezactiva independent fiecare canal din pagina de setări, iar sistemul respectă aceste preferințe la livrarea fiecărei alerte.
 
 \begin{figure}[H]
 \centering
