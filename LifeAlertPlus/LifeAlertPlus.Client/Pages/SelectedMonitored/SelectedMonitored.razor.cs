@@ -913,8 +913,6 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             return result;
         }
 
-        private bool ShowDataPoints => false; // points hidden — line only
-
         private void LoadWeeklyChartData(List<MeasurementResponseDTO> measurements)
         {
             var today = DateTime.Now.Date;

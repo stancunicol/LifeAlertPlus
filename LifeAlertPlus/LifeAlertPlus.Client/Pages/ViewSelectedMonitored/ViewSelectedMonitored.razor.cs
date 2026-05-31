@@ -504,11 +504,9 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 double cp1x = pts[i].X + seg;
                 double cp1y = pts[i].Y + m[i] * seg;
                 double cp2x = pts[i + 1].X - seg;
-                double cp2y = pts[i + 1].Y + m[i + 1] * -seg + 0; // keep similar math
+                double cp2y = pts[i + 1].Y - m[i + 1] * seg;
 
-                double cp2y_fixed = pts[i + 1].Y - m[i + 1] * seg;
-
-                path.Append($" C {F(cp1x)} {F(cp1y)}, {F(cp2x)} {F(cp2y_fixed)}, {F(pts[i + 1].X)} {F(pts[i + 1].Y)}");
+                path.Append($" C {F(cp1x)} {F(cp1y)}, {F(cp2x)} {F(cp2y)}, {F(pts[i + 1].X)} {F(pts[i + 1].Y)}");
             }
 
             return path.ToString();
