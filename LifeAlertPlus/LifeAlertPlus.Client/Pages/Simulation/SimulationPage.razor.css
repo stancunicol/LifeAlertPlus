@@ -475,3 +475,34 @@ button.ghost.small {
 		text-align: center;
 	}
 }
+
+.sim-warning-banner {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+	background: #fff3e0;
+	border: 1px solid #ffb74d;
+	border-left: 4px solid #f57c00;
+	border-radius: 8px;
+	padding: 1rem 1.25rem;
+	margin-bottom: 1.5rem;
+}
+
+.sim-warning-icon {
+	font-size: 1.3rem;
+	flex-shrink: 0;
+	margin-top: 1px;
+}
+
+.sim-warning-banner strong {
+	display: block;
+	color: #e65100;
+	margin-bottom: 0.2rem;
+}
+
+.sim-warning-banner p {
+	margin: 0;
+	color: #5d4037;
+	font-size: 0.9rem;
+	line-height: 1.5;
+}

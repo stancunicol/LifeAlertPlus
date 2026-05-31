@@ -167,14 +167,14 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         _          => "info"
     };
 
-    private static string FormatDate(DateTime utc)
+    private string FormatDate(DateTime utc)
     {
         var local = utc.ToLocalTime();
         var diff  = DateTime.Now - local;
 
-        if (diff.TotalMinutes < 1)  return "Acum";
-        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} min";
-        if (diff.TotalHours < 24)   return $"{(int)diff.TotalHours}h";
+        if (diff.TotalMinutes < 1)  return T("time.justNow");
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} {T("time.min")}";
+        if (diff.TotalHours < 24)   return $"{(int)diff.TotalHours}{T("time.h")}";
         if (diff.TotalDays < 7)     return local.ToString("ddd, HH:mm");
         return local.ToString("dd MMM, HH:mm");
     }

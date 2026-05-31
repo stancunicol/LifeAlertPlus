@@ -75,10 +75,13 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private List<ChartDataPoint> HeartRateHistory { get; set; } = new();
         private List<ChartDataPoint> TemperatureHistory { get; set; } = new();
+        private List<ChartDataPoint> SpO2History { get; set; } = new();
         private List<(double X, double Y)> HeartRatePoints { get; set; } = new();
         private List<(double X, double Y)> TemperaturePoints { get; set; } = new();
+        private List<(double X, double Y)> SpO2Points { get; set; } = new();
         private List<TooltipPoint> HrTooltipData { get; set; } = new();
         private List<TooltipPoint> TempTooltipData { get; set; } = new();
+        private List<TooltipPoint> SpO2TooltipData { get; set; } = new();
         private List<Alert> RecentAlerts { get; set; } = new();
         private List<Measurement> RecentMeasurements { get; set; } = new();
         private AIPredictionResponseDTO? AIPrediction { get; set; }
@@ -196,14 +199,16 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             await InitTooltipsAsync();
         }
 
-        // Re-project HeartRateHistory / TemperatureHistory onto the new (zoom-aware) X axis.
+        // Re-project HeartRateHistory / TemperatureHistory / SpO2History onto the new (zoom-aware) X axis.
         // No re-fetch from the API is needed — the underlying data hasn't changed.
         private void RecomputeChartPoints()
         {
             HeartRatePoints = ComputePointsWithRange(HeartRateHistory, 40, 140);
             TemperaturePoints = ComputePointsWithRange(TemperatureHistory, 35, 39);
+            SpO2Points = ComputePointsWithRange(SpO2History, 85, 100);
             HrTooltipData = ComputeTooltipData(HeartRateHistory, 40, 120);
             TempTooltipData = ComputeTooltipData(TemperatureHistory, 35, 39);
+            SpO2TooltipData = ComputeTooltipData(SpO2History, 85, 100);
             _tooltipsInitialized = false;
         }
 
@@ -866,6 +871,22 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 })
                 .OrderBy(p => p.XFraction)
                 .ToList();
+
+            SpO2History = todayMs
+                .Where(m => m.SpO2 > 0)
+                .Select(m =>
+                {
+                    var t = m.CreatedAt.ToLocalTime();
+                    return new ChartDataPoint
+                    {
+                        Day = t.ToString("HH:mm"),
+                        ActualValue = m.SpO2,
+                        HasData = true,
+                        XFraction = t.TimeOfDay.TotalHours / 24.0
+                    };
+                })
+                .OrderBy(p => p.XFraction)
+                .ToList();
         }
 
         private static List<T> SampleEvenly<T>(List<T> source, int count)
@@ -939,6 +960,18 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 ActualValue = tempByDay.TryGetValue(day, out var v) ? v : 0,
                 HasData = tempByDay.ContainsKey(day)
             }).ToList();
+
+            var spo2ByDay = measurements
+                .Where(m => m.CreatedAt.ToLocalTime().Date >= days[0] && m.CreatedAt.ToLocalTime().Date <= days[6] && m.SpO2 > 0)
+                .GroupBy(m => m.CreatedAt.ToLocalTime().Date)
+                .ToDictionary(g => g.Key, g => g.Average(m => m.SpO2));
+
+            SpO2History = days.Select(day => new ChartDataPoint
+            {
+                Day = day.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture),
+                ActualValue = spo2ByDay.TryGetValue(day, out var v) ? v : 0,
+                HasData = spo2ByDay.ContainsKey(day)
+            }).ToList();
         }
 
         private async Task SwitchChartView(ChartViewMode mode)
@@ -948,10 +981,13 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             _dayOffset = 0;
             HeartRateHistory = new List<ChartDataPoint>();
             TemperatureHistory = new List<ChartDataPoint>();
+            SpO2History = new List<ChartDataPoint>();
             HeartRatePoints = new List<(double X, double Y)>();
             TemperaturePoints = new List<(double X, double Y)>();
+            SpO2Points = new List<(double X, double Y)>();
             HrTooltipData = new List<TooltipPoint>();
             TempTooltipData = new List<TooltipPoint>();
+            SpO2TooltipData = new List<TooltipPoint>();
             _tooltipsInitialized = false;
             StateHasChanged();
             await Task.Delay(50);
@@ -992,10 +1028,13 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         {
             HeartRateHistory = new List<ChartDataPoint>();
             TemperatureHistory = new List<ChartDataPoint>();
+            SpO2History = new List<ChartDataPoint>();
             HeartRatePoints = new List<(double X, double Y)>();
             TemperaturePoints = new List<(double X, double Y)>();
+            SpO2Points = new List<(double X, double Y)>();
             HrTooltipData = new List<TooltipPoint>();
             TempTooltipData = new List<TooltipPoint>();
+            SpO2TooltipData = new List<TooltipPoint>();
             _tooltipsInitialized = false;
             StateHasChanged();
             await Task.Delay(50);

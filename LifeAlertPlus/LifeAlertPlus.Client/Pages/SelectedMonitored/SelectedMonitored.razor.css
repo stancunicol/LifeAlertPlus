@@ -751,6 +751,11 @@
     box-shadow: 0 0 0 3px rgba(255, 112, 67, 0.2);
 }
 
+.chart-color-dot.spo2 {
+    background: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.2);
+}
+
 .chart-unit-badge {
     font-size: 11px;
     color: #aaa;
@@ -833,6 +838,18 @@
     stroke: #FF7043;
     filter: drop-shadow(0 2px 4px rgba(255, 112, 67, 0.45));
     animation-delay: 0.15s;
+}
+
+.spo2-line {
+    stroke: #1565c0;
+    filter: drop-shadow(0 2px 4px rgba(21, 101, 192, 0.45));
+    animation-delay: 0.30s;
+}
+
+.spo2-dot {
+    fill: white;
+    stroke: #1565c0;
+    stroke-width: 2.5;
 }
 
 /* ── Data dots ──────────────────────────────────────────── */

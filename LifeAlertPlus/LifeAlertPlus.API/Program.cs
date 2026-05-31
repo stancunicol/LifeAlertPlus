@@ -223,6 +223,19 @@ catch (Exception seedEx)
     seedLogger.LogError(seedEx, "Seed failed — app will continue without seed data.");
 }
 
+// Step 3: pre-populează SimulationManager cu ultimele măsurători din DB.
+// Fără acest pas, după orice restart utilizatorii văd "no data" pentru câteva secunde.
+try
+{
+    var simManager = app.Services.GetRequiredService<LifeAlertPlus.API.Services.SimulationManager>();
+    await simManager.SeedFromDatabaseAsync();
+}
+catch (Exception simEx)
+{
+    var simLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    simLogger.LogWarning(simEx, "SimulationManager seeding from DB failed — live data will populate after first ESP POST.");
+}
+
 // Must run before any other middleware so that X-Forwarded-Proto / X-Forwarded-For
 // from Azure's reverse proxy are honoured. Without this the OAuth middleware generates
 // http:// callback URIs that don't match the https:// URI registered in Google Console.

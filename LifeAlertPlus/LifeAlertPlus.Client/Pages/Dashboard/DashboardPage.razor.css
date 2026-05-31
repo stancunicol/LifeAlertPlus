@@ -582,8 +582,8 @@
 }
 
 .empty-device-img {
-    width: 220px;
-    min-width: 180px;
+    width: 300px;
+    min-width: 240px;
     border-radius: 12px;
     object-fit: cover;
     box-shadow: 0 4px 16px rgba(0,0,0,.10);

@@ -72,6 +72,47 @@ namespace LifeAlertPlus.API.Services
             }
         }
 
+        // Populează SimulationManager cu ultimele măsurători din DB la startup.
+        // Astfel, după restart, utilizatorii văd date reale imediat (nu "no data"),
+        // până ESP-ul trimite un nou pachet (~5 secunde).
+        public async Task SeedFromDatabaseAsync()
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
+
+            var monitoreds = await db.Monitoreds
+                .Where(m => !string.IsNullOrWhiteSpace(m.DeviceSerialNumber) && !m.IsArchived)
+                .ToListAsync();
+
+            foreach (var m in monitoreds)
+            {
+                var serial = m.DeviceSerialNumber.Trim();
+                if (_simulatedData.ContainsKey(serial)) continue;
+
+                var last = await db.Measurements
+                    .Where(ms => ms.IdMonitored == m.Id)
+                    .OrderByDescending(ms => ms.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (last == null) continue;
+
+                _simulatedData[serial] = new LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO
+                {
+                    Serial      = serial,
+                    Date        = new DateTimeOffset(last.CreatedAt).ToUnixTimeSeconds(),
+                    IsAvailable = true,
+                    Bpm         = (int)last.Pulse,
+                    Spo2        = (int)last.SpO2,
+                    Temperature = last.Temperature,
+                    Neo6m       = string.IsNullOrWhiteSpace(last.Coordinates) ? null : last.Coordinates,
+                    IsFall      = last.IsFall,
+                    Activity    = last.Activity,
+                    Mpu6050     = new List<int>(),
+                    Gyro        = new List<int>()
+                };
+            }
+        }
+
         public async Task StartSimulationAsync(Guid personId, TimeSpan? interval = null)
         {
             // Check if already running

@@ -15,6 +15,14 @@
 			<span class="tag chip-muted">@T("sim.tools")</span>
 		</div>
 
+		<div class="sim-warning-banner">
+			<span class="sim-warning-icon">⚠️</span>
+			<div>
+				<strong>@T("sim.warningTitle")</strong>
+				<p>@T("sim.warningText")</p>
+			</div>
+		</div>
+
 		@if (IsLoading)
 		{
 			<div class="message-card">@T("sim.loading")</div>
