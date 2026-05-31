@@ -1255,7 +1255,20 @@ Componentele backend-ului sunt înregistrate într-un container de \textbf{injec
 
 \subsubsection{Autentificare și securitate}
 
-Autentificarea este gestionată prin token-uri JWT, validate la fiecare cerere pe baza unei chei secrete. Aplicația acceptă și autentificarea prin OAuth folosind un cont Google. O particularitate de implementare o reprezintă conexiunile SignalR, care, spre deosebire de cererile HTTP obișnuite, transmit token-ul prin șirul de interogare al adresei; backend-ul tratează explicit acest caz. Securitatea este întărită prin mai multe mecanisme complementare. \textbf{Limitarea ratei} (\textit{rate limiting}) restricționează numărul de cereri de autentificare acceptate de la același client într-o fereastră de timp, atenuând atacurile de tip forță brută. Răspunsurile includ \textbf{antete HTTP de securitate}, precum \texttt{X-Content-Type-Options}, \texttt{X-Frame-Options} și \texttt{Referrer-Policy}, care reduc riscul atacurilor de tip \textit{clickjacking} sau de interpretare greșită a conținutului. O \textbf{politică CORS} restrictivă permite accesul la API doar din partea aplicației web autorizate. Un \textbf{gestionar global de excepții} interceptează erorile neprevăzute și returnează un mesaj generic, fără a expune detalii interne care ar putea fi exploatate. De asemenea, întrucât backend-ul este găzduit în spatele unui \textit{reverse proxy}, sunt procesate antetele transmise de acesta, pentru ca redirecționările și fluxul de autentificare OAuth să folosească corect protocolul HTTPS.
+Autentificarea este gestionată prin token-uri JWT, validate la fiecare cerere pe baza unei chei secrete configurate exclusiv în variabilele de mediu ale serverului, nu în codul sursă. Aplicația acceptă și autentificarea prin OAuth folosind un cont Google. O particularitate de implementare o reprezintă conexiunile SignalR, care transmit token-ul prin șirul de interogare al adresei; backend-ul tratează explicit acest caz.
+
+Securitatea este întărită prin mai multe mecanisme complementare:
+
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Limitarea ratei} (\textit{rate limiting}) restricționează numărul de cereri de autentificare de la același client, atenuând atacurile de tip forță brută;
+\item \textbf{Antete HTTP de securitate} (\texttt{X-Content-Type-Options}, \texttt{X-Frame-Options}, \texttt{Referrer-Policy}, \texttt{X-XSS-Protection}) reduc riscul atacurilor de tip \textit{clickjacking} și XSS;
+\item \textbf{Politica CORS} restrictivă permite accesul la API doar din domeniul aplicației web autorizate; în producție, HTTPS Only este activat pe Azure App Service, astfel că orice cerere HTTP este redirecționată automat la HTTPS;
+\item \textbf{Cheia de dispozitiv ESP} (\texttt{X-Device-Key}): toate endpoint-urile expuse dispozitivelor IoT sunt protejate printr-o cheie secretă transmisă în antetul cererii, separată de sistemul JWT; cheia este configurată exclusiv în Azure App Settings și în memoria nevolatilă a dispozitivului;
+\item \textbf{Ștergere logică (soft delete)}: entitățile cu rol identitar (utilizatori, persoane monitorizate) nu sunt șterse fizic, ci primesc marcajul \texttt{DeletedAt}; aceasta respectă dreptul GDPR la portabilitate și permite recuperarea în caz de eroare;
+\item \textbf{VAPID pentru Web Push}: payload-ul notificărilor Web Push este criptat end-to-end între server și browser, prin perechea de chei asimetrice VAPID; subscripțiile sunt unice per browser și eliminate automat la expirare;
+\item \textbf{Gestionar global de excepții}: erorile neprevăzute returnează un mesaj generic, fără detalii interne; excepțiile sunt jurnalizate intern prin \texttt{AuditService} și vizibile administratorului în pagina de jurnal de erori;
+\item \textbf{Accesul bazat pe roluri}: fiecare endpoint verifică rolul utilizatorului (User, Admin) și dreptul de acces la resursa specifică; medicii invitați au acces exclusiv în regim de citire la pacientul pentru care au acceptat invitația.
+\end{itemize}
 
 \subsubsection{Serviciile de fundal}
 
@@ -1496,6 +1509,26 @@ Pe lângă interfața destinată aparținătorilor și medicilor, aplicația inc
 \label{fig:admin-erori}
 \end{figure}
 
+\subsubsection{Arhivarea persoanelor monitorizate}
+
+Aparținătorul poate \textbf{arhiva} o persoană monitorizată atunci când aceasta nu mai necesită monitorizare activă (de exemplu, la transferul permanent într-un centru de îngrijire). Datele istorice sunt păstrate integral, dar persoana nu mai apare în lista activă și nu mai declanșează alerte. O persoană arhivată poate fi \textbf{restaurată} oricând, fără pierderea datelor. Funcționalitatea este accesibilă prin butoane dedicate pe cardul persoanei, cu confirmare printr-un modal înainte de execuție. Persoanele arhivate sunt afișate pe un tab separat, fără indicatori de stare (online/offline).
+
+\subsubsection{Fluxul de acceptare a invitației de medic}
+
+Medicul invitat primește prin email un link unic cu token de expirare. Accesând link-ul, vede datele de bază ale pacientului și poate accepta sau refuza accesul. Dacă acceptă și nu are cont, este redirecționat către înregistrare; după autentificare, accesul la datele pacientului devine activ. Din aceeași pagină, medicul poate adăuga direct o notiță medicală. Invitațiile expirate sau deja folosite returnează un mesaj de eroare specific.
+
+\subsubsection{Consimțământul GDPR la înregistrare}
+
+La crearea unui cont nou, utilizatorul parcurge un \textbf{formular de consimțământ} structurat pe două niveluri: consimțământul general pentru prelucrarea datelor personale (Art. 6 GDPR) și consimțământul special pentru datele de sănătate ale persoanelor monitorizate (Art. 9 GDPR — date de categorie specială). Fără bifarea ambelor căsuțe, înregistrarea nu poate fi finalizată. Consimțămintele sunt stocate cu marcaj temporal în baza de date.
+
+\subsubsection{Fotografia de profil și editarea contului}
+
+Utilizatorii pot încărca o \textbf{fotografie de profil} din pagina de profil; imaginea este stocată pe server și inclusă în token-ul JWT. Dacă nicio fotografie nu este încărcată, inițialele numelui sunt afișate pe un fundal colorat. Pagina de profil permite, de asemenea, modificarea numelui, a numărului de telefon, a adresei de email (cu confirmare prin email nou) și a parolei.
+
+\subsubsection{Pagina de simulări (administrator)}
+
+Administratorii pot porni \textbf{simulări} de date pentru orice dispozitiv, fără a necesita hardware real: datele generate includ o fază de alertă (primele 3 minute, cu valori ce depășesc pragurile) urmată de o fază normală. Pagina include un avertisment vizibil că simulările suprascriu datele reale primite de la dispozitivele fizice, pentru a preveni confuzia în producție.
+
 \subsubsection{Vizualizarea medicului}
 
 Medicul invitat de un aparținător (prin mecanismul descris în subcapitolul 4.4) primește acces \textbf{în regim de citire} la datele pacientului respectiv, printr-o pagină dedicată similară celei a aparținătorului, dar fără controalele de editare a profilului, de configurare a rețelelor WiFi sau de modificare a pragurilor (figura~\ref{fig:vizualizare-medic}). Medicul poate consulta starea curentă, istoricul graficelor de parametri vitali, profilul de activitate și poate primi prin email un export structurat al măsurătorilor pentru un interval de timp selectabil, facilitând astfel evaluarea clinică în afara aplicației.
@@ -1579,6 +1612,24 @@ Testarea sistemului a fost realizată pe mai multe planuri. \textbf{Testarea fun
 Pentru testarea fluxurilor care depind de dispozitivul fizic a fost utilizat un \textbf{mod de simulare}, integrat în aplicație, care permite generarea de măsurători cu valori controlate, fără a fi necesar hardware-ul real. Acest mecanism a permis reproducerea sistematică a scenariilor de risc, anume valori critice de \spo, tahicardie, febră și imobilitate, urmate de verificarea reacției corecte a sistemului în fiecare caz.
 
 \textbf{Performanța modelului de inteligență artificială} a fost evaluată separat, pe setul de date, folosind tehnicile de validare descrise mai jos.
+
+\subsection{Testare automată}
+
+Pe lângă testarea funcțională manuală, aplicația dispune de o suită de \textbf{180 de teste automate}, organizate în două categorii, executate automat la fiecare push în pipeline-ul CI/CD configurat cu GitHub Actions.
+
+\subsubsection{Teste unitare}
+
+Testele unitare verifică izolat comportamentul fiecărui serviciu și controler, folosind obiecte mock (prin biblioteca \textbf{Moq}) pentru a elimina dependențele externe (baza de date, email, SMS). Sunt acoperite: \texttt{AuthenticationService} (înregistrare, autentificare, verificare email, resetare parolă), \texttt{JwtService} (generare și validare token), \texttt{UserService}, \texttt{MeasurementService}, \texttt{MonitoredService}, \texttt{WifiNetworkService} și \texttt{ConditionRuleEngine} (motorul de reguli medicale deterministe). La nivel de controlere REST sunt testate scenariile principale de succes și de eșec pentru \texttt{AuthenticationController}, \texttt{MeasurementController}, \texttt{WifiController} și \texttt{ConfigController}.
+
+Aserțiunile sunt formulate cu biblioteca \textbf{FluentAssertions}, care produce mesaje de eroare explicite în caz de eșec, facilitând identificarea cauzei fără a interpreta stack trace-uri brute.
+
+\subsubsection{Teste de integrare}
+
+Testele de integrare verifică interacțiunea dintre servicii și baza de date, folosind o instanță \textbf{SQLite in-memory} izolată per test (fiecare test pornește cu o bază curată, creată prin \texttt{EnsureCreated}). Sunt acoperite: \texttt{UserRepository} (CRUD utilizatori, autentificare, confirmare email), \texttt{MeasurementRepository} (stocare și interogare măsurători cu filtre temporale), \texttt{WifiNetworkRepository} (adăugare și ștergere rețele WiFi per dispozitiv), \texttt{RetentionCleanupService} (verificarea că job-ul de curățare elimină corect datele mai vechi decât perioada de retenție) și \texttt{NotificationFeedbackService} (ciclul complet de creare, marcare ca \textit{așteptând feedback} și înregistrare a răspunsului utilizatorului).
+
+\subsubsection{Rezultate}
+
+Toate cele 180 de teste trec cu succes în configurația curentă (0 eșuate, 0 sărite). Durata totală de execuție a suitei complete este de aproximativ 24 de secunde, acceptabilă pentru un ciclu CI/CD. Integrarea în GitHub Actions asigură că orice regresie este detectată înainte de publicarea codului în producție.
 
 \subsection{Acuratețea datelor și performanța modelului AI}
 
