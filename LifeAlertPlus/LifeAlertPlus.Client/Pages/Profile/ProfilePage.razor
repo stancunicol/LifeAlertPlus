@@ -113,6 +113,41 @@
             </div>
         </div>
 
+        <div class="profile-section">
+            <div class="section-header">
+                <h2>🔔 @T("profile.notificationsTitle")</h2>
+            </div>
+            <div class="section-content">
+                <div class="notification-toggle-row">
+                    <div class="notification-toggle-info">
+                        <strong>@T("profile.webPushTitle")</strong>
+                        <p>@T("profile.webPushDesc")</p>
+                    </div>
+                    <div class="notification-toggle-actions">
+                        @if (_webPushSupported)
+                        {
+                            @if (_webPushPermission == "denied")
+                            {
+                                <span class="push-status denied">@T("profile.webPushDenied")</span>
+                            }
+                            else if (_webPushSubscribed)
+                            {
+                                <button class="btn-secondary-action" @onclick="UnsubscribeWebPushAsync">@T("profile.webPushDisable")</button>
+                            }
+                            else
+                            {
+                                <button class="btn-primary-action" @onclick="SubscribeWebPushAsync">@T("profile.webPushEnable")</button>
+                            }
+                        }
+                        else
+                        {
+                            <span class="push-status unsupported">@T("profile.webPushUnsupported")</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="profile-section danger-section">
             <div class="section-header">
                 <h2>🔒 @T("profile.gdprZone")</h2>

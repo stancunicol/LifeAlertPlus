@@ -56,10 +56,13 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
         private List<ChartDataPoint> HeartRateHistory { get; set; } = new();
         private List<ChartDataPoint> TemperatureHistory { get; set; } = new();
+        private List<ChartDataPoint> SpO2History { get; set; } = new();
         private List<(double X, double Y)> HeartRatePoints { get; set; } = new();
         private List<(double X, double Y)> TemperaturePoints { get; set; } = new();
+        private List<(double X, double Y)> SpO2Points { get; set; } = new();
         private List<TooltipPoint> HrTooltipData { get; set; } = new();
         private List<TooltipPoint> TempTooltipData { get; set; } = new();
+        private List<TooltipPoint> SpO2TooltipData { get; set; } = new();
         private List<Alert> RecentAlerts { get; set; } = new();
         private List<Measurement> RecentMeasurements { get; set; } = new();
         private string UserFullName = "";
@@ -226,8 +229,10 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
                 HeartRatePoints = ComputePointsWithRange(HeartRateHistory, 40, 120);
                 TemperaturePoints = ComputePointsWithRange(TemperatureHistory, 35, 39);
+                SpO2Points = ComputePointsWithRange(SpO2History, 85, 100);
                 HrTooltipData = ComputeTooltipData(HeartRateHistory, 40, 120);
                 TempTooltipData = ComputeTooltipData(TemperatureHistory, 35, 39);
+                SpO2TooltipData = ComputeTooltipData(SpO2History, 85, 100);
 
                 // Ensure UI updates immediately after data is loaded so points appear
                 await InvokeAsync(StateHasChanged);
@@ -258,10 +263,18 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 XFraction = m.CreatedAt.ToLocalTime().TimeOfDay.TotalHours / 24.0
             }).ToList();
 
-            TemperatureHistory = todayMs.Select(m => new ChartDataPoint
+            TemperatureHistory = todayMs.Where(m => m.Temperature > 0).Select(m => new ChartDataPoint
             {
                 Day = m.CreatedAt.ToLocalTime().ToString("HH:mm"),
                 ActualValue = m.Temperature,
+                HasData = true,
+                XFraction = m.CreatedAt.ToLocalTime().TimeOfDay.TotalHours / 24.0
+            }).ToList();
+
+            SpO2History = todayMs.Where(m => m.SpO2 > 0).Select(m => new ChartDataPoint
+            {
+                Day = m.CreatedAt.ToLocalTime().ToString("HH:mm"),
+                ActualValue = m.SpO2,
                 HasData = true,
                 XFraction = m.CreatedAt.ToLocalTime().TimeOfDay.TotalHours / 24.0
             }).ToList();
@@ -271,20 +284,17 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         {
             var today = DateTime.Now.Date;
 
-            // Find the start of the current week based on user's preferred first day
             int diff = ((int)today.DayOfWeek - (int)_firstDayOfWeek + 7) % 7;
             var weekStart = today.AddDays(-diff);
             var days = Enumerable.Range(0, 7).Select(i => weekStart.AddDays(i)).ToList();
 
-            var hrByDay = measurements
+            var filtered = measurements
                 .Where(m => m.CreatedAt.ToLocalTime().Date >= days[0] && m.CreatedAt.ToLocalTime().Date <= days[6])
-                .GroupBy(m => m.CreatedAt.ToLocalTime().Date)
-                .ToDictionary(g => g.Key, g => g.Average(m => (double)m.Pulse));
+                .ToList();
 
-            var tempByDay = measurements
-                .Where(m => m.CreatedAt.ToLocalTime().Date >= days[0] && m.CreatedAt.ToLocalTime().Date <= days[6])
-                .GroupBy(m => m.CreatedAt.ToLocalTime().Date)
-                .ToDictionary(g => g.Key, g => g.Average(m => m.Temperature));
+            var hrByDay   = filtered.GroupBy(m => m.CreatedAt.ToLocalTime().Date).ToDictionary(g => g.Key, g => g.Average(m => (double)m.Pulse));
+            var tempByDay = filtered.GroupBy(m => m.CreatedAt.ToLocalTime().Date).ToDictionary(g => g.Key, g => g.Average(m => m.Temperature));
+            var spo2ByDay = filtered.Where(m => m.SpO2 > 0).GroupBy(m => m.CreatedAt.ToLocalTime().Date).ToDictionary(g => g.Key, g => g.Average(m => m.SpO2));
 
             HeartRateHistory = days.Select(day => new ChartDataPoint
             {
@@ -299,6 +309,13 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 ActualValue = tempByDay.TryGetValue(day, out var v) ? v : 0,
                 HasData = tempByDay.ContainsKey(day)
             }).ToList();
+
+            SpO2History = days.Select(day => new ChartDataPoint
+            {
+                Day = day.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture),
+                ActualValue = spo2ByDay.TryGetValue(day, out var v) ? v : 0,
+                HasData = spo2ByDay.ContainsKey(day)
+            }).ToList();
         }
 
         private async Task SwitchChartView(ChartViewMode mode)
@@ -306,10 +323,13 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             CurrentChartView = mode;
             HeartRateHistory = new List<ChartDataPoint>();
             TemperatureHistory = new List<ChartDataPoint>();
+            SpO2History = new List<ChartDataPoint>();
             HeartRatePoints = new List<(double X, double Y)>();
             TemperaturePoints = new List<(double X, double Y)>();
+            SpO2Points = new List<(double X, double Y)>();
             HrTooltipData = new List<TooltipPoint>();
             TempTooltipData = new List<TooltipPoint>();
+            SpO2TooltipData = new List<TooltipPoint>();
             _tooltipsInitialized = false;
             StateHasChanged();
             await Task.Delay(50);

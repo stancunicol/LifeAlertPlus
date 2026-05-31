@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Configuration;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Shared.DTOs.Responses.User;
 using LifeAlertPlus.Client.Services;
@@ -37,6 +38,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
 
         [Inject]
         private MonitoredApiClient MonitoredApiClient { get; set; } = null!;
+
+        [Inject]
+        private IConfiguration Config { get; set; } = null!;
 
         private UserProfileDTO CurrentUser { get; set; } = new UserProfileDTO();
 
@@ -143,6 +147,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
                 await InvokeAsync(StateHasChanged);
             }
             catch (Exception) { }
+
+            await LoadWebPushStateAsync();
         }
 
         private async Task LoadCurrentUserAsync()
@@ -427,6 +433,53 @@ namespace LifeAlertPlus.Client.Pages.Profile
         {
             ShowDeleteConfirmModalBool = false;
             ShowDeleteInfoModal = true;
+        }
+
+        // ── Web Push ─────────────────────────────────────────────────────────────
+        private bool _webPushSupported;
+        private bool _webPushSubscribed;
+        private string _webPushPermission = "default";
+
+        private async Task LoadWebPushStateAsync()
+        {
+            try
+            {
+                _webPushSupported  = await JSRuntime.InvokeAsync<bool>("webPushIsSupported");
+                _webPushPermission = await JSRuntime.InvokeAsync<string>("webPushGetPermission");
+                if (_webPushSupported && _webPushPermission == "granted")
+                {
+                    var reg = await JSRuntime.InvokeAsync<bool>("eval",
+                        "navigator.serviceWorker.ready.then(r=>r.pushManager.getSubscription()).then(s=>!!s)");
+                    _webPushSubscribed = reg;
+                }
+            }
+            catch { }
+        }
+
+        private async Task SubscribeWebPushAsync()
+        {
+            try
+            {
+                var apiBase = Config["ApiBaseUrl"] ?? "";
+                var token   = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "authToken") ?? "";
+                _webPushSubscribed = await JSRuntime.InvokeAsync<bool>("webPushSubscribe", apiBase, token);
+                _webPushPermission = await JSRuntime.InvokeAsync<string>("webPushGetPermission");
+                StateHasChanged();
+            }
+            catch { }
+        }
+
+        private async Task UnsubscribeWebPushAsync()
+        {
+            try
+            {
+                var apiBase = Config["ApiBaseUrl"] ?? "";
+                var token   = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "authToken") ?? "";
+                await JSRuntime.InvokeVoidAsync("webPushUnsubscribe", apiBase, token);
+                _webPushSubscribed = false;
+                StateHasChanged();
+            }
+            catch { }
         }
 
         // ── GDPR export ──────────────────────────────────────────────────────────
