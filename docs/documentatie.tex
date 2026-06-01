@@ -1153,77 +1153,77 @@ Microcontrollerul ESP32-C3 Mini dispune de un număr limitat de pini GPIO de uz 
 
 \begin{figure}[H]
 \centering
-\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
-  every node/.style={font=\small},
-  mcu/.style={rectangle, draw, thick, fill=blue!10, minimum width=3.2cm, minimum height=5.5cm, align=center},
-  mux/.style={rectangle, draw, thick, fill=orange!15, minimum width=2.2cm, minimum height=4.2cm, align=center},
-  sens/.style={rectangle, draw, fill=green!12, minimum width=2.2cm, minimum height=0.9cm, align=center},
-  pwr/.style={rectangle, draw, fill=yellow!20, minimum width=2.0cm, minimum height=0.7cm, align=center},
-  periph/.style={rectangle, draw, fill=red!10, minimum width=2.0cm, minimum height=0.7cm, align=center},
-  lbl/.style={font=\scriptsize},
-  arr/.style={->, thick},
-  bus/.style={<->, thick, blue!60}]
+  every node/.style={font=\scriptsize},
+  esp/.style={rectangle, draw, thick, fill=blue!10,
+              minimum width=2.8cm, minimum height=1.2cm, align=center},
+  mux/.style={rectangle, draw, thick, fill=orange!15,
+              minimum width=2.6cm, minimum height=2.8cm, align=center},
+  sens/.style={rectangle, draw, fill=green!12,
+               minimum width=3.0cm, minimum height=0.75cm, align=center},
+  pwr/.style={rectangle, draw, fill=yellow!20,
+              minimum width=2.4cm, minimum height=0.75cm, align=center},
+  peri/.style={rectangle, draw, fill=red!8,
+               minimum width=2.4cm, minimum height=0.75cm, align=center},
+  lbl/.style={font=\tiny},
+  arr/.style={-{Latex[length=2mm]}, thick},
+  biarr/.style={{Latex[length=2mm]}-{Latex[length=2mm]}, thick, blue!70}]
 
-% ESP32-C3 Mini
-\node[mcu] (esp) at (0,0) {\textbf{ESP32-C3 Mini}\\[2pt]
-  \scriptsize GPIO8 (SDA)\\
-  \scriptsize GPIO9 (SCL)\\
-  \scriptsize GPIO0 (rezervat)\\
-  \scriptsize GPIO1 (UART1 RX)\\
-  \scriptsize GPIO2 (UART1 TX)\\
-  \scriptsize GPIO3 (BTN1)\\
-  \scriptsize GPIO4 (BTN2)\\
-  \scriptsize GPIO5 (LED gal.)\\
-  \scriptsize GPIO6 (LED verde)};
+%% ── Coloana stângă: periferice ──────────────────────────
+\node[peri] (gps)  at (0, 5.4) {\textbf{NEO-6M GPS}\\\scriptsize UART, 9600 baud};
+\node[peri] (btn1) at (0, 4.2) {\textbf{Buton panică}\\\scriptsize GPIO3, pull-up};
+\node[peri] (btn2) at (0, 3.2) {\textbf{Buton sleep}\\\scriptsize GPIO4, pull-up};
+\node[peri] (ledY) at (0, 2.2) {\textbf{LED galben}\\\scriptsize GPIO5};
+\node[peri] (ledG) at (0, 1.2) {\textbf{LED verde}\\\scriptsize GPIO6};
 
-% TCA9548A Multiplexer
-\node[mux] (mux) at (5,0) {\textbf{TCA9548A}\\[-2pt]
-  \scriptsize(I2C 0x70)\\[4pt]
-  \scriptsize ch0: MAX30100\\
-  \scriptsize ch1: OLED\\
-  \scriptsize ch2: MPU6050\\
-  \scriptsize ch3: MLX90614};
+%% ── Coloana centrală: ESP32-C3 Mini ─────────────────────
+\node[esp]  (esp)  at (5.0, 5.4) {\textbf{ESP32-C3 Mini}\\\scriptsize WiFi, RISC-V};
+\node[esp]  (uart) at (5.0, 4.2) {\scriptsize UART1\\\scriptsize GPIO1(RX) / GPIO2(TX)};
+\node[esp]  (gpio) at (5.0, 3.2) {\scriptsize GPIO3/4/5/6\\\scriptsize butoane \& LED-uri};
+\node[esp]  (i2c)  at (5.0, 2.0) {\scriptsize I2C master\\\scriptsize GPIO8(SDA) / GPIO9(SCL)};
 
-% I2C bus ESP -> MUX
-\draw[bus] (esp.east |- mux.west) -- node[above,lbl]{I2C} (mux.west);
+%% ── Coloana centrală jos: alimentare ────────────────────
+\node[pwr] (lipo)   at (5.0, 0.6) {\textbf{LiPo 3.7\,V / 1500\,mAh}};
+\node[pwr] (tp4056) at (5.0,-0.3) {\textbf{TP4056} — încărcare USB-C};
+\node[pwr] (mt3608) at (5.0,-1.2) {\textbf{MT3608} — boost 3.3\,V};
 
-% Sensors on MUX channels
-\node[sens] (max) at (9, 2.0) {\textbf{MAX30100}\\\scriptsize puls \& \spo\ (0x57)};
-\node[sens] (oled) at (9, 0.7) {\textbf{OLED SSD1306}\\\scriptsize display (0x3C)};
-\node[sens] (mpu) at (9,-0.7) {\textbf{MPU6050}\\\scriptsize IMU (0x68)};
-\node[sens] (mlx) at (9,-2.0) {\textbf{GY-906 MLX90614}\\\scriptsize temp. (0x5A)};
-\draw[arr] (mux.east |- max.west) -- (max.west);
+%% ── Coloana dreaptă: multiplexor + senzori ──────────────
+\node[mux] (mux)  at (10.2, 3.5) {
+  \textbf{TCA9548A}\\[2pt]
+  \scriptsize I2C mux (0x70)\\[4pt]
+  \scriptsize ch\,0: MAX30100\\
+  \scriptsize ch\,1: OLED\\
+  \scriptsize ch\,2: MPU6050\\
+  \scriptsize ch\,3: MLX90614};
+
+\node[sens] (max)  at (14.5, 5.2) {\textbf{MAX30100}\\\scriptsize puls \& \spo\ (0x57)};
+\node[sens] (oled) at (14.5, 4.1) {\textbf{OLED SSD1306}\\\scriptsize display (0x3C)};
+\node[sens] (mpu)  at (14.5, 3.0) {\textbf{MPU6050}\\\scriptsize IMU (0x68)};
+\node[sens] (mlx)  at (14.5, 1.9) {\textbf{GY-906 MLX90614}\\\scriptsize temp. IR (0x5A)};
+
+%% ── Săgeți periferice → ESP ─────────────────────────────
+\draw[biarr] (gps.east)  -- node[above,lbl]{UART1} (esp.west |- gps.east);
+\draw[arr]   (btn1.east) -- (gpio.west |- btn1.east);
+\draw[arr]   (btn2.east) -- (gpio.west |- btn2.east);
+\draw[arr]   (gpio.west |- ledY.east) -- (ledY.east);
+\draw[arr]   (gpio.west |- ledG.east) -- (ledG.east);
+
+%% ── Săgeți alimentare ───────────────────────────────────
+\draw[arr] (lipo.south) -- (tp4056.north);
+\draw[arr] (tp4056.south) -- (mt3608.north);
+\draw[arr] (mt3608.east) to[out=0,in=270] node[right,lbl]{3.3\,V} (i2c.south);
+
+%% ── Săgeată I2C → MUX ───────────────────────────────────
+\draw[biarr] (i2c.east) -- node[above,lbl]{I2C} (mux.west |- i2c.east);
+
+%% ── Săgeți MUX → senzori ────────────────────────────────
+\draw[arr] (mux.east |- max.west)  -- (max.west);
 \draw[arr] (mux.east |- oled.west) -- (oled.west);
-\draw[arr] (mux.east |- mpu.west) -- (mpu.west);
-\draw[arr] (mux.east |- mlx.west) -- (mlx.west);
+\draw[arr] (mux.east |- mpu.west)  -- (mpu.west);
+\draw[arr] (mux.east |- mlx.west)  -- (mlx.west);
 
-% NEO-6M GPS (UART)
-\node[sens] (gps) at (-4.5, 2.2) {\textbf{NEO-6M GPS}\\\scriptsize UART 9600 baud};
-\draw[bus] (esp.west |- gps.east) -- node[above,lbl]{UART1} (gps.east);
-
-% Buttons
-\node[periph] (btn1) at (-4.5, 0.8) {\textbf{BTN Panică}\\\scriptsize GPIO3};
-\node[periph] (btn2) at (-4.5, 0.0) {\textbf{BTN Sleep}\\\scriptsize GPIO4};
-\draw[arr] (btn1.east) -- (esp.west |- btn1.east);
-\draw[arr] (btn2.east) -- (esp.west |- btn2.east);
-
-% LEDs
-\node[periph] (ledY) at (-4.5,-0.8) {\textbf{LED galben}\\\scriptsize GPIO5};
-\node[periph] (ledG) at (-4.5,-1.6) {\textbf{LED verde}\\\scriptsize GPIO6};
-\draw[arr] (esp.west |- ledY.east) -- (ledY.east);
-\draw[arr] (esp.west |- ledG.east) -- (ledG.east);
-
-% Power circuit
-\node[pwr] (lipo) at (-4.5,-3.0) {\textbf{LiPo 3.7V}};
-\node[pwr] (tp4056) at (-4.5,-3.8) {\textbf{TP4056}\\\scriptsize USB-C încărcare};
-\node[pwr] (mt3608) at (0,-3.8) {\textbf{MT3608}\\\scriptsize boost → 3.3V};
-\draw[arr] (lipo) -- (tp4056);
-\draw[arr] (tp4056) -- node[below,lbl]{3.7V} (mt3608);
-\draw[arr] (mt3608.north) -- node[right,lbl]{3.3V} (esp.south);
-
-\end{tikzpicture}}
-\caption{Schema de conexiuni a dispozitivului portabil: ESP32-C3 Mini conectat la multiplexorul TCA9548A (I2C) şi la senzorii pe canale separate, modulul GPS prin UART, butoanele şi LED-urile direct pe GPIO, şi circuitul de alimentare LiPo--TP4056--MT3608.}
+\end{tikzpicture}
+\caption{Schema de conexiuni a dispozitivului portabil: ESP32-C3 Mini conectat prin I2C la multiplexorul TCA9548A și la cei patru senzori pe canale separate, la modulul GPS prin UART, și la butonul de panică, butonul sleep și LED-uri direct pe GPIO. Circuitul de alimentare: LiPo $\to$ TP4056 (încărcare USB-C) $\to$ MT3608 (boost 3.3\,V).}
 \label{fig:schema}
 \end{figure}
 
@@ -1256,19 +1256,15 @@ Dispozitivul include două elemente de feedback vizual şi două elemente de int
 
 Cele două butoane momentane sunt conectate între pinul GPIO şi masă, iar starea de inactivitate (HIGH) este menţinută prin pull-up-urile interne ale microcontrollerului, configurate software. Detecţia apăsării se face pe \textbf{muchie descendentă} (\textit{negative edge}), printr-o întrerupere GPIO, cu \textit{debounce} software de 50\,ms aplicat în handler. Pentru a creşte fiabilitatea, firmware-ul implementează în paralel şi o cale de \textit{polling}: dacă, dintr-un motiv oarecare, întreruperea nu se declanşează, citirea ciclică a nivelului pinului prinde tot tranziţia. Această abordare hibridă a fost utilă în depanare, întrucât a permis distingerea unei probleme de cablaj (pin niciodată \textit{LOW} la apăsare) de o problemă strict software (pin oscilează corect, dar întreruperea nu se înregistrează).
 
-\subsubsection{Diagnoza la pornire şi auto-testarea}
+\subsubsection{Diagnoza la pornire şi auto-testarea senzorilor}
 
-Pentru ca defectele de montaj să poată fi identificate fără instrumente externe, firmware-ul execută la pornire o procedură de auto-testare în două etape, ale cărei rezultate sunt afişate pe portul serial. Prima etapă, denumită \textit{hardware self-test}, verifică elementele active de interacţiune: face LED-ul verde să clipească de mai multe ori (absenţa clipirii indică imediat o defecţiune a LED-ului, a rezistorului sau a cablajului) şi monitorizează timp de 10\,s nivelul pinilor celor două butoane, raportând câte tranziţii \textit{HIGH$\rightarrow$LOW} a detectat pe fiecare. Această ultimă măsurare permite distingerea unui buton blocat (pin niciodată \textit{HIGH}) de un buton deconectat sau cu firul de masă întrerupt (pin niciodată \textit{LOW}).
-
-A doua etapă, denumită \textit{sensor functional test}, depăşeşte simpla verificare a prezenţei pe magistrală (\textit{I2C probe}) şi efectuează o citire reală de la fiecare senzor: extrage un eşantion de la MPU6050 şi îl validează împotriva valorilor \textit{stuck zero} sau \textit{bus railed} (toţi biţii la 0 sau la 1, semn al unei defecţiuni de comunicaţie); trezeşte senzorul MAX30100 şi citeşte FIFO-ul după un interval suficient pentru acumularea câtorva eşantioane; citeşte temperatura de la senzorul GY-906 MLX90614 şi verifică încadrarea valorii în intervalul fiziologic plauzibil; verifică prezenţa caracterelor NMEA pe portul UART al modulului GPS. Pentru fiecare senzor se afişează verdictul (\texttt{FUNCTIONAL}, \texttt{FAULT} sau \texttt{NOT DETECTED}) alături de valorile efective citite, ceea ce face vizibile deopotrivă defectele de cablaj, contactul slab al senzorului şi erorile de configurare.
-
-Pentru cazul particular al unui buton blocat la masă (pin permanent \textit{LOW}), firmware-ul include şi un \textit{guard} care, după 500\,ms de citire continuă, dezactivează butonul respectiv, împiedicând astfel generarea unei avalanşe de evenimente false şi păstrând restul sistemului funcţional până la remedierea defecţiunii hardware.
+Pentru ca defectele de montaj ale senzorilor să poată fi identificate fără instrumente externe, firmware-ul execută la pornire o procedură de \textit{sensor functional test}, ale cărei rezultate sunt afişate pe portul serial. Procedura depăşeşte simpla verificare a prezenţei pe magistrală (\textit{I2C probe}) şi efectuează o citire reală de la fiecare senzor: extrage un eşantion de la MPU6050 şi îl validează împotriva valorilor \textit{stuck zero} sau \textit{bus railed} (toţi biţii la 0 sau la 1, semn al unei defecţiuni de comunicaţie); trezeşte senzorul MAX30100 şi citeşte FIFO-ul după un interval suficient pentru acumularea câtorva eşantioane; citeşte temperatura de la senzorul GY-906 MLX90614 şi verifică încadrarea valorii în intervalul fiziologic plauzibil; verifică prezenţa caracterelor NMEA pe portul UART al modulului GPS. Pentru fiecare senzor se afişează verdictul (\texttt{FUNCTIONAL}, \texttt{FAULT} sau \texttt{NOT DETECTED}) alături de valorile efective citite, ceea ce face vizibile deopotrivă defectele de cablaj, contactul slab al senzorului şi erorile de configurare.
 
 
 
 Firmware-ul dispozitivului portabil a fost dezvoltat în limbajul C++, utilizând framework-ul \textbf{ESP-IDF} (Espressif IoT Development Framework), mediul de dezvoltare oficial pentru microcontrollerele Espressif. Programul rulează peste sistemul de operare în timp real \textbf{FreeRTOS}, care permite organizarea funcționalității în sarcini (\textit{tasks}) concurente și sincronizarea acestora prin grupuri de evenimente; de exemplu, transmiterea datelor către server este declanșată doar după ce sarcina de conectare la rețea semnalează stabilirea conexiunii WiFi.
 
-Pornind de la maparea pinilor şi de la organizarea hardware descrise în subcapitolul 5.1, firmware-ul defineşte o abstractizare uniformă pentru fiecare senzor: o funcţie de iniţializare, o funcţie de citire şi, după caz, funcţii de \textit{wake} / \textit{sleep} pentru gestionarea consumului. Procedura de auto-testare prezentată anterior este apelată o singură dată, la pornire, după care execuţia intră într-o buclă principală responsabilă cu achiziţia periodică şi transmiterea datelor.
+Pornind de la maparea pinilor şi de la organizarea hardware descrise în subcapitolul 5.1, firmware-ul defineşte o abstractizare uniformă pentru fiecare senzor: o funcţie de iniţializare, o funcţie de citire şi, după caz, funcţii de \textit{wake} / \textit{sleep} pentru gestionarea consumului. Procedura de testare a senzorilor este apelată o singură dată, la pornire, după care execuţia intră într-o buclă principală responsabilă cu achiziţia periodică şi transmiterea datelor.
 
 \subsubsection{Citirea senzorilor și multiplexarea I2C}
 

@@ -138,7 +138,6 @@
 #define LED_YELLOW_PIN   5    // problem / offline / sleep indicator
 #define LED_GREEN_PIN    6    // system on indicator
 
-#define HW_SELFTEST      0    // diagnostic LED verde + butoane la boot (dezactivat)
 
 // =============================================================================
 // Global state
@@ -1928,62 +1927,6 @@ static void buttons_setup(void)
     gpio_isr_handler_add((gpio_num_t)BUTTON2_PIN, btn_isr, (void *)(intptr_t)BUTTON2_PIN);
 }
 
-#if HW_SELFTEST
-// Diagnostic la boot: verifică LED verde (GPIO 6) şi nivelul butoanelor (GPIO 3/4).
-static void hw_selftest(void)
-{
-    printf("\n[DIAG] ===== HARDWARE SELF-TEST =====\n");
-
-    // LED verde — clipeşte ambele polarităţi; dacă LED-ul e bun, se vede
-    printf("[DIAG] LED verde GPIO%d: 12 clipiri — urmăreşte LED-ul...\n", LED_GREEN_PIN);
-    for (int i = 0; i < 12; i++) {
-        gpio_set_level((gpio_num_t)LED_GREEN_PIN, i & 1);
-        vTaskDelay(pdMS_TO_TICKS(350));
-    }
-    gpio_set_level((gpio_num_t)LED_GREEN_PIN, 1);
-    printf("[DIAG] Nu a clipit deloc => LED/rezistor/fir defect pe GPIO%d\n", LED_GREEN_PIN);
-
-    // Butoane — citeşte nivelul brut 10s; idle=1 (pull-up), apăsat=0
-    printf("[DIAG] Apasă AMBELE butoane în următoarele 10s...\n");
-    int last1 = -1, last2 = -1;
-    int press1_count = 0, press2_count = 0;   // contor de tranziţii 1->0
-    int idle1_seen = 0,   idle2_seen = 0;     // confirmă pull-up funcţional
-    for (int t = 0; t < 100; t++) {
-        int l1 = gpio_get_level((gpio_num_t)BUTTON1_PIN);
-        int l2 = gpio_get_level((gpio_num_t)BUTTON2_PIN);
-        if (l1 == 1) idle1_seen++;
-        if (l2 == 1) idle2_seen++;
-        if (l1 != last1) {
-            printf("[DIAG]  buton panică GPIO%d = %d\n", BUTTON1_PIN, l1);
-            if (last1 == 1 && l1 == 0) press1_count++;
-            last1 = l1;
-        }
-        if (l2 != last2) {
-            printf("[DIAG]  buton sleep  GPIO%d = %d\n", BUTTON2_PIN, l2);
-            if (last2 == 1 && l2 == 0) press2_count++;
-            last2 = l2;
-        }
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-
-    // Verdict final
-    printf("[DIAG] ----- Rezultat butoane -----\n");
-    if (idle1_seen == 0)
-        printf("[DIAG]  GPIO%d (panică): NICIODATĂ HIGH => pull-up rupt / pin scurtcircuitat la GND\n", BUTTON1_PIN);
-    else if (press1_count == 0)
-        printf("[DIAG]  GPIO%d (panică): %d apăsări detectate (rămas la idle HIGH)\n", BUTTON1_PIN, press1_count);
-    else
-        printf("[DIAG]  GPIO%d (panică): OK, %d apăsări detectate\n", BUTTON1_PIN, press1_count);
-
-    if (idle2_seen == 0)
-        printf("[DIAG]  GPIO%d (sleep) : NICIODATĂ HIGH => pull-up rupt / pin scurtcircuitat la GND\n", BUTTON2_PIN);
-    else if (press2_count == 0)
-        printf("[DIAG]  GPIO%d (sleep) : NICIODATĂ LOW => buton/fir GND defect sau buton neapăsat\n", BUTTON2_PIN);
-    else
-        printf("[DIAG]  GPIO%d (sleep) : OK, %d apăsări detectate\n", BUTTON2_PIN, press2_count);
-    printf("[DIAG] ===== END SELF-TEST =====\n\n");
-}
-#endif
 
 // =============================================================================
 // Sensor functional self-test — verifică prezență + valori sensibile
@@ -2189,10 +2132,6 @@ extern "C" void app_main(void)
     // Buttons
     gpio_install_isr_service(0);
     buttons_setup();
-
-#if HW_SELFTEST
-    hw_selftest();
-#endif
 
     // Verifică prezenţa ŞI funcţionalitatea senzorilor (citire reală de valori)
     sensors_self_test(mpu_ok, max_ok, g_oled_ok, mux_ok);
