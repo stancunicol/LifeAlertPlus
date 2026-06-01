@@ -720,21 +720,21 @@ namespace LifeAlertPlus.API.Services
             int? maxHr = null, int? minHr = null, double? maxTemp = null, double? minTemp = null,
             int? minSpO2 = null)
         {
-            // Global defaults (clinical evidence-based)
-            int critMaxHr   = maxHr   ?? 150;
-            int critMinHr   = minHr   ?? 40;
-            double critMaxT = maxTemp ?? 39.5;
-            double critMinT = minTemp ?? 34.5;
+            // Alert boundary = patient's normal upper/lower bound.
+            // Critical boundary = clearly beyond normal (same buffers as SelectedMonitored UI).
+            int alertMaxHr = maxHr ?? 100;
+            int alertMinHr = minHr ?? 60;
+            int critMaxHr  = maxHr.HasValue ? maxHr.Value + 20 : 150;
+            int critMinHr  = minHr.HasValue ? minHr.Value - 10 : 40;
+
+            double alertMaxT = maxTemp ?? 37.5;
+            double alertMinT = minTemp ?? 36.0;
+            double critMaxT  = maxTemp.HasValue ? maxTemp.Value + 0.5 : 39.5;
+            double critMinT  = minTemp.HasValue ? minTemp.Value - 0.5 : 34.5;
 
             // SpO2: alert at patient's min, critical 5pp below that
             int alertSpO2 = minSpO2 ?? 95;
             int critSpO2  = Math.Max(70, alertSpO2 - 5);
-
-            // Alert thresholds: 85% of critical HR range, 1°C below critical temperature
-            int alertMaxHr   = (int)(critMaxHr * 0.80);
-            int alertMinHr   = (int)(critMinHr * 1.25);
-            double alertMaxT = critMaxT - 1.0;
-            double alertMinT = critMinT + 1.0;
 
             if (isFall) return AlertSeverity.Critical;
             if (spo2 > 0 && spo2 < critSpO2) return AlertSeverity.Critical;

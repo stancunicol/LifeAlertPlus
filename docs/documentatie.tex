@@ -1,4 +1,4 @@
-﻿% !TEX program = xelatex
+% !TEX program = xelatex
 % !TEX options = -interaction=nonstopmode -synctex=1 "%DOC%"
 \documentclass[12pt,a4paper,twoside]{article}
 
@@ -1332,7 +1332,7 @@ Rezultatul este limitat la intervalul $[70, 100]$\%, cu valoarea 0 indicând abs
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Spațiu pentru figură: captura ecranului OLED al dispozitivului, afișând valorile Puls, SpO2, Temperatură, starea rețelei și coada offline.]}
+\includegraphics[width=0.55\textwidth]{../figuri/dispozitiv-offline.jpeg}
 \caption{Ecranul OLED al dispozitivului: pulsul, \spo\ și temperatura sunt afișate în timp real; SpO2 înlocuiește câmpul de baterie nefuncțional.}
 \label{fig:oled-display}
 \end{figure}
@@ -1355,7 +1355,7 @@ La prima pornire, dacă nu există nicio rețea WiFi salvată în memoria nevola
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Spațiu pentru figură: captură de ecran de pe telefon a formularului de provizionare WiFi servit de dispozitiv la adresa 192.168.4.1 — fundal alb, câmpuri SSID și parolă, buton „Salvează și conectează".]}
+\includegraphics[width=0.55\textwidth]{../figuri/conectare-esp.jpeg}
 \caption{Pagina de provizionare WiFi afișată de dispozitiv la adresa \texttt{192.168.4.1}: aparținătorul introduce SSID-ul și parola rețelei de acasă direct din browser-ul telefonului.}
 \label{fig:prov-wifi}
 \end{figure}
@@ -1381,7 +1381,7 @@ Securitatea este întărită prin mai multe mecanisme complementare:
 \item \textbf{Antete HTTP de securitate} (\texttt{X-Content-Type-Options}, \texttt{X-Frame-Options}, \texttt{Referrer-Policy}, \texttt{X-XSS-Protection}) reduc riscul atacurilor de tip \textit{clickjacking} și XSS;
 \item \textbf{Politica CORS} restrictivă permite accesul la API doar din domeniul aplicației web autorizate; în producție, HTTPS Only este activat pe Azure App Service, astfel că orice cerere HTTP este redirecționată automat la HTTPS;
 \item \textbf{Cheia de dispozitiv ESP} (\texttt{X-Device-Key}): toate endpoint-urile expuse dispozitivelor IoT sunt protejate printr-o cheie secretă transmisă în antetul cererii, separată de sistemul JWT; cheia este configurată exclusiv în Azure App Settings și în memoria nevolatilă a dispozitivului;
-\item \textbf{Ștergere logică (soft delete)}: entitățile cu rol identitar (utilizatori, persoane monitorizate) nu sunt șterse fizic, ci primesc marcajul \texttt{DeletedAt}; aceasta respectă dreptul GDPR la portabilitate și permite recuperarea în caz de eroare;
+\item \textbf{Ștergere logică și fizică}: la solicitarea de ștergere, entitățile cu rol identitar (utilizatori, persoane monitorizate) primesc marcajul \texttt{DeletedAt} și sunt excluse din operațiunile normale ale aplicației (\textit{soft delete}), deschizând o perioadă de grație de 7 zile în care un administrator poate reactiva înregistrarea; la expirarea acesteia, job-ul zilnic de curățare execută \textbf{ștergerea fizică definitivă} (\textit{hard delete}) a înregistrării și a tuturor datelor asociate prin cascadă, echilibrând dreptul GDPR la ștergere cu securitatea operațională;
 \item \textbf{VAPID pentru Web Push}: payload-ul notificărilor Web Push este criptat end-to-end între server și browser, prin perechea de chei asimetrice VAPID; subscripțiile sunt unice per browser și eliminate automat la expirare;
 \item \textbf{Gestionar global de excepții}: erorile neprevăzute returnează un mesaj generic, fără detalii interne; excepțiile sunt jurnalizate intern prin \texttt{AuditService} și vizibile administratorului în pagina de jurnal de erori;
 \item \textbf{Accesul bazat pe roluri}: fiecare endpoint verifică rolul utilizatorului (User, Admin) și dreptul de acces la resursa specifică; medicii invitați au acces exclusiv în regim de citire la pacientul pentru care au acceptat invitația.
@@ -1389,9 +1389,9 @@ Securitatea este întărită prin mai multe mecanisme complementare:
 
 \subsubsection{Serviciile de fundal}
 
-API-ul include endpoint-uri noi față de versiunea inițial proiectată. \textbf{Notițele medicale} (DoctorNote) sunt gestionate printr-un controler dedicat: medicul invitat poate adăuga sau actualiza o notiță per pacient, iar la fiecare salvare aparținătorii primesc notificare push în aplicație și prin email. \textbf{Subscripțiile Web Push} sunt gestionate de \texttt{PushController}, care expune endpoint-urile de abonare/dezabonare și un endpoint public pentru cheia VAPID. \textbf{OTA-ul firmware-ului} este gestionat de un endpoint în \texttt{ESPController} care compară versiunea curentă cu cea configurată în Azure App Settings și returnează URL-ul binarului dacă este disponibilă o versiune mai nouă. La pornire, \textbf{SimulationManager} este pre-populat cu ultima măsurătoare din baza de date pentru fiecare dispozitiv activ, astfel încât aplicația să afișeze date imediat după un restart al serverului, fără a aștepta o nouă transmitere de la ESP.
+API-ul include endpoint-uri noi față de versiunea inițial proiectată. \textbf{Notițele medicale} (DoctorNote) sunt gestionate printr-un controler dedicat: medicul invitat poate adăuga sau actualiza o notiță per pacient, iar la fiecare salvare aparținătorii primesc notificare push în aplicație și prin email. \textbf{Subscripțiile Web Push} sunt gestionate de \texttt{PushController}, care expune endpoint-urile de abonare/dezabonare și un endpoint public pentru cheia VAPID. La pornire, \textbf{SimulationManager} este pre-populat cu ultima măsurătoare din baza de date pentru fiecare dispozitiv activ, astfel încât aplicația să afișeze date imediat după un restart al serverului, fără a aștepta o nouă transmitere de la ESP.
 
-Pe lângă controlere, backend-ul include mai multe servicii de fundal care rulează independent de cereri. \textbf{Serviciul de monitorizare a alertelor} (\texttt{AlertMonitorService}) primește fiecare măsurătoare nou primită, ține un buffer cu valorile din ultimele minute pentru fiecare pacient și decide momentul exact de trimitere a notificărilor. În paralel, \textbf{serviciul de profilare a activităţii} (\texttt{ActivityProfileService}) construieşte la prima nevoie un profil orar per pacient din ultimele 7 zile de măsurători şi verifică, la fiecare nouă măsurătoare, dacă eticheta de activitate primită de la dispozitiv abate de la tiparul obişnuit; abaterile semnificative declanşează notificările comportamentale descrise în subcapitolul 4.4. \textbf{Serviciul de raportare zilnică} (\texttt{DailyReportBackgroundService}) rulează o dată pe zi, la miezul nopții în fusul orar local configurat, și trimite prin email un raport sintetic al zilei precedente utilizatorilor care au activat această opțiune. \textbf{Serviciul de retenție a datelor} (\texttt{RetentionCleanupBackgroundService}) rulează tot zilnic și execută ștergerea fizică a măsurătorilor, notificărilor și agregărilor mai vechi decât perioada de retenție configurată pentru fiecare pacient. La pornirea aplicației se execută, de asemenea, popularea inițială a bazei de date cu rolurile și datele de bază.
+Pe lângă controlere, backend-ul include mai multe servicii de fundal care rulează independent de cereri. \textbf{Serviciul de monitorizare a alertelor} (\texttt{AlertMonitorService}) primește fiecare nouă măsurătoare, ține un buffer cu valorile din ultimele minute pentru fiecare pacient și decide momentul exact de trimitere a notificărilor. În paralel, \textbf{serviciul de profilare a activităţii} (\texttt{ActivityProfileService}) construieşte la prima nevoie un profil orar per pacient din ultimele 7 zile de măsurători şi verifică, la fiecare nouă măsurătoare, dacă eticheta de activitate primită de la dispozitiv abate de la tiparul obişnuit; abaterile semnificative declanşează notificările comportamentale descrise în subcapitolul 4.4. \textbf{Serviciul de raportare zilnică} (\texttt{Daily\-Report\-Background\-Service}) rulează o dată pe zi, la miezul nopții, și trimite prin email un raport sintetic al zilei precedente utilizatorilor care au activat această opțiune în setări. \textbf{Serviciul de retenție a datelor} (\texttt{RetentionCleanupBackgroundService}) rulează tot zilnic și execută ștergerea fizică a măsurătorilor, notificărilor și agregărilor mai vechi decât perioada de retenție configurată pentru fiecare pacient. La pornirea aplicației se execută, de asemenea, popularea inițială a bazei de date cu rolurile și datele de bază.
 
 \subsubsection{Contractul cu clientul și optimizări}
 
@@ -1404,11 +1404,44 @@ Fiecare cerere primită de API este validată înainte de a fi procesată: sunt 
 
 \subsection{Microserviciul de inteligență artificială}
 
-Microserviciul de inteligență artificială a fost implementat în limbajul \textbf{Python}, folosind framework-ul web \textbf{FastAPI}. La pornire, serviciul încarcă din fișierul de artefacte modelul Random Forest antrenat, împreună cu obiectele auxiliare necesare (scalatorul Min-Max și codificatorul de etichete), serializate anterior cu biblioteca joblib.
+Microserviciul de inteligență artificială a fost implementat în limbajul \textbf{Python}, folosind framework-ul web \textbf{FastAPI}. La pornire, serviciul încarcă din fișierul de artefacte modelul Random Forest antrenat, împreună cu obiectele auxiliare necesare (scalatorul Min-Max și codificatorul de etichete), serializate anterior cu biblioteca joblib. Procesul de antrenare și evaluare a modelului a fost realizat în mediul \textbf{Google Colab}, care a oferit acces la resurse GPU fără configurare locală și a facilitat documentarea pas cu pas a experimentelor într-un notebook partajabil.
 
 \subsubsection{Antrenarea modelului}
 
-Modelul de inteligență artificială a fost antrenat separat de aplicație, printr-un proces reproductibil. Sunt încărcate mai întâi cele trei seturi de date publice menționate în subcapitolul 2.3, pe baza cărora este generat un set de date sintetic, prin eșantionare cu adăugare de zgomot gaussian; setul cuprinde câteva mii de exemple normale și câteva mii de exemple corespunzătoare stărilor de alertă și critice. Datele sunt împărțite în subseturi de antrenare și de testare, componentele de mișcare sunt normalizate, iar modelul Random Forest este antrenat și evaluat. La final, modelul împreună cu obiectele auxiliare (scalatorul și codificatorul de etichete) sunt serializate într-un singur fișier de artefacte, exact fișierul pe care microserviciul îl încarcă la pornire. Astfel, etapa de antrenare, costisitoare și executată o singură dată, este complet separată de etapa de inferență, rapidă și executată la fiecare măsurătoare primită.
+Modelul de inteligență artificială a fost antrenat separat de aplicație, printr-un proces reproductibil executat în Google Colab. Sunt încărcate mai întâi cele trei seturi de date publice menționate în subcapitolul 2.3, pe baza cărora este generat un \textbf{set de date sintetic} de \textbf{8\,000 de înregistrări} (câte \textasciitilde2\,667 per clasă: NORMAL, ALERT, CRITICAL), prin eșantionare cu adăugare de zgomot gaussian. Setul sintetic este împărțit în \textbf{6\,400 de exemple pentru antrenare} (80\%) și \textbf{1\,600 de exemple pentru testare} (20\%), cu stratificare pentru a păstra distribuția uniformă a claselor în ambele subseturi. Componentele de mișcare sunt normalizate cu un scalar Min-Max, iar modelul Random Forest este antrenat și evaluat.
+
+Un exemplu reprezentativ dintr-un rând al setului de date sintetic este prezentat în tabelul~\ref{tab:data-example}.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Câmp} & \textbf{Valoare exemplu}\\
+\hline
+Puls (bpm) & 92\\
+\hline
+SpO\textsubscript{2} (\%) & 97\\
+\hline
+Temperatură (°C) & 36,8\\
+\hline
+AccelX (LSB) & 420\\
+\hline
+AccelY (LSB) & $-310$\\
+\hline
+AccelZ (LSB) & 16\,100\\
+\hline
+GyroX (LSB) & 55\\
+\hline
+Clasă & NORMAL\\
+\hline
+\end{tabular}
+\caption{Exemplu de înregistrare din setul de date sintetic utilizat la antrenarea modelului.}
+\label{tab:data-example}
+\end{table}
+
+La final, modelul împreună cu obiectele auxiliare (scalatorul și codificatorul de etichete) sunt serializate într-un singur fișier de artefacte, exact fișierul pe care microserviciul îl încarcă la pornire. Astfel, etapa de antrenare, costisitoare și executată o singură dată, este complet separată de etapa de inferență, rapidă și executată la fiecare măsurătoare primită.
 
 \subsubsection{Endpoint-urile serviciului}
 
@@ -1426,14 +1459,14 @@ Aplicația web a fost implementată în \textbf{Blazor WebAssembly}, sub forma u
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Captură: pagina de autentificare — email, parolă, buton Google.]}
+\includegraphics[width=0.75\textwidth]{../figuri/login.png}
 \caption{Pagina de autentificare a aplicației LifeAlert+: câmpuri pentru email și parolă, plus butonul de autentificare prin Google.}
 \label{fig:login}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Captură: pagina de înregistrare — date personale, email, parolă.]}
+\includegraphics[width=0.75\textwidth]{../figuri/register.png}
 \caption{Pagina de înregistrare: utilizatorul completează datele personale, email-ul, numărul de telefon și parola.}
 \label{fig:register}
 \end{figure}
@@ -1444,67 +1477,15 @@ Comunicarea cu API-ul se realizează prin clienți dedicați, construiți peste 
 
 \subsubsection{Autorizarea pe roluri și accesibilitatea}
 
-Accesul la pagini este controlat în funcție de rolul utilizatorului: paginile de administrare sunt disponibile doar administratorilor, iar fiecare aparținător sau medic vede exclusiv persoanele monitorizate la care are drept de acces. Tentativele de acces neautorizat sunt redirecționate către pagina de autentificare. Întrucât aplicația se adresează inclusiv unui public mai puțin familiarizat cu tehnologia, interfața include opțiuni de accesibilitate, precum selectarea limbii (română sau engleză), comutarea limbii fiind reflectată în timp real pe toate paginile, precum și un \textbf{asistent conversațional integrat} (figura~\ref{fig:chatbot}), care răspunde la întrebări frecvente despre utilizarea aplicației, pragurile semnelor vitale și afecțiunile medicale.
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: asistentul conversațional deschis în colțul paginii.]}
-\caption{Asistentul conversațional integrat răspunde la întrebări despre utilizarea aplicației și despre praguri / afecțiuni medicale.}
-\label{fig:chatbot}
-\end{figure}
+Accesul la pagini este controlat în funcție de rolul utilizatorului: paginile de administrare sunt disponibile doar administratorilor, iar fiecare aparținător sau medic vede exclusiv persoanele monitorizate la care are drept de acces. Tentativele de acces neautorizat sunt redirecționate către pagina de autentificare. Interfața oferă posibilitatea selectării limbii (română sau engleză), comutarea aplicându-se imediat pe toate paginile. De asemenea, aplicația include un \textbf{asistent conversațional integrat} care răspunde exclusiv la întrebări în legătură directă cu aplicația, pragurile semnelor vitale și afecțiunile medicale monitorizate, fără a ieși din contextul domeniului.
 
 \subsubsection{Organizarea interfeței și gestionarea stării}
 
-Interfața este construită din componente Blazor reutilizabile, anume antetul, widget-urile și notificările de tip \textit{toast}, combinate în pagini. Starea partajată între pagini, precum datele utilizatorului autentificat sau persoana monitorizată selectată, este menținută de servicii dedicate, înregistrate în containerul de injecție de dependențe al aplicației client. Astfel, informațiile încărcate o singură dată sunt disponibile în întreaga aplicație, fără a fi nevoie de cereri repetate către server la fiecare schimbare de pagină. Pagina principală a aparținătorului este lista persoanelor monitorizate (figura~\ref{fig:persoane-monitorizate}), unde fiecare pacient apare sub forma unui card cu starea curentă a parametrilor vitali, ultima actualizare, indicatorul GPS și statusul detectorului de căderi.
+Interfața este construită din componente Blazor reutilizabile, anume antetul, widget-urile și notificările de tip \textit{toast}, combinate în pagini. Starea partajată între pagini, precum datele utilizatorului autentificat sau persoana monitorizată selectată, este menținută de servicii dedicate, înregistrate în containerul de injecție de dependențe al aplicației client. Astfel, informațiile încărcate o singură dată sunt disponibile în întreaga aplicație, fără a fi nevoie de cereri repetate către server la fiecare schimbare de pagină. Pagina principală a aparținătorului este lista persoanelor monitorizate, unde fiecare pacient apare sub forma unui card cu starea curentă a parametrilor vitali, ultima actualizare, indicatorul GPS și statusul detectorului de căderi.
 
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: lista persoanelor monitorizate cu carduri de stare.]}
-\caption{Pagina cu persoanele monitorizate: cardul rezumă vitalele curente (puls, \spo, temperatură), starea (Stabil / Alertă / Verificare necesară), poziția GPS și momentul ultimei măsurători.}
-\label{fig:persoane-monitorizate}
-\end{figure}
+Tot din această pagină se accesează \textbf{modalul de editare a profilului pacientului}, prin care aparținătorul configurează pragurile personalizate ale fiecărui parametru vital, frecvența de actualizare a dispozitivului și perioada de retenție a datelor. Suplimentar, modalul de \textbf{configurare a rețelelor WiFi} permite înregistrarea a până la trei rețele pe care dispozitivul portabil le va încerca la conectare.
 
-Tot din această pagină se accesează \textbf{modalul de editare a profilului pacientului} (figura~\ref{fig:modal-editare-profil}), prin care aparținătorul configurează pragurile personalizate ale fiecărui parametru vital, frecvența de actualizare a dispozitivului și perioada de retenție a datelor. Suplimentar, modalul de \textbf{configurare a rețelelor WiFi} (figura~\ref{fig:modal-wifi}) permite înregistrarea a până la trei rețele pe care dispozitivul portabil le va încerca la conectare.
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: modalul de editare a profilului pacientului cu praguri.]}
-\caption{Modalul de editare a profilului unei persoane monitorizate, cu pragurile personalizate pentru ritm cardiac, temperatură și \spo, frecvența de actualizare și perioada de retenție.}
-\label{fig:modal-editare-profil}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: modalul de configurare rețele WiFi pentru dispozitiv.]}
-\caption{Modalul de configurare a rețelelor WiFi pentru dispozitivul portabil al pacientului.}
-\label{fig:modal-wifi}
-\end{figure}
-
-\subsubsection{Noi funcționalități ale interfeței}
-
-Pe parcursul dezvoltării au fost adăugate mai multe funcționalități față de concepția inițială.
-
-\textbf{Graficul \spo}: pe lângă graficele de puls și temperatură, pagina de detalii a pacientului include un al treilea grafic pentru saturația de oxigen (culoare albastru, interval 85--100\%), atât în vizualizarea zilnică, cât și în cea săptămânală. Graficul este afișat atât aparținătorului, cât și medicului invitat.
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Spațiu pentru figură: captură a paginii de detalii a pacientului, cu graficul SpO2 afișat sub graficele de puls și temperatură, cu axa Y la 85--100\%.]}
-\caption{Graficul \spo\ adăugat în pagina pacientului, sub graficele de puls și temperatură; valorile provin din calculul realizat în firmware.}
-\label{fig:grafic-spo2}
-\end{figure}
-
-\textbf{Notițe medicale}: medicul invitat poate adăuga notițe medicale direct din pagina pacientului, vizibile ulterior și aparținătorului. La fiecare salvare, aparținătorii primesc notificare push și email. Notițele sunt afișate cronologic, cu adresa de email a medicului și marcajul temporal.
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Spațiu pentru figură: captură a secțiunii „Notițe medicale" din pagina pacientului, cu lista notițelor și butonul de adăugare vizibil medicului.]}
-\caption{Secțiunea de notițe medicale: medicul invitat adaugă observații, aparținătorul le poate consulta, iar ambii primesc notificare la actualizare.}
-\label{fig:notite-medicale}
-\end{figure}
-
-\textbf{Indicator de date vechi}: dacă ultima măsurătoare primită are mai mult de 15 minute vechime, un banner de avertizare apare în pagina pacientului, semnalând că dispozitivul poate fi offline sau în afara rețelei.
-
-\textbf{Căutare după nume}: pagina cu persoanele monitorizate include un câmp de căutare live care filtrează cardurile după numele persoanei, util atunci când lista de pacienți este lungă.
+Pagina de detalii a pacientului include, pe lângă graficele de puls și temperatură, un al treilea grafic pentru saturația de oxigen (culoare albastru, interval 85--100\%), disponibil atât în vizualizarea zilnică, cât și în cea săptămânală, pentru aparținători și medici deopotrivă. Medicul invitat poate adăuga \textbf{notițe medicale} direct din aceeași pagină, vizibile ulterior și aparținătorului; la fiecare salvare, aparținătorii primesc notificare push și email. Dacă ultima măsurătoare are mai mult de 15 minute vechime, un banner de avertizare semnalează că dispozitivul poate fi offline. Pagina cu persoanele monitorizate include și un câmp de căutare live care filtrează cardurile după nume.
 
 \textbf{Onboarding la prima conectare}: la primul login, un modal de bun venit prezintă cei trei pași de configurare inițială (achiziție dispozitiv, configurare WiFi prin SoftAP, adăugare pacient). Modalul nu reapare la sesiunile ulterioare (starea este persistată în \texttt{localStorage}).
 
@@ -1523,14 +1504,7 @@ Reprezentarea grafică a istoricului parametrilor vitali este realizată direct 
 \label{fig:grafice-vitale}
 \end{figure}
 
-Localizarea pacientului în scenarii de alertă este realizată tot prin interoperabilitate JavaScript, integrând harta Google Maps direct în vizualizarea persoanei monitorizate (figura~\ref{fig:harta-pacient}). Marcatorul este actualizat automat la fiecare nouă măsurătoare cu fix GPS valid. Pentru a evita expunerea cheii API în codul client, aceasta nu este inclusă în pachetul aplicației, ci este obținută la nevoie de la backend printr-un endpoint dedicat (servit doar către cereri autentificate), apoi predată bibliotecii de hărți. Exportul rapoartelor în format PDF folosește același mecanism de interoperabilitate.
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: harta Google Maps cu marcatorul poziției pacientului.]}
-\caption{Vizualizarea pe hartă a poziției curente a pacientului în pagina sa de detalii.}
-\label{fig:harta-pacient}
-\end{figure}
+Localizarea pacientului în scenarii de alertă este realizată tot prin interoperabilitate JavaScript, integrând harta Google Maps direct în vizualizarea persoanei monitorizate. Marcatorul este actualizat automat la fiecare nouă măsurătoare cu fix GPS valid. Pentru a evita expunerea cheii API în codul client, aceasta nu este inclusă în pachetul aplicației, ci este obținută la nevoie de la backend printr-un endpoint dedicat (servit doar către cereri autentificate), apoi predată bibliotecii de hărți. Exportul rapoartelor în format PDF folosește același mecanism de interoperabilitate.
 
 Aplicația este configurată ca \textbf{PWA}: include un service worker, un fișier manifest care permite instalarea pe dispozitiv și o pagină dedicată modului offline.
 
@@ -1538,93 +1512,30 @@ Aplicația este configurată ca \textbf{PWA}: include un service worker, un fiș
 
 Pagina de start a aparținătorului după autentificare este \textbf{tabloul de bord} (figura~\ref{fig:dashboard}), care oferă o privire de ansamblu: numărul total de persoane monitorizate, câte se află în stare de alertă, câte sunt stabile, câte sunt offline și numărul de măsurători din ziua curentă, urmate de carduri rezumat pentru cele mai recent actualizate persoane. Tabloul de bord se reîmprospătează periodic, astfel încât starea afișată să rămână actuală fără reîncărcarea manuală a paginii.
 
-Pagina de \textbf{notificări} (figura~\ref{fig:notificari}) listează cronologic alertele și mesajele primite, cu posibilitatea de filtrare după tip și de marcare ca citite; un indicator în antet semnalează notificările necitite. Pagina de \textbf{istoric al măsurătorilor} (figura~\ref{fig:istoric-masuratori}) prezintă tabelar măsurătorile brute ale unei persoane, paginat, util pentru o consultare detaliată dincolo de reprezentarea grafică.
+Pagina de \textbf{notificări} listează cronologic alertele și mesajele primite, cu posibilitatea de filtrare după tip și de marcare ca citite; un indicator în antet semnalează notificările necitite. Pagina de \textbf{istoric al măsurătorilor} prezintă tabelar măsurătorile brute ale unei persoane, paginat, util pentru o consultare detaliată dincolo de reprezentarea grafică.
 
-Pagina de \textbf{profil} (figura~\ref{fig:profil}) permite utilizatorului să își editeze datele personale, fotografia de profil și parola, iar pagina de \textbf{setări} (figura~\ref{fig:setari}) grupează preferințele de cont: limba interfeței, preferințele de notificare (descrise în subcapitolul 5.5), pragurile vitale implicite și prima zi a săptămânii folosită în graficele săptămânale.
+Pagina de \textbf{profil} permite utilizatorului să își editeze datele personale, numărul de telefon, adresa de email (cu confirmare prin email nou) și parola, iar pagina de \textbf{setări} grupează preferințele de cont: limba interfeței, preferințele de notificare (descrise în subcapitolul 5.5), pragurile vitale implicite și prima zi a săptămânii folosită în graficele săptămânale.
 
 \begin{figure}[H]
 \centering
-\figplaceholder{Captură: tabloul de bord al aparținătorului (figuri/dashboard.png) — de inserat.}
+\includegraphics[width=0.85\textwidth]{../figuri/utilizator-dashboard.png}
 \caption{Tabloul de bord al aparținătorului, cu statistici de ansamblu și carduri pentru persoanele recent actualizate.}
 \label{fig:dashboard}
 \end{figure}
 
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: pagina de notificări cu lista alertelor și filtrele.]}
-\caption{Pagina de notificări, cu filtrare după tip și marcarea notificărilor citite.}
-\label{fig:notificari}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: pagina de istoric al măsurătorilor, tabel paginat.]}
-\caption{Pagina de istoric al măsurătorilor, cu afișarea paginată a valorilor brute.}
-\label{fig:istoric-masuratori}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: pagina de profil utilizator.]}
-\caption{Pagina de profil a utilizatorului.}
-\label{fig:profil}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: pagina de setări — limbă, notificări, praguri implicite.]}
-\caption{Pagina de setări a contului, cu preferințele de limbă, notificare și pragurile vitale implicite.}
-\label{fig:setari}
-\end{figure}
-
 \subsubsection{Paginile informative și suportul}
 
-Aplicația include și două pagini cu rol informativ, accesibile din meniul principal. Pagina \textbf{Despre noi} (figura~\ref{fig:despre-noi}) prezintă, sub formă de carduri, misiunea proiectului, problema pe care o adresează și principalele caracteristici. Pagina de \textbf{Suport} (figura~\ref{fig:suport}) oferă o imagine a dispozitivului, datele de contact prin email, o listă de verificări de bază (dispozitiv încărcat, repornit, conexiune la internet) și o secțiune de întrebări frecvente cu soluții pentru problemele comune (de exemplu, lipsa datelor de la dispozitiv).
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: pagina Despre noi cu misiunea și caracteristicile proiectului.]}
-\caption{Pagina „Despre noi”, cu misiunea, problema adresată și caracteristicile proiectului.}
-\label{fig:despre-noi}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: pagina de suport cu datele de contact și ghidul de configurare WiFi.]}
-\caption{Pagina de suport, cu datele de contact, lista de verificări și întrebările frecvente.}
-\label{fig:suport}
-\end{figure}
+Aplicația include și două pagini cu rol informativ, accesibile din meniul principal. Pagina \textbf{Despre noi} prezintă, sub formă de carduri, misiunea proiectului, problema pe care o adresează și principalele caracteristici. Pagina de \textbf{Suport} oferă o imagine a dispozitivului, datele de contact prin email, o listă de verificări de bază și o secțiune de întrebări frecvente cu soluții pentru problemele comune.
 
 \subsubsection{Interfața de administrare}
 
 Pe lângă interfața destinată aparținătorilor și medicilor, aplicația include un set de pagini accesibile exclusiv rolului de \textbf{administrator}, protejate prin verificarea rolului din token-ul JWT la fiecare navigare. Acestea cuprind:
 
 \begin{itemize}[leftmargin=1.5em]
-\item \textbf{Tabloul de bord de administrare} (figura~\ref{fig:admin-dashboard}), care prezintă statistici agregate la nivelul întregului sistem, calculate în timp real din datele reale: numărul total de utilizatori, numărul de persoane monitorizate, câte dispozitive sunt online sau offline, numărul de alerte active și numărul de măsurători din ziua curentă, alături de o listă a notificărilor recente din sistem.
+\item \textbf{Tabloul de bord de administrare}, care prezintă statistici agregate la nivelul întregului sistem: numărul total de utilizatori, persoane monitorizate, dispozitive online/offline, alerte active și măsurători din ziua curentă.
 \item \textbf{Gestionarea utilizatorilor}, prin care administratorul poate vizualiza conturile, le poate edita sau șterge și poate consulta persoanele monitorizate asociate fiecăruia.
-\item \textbf{Jurnalul de activitate} (figura~\ref{fig:admin-istoric}) și \textbf{jurnalul de erori} (figura~\ref{fig:admin-erori}), două vizualizări tabelare cu filtrare și căutare, destinate urmăririi evenimentelor de cont și de sistem, respectiv a erorilor și avertismentelor backend-ului. În stadiul actual, aceste două vizualizări prezintă date reprezentative, structura lor fiind pregătită pentru conectarea ulterioară la un mecanism de audit persistent.
+\item \textbf{Jurnalul de activitate} și \textbf{jurnalul de erori}, două vizualizări tabelare cu filtrare și căutare, destinate urmăririi evenimentelor de cont și de sistem, respectiv a erorilor și avertismentelor backend-ului.
 \end{itemize}
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: tabloul de bord de administrare cu statistici agregate.]}
-\caption{Tabloul de bord de administrare, cu statisticile agregate la nivelul întregului sistem.}
-\label{fig:admin-dashboard}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: jurnalul de activitate admin cu filtrare și căutare.]}
-\caption{Jurnalul de activitate (evenimente de cont și de sistem), cu filtrare și căutare.}
-\label{fig:admin-istoric}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: jurnalul de erori backend cu filtrare după nivel.]}
-\caption{Jurnalul de erori al backend-ului, cu filtrare după nivel (eroare, avertisment, informativ).}
-\label{fig:admin-erori}
-\end{figure}
 
 \subsubsection{Arhivarea persoanelor monitorizate}
 
@@ -1632,15 +1543,22 @@ Aparținătorul poate \textbf{arhiva} o persoană monitorizată atunci când ace
 
 \subsubsection{Fluxul de acceptare a invitației de medic}
 
-Medicul invitat primește prin email un link unic cu token de expirare. Accesând link-ul, vede datele de bază ale pacientului și poate accepta sau refuza accesul. Dacă acceptă și nu are cont, este redirecționat către înregistrare; după autentificare, accesul la datele pacientului devine activ. Din aceeași pagină, medicul poate adăuga direct o notiță medicală. Invitațiile expirate sau deja folosite returnează un mesaj de eroare specific.
+Medicul invitat primește prin email un link unic cu token de expirare. Accesând link-ul, vede datele de bază ale pacientului și poate accepta sau refuza accesul (figura~\ref{fig:invitatie-doctor}). Accesul se realizează exclusiv prin link-ul cu token, fără a fi necesară crearea unui cont. Din aceeași pagină, medicul poate adăuga direct o notiță medicală. Invitațiile expirate sau deja folosite returnează un mesaj de eroare specific.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.80\textwidth]{../figuri/invitatie-doctor.png}
+\caption{Pagina de acceptare a invitației de medic: medicul vede datele de bază ale pacientului și poate accepta sau refuza accesul printr-un link unic cu token de expirare, fără a necesita un cont.}
+\label{fig:invitatie-doctor}
+\end{figure}
 
 \subsubsection{Consimțământul GDPR la înregistrare}
 
-La crearea unui cont nou, utilizatorul parcurge un \textbf{formular de consimțământ} structurat pe două niveluri: consimțământul general pentru prelucrarea datelor personale (Art. 6 GDPR) și consimțământul special pentru datele de sănătate ale persoanelor monitorizate (Art. 9 GDPR — date de categorie specială). Fără bifarea ambelor căsuțe, înregistrarea nu poate fi finalizată. Consimțămintele sunt stocate cu marcaj temporal în baza de date.
+La crearea unui cont nou, utilizatorul bifează o \textbf{căsuță de consimțământ} care acoperă atât prelucrarea datelor personale (Art. 6 GDPR), cât și datele speciale de sănătate ale persoanelor monitorizate (Art. 9 GDPR). Fără bifarea acesteia, înregistrarea nu poate fi finalizată. Consimțământul este stocat cu marcaj temporal în baza de date.
 
-\subsubsection{Fotografia de profil și editarea contului}
+\subsubsection{Editarea contului și schimbarea numărului de telefon}
 
-Utilizatorii pot încărca o \textbf{fotografie de profil} din pagina de profil; imaginea este stocată pe server și inclusă în token-ul JWT. Dacă nicio fotografie nu este încărcată, inițialele numelui sunt afișate pe un fundal colorat. Pagina de profil permite, de asemenea, modificarea numelui, a numărului de telefon, a adresei de email (cu confirmare prin email nou) și a parolei.
+Pagina de profil permite utilizatorului să modifice numele, numărul de telefon, adresa de email (cu confirmare prin email trimis la noua adresă) și parola. Dacă nicio fotografie de profil nu este asociată contului, inițialele numelui sunt afișate pe un fundal colorat în locul imaginii.
 
 \subsubsection{Pagina de simulări (administrator)}
 
@@ -1648,29 +1566,15 @@ Administratorii pot porni \textbf{simulări} de date pentru orice dispozitiv, f�
 
 \subsubsection{Vizualizarea medicului}
 
-Medicul invitat de un aparținător (prin mecanismul descris în subcapitolul 4.4) primește acces \textbf{în regim de citire} la datele pacientului respectiv, printr-o pagină dedicată similară celei a aparținătorului, dar fără controalele de editare a profilului, de configurare a rețelelor WiFi sau de modificare a pragurilor (figura~\ref{fig:vizualizare-medic}). Medicul poate consulta starea curentă, istoricul graficelor de parametri vitali, profilul de activitate și poate primi prin email un export structurat al măsurătorilor pentru un interval de timp selectabil, facilitând astfel evaluarea clinică în afara aplicației.
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: vizualizarea în regim citire a datelor pacientului pentru medic.]}
-\caption{Vizualizarea în regim de citire a datelor pacientului, disponibilă medicului invitat.}
-\label{fig:vizualizare-medic}
-\end{figure}
+Odată acceptată invitația, medicul accesează o pagină dedicată cu aceleași vizualizări ca aparținătorul (vitale curente, grafice, profil de activitate, notițe medicale), dar fără funcțiile de editare a profilului, a pragurilor sau a rețelelor WiFi. Poate solicita prin email un export structurat al măsurătorilor pentru un interval selectabil, util evaluării clinice în afara aplicației.
 
 \subsection{Sistemul de notificări}
 
-Sistemul de notificări implementează alertarea multi-canal descrisă conceptual în subcapitolul 2.4. Logica de declanșare este coordonată de serviciul de monitorizare a alertelor, care decide când și prin ce canale trebuie transmisă o notificare, ținând cont de preferințele fiecărui utilizator. Aceste preferințe sunt expuse într-o pagină dedicată de setări (figura~\ref{fig:setari-notificari}), unde fiecare canal (email, push, SMS) și raportul zilnic pot fi activate sau dezactivate independent printr-un comutator.
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Captură: pagina setări notificări cu comutatoarele email/push/SMS/raport.]}
-\caption{Pagina de setări pentru notificări: comutatoarele permit activarea independentă a email, push, SMS și raport zilnic.}
-\label{fig:setari-notificari}
-\end{figure}
+Sistemul de notificări implementează alertarea multi-canal descrisă conceptual în subcapitolul 2.4. Logica de declanșare este coordonată de serviciul de monitorizare a alertelor, care decide când și prin ce canale trebuie transmisă o notificare, ținând cont de preferințele fiecărui utilizator. Aceste preferințe sunt expuse într-o pagină dedicată de setări, unde fiecare canal (email, push, SMS) și raportul zilnic pot fi activate sau dezactivate independent printr-un comutator.
 
 \subsubsection{Temporizarea alertelor}
 
-Pentru a evita alertele false, serviciul de monitorizare aplică mai multe temporizări. O stare anormală trebuie să persiste o durată minimă, anume pragul de persistență, de aproximativ două minute pentru stările critice, înainte de a genera o notificare, eliminând valorile tranzitorii. La declanșare, alerta este transmisă simultan prin toate canalele activate de utilizator (push, email și SMS), fiecare alertă fiind însoțită de SMS dacă acest canal este selectat; SMS-ul nu este întârziat suplimentar față de celelalte canale. Atâta vreme cât starea critică persistă, notificarea este retrimisă la fiecare două minute; pentru alertele non-critice, un interval de inhibare (\textit{cooldown}) împiedică retransmiterea aceleiași alerte pentru aceeași persoană, eliminând riscul inundării aparținătorului cu mesaje. Pentru aplicarea acestor reguli, serviciul menține în memorie, pentru fiecare persoană monitorizată, un buffer cu măsurătorile din ultimele minute.
+Pentru a evita alertele false, serviciul de monitorizare aplică mai multe temporizări. O stare anormală trebuie să persiste o durată minimă, anume pragul de persistență, de aproximativ două minute pentru stările critice, înainte de a genera o notificare, eliminând valorile tranzitorii. La declanșare, alerta este transmisă simultan prin toate canalele activate de utilizator (push, email și SMS); SMS-ul nu este întârziat suplimentar față de celelalte canale. Atâta vreme cât starea critică persistă, notificarea este retrimisă la fiecare două minute; pentru alertele non-critice, un interval de inhibare (\textit{cooldown}) împiedică retransmiterea aceleiași alerte pentru aceeași persoană, eliminând riscul inundării aparținătorului cu mesaje. Pentru aplicarea acestor reguli, serviciul menține în memorie, pentru fiecare persoană monitorizată, un buffer cu măsurătorile din ultimele minute.
 
 \subsubsection{Notificările push}
 
@@ -1684,36 +1588,36 @@ Din pagina de profil, utilizatorul poate activa sau dezactiva independent notifi
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Captură: toast de notificare push afișat în interfața web.]}
+\includegraphics[width=0.80\textwidth]{../figuri/notificare-push.png}
 \caption{Notificare push afișată în interfața web prin SignalR, imediat ce alerta este declanșată pe server.}
 \label{fig:notificare-push}
 \end{figure}
 
 \subsubsection{SMS și email}
 
-Trimiterea SMS-urilor este realizată prin integrarea cu platforma de comunicație în cloud \textbf{Twilio}, apelată prin biblioteca oficială a acesteia. Mesajul SMS (figura~\ref{fig:notificare-sms}) conține tipul alertei, numele persoanei monitorizate și valorile vitale relevante, format compact pentru a se încadra într-un singur segment. Email-urile sunt trimise printr-un server SMTP, folosind \textit{template}-uri HTML dedicate cu identitatea vizuală a aplicației. Sistemul implementează \textbf{7 tipuri distincte de email}: (1) confirmarea adresei la înregistrare, (2) resetarea parolei, (3) verificarea noii adrese de email la schimbarea acesteia, (4) notificarea adresei vechi la schimbarea email-ului, (5) alertele medicale, (6) invitația medicului și (7) notificarea la adăugarea unei notițe medicale. Fiecare tip are un template separat, bilingv (română/engleză), selectat în funcție de preferința de limbă a destinatarului. Fiecare utilizator poate activa sau dezactiva independent fiecare canal din pagina de setări, iar sistemul respectă aceste preferințe la livrarea fiecărei alerte.
+Trimiterea SMS-urilor este realizată prin integrarea cu platforma de comunicație în cloud \textbf{Twilio}, apelată prin biblioteca oficială a acesteia. Mesajul SMS (figura~\ref{fig:notificare-sms}) conține tipul alertei, numele persoanei monitorizate și valorile vitale relevante, format compact pentru a se încadra într-un singur segment. Email-urile sunt trimise printr-un server SMTP, folosind \textit{template}-uri HTML dedicate cu identitatea vizuală a aplicației. Sistemul implementează \textbf{7 tipuri distincte de email}: (1) confirmarea adresei la înregistrare, (2) resetarea parolei, (3) verificarea noii adrese de email la schimbarea acesteia, (4) notificarea adresei vechi la schimbarea email-ului, (5) alertele medicale, (6) invitația medicului și (7) notificarea la adăugarea unei notițe medicale. Fiecare tip are un template separat, bilingv (română/engleză), selectat în funcție de preferința de limbă a destinatarului. Excepție fac emailul de invitație trimis medicului și emailul de confirmare a adresei la înregistrare, care sunt redactate exclusiv \textbf{în limba română}, întrucât destinatarul poate să nu aibă încă un cont cu preferințe configurate. Fiecare utilizator poate activa sau dezactiva independent fiecare canal din pagina de setări, iar sistemul respectă aceste preferințe la livrarea fiecărei alerte.
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Captură: SMS de alertă primit pe telefonul aparținătorului.]}
+\includegraphics[width=0.60\textwidth]{../figuri/notificare-sms.png}
 \caption{Alertă livrată prin SMS pe telefonul aparținătorului, prin platforma Twilio.}
 \label{fig:notificare-sms}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Captură: email de alertă cu template HTML trimis prin SMTP.]}
+\includegraphics[width=0.80\textwidth]{../figuri/notificare-email.png}
 \caption{Email de alertă cu \textit{template} HTML dedicat, livrat printr-un server SMTP configurat în aplicație.}
 \label{fig:notificare-email}
 \end{figure}
 
 \subsubsection{Raportul zilnic}
 
-Pe lângă alertele declanșate de situații de risc, sistemul generează, pentru utilizatorii care au activat această opțiune dintr-un comutator dedicat din pagina de setări, un \textbf{raport zilnic} de sănătate. Serviciul de fundal corespunzător rulează o dată pe zi, la miezul nopții în fusul orar local configurat în setările serverului (de exemplu, \texttt{Europe/Bucharest}), agregă măsurătorile zilei precedente, anume valorile minime, maxime și medii ale parametrilor vitali, numărul de căderi și de alerte, și trimite sinteza prin email folosind un \textbf{template HTML dedicat}, distinct de cel al notificărilor de alertă. Acest mecanism oferă aparținătorului o imagine de ansamblu chiar și în zilele fără evenimente, fără a fi necesară consultarea activă a aplicației.
+Pe lângă alertele declanșate de situații de risc, sistemul generează, pentru utilizatorii care au activat această opțiune dintr-un comutator dedicat din pagina de setări, un \textbf{raport zilnic} de sănătate. Serviciul de fundal corespunzător rulează o dată pe zi, la miezul nopții în fusul orar local configurat în setările serverului (de exemplu, \texttt{Europe/Bucharest}), agregă măsurătorile zilei precedente, anume valorile minime, maxime și medii ale parametrilor vitali, numărul de căderi și de alerte, și trimite sinteza prin email folosind un \textbf{template HTML dedicat}, distinct de cel al notificărilor de alertă. Raportul este livrat exclusiv prin email în format HTML; nu se generează un fișier PDF atașat. Acest mecanism oferă aparținătorului o imagine de ansamblu chiar și în zilele fără evenimente, fără a fi necesară consultarea activă a aplicației.
 
 \subsubsection{Feedback pentru alarme false}
 
-Pentru a îmbunătăți calitatea sistemului de alertare în timp și pentru a oferi date concrete despre rata reală de alerte false, aplicația implementează o buclă de feedback: atunci când o stare de alertă se rezolvă (vitalele revin la normal), ultima notificare a episodului este marcată automat în baza de date ca \textit{așteptând răspuns}. La următoarea vizită a aparținătorului în aplicație, o componentă plasată în layout-ul principal verifică existența unor notificări marcate și afișează un popup care întreabă explicit dacă alerta a fost reală sau falsă. Răspunsul (\textit{Da, reală}, \textit{Nu, alarmă falsă} sau \textit{Întreabă-mă mai târziu}) este înregistrat pe notificare, iar prima opțiune fixează răspunsul definitiv, în timp ce ultima lasă popup-ul să reapară la sesiunea următoare. Datele etichetate astfel permit, ulterior, calcularea ratei reale de alerte false raportate de utilizatori, metrică folosită și în capitolul de testare al lucrării.
+Pentru a îmbunătăți calitatea sistemului de alertare în timp și pentru a oferi date concrete despre rata reală de alerte false, aplicația implementează o buclă de feedback: atunci când o stare de alertă se rezolvă (vitalele revin la normal), ultima notificare a episodului este marcată automat în baza de date ca \textit{așteptând răspuns}. La următoarea accesare a paginii persoanei monitorizate, un banner vizibil la începutul paginii întreabă explicit dacă alerta a fost reală sau falsă. Răspunsul (\textit{Da, reală}, \textit{Nu, alarmă falsă} sau \textit{Întreabă-mă mai târziu}) este înregistrat pe notificare, iar prima opțiune fixează răspunsul definitiv, în timp ce ultima lasă banner-ul să reapară la accesul ulterior. Datele etichetate astfel permit, ulterior, calcularea ratei reale de alerte false raportate de utilizatori, metrică folosită și în capitolul de testare al lucrării.
 
 \newpage
 \section{Testare și rezultate}

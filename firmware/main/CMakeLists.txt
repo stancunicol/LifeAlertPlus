@@ -3,5 +3,5 @@ idf_component_register(
     INCLUDE_DIRS ""
     PRIV_REQUIRES json esp_http_server driver
                   efuse esp_wifi esp_event esp_http_client mbedtls
-                  nvs_flash esp_timer lwip esp_task_wdt
+                  nvs_flash esp_timer lwip esp_system
 )

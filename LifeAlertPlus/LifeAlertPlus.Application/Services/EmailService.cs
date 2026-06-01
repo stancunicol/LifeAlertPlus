@@ -43,7 +43,7 @@ namespace LifeAlertPlus.Application.Services
             var mailMessage = new MailMessage
             {
                 From = GetSenderAddress(),
-                Subject = "Welcome to LifeAlert+ - Please Verify Your Email",
+                Subject = "LifeAlert+ - Confirmați adresa de email",
                 Body = GenerateRegistrationEmailBody(recipientName, verificationUrl),
                 IsBodyHtml = true
             };
@@ -187,17 +187,17 @@ namespace LifeAlertPlus.Application.Services
                             <p>Because every heartbeat matters</p>
                         </div>
                         <div class='body'>
-                            <h2>Welcome, {recipientName}!</h2>
-                            <p>Thank you for registering with LifeAlert+. Your account has been successfully created.</p>
-                            <p>To complete your registration, please verify your email address by clicking the button below:</p>
+                            <h2>Bun venit, {recipientName}!</h2>
+                            <p>Vă mulțumim că v-ați înregistrat în LifeAlert+. Contul dumneavoastră a fost creat cu succes.</p>
+                            <p>Pentru a finaliza înregistrarea, vă rugăm să confirmați adresa de email prin apăsarea butonului de mai jos:</p>
                             <p style='text-align:center;'>
-                                <a href='{verificationUrl}' class='button'>Verify Email Address</a>
+                                <a href='{verificationUrl}' class='button'>Confirmați adresa de email</a>
                             </p>
-                            <p class='warning'>This verification link will expire in 24 hours.</p>
-                            <p>If you did not create an account, please ignore this email.</p>
+                            <p class='warning'>Linkul de confirmare expiră în 24 de ore.</p>
+                            <p>Dacă nu ați creat un cont, ignorați acest email.</p>
                         </div>
                         <div class='footer'>
-                            <p>This is an automated message from LifeAlert+. Please do not reply to this email.</p>
+                            <p>Acesta este un mesaj automat din partea LifeAlert+. Vă rugăm să nu răspundeți la acest email.</p>
                         </div>
                     </div>
                 </body>

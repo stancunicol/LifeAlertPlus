@@ -246,12 +246,18 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                                 c.EspData?.Max30100?.Count >= 1 ? c.EspData.Max30100[0] : 0,
                                 c.EspData?.Max30100?.Count >= 2 ? c.EspData.Max30100[1] : 0,
                                 c.EspData?.Temperature,
-                                c.EspData?.IsAvailable ?? false) == "Critical");
+                                c.EspData?.IsAvailable ?? false,
+                                c.Person.MinHeartRate, c.Person.MaxHeartRate,
+                                c.Person.MinTemperature, c.Person.MaxTemperature,
+                                c.Person.MinSpO2) == "Critical");
             StableCount    = cards.Count(c => GetStatus(
                                 c.EspData?.Max30100?.Count >= 1 ? c.EspData.Max30100[0] : 0,
                                 c.EspData?.Max30100?.Count >= 2 ? c.EspData.Max30100[1] : 0,
                                 c.EspData?.Temperature,
-                                c.EspData?.IsAvailable ?? false) == "OK");
+                                c.EspData?.IsAvailable ?? false,
+                                c.Person.MinHeartRate, c.Person.MaxHeartRate,
+                                c.Person.MinTemperature, c.Person.MaxTemperature,
+                                c.Person.MinSpO2) == "OK");
 
             // Show only the top 3 people who have at least one persisted measurement,
             // ordered by most recent. People with no data yet stay off the dashboard
@@ -271,7 +277,10 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                 var temperature = espData?.Temperature?.ToString("F1") ?? "N/A";
                 var isOnline = espData?.IsAvailable ?? false;
                 
-                var status = GetStatus(heartRate, spO2Value, espData?.Temperature, isOnline);
+                var status = GetStatus(heartRate, spO2Value, espData?.Temperature, isOnline,
+                    person.MinHeartRate, person.MaxHeartRate,
+                    person.MinTemperature, person.MaxTemperature,
+                    person.MinSpO2);
                 var lastUpdate = GetLastUpdateText(card.LastUpdatedUtc);
 
                 var gps = espData?.Neo6m ?? T("card.noData");
@@ -306,26 +315,35 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         }
     }
 
-    private string GetStatus(int heartRate, int spO2, double? temperature, bool isOnline)
+    private string GetStatus(int heartRate, int spO2, double? temperature, bool isOnline,
+        int? minHr = null, int? maxHr = null,
+        double? minTemp = null, double? maxTemp = null,
+        int? minSpO2 = null)
     {
-        if (!isOnline) return "Warning";
-        
-        // Critical conditions
-        if (heartRate < 50 || heartRate > 100)
+        if (!isOnline) return "Offline";
+
+        int effectiveMinHr  = minHr  ?? 60;
+        int effectiveMaxHr  = maxHr  ?? 100;
+        double effectiveMinT = minTemp ?? 36.0;
+        double effectiveMaxT = maxTemp ?? 37.5;
+        int effectiveMinSpO2 = minSpO2 ?? 95;
+
+        // Critical — same thresholds as SelectedMonitored page
+        if (heartRate > 0 && (heartRate > effectiveMaxHr || heartRate < effectiveMinHr - 10))
             return "Critical";
         if (spO2 > 0 && spO2 < 90)
             return "Critical";
-        if (temperature.HasValue && (temperature < 36.0 || temperature > 37.5))
+        if (temperature.HasValue && (temperature > effectiveMaxT + 0.5 || temperature < effectiveMinT - 0.5))
             return "Critical";
-        
-        // Warning conditions
-        if (heartRate < 60 || heartRate > 90)
+
+        // Warning
+        if (heartRate > 0 && (heartRate > effectiveMaxHr - 10 || heartRate < effectiveMinHr))
             return "Warning";
-        if (spO2 > 0 && spO2 < 95)
+        if (spO2 > 0 && spO2 < effectiveMinSpO2)
             return "Warning";
-        if (temperature.HasValue && (temperature < 36.5 || temperature > 37.0))
+        if (temperature.HasValue && (temperature > effectiveMaxT || temperature < effectiveMinT))
             return "Warning";
-        
+
         return "OK";
     }
 
@@ -370,9 +388,9 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         if (!online) return T("card.statusOffline");
         return status.ToLower() switch
         {
-            "critical" => T("card.statusAlert"),
-            "warning" => T("card.statusCheckNeeded"),
-            _ => T("card.statusStable")
+            "critical" => T("card.statusCritical"),
+            "warning"  => T("card.statusCheckNeeded"),
+            _          => T("card.statusStable")
         };
     }
 

@@ -115,6 +115,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 _pendingFeedback = all.FirstOrDefault(f => f.IdMonitored == PersonId);
             }
             catch { _pendingFeedback = null; }
+            await InvokeAsync(StateHasChanged);
         }
 
         private async Task SubmitFeedbackAsync(bool wasReal)
