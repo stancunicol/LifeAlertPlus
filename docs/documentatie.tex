@@ -32,8 +32,7 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small LifeAlertPlus}
-\fancyhead[R]{\small Stancu Nicol-Alexia}
+\fancyhead[RE,LO]{\small Stancu Nicol-Alexia}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
@@ -137,9 +136,11 @@ WDT & Watchdog Timer, circuit de supraveghere a buclei principale\\
 
 Transformarea digitală a sistemelor de sănătate reprezintă una dintre tendințele cele mai semnificative ale ultimului deceniu. La nivel global, numărul persoanelor diagnosticate cu afecțiuni cronice precum diabetul, hipertensiunea sau bolile cardiovasculare depășește 1,9 miliarde, potrivit datelor Organizației Mondiale a Sănătății (2023). În România, aproximativ 35\% din populație suferă de cel puțin o boală cronică, un procentaj care pune o presiune considerabilă asupra sistemului medical tradițional, bazat în principal pe consultații periodice și internări.
 
-În acest context, tehnologiile Internet of Things (IoT) oferă o alternativă viabilă: monitorizarea continuă a pacienților în afara mediului spitalicesc, prin intermediul senzorilor portabili capabili să măsoare parametri vitali precum ritmul cardiac, saturația oxigenului în sânge (\spo) și temperatura corporală, dar și să detecteze, prin senzori de mișcare, evenimente critice precum căderile, care sunt frecvente și potențial grave în cazul persoanelor vârstnice. Datele colectate sunt transmise în timp real către platforme software care le procesează, le stochează și le analizează, permițând intervenția rapidă în situații critice.
+O categorie deosebit de vulnerabilă o constituie \textbf{persoanele vârstnice}: în România, populația cu vârsta de peste 65 de ani reprezintă aproximativ 20\% din total, iar proiecțiile demografice indică o creștere semnificativă a acestei ponderi în deceniile următoare. Vârstnicii sunt predispuși la afecțiuni cronice multiple, la căderi accidentale și la episoade acute care, nedepistate la timp, pot pune viața în pericol. Caracterul lor adesea singuratic și dificultatea de a accesa prompt serviciile medicale sporesc riscul ca o situație critică să treacă neobservată ore sau zile întregi.
 
-Această abordare reduce costurile de spitalizare, crește autonomia pacientului și îmbunătățește calitatea actului medical prin accesul la date obiective și continue.
+În acest context, tehnologiile Internet of Things (IoT) oferă o alternativă viabilă: monitorizarea continuă a pacienților în afara mediului spitalicesc, prin intermediul senzorilor portabili capabili să măsoare parametri vitali precum ritmul cardiac, saturația oxigenului în sânge (\spo) și temperatura corporală, dar și să detecteze, prin senzori de mișcare, evenimente critice precum căderile. Datele colectate sunt transmise în timp real către platforme software care le procesează, le stochează și le analizează, permițând intervenția rapidă a aparținătorilor sau a serviciilor de urgență.
+
+Această abordare reduce costurile de spitalizare, crește autonomia vârstnicului și îmbunătățește calitatea actului medical prin accesul la date obiective și continue.
 
 \subsection{Motivația alegerii temei}
 
@@ -161,7 +162,7 @@ Pentru realizarea scopului propus, au fost stabilite următoarele obiective:
 
 \textbf{O1}: proiectarea și implementarea unui subsistem de achiziție a datelor de la senzori biomedicali (ritm cardiac, \spo, temperatură corporală) și de la un senzor inerțial pentru detectarea mișcării și a căderilor, precum și a poziției geografice prin GPS, cu transmitere în timp real către un server centralizat.
 
-\textbf{O2}: dezvoltarea unei aplicații web pentru vizualizarea datelor colectate, accesibilă atât pacienților, cât și persoanelor responsabile de monitorizare.
+\textbf{O2}: dezvoltarea unei aplicații web pentru vizualizarea datelor colectate, accesibilă persoanelor responsabile de monitorizare.
 
 \textbf{O3}: definirea și implementarea unui mecanism inteligent de evaluare a stării de sănătate, care combină un model de învățare automată pentru clasificarea stării pacientului cu un indice sintetic original (health score), bazat pe corelarea mai multor parametri vitali și pe praguri de alertă personalizabile.
 
@@ -218,7 +219,7 @@ Din punct de vedere arhitectural, un sistem IoT este organizat pe trei niveluri 
 
 Un aspect critic în sistemele IoT medicale este fiabilitatea comunicației. Spre deosebire de aplicațiile industriale sau de automatizare casnică, întreruperea transmisiei datelor într-un sistem medical poate avea consecințe directe asupra siguranței pacientului. Din acest motiv, arhitecturile IoMT includ în mod obișnuit mecanisme de stocare locală temporară a datelor, care asigură continuitatea înregistrării chiar și în absența conectivității la rețea, cu sincronizare automată la revenirea conexiunii.
 
-În cadrul sistemului dezvoltat în această lucrare, arhitectura IoT este implementată pe trei niveluri corespunzătoare: un dispozitiv portabil bazat pe microcontrollerul ESP32-C3 Mini în rolul de nod de percepție, comunicația WiFi și BLE în rolul nivelului de rețea, și o aplicație web deployată pe Azure în rolul nivelului de aplicație. Dat fiind că sistemul este destinat persoanelor vârstnice, s-a acordat o atenție deosebită simplificării interacțiunii cu dispozitivul, configurarea tehnică fiind realizată o singură dată de aparținător, iar funcționarea ulterioară fiind complet transparentă pentru pacient. Corespondența între cele trei niveluri teoretice și componentele concrete ale sistemului este ilustrată în figura~\ref{fig:iot-layers}.
+În cadrul sistemului dezvoltat în această lucrare, arhitectura IoT este implementată pe trei niveluri corespunzătoare: un dispozitiv portabil bazat pe microcontrollerul ESP32-C3 Mini în rolul de nod de percepție, comunicația WiFi în rolul nivelului de rețea, și o aplicație web deployată pe Azure în rolul nivelului de aplicație. Dat fiind că sistemul este destinat persoanelor vârstnice, s-a acordat o atenție deosebită simplificării interacțiunii cu dispozitivul, configurarea tehnică fiind realizată o singură dată de aparținător, iar funcționarea ulterioară fiind complet transparentă pentru pacient. Corespondența între cele trei niveluri teoretice și componentele concrete ale sistemului este ilustrată în figura~\ref{fig:iot-layers}.
 
 \begin{figure}[H]
 \centering
@@ -230,8 +231,8 @@ Un aspect critic în sistemele IoT medicale este fiabilitatea comunicației. Spr
     app/.style={layer, fill=green!10},
     arrow/.style={-{Latex[length=2.5mm]}, very thick}]
 
-  \node[perc] (perc) {\textbf{Nivelul de percepție}\\\scriptsize dispozitiv portabil ESP32-C3 cu senzorii MAX30100, DS18B20, MPU6050 și NEO-6M};
-  \node[ret, below=of perc] (ret) {\textbf{Nivelul de rețea}\\\scriptsize comunicație WiFi (HTTPS) și BLE pentru livrarea datelor către cloud};
+  \node[perc] (perc) {\textbf{Nivelul de percepție}\\\scriptsize dispozitiv portabil ESP32-C3 cu senzorii MAX30100, GY-906 MLX90614, MPU6050 și NEO-6M};
+  \node[ret, below=of perc] (ret) {\textbf{Nivelul de rețea}\\\scriptsize comunicație WiFi (HTTPS) pentru livrarea datelor către cloud};
   \node[app, below=of ret] (app) {\textbf{Nivelul de aplicație}\\\scriptsize backend ASP.NET Core, microserviciu AI, bază de date PostgreSQL (Neon) și aplicație web Blazor pe Azure};
 
   \draw[arrow] (perc) -- node[right, font=\scriptsize]{date brute de la senzori} (ret);
@@ -247,7 +248,7 @@ Un aspect critic în sistemele IoT medicale este fiabilitatea comunicației. Spr
 
 ESP32-C3 Mini este un microcontroller de dimensiuni reduse, produs de Espressif Systems, bazat pe arhitectura RISC-V pe 32 de biți. Dispune de conectivitate WiFi 802.11 b/g/n și Bluetooth 5.0 Low Energy, ceea ce îl face potrivit pentru aplicații IoT portabile care necesită atât comunicație locală, cât și acces la internet. Consumul redus de energie, dimensiunile compacte și suportul pentru protocoale de comunicație standard precum I2C, SPI și UART îl recomandă ca platformă centrală pentru un dispozitiv de tip brățară medicală.
 
-În cadrul sistemului, ESP32-C3 Mini îndeplinește rolul de unitate centrală de procesare a dispozitivului portabil: colectează datele de la toți senzorii, le procesează local, le afișează pe ecranul OLED și le transmite către serverul din cloud prin WiFi sau, în absența acestuia, prin BLE către telefonul aparținătorului.
+În cadrul sistemului, ESP32-C3 Mini îndeplinește rolul de unitate centrală de procesare a dispozitivului portabil: colectează datele de la toți senzorii, le procesează local, le afișează pe ecranul OLED și le transmite către serverul din cloud prin WiFi.
 
 \subsubsection{Senzorul MAX30100 pentru puls și saturație de oxigen}
 
@@ -255,17 +256,17 @@ MAX30100 este un senzor optic integrat, produs de Maxim Integrated, destinat mă
 
 Comunicația cu microcontrollerul se realizează prin protocolul \textbf{I2C}, la o adresă fixă de 0x57. Tensiunea de alimentare este de 1.8V pentru nucleul digital și 3.3V pentru LED-uri, necesitând atenție la proiectarea schemei electrice. Valorile normale ale parametrilor măsurați sunt între 60 și 100 bătăi pe minut pentru frecvența cardiacă și între 95\% și 100\% pentru \spo, valorile sub 90\% indicând o hipoxemie potențial critică.
 
-\subsubsection{Senzorul DS18B20 pentru temperatura corporală}
+\subsubsection{Senzorul GY-906 MLX90614 pentru temperatura corporală}
 
-DS18B20 este un senzor digital de temperatură produs de Dallas Semiconductor (Maxim Integrated), cu o rezoluție configurabilă între 9 și 12 biți și o precizie de $\pm$0.5\textdegree C în intervalul 0--70\textdegree C. Comunicația se realizează prin protocolul \textbf{1-Wire}, care permite conectarea mai multor senzori pe același fir de date, fiecare identificat printr-un cod unic de 64 de biți. Intervalul de măsurare este de -55\textdegree C până la +125\textdegree C, acoperind cu generozitate atât intervalul temperaturilor corporale normale (36.1\textdegree C până la 37.2\textdegree C), cât și pe cel al temperaturilor febrile (peste 38\textdegree C).
+GY-906 MLX90614 este un senzor infraroșu \textbf{fără contact} pentru măsurarea temperaturii, produs de Melexis, capabil să măsoare temperatura obiectului vizat fără a necesita atingerea acestuia. Senzorul conține atât un termometru infraroșu pentru obiect (câmpul de vizionare 90°), cât și un senzor de temperatură ambiantă, ceea ce permite compensarea temperaturii mediului. Comunicația cu microcontrollerul se realizează prin protocolul \textbf{I2C} (adresă implicită 0x5A), ceea ce permite conectarea senzorului la magistrala comună gestionată de multiplexorul TCA9548A.
 
-Un avantaj important pentru aplicația de față este că DS18B20 poate fi utilizat în variantă impermeabilă, potrivită pentru contact cu pielea, și are un consum extrem de redus în modul de așteptare.
+Precizia de $\pm$0.5\textdegree C în intervalul clinic relevant (36--42\textdegree C) îl face adecvat pentru detectarea temperaturii corporale fără contact. Intervalul de măsurare pentru obiect este de -70\textdegree C până la +380\textdegree C, iar cel pentru temperatura ambiantă de -40\textdegree C până la +125\textdegree C. Consumul de curent este de aproximativ 1.5\,mA în mod activ. Avantajul principal pentru aplicația de față este că măsurătoarea se realizează \textbf{fără contact direct cu pielea}, eliminând disconfortul purtătorului și riscul de contaminare creuciată.
 
 \subsubsection{Senzorul MPU6050 pentru mișcare și accelerație}
 
 MPU6050, produs de InvenSense, este o unitate de măsurare inerțială (IMU) care integrează un accelerometru triaxial și un giroscop triaxial într-un singur circuit, comunicând prin \textbf{I2C} la adresele 0x68 sau 0x69. Accelerometrul măsoară accelerația pe axele X, Y și Z, iar giroscopul măsoară viteza unghiulară, permițând împreună determinarea orientării și a tipului de mișcare al purtătorului.
 
-În contextul acestei lucrări, datele furnizate de MPU6050 sunt utilizate în două scopuri distincte. Primul scop este \textbf{detectarea activității fizice} (mers, repaus, somn), pentru construirea profilului de activitate zilnică al pacientului. Al doilea scop, cu implicații directe asupra siguranței, este \textbf{detectarea căderilor}, un eveniment frecvent și potențial grav în cazul persoanelor vârstnice. Algoritmul de detecție folosește un detector clasic bazat pe praguri aplicate magnitudinii acceleraţiei: o cădere reală combină o scurtă perioadă de \textit{free-fall} (magnitudine sub aproximativ 0,5\,g), un \textit{impact} brusc (magnitudine peste 2,5\,g) și o perioadă ulterioară de \textit{imobilitate} a pacientului (variaţii mici în jurul valorii de 1\,g). Implementarea concretă a acestui algoritm, ca task FreeRTOS dedicat pe microcontroller, este detaliată în subcapitolul 5.2.
+În contextul acestei lucrări, datele furnizate de MPU6050 sunt utilizate în două scopuri distincte. Primul scop este \textbf{detectarea activității fizice} (mers, repaus, somn), pentru construirea profilului de activitate zilnică al pacientului. Al doilea scop, cu implicații directe asupra siguranței, este \textbf{detectarea căderilor}, un eveniment frecvent și potențial grav în cazul persoanelor vârstnice. Algoritmul de detecție folosește un detector clasic bazat pe praguri aplicate magnitudinii acceleraţiei: o cădere reală combină o scurtă perioadă de \textit{free-fall} (magnitudine sub aproximativ 0,5\,g), un \textit{impact} brusc (magnitudine peste 2,5\,g) și o perioadă ulterioară de \textit{imobilitate} a pacientului (variaţii mici în jurul valorii de 1\,g). Implementarea concretă a acestui algoritm, ca task FreeRTOS dedicat pe microcontroller, este detaliată în subcapitolul 5.1.
 
 Interpretarea datelor brute ale senzorului pentru clasificarea activităților este realizată de un modul AI descris în subcapitolul 2.3.
 
@@ -273,11 +274,13 @@ Interpretarea datelor brute ale senzorului pentru clasificarea activităților e
 
 NEO-6M este un modul GPS produs de u-blox, capabil să determine poziția geografică cu o precizie de aproximativ 2.5 metri în condiții favorabile. Comunicația cu microcontrollerul se realizează prin \textbf{UART}, la o rată de 9600 baud implicit, transmițând date în format NMEA 0183. Timpul de achiziție a primului fix GPS (TTFF) este de aproximativ 27 de secunde la pornire rece și sub 1 secundă la pornire caldă.
 
-În cadrul sistemului, modulul GPS servește la localizarea pacientului în scenarii de alertă, permițând aparținătorului să vizualizeze ultima poziție cunoscută în aplicație. Deoarece GPS-ul are un consum relativ ridicat față de ceilalți senzori, frecvența de interogare este configurabilă, reducând impactul asupra autonomiei bateriei.
+O limitare importantă a modulului GPS este că semnalul satelitar \textbf{nu este disponibil în interiorul clădirilor}, în subsoluri sau în zone cu vizibilitate redusă a cerului (zone urbane dens construite, vehicule cu geamuri termoizolante). În aceste condiții frecvente în contextul monitorizării vârstnicilor la domiciliu, modulul nu poate furniza coordonate valide, iar câmpul de localizare rămâne nul în datele transmise. Firmware-ul gestionează această situație prin mecanismul de timeout descris în subcapitolul 5.1: după 5 minute fără fix valid, driverul UART al modulului este oprit pentru a economisi curentul consumat (~30\,mA), iar la fiecare heartbeat se încearcă o nouă obținere a semnalului.
+
+În cadrul sistemului, modulul GPS servește exclusiv la localizarea pacientului în scenarii de alertă (buton panică, alertă critică), permițând aparținătorului să vizualizeze ultima poziție cunoscută în aplicație.
 
 \subsubsection{Multiplexorul I2C TCA9548A}
 
-TCA9548A este un multiplexor I2C pe 8 canale, produs de Texas Instruments, care permite conectarea simultană a mai multor dispozitive I2C cu aceeași adresă la același microcontroller. Această componentă rezolvă conflictele de adresă care apar inevitabil atunci când se conectează mai mulți senzori pe aceeași magistrală I2C; în cazul de față, MAX30100 și MPU6050 utilizează ambele magistrala I2C. Comunicația cu ESP32-C3 se realizează tot prin I2C, la adresa 0x70, iar selectarea canalului activ se face prin scriere software.
+TCA9548A este un multiplexor I2C pe 8 canale, produs de Texas Instruments, care permite conectarea simultană a mai multor dispozitive I2C cu aceeași adresă la același microcontroller. Această componentă rezolvă conflictele de adresă care apar inevitabil atunci când se conectează mai mulți senzori pe aceeași magistrală I2C. În cazul de față, pe canalele multiplexorului sunt conectate: senzorul \textbf{MAX30100} (puls și \spo, adresă 0x57), ecranul \textbf{OLED SSD1306} (adresă 0x3C), senzorul \textbf{MPU6050} (accelerometru și giroscop, adresă 0x68) și senzorul de temperatură \textbf{GY-906 MLX90614} (adresă 0x5A) — toate partajând aceeași pereche de fire SDA/SCL, izolate electric prin multiplexor. Comunicația cu ESP32-C3 se realizează tot prin I2C, la adresa 0x70, iar selectarea canalului activ se face prin scriere software.
 
 \subsubsection{Sistemul de alimentare}
 
@@ -285,14 +288,14 @@ Alimentarea dispozitivului portabil este asigurată de un acumulator \textbf{LiP
 
 \subsubsection{Interfața utilizator pe dispozitiv}
 
-Dispozitivul include două elemente de interfață locală. Un \textbf{ecran OLED} afișează în timp real informații esențiale precum frecvența cardiacă, \spo, temperatura și starea conexiunii, oferind pacientului sau aparținătorului o confirmare vizuală a funcționării. Două \textbf{LED-uri} indică starea sistemului: verde pentru funcționare normală și roșu pentru eroare sau alertă activă.
+Dispozitivul include două elemente de interfață locală. Un \textbf{ecran OLED} afișează în timp real informații esențiale precum frecvența cardiacă, \spo, temperatura și starea conexiunii, oferind pacientului sau aparținătorului o confirmare vizuală a funcționării. Două \textbf{LED-uri} indică starea sistemului: \textbf{verde} pentru funcționare normală și \textbf{galben} pentru eroare, lipsă de rețea sau mod sleep activ.
 
 Interacțiunea fizică cu dispozitivul este limitată la două butoane, în concordanță cu principiul simplității pentru utilizatorul vârstnic: un buton de pornire/oprire și un \textbf{buton de panică}, a cărui apăsare declanșează imediat o alertă către aparținător, indiferent de valorile senzorilor.
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Spațiu pentru figură: fotografia dispozitivului portabil asamblat, cu senzorii, ecranul OLED și butoanele vizibile.]}
-\caption{Dispozitivul portabil LifeAlertPlus.}
+\includegraphics[width=0.72\textwidth]{figuri/interfata_dispozitiv.png}
+\caption{Interfața dispozitivului portabil LifeAlertPlus: ecranul OLED afișând parametrii vitali și starea sistemului, împreună cu LED-urile de stare și butoanele de interacțiune.}
 \label{fig:dispozitiv}
 \end{figure}
 
@@ -368,7 +371,7 @@ Performanța modelului a fost estimată prin \textbf{validare încrucișată str
 
 \subsubsection{Clasificarea activității și arhitectura de tip microserviciu}
 
-Pe lângă evaluarea stării de sănătate, datele de mișcare furnizate de senzorul MPU6050 sunt prelucrate \textbf{pe dispozitiv} pentru a clasifica activitatea purtătorului ca \texttt{moving} sau \texttt{stationary}, și pentru a contribui la detectarea căderilor. Eticheta de activitate este derivată din acumularea abaterii magnitudinii acceleraţiei faţă de gravitaţie ($|\vec{a}| - 1\,g$) peste fereastra de ~5\,s între două POST-uri: media şi maximul abaterii peste această fereastră sunt comparate cu praguri empirice (0,05\,g pentru media de mişcare susţinută, 0,20\,g pentru un vârf izolat), iar eticheta rezultată este inclusă direct în payload-ul JSON trimis backend-ului. Această clasificare reutilizează exact aceleaşi sample-uri pe care fall-detector-ul le citește la 50\,Hz, fără overhead suplimentar. Pe baza acestei etichete, persistată pentru fiecare măsurătoare, backend-ul agregă \textbf{profilul de activitate zilnică} (rata de mişcare şi probabilitatea de somn per oră, pe o fereastră de 14 zile) şi detectează două tipuri de anomalii comportamentale: \textit{inactivitate prelungită} (peste 15 minute fără mişcare într-o oră în care pacientul e de obicei activ) şi \textit{activitate nocturnă} (mişcare detectată într-o oră în care pacientul doarme de obicei).
+Pe lângă evaluarea stării de sănătate, datele de mișcare furnizate de senzorul MPU6050 sunt prelucrate \textbf{pe dispozitiv} pentru a clasifica activitatea purtătorului ca \texttt{moving} sau \texttt{stationary}, și pentru a contribui la detectarea căderilor. Eticheta de activitate este derivată din acumularea abaterii magnitudinii acceleraţiei faţă de gravitaţie ($|\vec{a}| - 1\,g$) peste fereastra de ~5\,s între două POST-uri: media şi maximul abaterii peste această fereastră sunt comparate cu praguri empirice (0,05\,g pentru media de mişcare susţinută, 0,20\,g pentru un vârf izolat), iar eticheta rezultată este inclusă direct în payload-ul JSON trimis backend-ului. Această clasificare reutilizează exact aceleaşi sample-uri pe care fall-detector-ul le citește la 50\,Hz, fără overhead suplimentar. Pe baza acestei etichete, persistată pentru fiecare măsurătoare, backend-ul agregă \textbf{profilul de activitate zilnică} (rata de mişcare şi probabilitatea de somn per oră, pe o fereastră de 7 zile) şi detectează două tipuri de anomalii comportamentale: \textit{inactivitate prelungită} (peste 15 minute fără mişcare într-o oră în care pacientul e de obicei activ) şi \textit{activitate nocturnă} (mişcare detectată într-o oră în care pacientul doarme de obicei).
 
 Din punct de vedere arhitectural, componenta de inteligență artificială propriu-zisă (clasificarea stării vitale în NORMAL/ALERT/CRITICAL şi calculul health score-ului) este implementată ca un \textbf{microserviciu} independent, scris în limbajul Python și expus printr-o interfață REST. Această separare a fost aleasă deliberat: ecosistemul Python oferă cele mai mature biblioteci de învățare automată, iar izolarea modulului AI într-un serviciu propriu permite actualizarea, înlocuirea sau scalarea modelului fără a afecta restul aplicației. Backend-ul aplicației comunică cu microserviciul AI prin cereri HTTP, transmițând valorile senzorilor și primind în răspuns starea prezisă, health score-ul și o explicație textuală a deciziei.
 
@@ -407,7 +410,7 @@ Combinarea celor patru canale asigură redundanță: dacă un canal eșuează sa
 
   \node[src] (alerta) {Alertă confirmată};
 
-  \node[chan, right=2.0cm of alerta, yshift=2.4cm] (push) {Push SignalR\\\scriptsize latență mică, app deschisă};
+  \node[chan, right=2.0cm of alerta, yshift=2.4cm] (push) {Push SignalR\\\scriptsize latență mică, aplicația deschisă};
   \node[chan, right=2.0cm of alerta, yshift=0.8cm] (webpush) {Web Push (VAPID)\\\scriptsize browser în fundal};
   \node[chan, right=2.0cm of alerta, yshift=-0.8cm] (sms) {SMS (Twilio)\\\scriptsize acoperire maximă};
   \node[chan, right=2.0cm of alerta, yshift=-2.4cm] (mail) {Email (SMTP)\\\scriptsize conținut bogat, asincron};
@@ -578,7 +581,7 @@ Acest capitol descrie deciziile de proiectare luate înaintea implementării pro
 
 \subsection{Arhitectura generală}
 
-Sistemul LifeAlertPlus respectă modelul arhitectural pe trei niveluri specific aplicațiilor IoT, prezentat în subcapitolul 2.1. Fiecărui nivel teoretic îi corespunde o componentă concretă: nivelului de percepție îi corespunde dispozitivul portabil bazat pe microcontrollerul ESP32-C3 Mini; nivelului de rețea îi corespund comunicația WiFi și BLE; iar nivelului de aplicație îi corespund backend-ul, microserviciul de inteligență artificială, baza de date și aplicația web, toate găzduite pe infrastructură cloud.
+Sistemul LifeAlertPlus respectă modelul arhitectural pe trei niveluri specific aplicațiilor IoT, prezentat în subcapitolul 2.1. Fiecărui nivel teoretic îi corespunde o componentă concretă: nivelului de percepție îi corespunde dispozitivul portabil bazat pe microcontrollerul ESP32-C3 Mini; nivelului de rețea îi corespunde comunicația WiFi; iar nivelului de aplicație îi corespund backend-ul, microserviciul de inteligență artificială, baza de date și aplicația web, toate găzduite pe infrastructură cloud.
 
 \subsubsection{Separarea în straturi a aplicației software}
 
@@ -646,7 +649,7 @@ Cele trei componente software ale sistemului sunt împachetate fiecare într-o i
 
 \subsubsection{Dispozitivul portabil}
 
-Dispozitivul portabil este construit în jurul microcontrollerului ESP32-C3 Mini și integrează senzorii descriși în subcapitolul 2.2: MAX30100 pentru puls și \spo, DS18B20 pentru temperatură, MPU6050 pentru mișcare și NEO-6M pentru poziție. Microcontrollerul colectează periodic datele de la senzori, calculează local mărimi derivate, le afișează pe ecranul OLED și le transmite către backend. Frecvența de transmitere este configurabilă, fiind stabilită de aparținător din aplicația web. Atunci când conexiunea la internet nu este disponibilă, măsurătorile sunt stocate temporar într-o coadă locală pe dispozitiv și transmise ulterior, la revenirea conexiunii. Dispozitivul trimite periodic și un mesaj de tip \textit{heartbeat}, care raportează starea sa tehnică, anume puterea semnalului, memoria liberă, timpul de funcționare și numărul de măsurători aflate în coada de așteptare.
+Dispozitivul portabil este construit în jurul microcontrollerului ESP32-C3 Mini și integrează senzorii descriși în subcapitolul 2.2: MAX30100 pentru puls și \spo, GY-906 MLX90614 pentru temperatură, MPU6050 pentru mișcare și NEO-6M pentru poziție. Microcontrollerul colectează periodic datele de la senzori, calculează local mărimi derivate, le afișează pe ecranul OLED și le transmite către backend. Frecvența de transmitere este configurabilă, fiind stabilită de aparținător din aplicația web. Atunci când conexiunea la internet nu este disponibilă, măsurătorile sunt stocate temporar într-o coadă locală pe dispozitiv și transmise ulterior, la revenirea conexiunii. Dispozitivul trimite periodic și un mesaj de tip \textit{heartbeat}, care raportează starea sa tehnică, anume puterea semnalului, memoria liberă, timpul de funcționare și numărul de măsurători aflate în coada de așteptare.
 
 \subsubsection{Backend-ul}
 
@@ -1015,12 +1018,12 @@ Pragurile au fost alese empiric pe baza literaturii de specialitate pentru detec
 
 \subsubsection{Profilul de activitate și detecția anomaliilor comportamentale}
 
-Pe lângă măsurătorile instantanee, sistemul construiește pentru fiecare pacient un \textbf{profil de activitate zilnică} agregat pe orele zilei dintr-o fereastră glisantă de 14 zile. Sursa de date este eticheta de activitate (\texttt{moving} / \texttt{stationary}) calculată în firmware pentru fiecare măsurătoare (procedeu descris în subcapitolul de implementare a firmware-ului). Pentru fiecare oră a zilei, serviciul de profilare păstrează trei valori derivate: pulsul mediu, \textbf{rata de mişcare} (proporţia măsurătorilor etichetate \texttt{moving}) şi \textbf{probabilitatea de somn} (proporţia măsurătorilor etichetate \texttt{stationary} la care pulsul este sub 75\,bpm). Profilul este recalculat în fundal o singură dată per pacient, atunci când e folosit prima oară, şi păstrat într-o memorie locală cu expirare la 4 ore pentru a evita interogări repetate pe baza de date.
+Pe lângă măsurătorile instantanee, sistemul construiește pentru fiecare pacient un \textbf{profil de activitate zilnică} agregat pe orele zilei dintr-o fereastră glisantă de 7 zile. Sursa de date este eticheta de activitate (\texttt{moving} / \texttt{stationary}) calculată în firmware pentru fiecare măsurătoare (procedeu descris în subcapitolul de implementare a firmware-ului). Pentru fiecare oră a zilei, serviciul de profilare păstrează trei valori derivate: pulsul mediu, \textbf{rata de mişcare} (proporţia măsurătorilor etichetate \texttt{moving}) şi \textbf{probabilitatea de somn} (proporţia măsurătorilor etichetate \texttt{stationary} la care pulsul este sub 75\,bpm). Profilul este recalculat în fundal o singură dată per pacient, atunci când e folosit prima oară, şi păstrat într-o memorie locală cu expirare la 4 ore pentru a evita interogări repetate pe baza de date.
 
 Pe baza acestui profil, la fiecare măsurătoare nouă serviciul de monitorizare verifică dacă starea curentă se abate semnificativ de la tiparul obişnuit al pacientului la ora respectivă, declanşând una dintre două \textbf{anomalii comportamentale}:
 
 \begin{itemize}[leftmargin=1.5em]
-\item \textbf{Inactivitate prelungită}: în ultimele 15 minute toate măsurătorile au fost etichetate \texttt{stationary}, deşi la ora curentă pacientul se mişcă în mod obişnuit cel puţin 65\% din timp (după profilul de 14 zile). Acest scenariu poate semnala o situaţie de risc (cădere nedetectată, leşin, imobilizare).
+\item \textbf{Inactivitate prelungită}: în ultimele 15 minute toate măsurătorile au fost etichetate \texttt{stationary}, deşi la ora curentă pacientul se mişcă în mod obişnuit cel puţin 65\% din timp (după profilul de 7 zile). Acest scenariu poate semnala o situaţie de risc (cădere nedetectată, leşin, imobilizare).
 \item \textbf{Activitate nocturnă}: măsurătoarea curentă este etichetată \texttt{moving} într-o oră în care pacientul doarme de obicei cel puţin 70\% din timp. Acest scenariu poate semnala agitaţie nocturnă, ridicare neaşteptată sau o stare alterată.
 \end{itemize}
 
@@ -1095,7 +1098,7 @@ Microcontrollerul ESP32-C3 Mini dispune de un număr limitat de pini GPIO de uz 
 \hline
 \textbf{GPIO} & \textbf{Componentă} & \textbf{Observaţii}\\
 \hline
-0  & DS18B20 (1-Wire) & Pull-up extern 4{,}7\,k$\Omega$; mod open-drain\\
+0  & (rezervat / nefolosit) & GPIO 0 eliberat — GY-906 MLX90614 pe magistrala I2C\\
 \hline
 1  & GPS NEO-6M (TX $\rightarrow$ ESP RX) & UART1 RX, 9600 baud, NMEA\\
 \hline
@@ -1120,7 +1123,7 @@ Microcontrollerul ESP32-C3 Mini dispune de un număr limitat de pini GPIO de uz 
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Spaţiu pentru figură: schema electrică a dispozitivului, prezentând ESP32-C3 Mini, multiplexorul TCA9548A, senzorii MAX30100/MPU6050/DS18B20/NEO-6M, ecranul OLED, butoanele şi LED-urile, cu pinii GPIO corespunzători şi rezistoarele de pull-up evidenţiate. Schema poate fi exportată din KiCad sau Fritzing.]}
+\figplaceholder{[Spaţiu pentru figură: schema electrică a dispozitivului, prezentând ESP32-C3 Mini, multiplexorul TCA9548A, senzorii MAX30100/MPU6050/GY-906 MLX90614/NEO-6M, ecranul OLED SSD1306, butoanele şi LED-urile, cu pinii GPIO corespunzători şi rezistoarele de pull-up evidenţiate. Schema poate fi exportată din KiCad sau Fritzing.]}
 \caption{Schema de conexiuni a dispozitivului portabil.}
 \label{fig:schema}
 \end{figure}
@@ -1158,7 +1161,7 @@ Cele două butoane momentane sunt conectate între pinul GPIO şi masă, iar sta
 
 Pentru ca defectele de montaj să poată fi identificate fără instrumente externe, firmware-ul execută la pornire o procedură de auto-testare în două etape, ale cărei rezultate sunt afişate pe portul serial. Prima etapă, denumită \textit{hardware self-test}, verifică elementele active de interacţiune: face LED-ul verde să clipească de mai multe ori (absenţa clipirii indică imediat o defecţiune a LED-ului, a rezistorului sau a cablajului) şi monitorizează timp de 10\,s nivelul pinilor celor două butoane, raportând câte tranziţii \textit{HIGH$\rightarrow$LOW} a detectat pe fiecare. Această ultimă măsurare permite distingerea unui buton blocat (pin niciodată \textit{HIGH}) de un buton deconectat sau cu firul de masă întrerupt (pin niciodată \textit{LOW}).
 
-A doua etapă, denumită \textit{sensor functional test}, depăşeşte simpla verificare a prezenţei pe magistrală (\textit{I\textsuperscript{2}C probe}) şi efectuează o citire reală de la fiecare senzor: extrage un eşantion de la MPU6050 şi îl validează împotriva valorilor \textit{stuck zero} sau \textit{bus railed} (toţi biţii la 0 sau la 1, semn al unei defecţiuni de comunicaţie); trezeşte senzorul MAX30100 şi citeşte FIFO-ul după un interval suficient pentru acumularea câtorva eşantioane; declanşează o conversie completă a senzorului DS18B20 şi verifică integritatea datelor prin codul de control \textit{CRC8}; verifică prezenţa caracterelor NMEA pe portul UART al modulului GPS. Pentru fiecare senzor se afişează verdictul (\texttt{FUNCTIONAL}, \texttt{FAULT} sau \texttt{NOT DETECTED}) alături de valorile efective citite, ceea ce face vizibile deopotrivă defectele de cablaj, contactul slab al senzorului şi erorile de configurare.
+A doua etapă, denumită \textit{sensor functional test}, depăşeşte simpla verificare a prezenţei pe magistrală (\textit{I2C probe}) şi efectuează o citire reală de la fiecare senzor: extrage un eşantion de la MPU6050 şi îl validează împotriva valorilor \textit{stuck zero} sau \textit{bus railed} (toţi biţii la 0 sau la 1, semn al unei defecţiuni de comunicaţie); trezeşte senzorul MAX30100 şi citeşte FIFO-ul după un interval suficient pentru acumularea câtorva eşantioane; citeşte temperatura de la senzorul GY-906 MLX90614 şi verifică încadrarea valorii în intervalul fiziologic plauzibil; verifică prezenţa caracterelor NMEA pe portul UART al modulului GPS. Pentru fiecare senzor se afişează verdictul (\texttt{FUNCTIONAL}, \texttt{FAULT} sau \texttt{NOT DETECTED}) alături de valorile efective citite, ceea ce face vizibile deopotrivă defectele de cablaj, contactul slab al senzorului şi erorile de configurare.
 
 Pentru cazul particular al unui buton blocat la masă (pin permanent \textit{LOW}), firmware-ul include şi un \textit{guard} care, după 500\,ms de citire continuă, dezactivează butonul respectiv, împiedicând astfel generarea unei avalanşe de evenimente false şi păstrând restul sistemului funcţional până la remedierea defecţiunii hardware.
 
@@ -1170,7 +1173,7 @@ Pornind de la maparea pinilor şi de la organizarea hardware descrise în subcap
 
 \subsubsection{Citirea senzorilor și multiplexarea I2C}
 
-Senzorii sunt interogați ciclic, într-o buclă cu perioada de ordinul a câteva sute de milisecunde. Întrucât MAX30100, ecranul OLED și MPU6050 partajează aceeași magistrală I2C, accesul la fiecare dintre ele se face prin selectarea canalului corespunzător al multiplexorului TCA9548A înaintea fiecărei citiri. Pentru a evita coliziunile între task-urile FreeRTOS concurente, accesul la magistrala I2C este serializat printr-un mutex recursiv. Senzorul de temperatură DS18B20 comunică separat, prin protocolul 1-Wire, iar modulul GPS NEO-6M prin interfața UART, datele de poziție fiind extrase din mesajele transmise în format NMEA. Valorile brute sunt validate local, prin compararea cu intervalele fizic posibile, iar citirile evident eronate, generate de un contact imperfect al senzorului cu pielea, sunt eliminate înainte de a fi luate în considerare.
+Senzorii sunt interogați ciclic, într-o buclă cu perioada de ordinul a câteva sute de milisecunde. MAX30100, ecranul OLED, MPU6050 și GY-906 MLX90614 partajează aceeași magistrală I2C, accesul la fiecare dintre ele realizându-se prin selectarea canalului corespunzător al multiplexorului TCA9548A înaintea fiecărei citiri. Pentru a evita coliziunile între task-urile FreeRTOS concurente, accesul la magistrala I2C este serializat printr-un mutex recursiv. Modulul GPS NEO-6M comunică prin interfața UART, datele de poziție fiind extrase din mesajele transmise în format NMEA. Valorile brute sunt validate local, prin compararea cu intervalele fizic posibile, iar citirile evident eronate, generate de un contact imperfect al senzorului cu pielea, sunt eliminate înainte de a fi luate în considerare.
 
 \subsubsection{Detecția căderilor în firmware}
 
@@ -1282,7 +1285,7 @@ Securitatea este întărită prin mai multe mecanisme complementare:
 
 API-ul include endpoint-uri noi față de versiunea inițial proiectată. \textbf{Notițele medicale} (DoctorNote) sunt gestionate printr-un controler dedicat: medicul invitat poate adăuga sau actualiza o notiță per pacient, iar la fiecare salvare aparținătorii primesc notificare push în aplicație și prin email. \textbf{Subscripțiile Web Push} sunt gestionate de \texttt{PushController}, care expune endpoint-urile de abonare/dezabonare și un endpoint public pentru cheia VAPID. \textbf{OTA-ul firmware-ului} este gestionat de un endpoint în \texttt{ESPController} care compară versiunea curentă cu cea configurată în Azure App Settings și returnează URL-ul binarului dacă este disponibilă o versiune mai nouă. La pornire, \textbf{SimulationManager} este pre-populat cu ultima măsurătoare din baza de date pentru fiecare dispozitiv activ, astfel încât aplicația să afișeze date imediat după un restart al serverului, fără a aștepta o nouă transmitere de la ESP.
 
-Pe lângă controlere, backend-ul include mai multe servicii de fundal care rulează independent de cereri. \textbf{Serviciul de monitorizare a alertelor} (\texttt{AlertMonitorService}) primește fiecare măsurătoare nou primită, ține un buffer cu valorile din ultimele minute pentru fiecare pacient și decide momentul exact de trimitere a notificărilor. În paralel, \textbf{serviciul de profilare a activităţii} (\texttt{ActivityProfileService}) construieşte la prima nevoie un profil orar per pacient din ultimele 14 zile de măsurători şi verifică, la fiecare nouă măsurătoare, dacă eticheta de activitate primită de la dispozitiv abate de la tiparul obişnuit; abaterile semnificative declanşează notificările comportamentale descrise în subcapitolul 4.4. \textbf{Serviciul de raportare zilnică} (\texttt{DailyReportBackgroundService}) rulează o dată pe zi, la miezul nopții în fusul orar local configurat, și trimite prin email un raport sintetic al zilei precedente utilizatorilor care au activat această opțiune. \textbf{Serviciul de retenție a datelor} (\texttt{RetentionCleanupBackgroundService}) rulează tot zilnic și execută ștergerea fizică a măsurătorilor, notificărilor și agregărilor mai vechi decât perioada de retenție configurată pentru fiecare pacient. La pornirea aplicației se execută, de asemenea, popularea inițială a bazei de date cu rolurile și datele de bază.
+Pe lângă controlere, backend-ul include mai multe servicii de fundal care rulează independent de cereri. \textbf{Serviciul de monitorizare a alertelor} (\texttt{AlertMonitorService}) primește fiecare măsurătoare nou primită, ține un buffer cu valorile din ultimele minute pentru fiecare pacient și decide momentul exact de trimitere a notificărilor. În paralel, \textbf{serviciul de profilare a activităţii} (\texttt{ActivityProfileService}) construieşte la prima nevoie un profil orar per pacient din ultimele 7 zile de măsurători şi verifică, la fiecare nouă măsurătoare, dacă eticheta de activitate primită de la dispozitiv abate de la tiparul obişnuit; abaterile semnificative declanşează notificările comportamentale descrise în subcapitolul 4.4. \textbf{Serviciul de raportare zilnică} (\texttt{DailyReportBackgroundService}) rulează o dată pe zi, la miezul nopții în fusul orar local configurat, și trimite prin email un raport sintetic al zilei precedente utilizatorilor care au activat această opțiune. \textbf{Serviciul de retenție a datelor} (\texttt{RetentionCleanupBackgroundService}) rulează tot zilnic și execută ștergerea fizică a măsurătorilor, notificărilor și agregărilor mai vechi decât perioada de retenție configurată pentru fiecare pacient. La pornirea aplicației se execută, de asemenea, popularea inițială a bazei de date cu rolurile și datele de bază.
 
 \subsubsection{Contractul cu clientul și optimizări}
 
@@ -1759,7 +1762,7 @@ Sistemul dezvoltat constituie o bază solidă pentru extinderi viitoare. Printre
 
 \bibitem{max30100} Analog Devices (Maxim Integrated), \textit{MAX30100. Pulse Oximeter and Heart-Rate Sensor IC for Wearable Health Datasheet}. \url{https://www.analog.com/media/en/technical-documentation/data-sheets/MAX30100.pdf} (accesat: 29.05.2026).
 
-\bibitem{ds18b20} Analog Devices (Maxim Integrated), \textit{DS18B20. Programmable Resolution 1-Wire Digital Thermometer Datasheet}. \url{https://www.analog.com/media/en/technical-documentation/data-sheets/DS18B20.pdf} (accesat: 29.05.2026).
+\bibitem{mlx90614} Melexis, \textit{MLX90614 Family. Single and Dual Zone Infra Red Thermometer in TO-39 Datasheet}. \url{https://www.melexis.com/en/documents/documentation/datasheets/datasheet-mlx90614} (accesat: 29.05.2026).
 
 \bibitem{mpu6050} InvenSense (TDK), \textit{MPU-6000 and MPU-6050 Product Specification, Revision 3.4}. \url{https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf} (accesat: 29.05.2026).
 
