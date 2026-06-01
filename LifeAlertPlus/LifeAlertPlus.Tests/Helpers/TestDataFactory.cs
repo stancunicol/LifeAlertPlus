@@ -102,11 +102,27 @@ public static class TestDataFactory
             })
             .Build();
 
+    // Dacă e setată variabila de mediu TEST_POSTGRES_URL, testele rulează pe PostgreSQL real.
+    // Altfel, se folosește SQLite in-memory pentru rulare locală fără server.
     public static LifeAlertPlusDbContext CreateInMemoryDbContext(string? dbName = null)
     {
-        var options = new DbContextOptionsBuilder<LifeAlertPlusDbContext>()
-            .UseSqlite($"Data Source=file:{dbName ?? Guid.NewGuid().ToString()}?mode=memory&cache=shared")
-            .Options;
+        var pgUrl = Environment.GetEnvironmentVariable("TEST_POSTGRES_URL");
+
+        DbContextOptions<LifeAlertPlusDbContext> options;
+        if (!string.IsNullOrEmpty(pgUrl))
+        {
+            // Fiecare test primește un schema unic pentru izolare
+            var schema = $"test_{(dbName ?? Guid.NewGuid().ToString("N")[..8]).Replace("-", "_")}";
+            options = new DbContextOptionsBuilder<LifeAlertPlusDbContext>()
+                .UseNpgsql(pgUrl, o => o.MigrationsHistoryTable("__EFMigrationsHistory", schema))
+                .Options;
+        }
+        else
+        {
+            options = new DbContextOptionsBuilder<LifeAlertPlusDbContext>()
+                .UseSqlite($"Data Source=file:{dbName ?? Guid.NewGuid().ToString()}?mode=memory&cache=shared")
+                .Options;
+        }
 
         var ctx = new LifeAlertPlusDbContext(options);
         ctx.Database.EnsureCreated();

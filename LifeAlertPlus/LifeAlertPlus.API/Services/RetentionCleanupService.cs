@@ -89,6 +89,38 @@ namespace LifeAlertPlus.API.Services
                         "[Retention] Permanently deleted {Count} archived monitored person(s) whose archive retention window expired.",
                         archivedExpired.Count);
                 }
+
+                // Grace-period hard delete: Users și Monitoreds cu soft-delete > 7 zile
+                // și neactivate de admin sunt șterse fizic definitiv.
+                var graceCutoff = now.AddDays(-7);
+
+                var expiredMonitoreds = await db.Monitoreds
+                    .Where(m => m.DeletedAt != null && m.DeletedAt < graceCutoff)
+                    .ToListAsync(ct);
+
+                if (expiredMonitoreds.Any())
+                {
+                    db.Monitoreds.RemoveRange(expiredMonitoreds);
+                    await db.SaveChangesAsync(ct);
+                    totalDeleted += expiredMonitoreds.Count;
+                    _logger.LogInformation(
+                        "[Retention] Hard-deleted {Count} monitored person(s) after 7-day grace period.",
+                        expiredMonitoreds.Count);
+                }
+
+                var expiredUsers = await db.Users
+                    .Where(u => u.DeletedAt != null && u.DeletedAt < graceCutoff)
+                    .ToListAsync(ct);
+
+                if (expiredUsers.Any())
+                {
+                    db.Users.RemoveRange(expiredUsers);
+                    await db.SaveChangesAsync(ct);
+                    totalDeleted += expiredUsers.Count;
+                    _logger.LogInformation(
+                        "[Retention] Hard-deleted {Count} user account(s) after 7-day grace period.",
+                        expiredUsers.Count);
+                }
             }
             catch (Exception ex)
             {
@@ -96,5 +128,7 @@ namespace LifeAlertPlus.API.Services
             }
             return totalDeleted;
         }
+
+        public const int GracePeriodDays = 7;
     }
 }

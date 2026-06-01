@@ -1,0 +1,43 @@
+\babel@toc {romanian}{}\relax 
+\contentsline {figure}{\numberline {1}{\ignorespaces Cele trei niveluri ale arhitecturii IoT și corespondența lor în sistemul LifeAlertPlus.}}{15}{figure.1}%
+\contentsline {figure}{\numberline {2}{\ignorespaces Interfața dispozitivului portabil LifeAlertPlus: ecranul OLED afișând parametrii vitali și starea sistemului, împreună cu LED-urile de stare și butoanele de interacțiune.}}{17}{figure.2}%
+\contentsline {figure}{\numberline {3}{\ignorespaces Mecanismul hibrid de decizie: senzorii și pragurile personalizate formează un vector de intrare comun, evaluat în paralel de modelul Random Forest și de setul de reguli medicale; predicțiile sunt combinate în stratul de fuziune, care produce simultan starea discretă și health score-ul.}}{19}{figure.3}%
+\contentsline {figure}{\numberline {4}{\ignorespaces Livrarea alertei prin patru canale complementare asigură redundanța mecanismului de notificare.}}{21}{figure.4}%
+\contentsline {figure}{\numberline {5}{\ignorespaces Arhitectura generală a sistemului LifeAlertPlus, cu backend-ul în centru și serviciile externe (Twilio, SMTP) reprezentate prin contururi punctate.}}{29}{figure.5}%
+\contentsline {figure}{\numberline {6}{\ignorespaces Diagrama de clase simplificată a aplicației LifeAlertPlus, organizată pe trei straturi: API (controlere), Application (servicii) și Domain (entități). Săgețile reprezintă direcția dependențelor între straturi.}}{31}{figure.6}%
+\contentsline {figure}{\numberline {7}{\ignorespaces Diagrama entitate-relație a bazei de date LifeAlertPlus. Relația centrală \textit {mulți-la-mulți} dintre \texttt {User} și \texttt {Monitored} se realizează prin tabela de legătură \texttt {UserMonitored}. Toate entitățile dependente sunt legate \textit {unu-la-mulți} de \texttt {Monitored}, iar relația punctată indică o legătură opțională (un destinatar pentru o notificare).}}{33}{figure.7}%
+\contentsline {figure}{\numberline {8}{\ignorespaces Predicțiile de tendințe afișate în pagina pacientului: etichetă, valoare curentă, rată de variație și timp estimat până la prag.}}{36}{figure.8}%
+\contentsline {figure}{\numberline {9}{\ignorespaces Fluxul de declanșare și escaladare a unei alerte.}}{37}{figure.9}%
+\contentsline {figure}{\numberline {10}{\ignorespaces Mașina de stări a detectorului de căderi rulat pe dispozitiv.}}{38}{figure.10}%
+\contentsline {figure}{\numberline {11}{\ignorespaces Fluxul de sincronizare a configurației WiFi între aplicația web și dispozitivul fizic.}}{40}{figure.11}%
+\contentsline {figure}{\numberline {12}{\ignorespaces Schema de conexiuni a dispozitivului portabil.}}{44}{figure.12}%
+\contentsline {figure}{\numberline {13}{\ignorespaces Prototipul dispozitivului portabil asamblat, cu toți senzorii conectați la multiplexorul TCA9548A și la ESP32-C3 Mini.}}{44}{figure.13}%
+\contentsline {figure}{\numberline {14}{\ignorespaces Ecranul OLED al dispozitivului: pulsul, SpO\textsubscript {2}\ și temperatura sunt afișate în timp real; SpO2 înlocuiește câmpul de baterie nefuncțional.}}{48}{figure.14}%
+\contentsline {figure}{\numberline {15}{\ignorespaces Pagina de provizionare WiFi afișată de dispozitiv la adresa \texttt {192.168.4.1}: aparținătorul introduce SSID-ul și parola rețelei de acasă direct din browser-ul telefonului.}}{49}{figure.15}%
+\contentsline {figure}{\numberline {16}{\ignorespaces Pagina de autentificare a aplicației LifeAlert+: câmpuri pentru email și parolă, plus butonul de autentificare prin Google.}}{52}{figure.16}%
+\contentsline {figure}{\numberline {17}{\ignorespaces Pagina de înregistrare: utilizatorul completează datele personale, email-ul, numărul de telefon și parola.}}{53}{figure.17}%
+\contentsline {figure}{\numberline {18}{\ignorespaces Asistentul conversațional integrat răspunde la întrebări despre utilizarea aplicației și despre praguri / afecțiuni medicale.}}{53}{figure.18}%
+\contentsline {figure}{\numberline {19}{\ignorespaces Pagina cu persoanele monitorizate: cardul rezumă vitalele curente (puls, SpO\textsubscript {2}, temperatură), starea (Stabil / Alertă / Verificare necesară), poziția GPS și momentul ultimei măsurători.}}{54}{figure.19}%
+\contentsline {figure}{\numberline {20}{\ignorespaces Modalul de editare a profilului unei persoane monitorizate, cu pragurile personalizate pentru ritm cardiac, temperatură și SpO\textsubscript {2}, frecvența de actualizare și perioada de retenție.}}{54}{figure.20}%
+\contentsline {figure}{\numberline {21}{\ignorespaces Modalul de configurare a rețelelor WiFi pentru dispozitivul portabil al pacientului.}}{55}{figure.21}%
+\contentsline {figure}{\numberline {22}{\ignorespaces Graficul SpO\textsubscript {2}\ adăugat în pagina pacientului, sub graficele de puls și temperatură; valorile provin din calculul realizat în firmware.}}{55}{figure.22}%
+\contentsline {figure}{\numberline {23}{\ignorespaces Secțiunea de notițe medicale: medicul invitat adaugă observații, aparținătorul le poate consulta, iar ambii primesc notificare la actualizare.}}{56}{figure.23}%
+\contentsline {figure}{\numberline {24}{\ignorespaces Graficele zilnice de puls și temperatură, cu tooltip-ul activ la hover (afișează valoarea, de exemplu 82~bpm la 19:16, și ora) și scrollbar orizontal sincronizat sub fiecare grafic.}}{57}{figure.24}%
+\contentsline {figure}{\numberline {25}{\ignorespaces Vizualizarea pe hartă a poziției curente a pacientului în pagina sa de detalii.}}{57}{figure.25}%
+\contentsline {figure}{\numberline {26}{\ignorespaces Tabloul de bord al aparținătorului, cu statistici de ansamblu și carduri pentru persoanele recent actualizate.}}{58}{figure.26}%
+\contentsline {figure}{\numberline {27}{\ignorespaces Pagina de notificări, cu filtrare după tip și marcarea notificărilor citite.}}{58}{figure.27}%
+\contentsline {figure}{\numberline {28}{\ignorespaces Pagina de istoric al măsurătorilor, cu afișarea paginată a valorilor brute.}}{58}{figure.28}%
+\contentsline {figure}{\numberline {29}{\ignorespaces Pagina de profil a utilizatorului.}}{59}{figure.29}%
+\contentsline {figure}{\numberline {30}{\ignorespaces Pagina de setări a contului, cu preferințele de limbă, notificare și pragurile vitale implicite.}}{59}{figure.30}%
+\contentsline {figure}{\numberline {31}{\ignorespaces Pagina „Despre noi”, cu misiunea, problema adresată și caracteristicile proiectului.}}{59}{figure.31}%
+\contentsline {figure}{\numberline {32}{\ignorespaces Pagina de suport, cu datele de contact, lista de verificări și întrebările frecvente.}}{60}{figure.32}%
+\contentsline {figure}{\numberline {33}{\ignorespaces Tabloul de bord de administrare, cu statisticile agregate la nivelul întregului sistem.}}{60}{figure.33}%
+\contentsline {figure}{\numberline {34}{\ignorespaces Jurnalul de activitate (evenimente de cont și de sistem), cu filtrare și căutare.}}{61}{figure.34}%
+\contentsline {figure}{\numberline {35}{\ignorespaces Jurnalul de erori al backend-ului, cu filtrare după nivel (eroare, avertisment, informativ).}}{61}{figure.35}%
+\contentsline {figure}{\numberline {36}{\ignorespaces Vizualizarea în regim de citire a datelor pacientului, disponibilă medicului invitat.}}{62}{figure.36}%
+\contentsline {figure}{\numberline {37}{\ignorespaces Pagina de setări pentru notificări: comutatoarele permit activarea independentă a email, push, SMS și raport zilnic.}}{63}{figure.37}%
+\contentsline {figure}{\numberline {38}{\ignorespaces Notificare push afișată în interfața web prin SignalR, imediat ce alerta este declanșată pe server.}}{64}{figure.38}%
+\contentsline {figure}{\numberline {39}{\ignorespaces Alertă livrată prin SMS pe telefonul aparținătorului, prin platforma Twilio.}}{64}{figure.39}%
+\contentsline {figure}{\numberline {40}{\ignorespaces Email de alertă cu \textit {template} HTML dedicat, livrat printr-un server SMTP configurat în aplicație.}}{65}{figure.40}%
+\contentsline {figure}{\numberline {41}{\ignorespaces Matricea de confuzie a modelului Random Forest.}}{68}{figure.41}%
+\contentsline {figure}{\numberline {42}{\ignorespaces Importanța parametrilor de intrare (analiză SHAP).}}{68}{figure.42}%

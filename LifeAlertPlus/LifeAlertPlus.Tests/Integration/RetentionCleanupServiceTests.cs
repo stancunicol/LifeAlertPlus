@@ -18,15 +18,18 @@ public class RetentionCleanupServiceTests : IDisposable
     {
         // Build a DI container with the DbContext as scoped, so RunAsync's scope.CreateScope() works.
         var services = new ServiceCollection();
-        services.AddDbContext<LifeAlertPlusDbContext>(opts =>
-            opts.UseSqlite($"Data Source=file:{_dbName}?mode=memory&cache=shared"));
+        var pgUrl = Environment.GetEnvironmentVariable("TEST_POSTGRES_URL");
+        if (!string.IsNullOrEmpty(pgUrl))
+            services.AddDbContext<LifeAlertPlusDbContext>(opts => opts.UseNpgsql(pgUrl));
+        else
+            services.AddDbContext<LifeAlertPlusDbContext>(opts =>
+                opts.UseSqlite($"Data Source=file:{_dbName}?mode=memory&cache=shared"));
         _provider = services.BuildServiceProvider();
 
-        // Open a long-lived connection so the in-memory database survives across scopes.
         using (var bootstrap = _provider.CreateScope())
         {
             var ctx = bootstrap.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
-            ctx.Database.OpenConnection();
+            if (pgUrl == null) ctx.Database.OpenConnection();
             ctx.Database.EnsureCreated();
         }
 
