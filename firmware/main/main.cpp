@@ -1766,7 +1766,8 @@ static void heartbeat_send(void *)
                 ota_cfg.url               = url->valuestring;
                 ota_cfg.crt_bundle_attach = esp_crt_bundle_attach;
                 ota_cfg.timeout_ms        = 30000;
-                esp_https_ota_config_t https_cfg = { .http_config = &ota_cfg };
+                esp_https_ota_config_t https_cfg = {};
+                https_cfg.http_config = &ota_cfg;
                 esp_err_t ota_err = esp_https_ota(&https_cfg);
                 if (ota_err == ESP_OK) {
                     printf("[OTA] Succes — repornire...\n");
@@ -2314,7 +2315,7 @@ extern "C" void app_main(void)
             if (!g_gps.valid && (now - s_gps_start_ms) > GPS_FIX_TIMEOUT_MS) {
                 uart_driver_delete(GPS_UART_NUM);
                 s_gps_enabled = false;
-                printf("[GPS] Fără fix în %lus — UART oprit (economie curent)\n",
+                printf("[GPS] Fără fix în %us — UART oprit (economie curent)\n",
                        GPS_FIX_TIMEOUT_MS / 1000);
             }
         }
