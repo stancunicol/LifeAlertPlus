@@ -45,8 +45,6 @@
 #include "cJSON.h"
 #include "esp_http_server.h"
 #include "esp_task_wdt.h"
-#include "esp_ota_ops.h"
-#include "esp_https_ota.h"
 
 // ─── WiFi / API ───────────────────────────────────────────────────────────────
 // All secrets / deployment-specific values come from sdkconfig (gitignored),
@@ -62,7 +60,6 @@
 #define API_PANIC_PATH       "/api/ESP/panic"
 #define API_HEARTBEAT_PATH   "/api/ESP/heartbeat"
 #define API_WIFI_CONFIG_PATH "/api/ESP/wifi-config/"  // serial appended at call site
-#define API_OTA_PATH         "/api/ESP/ota/"           // serial appended at call site
 #define API_DEVICE_KEY       CONFIG_LIFEALERT_API_DEVICE_KEY
 #define FIRMWARE_VERSION     "1.1.0"
 
@@ -1750,37 +1747,6 @@ static void heartbeat_send(void *)
     // Pull any updated WiFi networks configured from the web app.
     wifi_config_fetch_and_store();
 
-    // OTA check — verifică dacă există firmware nou disponibil pe server
-    {
-        char ota_path[128];
-        snprintf(ota_path, sizeof(ota_path), "%s%s?version=%s", API_OTA_PATH, g_serial, FIRMWARE_VERSION);
-        char body[512] = {};
-        int  status    = 0;
-        if (http_get_to(ota_path, body, sizeof(body), &status) && status == 200) {
-            cJSON *root = cJSON_Parse(body);
-            cJSON *avail = root ? cJSON_GetObjectItem(root, "updateAvailable") : NULL;
-            cJSON *url   = root ? cJSON_GetObjectItem(root, "url")             : NULL;
-            if (cJSON_IsTrue(avail) && cJSON_IsString(url) && url->valuestring[0]) {
-                printf("[OTA] Firmware nou disponibil — descărcare din %s\n", url->valuestring);
-                esp_http_client_config_t ota_cfg = {};
-                ota_cfg.url               = url->valuestring;
-                ota_cfg.crt_bundle_attach = esp_crt_bundle_attach;
-                ota_cfg.timeout_ms        = 30000;
-                esp_https_ota_config_t https_cfg = {};
-                https_cfg.http_config = &ota_cfg;
-                esp_err_t ota_err = esp_https_ota(&https_cfg);
-                if (ota_err == ESP_OK) {
-                    printf("[OTA] Succes — repornire...\n");
-                    vTaskDelay(pdMS_TO_TICKS(1000));
-                    esp_restart();
-                } else {
-                    printf("[OTA] Eșuat: %s\n", esp_err_to_name(ota_err));
-                }
-            }
-            if (root) cJSON_Delete(root);
-        }
-    }
-
     // Dacă GPS-ul a fost oprit din cauza timeout-ului, reactivăm la fiecare heartbeat
     // pentru a încerca din nou obținerea unui fix (ex. dacă dispozitivul a ieșit afară).
     if (!s_gps_enabled && !g_gps.valid) {
@@ -2339,13 +2305,15 @@ extern "C" void app_main(void)
                            (uint64_t)now);
                 printf("[JSON] %s\n", json_buf);
                 if (s_wifi_ok) {
+                    // WiFi conectat: transmitem direct, fără a pune în coadă.
+                    // Dacă POST eșuează (server indisponibil temporar), datele se pierd
+                    // dar coada rămâne disponibilă exclusiv pentru perioadele offline.
                     panic_queue_flush();   // panic-ul are prioritate
-                    queue_flush();
+                    queue_flush();         // golim coada acumulată offline
                     if (http_post(json_buf)) {
                         printf("[POST] OK -> server\n");
                     } else {
-                        printf("[POST] FAILED -> enqueued offline\n");
-                        queue_push(json_buf);
+                        printf("[POST] FAILED (WiFi activ) -> date pierdute, retry la ciclul urmator\n");
                     }
                 } else {
                     printf("[POST] OFFLINE -> enqueued (queue=%lu)\n",

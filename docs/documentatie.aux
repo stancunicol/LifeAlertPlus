@@ -118,59 +118,58 @@
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.14}Înrolarea utilizatorilor și asocierea dispozitivului}{41}{subsubsection.4.4.14}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.15}Invitarea medicului și exportul datelor}{41}{subsubsection.4.4.15}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.16}Ștergerea conturilor și a profilelor de pacienți}{41}{subsubsection.4.4.16}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.17}Configurarea inițială a conexiunii WiFi}{41}{subsubsection.4.4.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.17}Configurarea inițială a conexiunii WiFi}{42}{subsubsection.4.4.17}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {5}Implementarea aplicației}{43}{section.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Hardware-ul dispozitivului portabil}{43}{subsection.5.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}Schema de conexiuni şi maparea pinilor GPIO}{43}{subsubsection.5.1.1}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Maparea pinilor GPIO ai microcontrollerului ESP32-C3 Mini.}}{43}{table.3}\protected@file@percent }
 \newlabel{tab:gpio-map}{{3}{43}{Maparea pinilor GPIO ai microcontrollerului ESP32-C3 Mini}{table.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Schema de conexiuni a dispozitivului portabil.}}{44}{figure.12}\protected@file@percent }
-\newlabel{fig:schema}{{12}{44}{Schema de conexiuni a dispozitivului portabil}{figure.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Schema de conexiuni a dispozitivului portabil: ESP32-C3 Mini conectat la multiplexorul TCA9548A (I2C) şi la senzorii pe canale separate, modulul GPS prin UART, butoanele şi LED-urile direct pe GPIO, şi circuitul de alimentare LiPo--TP4056--MT3608.}}{44}{figure.12}\protected@file@percent }
+\newlabel{fig:schema}{{12}{44}{Schema de conexiuni a dispozitivului portabil: ESP32-C3 Mini conectat la multiplexorul TCA9548A (I2C) şi la senzorii pe canale separate, modulul GPS prin UART, butoanele şi LED-urile direct pe GPIO, şi circuitul de alimentare LiPo--TP4056--MT3608}{figure.12}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Prototipul dispozitivului portabil asamblat, cu toți senzorii conectați la multiplexorul TCA9548A și la ESP32-C3 Mini.}}{44}{figure.13}\protected@file@percent }
 \newlabel{fig:prototip}{{13}{44}{Prototipul dispozitivului portabil asamblat, cu toți senzorii conectați la multiplexorul TCA9548A și la ESP32-C3 Mini}{figure.13}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.2}Magistrala I\textsuperscript  {2}C şi multiplexarea TCA9548A}{44}{subsubsection.5.1.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.3}Sistemul de alimentare}{44}{subsubsection.5.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.2}Magistrala I2C şi multiplexarea TCA9548A}{44}{subsubsection.5.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.3}Sistemul de alimentare}{45}{subsubsection.5.1.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.4}Interfaţa fizică: LED-uri şi butoane}{45}{subsubsection.5.1.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.5}Diagnoza la pornire şi auto-testarea}{45}{subsubsection.5.1.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.5}Diagnoza la pornire şi auto-testarea}{46}{subsubsection.5.1.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.6}Citirea senzorilor și multiplexarea I2C}{46}{subsubsection.5.1.6}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.7}Detecția căderilor în firmware}{46}{subsubsection.5.1.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.8}Clasificarea activităţii pe dispozitiv}{46}{subsubsection.5.1.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.8}Clasificarea activităţii pe dispozitiv}{47}{subsubsection.5.1.8}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.9}Sincronizarea configurației WiFi}{47}{subsubsection.5.1.9}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.10}Comunicația cu serverul și coada offline}{47}{subsubsection.5.1.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.11}Calculul saturației de oxigen (SpO\textsubscript  {2}) în firmware}{47}{subsubsection.5.1.11}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Ecranul OLED al dispozitivului: pulsul, SpO\textsubscript  {2}\ și temperatura sunt afișate în timp real; SpO2 înlocuiește câmpul de baterie nefuncțional.}}{48}{figure.14}\protected@file@percent }
-\newlabel{fig:oled-display}{{14}{48}{Ecranul OLED al dispozitivului: pulsul, \spo \ și temperatura sunt afișate în timp real; SpO2 înlocuiește câmpul de baterie nefuncțional}{figure.14}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.12}Watchdog și recuperarea automată}{48}{subsubsection.5.1.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.13}OTA --- actualizare firmware prin rețea}{48}{subsubsection.5.1.13}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.14}Timeout GPS și economisire curent}{49}{subsubsection.5.1.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.15}Interfața locală}{49}{subsubsection.5.1.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.16}Configurarea rețelei — modul de provizionare SoftAP}{49}{subsubsection.5.1.16}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Pagina de provizionare WiFi afișată de dispozitiv la adresa \texttt  {192.168.4.1}: aparținătorul introduce SSID-ul și parola rețelei de acasă direct din browser-ul telefonului.}}{49}{figure.15}\protected@file@percent }
-\newlabel{fig:prov-wifi}{{15}{49}{Pagina de provizionare WiFi afișată de dispozitiv la adresa \texttt {192.168.4.1}: aparținătorul introduce SSID-ul și parola rețelei de acasă direct din browser-ul telefonului}{figure.15}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Backend-ul și API-ul REST}{49}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.11}Calculul saturației de oxigen (SpO\textsubscript  {2}) în firmware}{48}{subsubsection.5.1.11}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Ecranul OLED al dispozitivului: pulsul, SpO\textsubscript  {2}\ și temperatura sunt afișate în timp real; SpO2 înlocuiește câmpul de baterie nefuncțional.}}{49}{figure.14}\protected@file@percent }
+\newlabel{fig:oled-display}{{14}{49}{Ecranul OLED al dispozitivului: pulsul, \spo \ și temperatura sunt afișate în timp real; SpO2 înlocuiește câmpul de baterie nefuncțional}{figure.14}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.12}Watchdog și recuperarea automată}{49}{subsubsection.5.1.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.13}Timeout GPS și economisire curent}{49}{subsubsection.5.1.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.14}Interfața locală}{49}{subsubsection.5.1.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.15}Configurarea rețelei — modul de provizionare SoftAP}{49}{subsubsection.5.1.15}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Pagina de provizionare WiFi afișată de dispozitiv la adresa \texttt  {192.168.4.1}: aparținătorul introduce SSID-ul și parola rețelei de acasă direct din browser-ul telefonului.}}{50}{figure.15}\protected@file@percent }
+\newlabel{fig:prov-wifi}{{15}{50}{Pagina de provizionare WiFi afișată de dispozitiv la adresa \texttt {192.168.4.1}: aparținătorul introduce SSID-ul și parola rețelei de acasă direct din browser-ul telefonului}{figure.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Backend-ul și API-ul REST}{50}{subsection.5.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Injecția de dependențe și accesul la date}{50}{subsubsection.5.2.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}Autentificare și securitate}{50}{subsubsection.5.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Serviciile de fundal}{50}{subsubsection.5.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}Serviciile de fundal}{51}{subsubsection.5.2.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.4}Contractul cu clientul și optimizări}{51}{subsubsection.5.2.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.5}Validarea cererilor}{51}{subsubsection.5.2.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Microserviciul de inteligență artificială}{51}{subsection.5.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}Antrenarea modelului}{51}{subsubsection.5.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.5}Validarea cererilor}{52}{subsubsection.5.2.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Microserviciul de inteligență artificială}{52}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}Antrenarea modelului}{52}{subsubsection.5.3.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.2}Endpoint-urile serviciului}{52}{subsubsection.5.3.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.3}Logica hibridă de decizie}{52}{subsubsection.5.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Frontend-ul web}{52}{subsection.5.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Pagina de autentificare a aplicației LifeAlert+: câmpuri pentru email și parolă, plus butonul de autentificare prin Google.}}{52}{figure.16}\protected@file@percent }
-\newlabel{fig:login}{{16}{52}{Pagina de autentificare a aplicației LifeAlert+: câmpuri pentru email și parolă, plus butonul de autentificare prin Google}{figure.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Frontend-ul web}{53}{subsection.5.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Pagina de autentificare a aplicației LifeAlert+: câmpuri pentru email și parolă, plus butonul de autentificare prin Google.}}{53}{figure.16}\protected@file@percent }
+\newlabel{fig:login}{{16}{53}{Pagina de autentificare a aplicației LifeAlert+: câmpuri pentru email și parolă, plus butonul de autentificare prin Google}{figure.16}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Pagina de înregistrare: utilizatorul completează datele personale, email-ul, numărul de telefon și parola.}}{53}{figure.17}\protected@file@percent }
 \newlabel{fig:register}{{17}{53}{Pagina de înregistrare: utilizatorul completează datele personale, email-ul, numărul de telefon și parola}{figure.17}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.1}Comunicarea cu backend-ul}{53}{subsubsection.5.4.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.2}Autorizarea pe roluri și accesibilitatea}{53}{subsubsection.5.4.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Asistentul conversațional integrat răspunde la întrebări despre utilizarea aplicației și despre praguri / afecțiuni medicale.}}{53}{figure.18}\protected@file@percent }
-\newlabel{fig:chatbot}{{18}{53}{Asistentul conversațional integrat răspunde la întrebări despre utilizarea aplicației și despre praguri / afecțiuni medicale}{figure.18}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.3}Organizarea interfeței și gestionarea stării}{53}{subsubsection.5.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Asistentul conversațional integrat răspunde la întrebări despre utilizarea aplicației și despre praguri / afecțiuni medicale.}}{54}{figure.18}\protected@file@percent }
+\newlabel{fig:chatbot}{{18}{54}{Asistentul conversațional integrat răspunde la întrebări despre utilizarea aplicației și despre praguri / afecțiuni medicale}{figure.18}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.3}Organizarea interfeței și gestionarea stării}{54}{subsubsection.5.4.3}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Pagina cu persoanele monitorizate: cardul rezumă vitalele curente (puls, SpO\textsubscript  {2}, temperatură), starea (Stabil / Alertă / Verificare necesară), poziția GPS și momentul ultimei măsurători.}}{54}{figure.19}\protected@file@percent }
 \newlabel{fig:persoane-monitorizate}{{19}{54}{Pagina cu persoanele monitorizate: cardul rezumă vitalele curente (puls, \spo , temperatură), starea (Stabil / Alertă / Verificare necesară), poziția GPS și momentul ultimei măsurători}{figure.19}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Modalul de editare a profilului unei persoane monitorizate, cu pragurile personalizate pentru ritm cardiac, temperatură și SpO\textsubscript  {2}, frecvența de actualizare și perioada de retenție.}}{54}{figure.20}\protected@file@percent }
-\newlabel{fig:modal-editare-profil}{{20}{54}{Modalul de editare a profilului unei persoane monitorizate, cu pragurile personalizate pentru ritm cardiac, temperatură și \spo , frecvența de actualizare și perioada de retenție}{figure.20}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Modalul de editare a profilului unei persoane monitorizate, cu pragurile personalizate pentru ritm cardiac, temperatură și SpO\textsubscript  {2}, frecvența de actualizare și perioada de retenție.}}{55}{figure.20}\protected@file@percent }
+\newlabel{fig:modal-editare-profil}{{20}{55}{Modalul de editare a profilului unei persoane monitorizate, cu pragurile personalizate pentru ritm cardiac, temperatură și \spo , frecvența de actualizare și perioada de retenție}{figure.20}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces Modalul de configurare a rețelelor WiFi pentru dispozitivul portabil al pacientului.}}{55}{figure.21}\protected@file@percent }
 \newlabel{fig:modal-wifi}{{21}{55}{Modalul de configurare a rețelelor WiFi pentru dispozitivul portabil al pacientului}{figure.21}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.4}Noi funcționalități ale interfeței}{55}{subsubsection.5.4.4}\protected@file@percent }

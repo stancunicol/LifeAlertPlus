@@ -776,7 +776,7 @@ Pentru a optimiza performanța interogărilor frecvente, au fost definite indexu
 
 \subsubsection{Ștergerea datelor}
 
-Sistemul folosește două politici complementare de ștergere, în funcție de tipul datelor. Pentru entitățile cu rol identitar, anume \texttt{User} și \texttt{Monitored}, se aplică \textbf{ștergere în două etape}: mai întâi o \textbf{ștergere logică} (soft delete), prin care înregistrarea primește o dată în câmpul \texttt{DeletedAt} și este exclusă din interogările obișnuite. Aceasta oferă o \textbf{perioadă de grație de 7 zile} în care un administrator poate reactiva contul sau profilul (ștergând câmpul \texttt{DeletedAt}). Dacă în această perioadă nu are loc nicio reactivare, job-ul zilnic de retenție execută automat \textbf{ștergerea fizică definitivă} (hard delete), eliminând ireversibil înregistrarea și toate datele dependente prin cascadă. Pentru entitățile de tip volumetric, anume \texttt{Measurement}, \texttt{Notification}, \texttt{DailyHistory} și \texttt{WeeklyHistory}, se aplică \textbf{ștergere fizică} (hard delete) prin \textit{job-ul} zilnic de retenție descris în subcapitolul 4.4: înregistrările mai vechi decât perioada configurată (\texttt{DataRetentionDays} de pe persoana monitorizată) sunt eliminate definitiv, atât pentru a respecta principiul minimizării datelor cerut de regulamentul GDPR, cât și pentru a limita creșterea bazei de date sub fluxul continuu de măsurători de la dispozitiv.
+Sistemul folosește două politici complementare de ștergere, în funcție de tipul datelor. Pentru entitățile cu rol identitar, anume \texttt{User} și \texttt{Monitored}, se aplică \textbf{ștergere în două etape}: mai întâi o \textbf{ștergere logică} (soft delete), prin care înregistrarea primește o dată în câmpul \texttt{DeletedAt} și este exclusă din interogările obișnuite. Aceasta oferă o \textbf{perioadă de grație de 7 zile} în care un administrator poate reactiva contul sau profilul (ștergând câmpul \texttt{DeletedAt}). Dacă în această perioadă nu are loc nicio reactivare, job-ul zilnic de retenție execută automat \textbf{ștergerea fizică definitivă} (hard delete), eliminând ireversibil înregistrarea și toate datele dependente prin cascadă. Pentru entitățile de tip volumetric, anume \texttt{Measurement}, \texttt{Notification}, \texttt{DailyHistory} și \texttt{WeeklyHistory}, se aplică \textbf{ștergere fizică} (hard delete) prin \textit{job-ul} zilnic de retenție descris în subcapitolul 4.4: înregistrările mai vechi decât perioada configurată (\texttt{Data\-Retention\-Days} de pe persoana monitorizată) sunt eliminate definitiv, atât pentru a respecta principiul minimizării datelor cerut de regulamentul GDPR, cât și pentru a limita creșterea bazei de date sub fluxul continuu de măsurători de la dispozitiv.
 
 \subsubsection{Datele agregate și istoricul}
 
@@ -934,7 +934,7 @@ De exemplu, o temperatură în creștere constantă generează predicția \texti
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Captură de ecran: secțiunea de predicții de tendințe din pagina pacientului, cu etichetele de avertizare, valorile curente, rata de variație și timpul estimat până la prag.]}
+\includegraphics[width=\textwidth]{figuri/predictii-tendinte.png}
 \caption{Predicțiile de tendințe afișate în pagina pacientului: etichetă, valoare curentă, rată de variație și timp estimat până la prag.}
 \label{fig:predictii-tendinte}
 \end{figure}
@@ -1083,7 +1083,7 @@ Aplicația implementează o politică de retenție configurabilă \textbf{per pa
 
 \subsubsection{Sincronizarea datelor stocate local și comportamentul la capacitate maximă}
 
-Atunci când dispozitivul funcționează fără conexiune la internet, măsurătorile se acumulează în coada locală (capacitate maximă: 50 de intrări). La revenirea conexiunii, dispozitivul transmite măsurătorile aflate în așteptare în ordinea înregistrării lor, câte 5 per ciclu de POST, pentru a nu perturba fluxul curent de date. Astfel, istoricul medical rămâne complet chiar și în condiții de conectivitate intermitentă.
+Coada locală este utilizată \textbf{exclusiv atunci când dispozitivul nu are conexiune WiFi}. Atât timp cât WiFi-ul este activ, măsurătorile sunt transmise direct către server, fără a fi stocate în coadă — prin urmare, în condiții normale de funcționare, coada ar trebui să fie goală. Dacă un POST eșuează în timp ce WiFi-ul este conectat (de exemplu, serverul este temporar indisponibil), datele acelui ciclu se pierd, dar ciclul următor va retransmite noile măsurători. La revenirea conexiunii WiFi după o perioadă offline, dispozitivul golește mai întâi coada (câte 5 intrări per ciclu) înainte de a trimite datele noi, astfel că \textbf{istoricul din perioadele offline este recuperat complet}.
 
 Un aspect important al proiectării este comportamentul \textbf{la atingerea capacității maxime a cozii}: dacă cele 50 de locuri sunt ocupate și sosesc noi măsurători (de exemplu, în cazul unei pene de curent prelungite), \textbf{cea mai veche înregistrare din coadă este suprascrisă}. Aceasta înseamnă că, în lipsa conexiunii pentru perioade lungi, se păstrează cele mai recente 50 de măsurători, nu cele mai vechi. Această politică a fost aleasă deliberat: datele recente sunt mai relevante clinic decât cele vechi, iar dimensiunea fixă a cozii protejează memoria flash a dispozitivului împotriva uzurii prin scrieri excesive.
 
@@ -1142,9 +1142,9 @@ Microcontrollerul ESP32-C3 Mini dispune de un număr limitat de pini GPIO de uz 
 \hline
 6  & LED verde (sistem activ) & Active-HIGH\\
 \hline
-8  & I\textsuperscript{2}C SDA (TCA9548) & Pull-up intern activat\\
+8  & I2C SDA (TCA9548) & Pull-up intern activat\\
 \hline
-9  & I\textsuperscript{2}C SCL (TCA9548) & Pull-up intern activat\\
+9  & I2C SCL (TCA9548) & Pull-up intern activat\\
 \hline
 \end{tabular}
 \caption{Maparea pinilor GPIO ai microcontrollerului ESP32-C3 Mini.}
@@ -1153,29 +1153,98 @@ Microcontrollerul ESP32-C3 Mini dispune de un număr limitat de pini GPIO de uz 
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Spaţiu pentru figură: schema electrică a dispozitivului, prezentând ESP32-C3 Mini, multiplexorul TCA9548A, senzorii MAX30100/MPU6050/GY-906 MLX90614/NEO-6M, ecranul OLED SSD1306, butoanele şi LED-urile, cu pinii GPIO corespunzători şi rezistoarele de pull-up evidenţiate. Schema poate fi exportată din KiCad sau Fritzing.]}
-\caption{Schema de conexiuni a dispozitivului portabil.}
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  every node/.style={font=\small},
+  mcu/.style={rectangle, draw, thick, fill=blue!10, minimum width=3.2cm, minimum height=5.5cm, align=center},
+  mux/.style={rectangle, draw, thick, fill=orange!15, minimum width=2.2cm, minimum height=4.2cm, align=center},
+  sens/.style={rectangle, draw, fill=green!12, minimum width=2.2cm, minimum height=0.9cm, align=center},
+  pwr/.style={rectangle, draw, fill=yellow!20, minimum width=2.0cm, minimum height=0.7cm, align=center},
+  periph/.style={rectangle, draw, fill=red!10, minimum width=2.0cm, minimum height=0.7cm, align=center},
+  lbl/.style={font=\scriptsize},
+  arr/.style={->, thick},
+  bus/.style={<->, thick, blue!60}]
+
+% ESP32-C3 Mini
+\node[mcu] (esp) at (0,0) {\textbf{ESP32-C3 Mini}\\[2pt]
+  \scriptsize GPIO8 (SDA)\\
+  \scriptsize GPIO9 (SCL)\\
+  \scriptsize GPIO0 (rezervat)\\
+  \scriptsize GPIO1 (UART1 RX)\\
+  \scriptsize GPIO2 (UART1 TX)\\
+  \scriptsize GPIO3 (BTN1)\\
+  \scriptsize GPIO4 (BTN2)\\
+  \scriptsize GPIO5 (LED gal.)\\
+  \scriptsize GPIO6 (LED verde)};
+
+% TCA9548A Multiplexer
+\node[mux] (mux) at (5,0) {\textbf{TCA9548A}\\[-2pt]
+  \scriptsize(I2C 0x70)\\[4pt]
+  \scriptsize ch0: MAX30100\\
+  \scriptsize ch1: OLED\\
+  \scriptsize ch2: MPU6050\\
+  \scriptsize ch3: MLX90614};
+
+% I2C bus ESP -> MUX
+\draw[bus] (esp.east |- mux.west) -- node[above,lbl]{I2C} (mux.west);
+
+% Sensors on MUX channels
+\node[sens] (max) at (9, 2.0) {\textbf{MAX30100}\\\scriptsize puls \& \spo\ (0x57)};
+\node[sens] (oled) at (9, 0.7) {\textbf{OLED SSD1306}\\\scriptsize display (0x3C)};
+\node[sens] (mpu) at (9,-0.7) {\textbf{MPU6050}\\\scriptsize IMU (0x68)};
+\node[sens] (mlx) at (9,-2.0) {\textbf{GY-906 MLX90614}\\\scriptsize temp. (0x5A)};
+\draw[arr] (mux.east |- max.west) -- (max.west);
+\draw[arr] (mux.east |- oled.west) -- (oled.west);
+\draw[arr] (mux.east |- mpu.west) -- (mpu.west);
+\draw[arr] (mux.east |- mlx.west) -- (mlx.west);
+
+% NEO-6M GPS (UART)
+\node[sens] (gps) at (-4.5, 2.2) {\textbf{NEO-6M GPS}\\\scriptsize UART 9600 baud};
+\draw[bus] (esp.west |- gps.east) -- node[above,lbl]{UART1} (gps.east);
+
+% Buttons
+\node[periph] (btn1) at (-4.5, 0.8) {\textbf{BTN Panică}\\\scriptsize GPIO3};
+\node[periph] (btn2) at (-4.5, 0.0) {\textbf{BTN Sleep}\\\scriptsize GPIO4};
+\draw[arr] (btn1.east) -- (esp.west |- btn1.east);
+\draw[arr] (btn2.east) -- (esp.west |- btn2.east);
+
+% LEDs
+\node[periph] (ledY) at (-4.5,-0.8) {\textbf{LED galben}\\\scriptsize GPIO5};
+\node[periph] (ledG) at (-4.5,-1.6) {\textbf{LED verde}\\\scriptsize GPIO6};
+\draw[arr] (esp.west |- ledY.east) -- (ledY.east);
+\draw[arr] (esp.west |- ledG.east) -- (ledG.east);
+
+% Power circuit
+\node[pwr] (lipo) at (-4.5,-3.0) {\textbf{LiPo 3.7V}};
+\node[pwr] (tp4056) at (-4.5,-3.8) {\textbf{TP4056}\\\scriptsize USB-C încărcare};
+\node[pwr] (mt3608) at (0,-3.8) {\textbf{MT3608}\\\scriptsize boost → 3.3V};
+\draw[arr] (lipo) -- (tp4056);
+\draw[arr] (tp4056) -- node[below,lbl]{3.7V} (mt3608);
+\draw[arr] (mt3608.north) -- node[right,lbl]{3.3V} (esp.south);
+
+\end{tikzpicture}}
+\caption{Schema de conexiuni a dispozitivului portabil: ESP32-C3 Mini conectat la multiplexorul TCA9548A (I2C) şi la senzorii pe canale separate, modulul GPS prin UART, butoanele şi LED-urile direct pe GPIO, şi circuitul de alimentare LiPo--TP4056--MT3608.}
 \label{fig:schema}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\figplaceholder{[Spațiu pentru figură: fotografie a dispozitivului prototip asamblat pe breadboard sau PCB, cu senzorii, multiplexorul TCA9548A, ecranul OLED și cablajele vizibile. Fotografia trebuie realizată pe fundal alb sau neutru, cu lumină uniformă.]}
+\includegraphics[width=0.85\textwidth]{figuri/dispozitiv-breadboard.png}
 \caption{Prototipul dispozitivului portabil asamblat, cu toți senzorii conectați la multiplexorul TCA9548A și la ESP32-C3 Mini.}
 \label{fig:prototip}
 \end{figure}
 
-\subsubsection{Magistrala I\textsuperscript{2}C şi multiplexarea TCA9548A}
+\subsubsection{Magistrala I2C şi multiplexarea TCA9548A}
 
-Trei dintre componentele dispozitivului, anume ecranul OLED SSD1306, senzorul MAX30100 şi senzorul MPU6050, comunică prin magistrala I\textsuperscript{2}C. Întrucât MAX30100 are o adresă fixă (0x57), iar OLED-ul şi MPU6050 au adrese predefinite care nu pot fi modificate fără remontare hardware, conectarea directă pe aceeaşi magistrală ar genera, în practică, comportament instabil din cauza încărcării capacitive cumulate şi a interferenţelor între dispozitive cu cerinţe diferite de \textit{timing}.
+Trei dintre componentele dispozitivului, anume ecranul OLED SSD1306, senzorul MAX30100 şi senzorul MPU6050, comunică prin magistrala I2C. Întrucât MAX30100 are o adresă fixă (0x57), iar OLED-ul şi MPU6050 au adrese predefinite care nu pot fi modificate fără remontare hardware, conectarea directă pe aceeaşi magistrală ar genera, în practică, comportament instabil din cauza încărcării capacitive cumulate şi a interferenţelor între dispozitive cu cerinţe diferite de \textit{timing}.
 
-Soluţia adoptată este utilizarea unui multiplexor I\textsuperscript{2}C \textbf{TCA9548A} pe 8 canale, care expune fiecărui dispozitiv un canal izolat electric. Microcontrollerul selectează canalul activ printr-o scriere unică pe registrul multiplexorului (adresa 0x70), efectuează tranzacţia I\textsuperscript{2}C cu senzorul vizat, apoi închide canalul. Această secvenţă \textit{open / read / close} este aplicată sistematic în firmware pentru a preveni conflictele de adresă atunci când mai mulţi senzori partajează aceleaşi numere de adresă pe magistrale diferite. Canalul 0 a fost alocat senzorului MAX30100, canalul 1 ecranului OLED, iar canalul 2 senzorului MPU6050.
+Soluţia adoptată este utilizarea unui multiplexor I2C \textbf{TCA9548A} pe 8 canale, care expune fiecărui dispozitiv un canal izolat electric. Microcontrollerul selectează canalul activ printr-o scriere unică pe registrul multiplexorului (adresa 0x70), efectuează tranzacţia I2C cu senzorul vizat, apoi închide canalul. Această secvenţă \textit{open / read / close} este aplicată sistematic în firmware pentru a preveni conflictele de adresă atunci când mai mulţi senzori partajează aceleaşi numere de adresă pe magistrale diferite. Canalul 0 a fost alocat senzorului MAX30100, canalul 1 ecranului OLED, canalul 2 senzorului MPU6050, iar canalul 3 senzorului de temperatură GY-906 MLX90614.
 
 \subsubsection{Sistemul de alimentare}
 
 Alimentarea dispozitivului portabil este asigurată de un acumulator \textbf{LiPo 3{,}7\,V / 1500\,mAh} (model 103048, AM Electronics), ales pentru raportul favorabil între capacitate şi gabarit (10\,$\times$\,30\,$\times$\,48\,mm) şi pentru protecţia integrată împotriva supraîncărcării, supradescărcării şi scurtcircuitului. Gestionarea încărcării prin USB-C este realizată de modulul \textbf{TP4056}, un circuit integrat dedicat încărcării bateriilor Li-Ion / Li-Po cu un curent maxim de 1\,A şi protecţie completă a celulei.
 
-Întrucât tensiunea nominală a acumulatorului LiPo (3{,}0--4{,}2\,V) este insuficientă pentru alimentarea simultană a tuturor componentelor în regimul lor optim, sistemul include un convertor \textbf{boost MT3608}, capabil să furnizeze până la 28\,V / 2\,A şi configurat în acest caz pentru tensiunea de operare a sistemului (5\,V).
+Întrucât tensiunea nominală a acumulatorului LiPo (3{,}0--4{,}2\,V) este insuficientă pentru alimentarea simultană a tuturor componentelor în regimul lor optim, sistemul include un convertor \textbf{boost MT3608}, capabil să furnizeze până la 28\,V / 2\,A şi configurat în acest caz pentru tensiunea de operare a sistemului (\textbf{3{,}3\,V}), tensiunea necesară microcontrollerului ESP32-C3 şi senzorilor I2C conectaţi la acesta.
 
 Modulul ESP32-C3 Mini integrează un \textbf{Brownout Detector (BOD)} care resetează cipul atunci când tensiunea de alimentare coboară sub un prag configurabil (implicit 2{,}51\,V pe ESP32-C3). În timpul testărilor s-a observat că tranziţiile rapide de regim, de exemplu comutarea în modul sleep cu oprirea simultană a LED-urilor senzorului MAX30100 şi schimbarea modului de \textit{power save} al radio-ului WiFi, generau pe sursa de alimentare un \textit{transient} suficient de mare încât să declanşeze BOD-ul. Cauza principală o reprezintă curentul-vârf consumat de transceiver-ul WiFi în timpul emisiei, care poate atinge 350\,mA, valoare la limita capacităţii unui cablu USB de calitate medie.
 
@@ -1236,19 +1305,21 @@ Atunci când transmiterea eșuează din cauza lipsei conexiunii, măsurătoarea 
 
 \subsubsection{Calculul saturației de oxigen (\texorpdfstring{\spo}{SpO2}) în firmware}
 
-Pe lângă pulsul calculat prin detectarea vârfurilor pe semnalul IR, firmware-ul calculează și saturația de oxigen \spo\ direct pe dispozitiv, fără a transmite valorile brute ADC către server. Algoritmul utilizează raportul \textbf{R} dintre amplitudinea AC și componenta DC a semnalului RED, respectiv IR, obținute prin urmărire exponențial-mobilă (EMA):
+Pe lângă pulsul calculat prin detectarea vârfurilor pe semnalul IR, firmware-ul calculează și saturația de oxigen \spo\ direct pe dispozitiv. Principiul fizic se bazează pe faptul că hemoglobina oxigenată și cea dezoxigenată absorb diferit lumina roșie și infraroșie: raportul dintre absorbțiile celor două lungimi de undă se modifică în funcție de concentrația de oxigen din sânge.
+
+Senzorul MAX30100 emite alternativ lumină RED (roșie, 660\,nm) și IR (infraroșu, 940\,nm) și măsoară intensitatea recepționată. Fiecare semnal conține o componentă \textbf{DC} (constantă, dată de țesuturile statice) și o componentă \textbf{AC} (pulsatilă, generată de fluxul sanguin). Algoritmul urmărește componenta DC a fiecărui semnal prin medie exponențial-mobilă (EMA), extrage amplitudinea AC (diferența max-min per bătaie cardiacă) și calculează raportul:
 
 \[
 R = \frac{(\text{RED}_{AC} / \text{RED}_{DC})}{(\text{IR}_{AC} / \text{IR}_{DC})}
 \]
 
-Valoarea \spo\ este estimată printr-un model pătratic empiric, mai precis decât aproximarea liniară clasică $110 - 25 \cdot R$:
+Când sângele este bine oxigenat, hemoglobina absoarbe mult RED și puțin IR ($R$ mic); când saturația scade, absorbția RED scade și cea IR crește ($R$ mare). Valoarea \spo\ este estimată dintr-un \textbf{model pătratic empiric}, calibrat pe datele senzorului MAX30100, mai precis decât aproximarea liniară clasică $110 - 25 \cdot R$:
 
 \[
 \text{SpO}_2 = -45{,}060 \cdot R^2 + 30{,}354 \cdot R + 94{,}845
 \]
 
-Rezultatul este limitat la intervalul $[70, 100]$\%, cu valoarea 0 indicând absența degetului pe senzor. Curentul LED-ului IR este ajustat adaptiv la fiecare ~5 secunde: dacă semnalul este prea slab (IR $<$ 5\,000 unități ADC), curentul crește la 37\,mA; dacă este prea puternic (IR $>$ 40\,000), scade la 11\,mA; altfel rămâne la 27\,mA implicit. Această ajustare reduce consumul de curent fără a sacrifica acuratețea semnalului.
+Rezultatul este limitat la intervalul $[70, 100]$\%, cu valoarea 0 indicând absența degetului pe senzor. Calculul se realizează o dată per bătaie cardiacă detectată (la fiecare vârf IR), asigurând o estimare stabilă și sincronizată cu ciclul cardiac. Curentul LED-ului IR este ajustat adaptiv la fiecare ~5 secunde: dacă semnalul este prea slab (IR $<$ 5\,000 unități ADC), curentul crește la 37\,mA; dacă este prea puternic (IR $>$ 40\,000), scade la 11\,mA; altfel rămâne la 27\,mA implicit. Această ajustare reduce consumul de curent fără a sacrifica acuratețea semnalului.
 
 \begin{figure}[H]
 \centering
@@ -1260,10 +1331,6 @@ Rezultatul este limitat la intervalul $[70, 100]$\%, cu valoarea 0 indicând abs
 \subsubsection{Watchdog și recuperarea automată}
 
 Pentru a garanta funcționarea continuă fără supraveghere, firmware-ul activează \textbf{Task Watchdog Timer (TWDT)} cu un timeout de 30 de secunde. Dacă bucla principală îngheață, de exemplu din cauza unui timeout I2C sau a unui blocaj de semaphore, watchdog-ul resetează microcontrollerul automat, fără a necesita intervenție fizică. Buca principală apelează \texttt{esp\_task\_wdt\_reset()} la fiecare ciclu de 500\,ms, confirmând că sistemul rulează normal.
-
-\subsubsection{OTA --- actualizare firmware prin rețea}
-
-Firmware-ul suportă actualizare \textbf{Over-The-Air (OTA)} prin protocolul HTTPS. La fiecare \textit{heartbeat} (5 minute), dispozitivul interoghează endpoint-ul \texttt{/api/ESP/ota/\{serial\}?version=x.y.z}; dacă serverul returnează \texttt{updateAvailable: true} și un URL valid, firmware-ul descarcă imaginea prin \texttt{esp\_https\_ota} și repornește automat în noua versiune. Dacă descărcarea eșuează, dispozitivul continuă să ruleze versiunea curentă fără a fi afectat. Mecanismul este activat prin configurarea a două variabile în Azure App Settings: \texttt{Urls\_\_OtaFirmwareUrl} (URL-ul binarului .bin) și \texttt{Urls\_\_OtaFirmwareVersion} (versiunea țintă, comparată cu \texttt{FIRMWARE\_VERSION} din cod).
 
 \subsubsection{Timeout GPS și economisire curent}
 
