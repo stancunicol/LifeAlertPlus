@@ -1153,77 +1153,90 @@ Microcontrollerul ESP32-C3 Mini dispune de un număr limitat de pini GPIO de uz 
 
 \begin{figure}[H]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
   every node/.style={font=\scriptsize},
-  esp/.style={rectangle, draw, thick, fill=blue!10,
-              minimum width=2.8cm, minimum height=1.2cm, align=center},
-  mux/.style={rectangle, draw, thick, fill=orange!15,
-              minimum width=2.6cm, minimum height=2.8cm, align=center},
-  sens/.style={rectangle, draw, fill=green!12,
-               minimum width=3.0cm, minimum height=0.75cm, align=center},
-  pwr/.style={rectangle, draw, fill=yellow!20,
-              minimum width=2.4cm, minimum height=0.75cm, align=center},
-  peri/.style={rectangle, draw, fill=red!8,
-               minimum width=2.4cm, minimum height=0.75cm, align=center},
-  lbl/.style={font=\tiny},
-  arr/.style={-{Latex[length=2mm]}, thick},
-  biarr/.style={{Latex[length=2mm]}-{Latex[length=2mm]}, thick, blue!70}]
+  BOX/.style={rectangle, draw, thick, minimum width=3.0cm,
+              minimum height=0.85cm, align=center},
+  ESP/.style={rectangle, draw, very thick, fill=blue!10,
+              minimum width=3.2cm, minimum height=6.2cm, align=center},
+  MUX/.style={rectangle, draw, thick, fill=orange!12,
+              minimum width=2.8cm, minimum height=5.4cm, align=center},
+  SENS/.style={BOX, fill=green!10, minimum width=3.4cm},
+  PERI/.style={BOX, fill=red!7, minimum width=3.0cm},
+  PWR/.style={BOX, fill=yellow!18, minimum width=3.0cm},
+  lbl/.style={font=\tiny, inner sep=1pt},
+  A/.style={-{Latex[length=2.5mm]}, thick},
+  BI/.style={{Latex[length=2.5mm]}-{Latex[length=2.5mm]}, thick, blue!60}]
 
-%% ── Coloana stângă: periferice ──────────────────────────
-\node[peri] (gps)  at (0, 5.4) {\textbf{NEO-6M GPS}\\\scriptsize UART, 9600 baud};
-\node[peri] (btn1) at (0, 4.2) {\textbf{Buton panică}\\\scriptsize GPIO3, pull-up};
-\node[peri] (btn2) at (0, 3.2) {\textbf{Buton sleep}\\\scriptsize GPIO4, pull-up};
-\node[peri] (ledY) at (0, 2.2) {\textbf{LED galben}\\\scriptsize GPIO5};
-\node[peri] (ledG) at (0, 1.2) {\textbf{LED verde}\\\scriptsize GPIO6};
+%% ─── Coordonate fixe: 4 rânduri la y = 3.5 / 2.0 / 0.5 / -1.0
+%% ─── Coloane: x=0 (periferie), x=5 (ESP centrat), x=10.5 (MUX), x=15.5 (senzori)
 
-%% ── Coloana centrală: ESP32-C3 Mini ─────────────────────
-\node[esp]  (esp)  at (5.0, 5.4) {\textbf{ESP32-C3 Mini}\\\scriptsize WiFi, RISC-V};
-\node[esp]  (uart) at (5.0, 4.2) {\scriptsize UART1\\\scriptsize GPIO1(RX) / GPIO2(TX)};
-\node[esp]  (gpio) at (5.0, 3.2) {\scriptsize GPIO3/4/5/6\\\scriptsize butoane \& LED-uri};
-\node[esp]  (i2c)  at (5.0, 2.0) {\scriptsize I2C master\\\scriptsize GPIO8(SDA) / GPIO9(SCL)};
+%% Col A — periferice (x=0)
+\node[PERI] (btn1) at (0, 3.5) {\textbf{Buton panică}\\\tiny GPIO3, pull-up intern};
+\node[PERI] (btn2) at (0, 2.0) {\textbf{Buton sleep}\\\tiny GPIO4, pull-up intern};
+\node[PERI] (ledY) at (0, 0.5) {\textbf{LED galben}\\\tiny GPIO5, active-HIGH};
+\node[PERI] (ledG) at (0,-1.0) {\textbf{LED verde}\\\tiny GPIO6, active-HIGH};
 
-%% ── Coloana centrală jos: alimentare ────────────────────
-\node[pwr] (lipo)   at (5.0, 0.6) {\textbf{LiPo 3.7\,V / 1500\,mAh}};
-\node[pwr] (tp4056) at (5.0,-0.3) {\textbf{TP4056} — încărcare USB-C};
-\node[pwr] (mt3608) at (5.0,-1.2) {\textbf{MT3608} — boost 3.3\,V};
+%% Col A — GPS deasupra ESP (x=5, y=5.5)
+\node[PERI] (gps)  at (5.0, 5.5) {\textbf{NEO-6M GPS}\\\tiny UART1, 9600 baud};
 
-%% ── Coloana dreaptă: multiplexor + senzori ──────────────
-\node[mux] (mux)  at (10.2, 3.5) {
-  \textbf{TCA9548A}\\[2pt]
-  \scriptsize I2C mux (0x70)\\[4pt]
-  \scriptsize ch\,0: MAX30100\\
-  \scriptsize ch\,1: OLED\\
-  \scriptsize ch\,2: MPU6050\\
-  \scriptsize ch\,3: MLX90614};
+%% Col B — ESP32-C3 Mini (x=5, centrat la y=1.25)
+\node[ESP]  (esp)  at (5.0, 1.25) {
+  \textbf{ESP32-C3 Mini}\\[4pt]
+  \tiny WiFi 802.11b/g/n\\
+  \tiny RISC-V 32-bit\\[6pt]
+  \tiny GPIO8 — SDA\\
+  \tiny GPIO9 — SCL\\
+  \tiny GPIO1 — UART RX\\
+  \tiny GPIO2 — UART TX\\
+  \tiny GPIO3/4/5/6};
 
-\node[sens] (max)  at (14.5, 5.2) {\textbf{MAX30100}\\\scriptsize puls \& \spo\ (0x57)};
-\node[sens] (oled) at (14.5, 4.1) {\textbf{OLED SSD1306}\\\scriptsize display (0x3C)};
-\node[sens] (mpu)  at (14.5, 3.0) {\textbf{MPU6050}\\\scriptsize IMU (0x68)};
-\node[sens] (mlx)  at (14.5, 1.9) {\textbf{GY-906 MLX90614}\\\scriptsize temp. IR (0x5A)};
+%% Col C — TCA9548A (x=10.5, centrat la y=1.25)
+\node[MUX]  (mux)  at (10.5, 1.25) {
+  \textbf{TCA9548A}\\[4pt]
+  \tiny I2C mux (0x70)\\[6pt]
+  \tiny ch\,0: MAX30100\\
+  \tiny ch\,1: OLED\\
+  \tiny ch\,2: MPU6050\\
+  \tiny ch\,3: MLX90614};
 
-%% ── Săgeți periferice → ESP ─────────────────────────────
-\draw[biarr] (gps.east)  -- node[above,lbl]{UART1} (esp.west |- gps.east);
-\draw[arr]   (btn1.east) -- (gpio.west |- btn1.east);
-\draw[arr]   (btn2.east) -- (gpio.west |- btn2.east);
-\draw[arr]   (gpio.west |- ledY.east) -- (ledY.east);
-\draw[arr]   (gpio.west |- ledG.east) -- (ledG.east);
+%% Col D — senzori (x=15.5, aceleași rânduri ca periferiile)
+\node[SENS] (max)  at (15.5, 3.5) {\textbf{MAX30100}\\\tiny puls \& \spo{} (0x57)};
+\node[SENS] (oled) at (15.5, 2.0) {\textbf{OLED SSD1306}\\\tiny display (0x3C)};
+\node[SENS] (mpu)  at (15.5, 0.5) {\textbf{MPU6050}\\\tiny IMU (0x68)};
+\node[SENS] (mlx)  at (15.5,-1.0) {\textbf{GY-906 MLX90614}\\\tiny temp. IR (0x5A)};
 
-%% ── Săgeți alimentare ───────────────────────────────────
-\draw[arr] (lipo.south) -- (tp4056.north);
-\draw[arr] (tp4056.south) -- (mt3608.north);
-\draw[arr] (mt3608.east) to[out=0,in=270] node[right,lbl]{3.3\,V} (i2c.south);
+%% Alimentare — sub ESP (y=-3.0)
+\node[PWR] (lipo)   at (1.5, -3.0) {\textbf{LiPo 3.7\,V}\\\tiny 1500\,mAh};
+\node[PWR] (tp)     at (5.0, -3.0) {\textbf{TP4056}\\\tiny încărcare USB-C};
+\node[PWR] (mt)     at (8.5, -3.0) {\textbf{MT3608}\\\tiny boost 3.3\,V};
 
-%% ── Săgeată I2C → MUX ───────────────────────────────────
-\draw[biarr] (i2c.east) -- node[above,lbl]{I2C} (mux.west |- i2c.east);
+%% ── Săgeți Col A → Col B (orizontale, pe rândul lor exact) ──
+\draw[A]  (btn1.east) -- node[above,lbl]{GPIO3} (esp.west |- btn1.east);
+\draw[A]  (btn2.east) -- node[above,lbl]{GPIO4} (esp.west |- btn2.east);
+\draw[A]  (esp.west |- ledY.east) -- node[above,lbl]{GPIO5} (ledY.east);
+\draw[A]  (esp.west |- ledG.east) -- node[above,lbl]{GPIO6} (ledG.east);
 
-%% ── Săgeți MUX → senzori ────────────────────────────────
-\draw[arr] (mux.east |- max.west)  -- (max.west);
-\draw[arr] (mux.east |- oled.west) -- (oled.west);
-\draw[arr] (mux.east |- mpu.west)  -- (mpu.west);
-\draw[arr] (mux.east |- mlx.west)  -- (mlx.west);
+%% GPS → ESP (vertical)
+\draw[BI] (gps.south) -- node[right,lbl]{UART1} (esp.north);
 
-\end{tikzpicture}
-\caption{Schema de conexiuni a dispozitivului portabil: ESP32-C3 Mini conectat prin I2C la multiplexorul TCA9548A și la cei patru senzori pe canale separate, la modulul GPS prin UART, și la butonul de panică, butonul sleep și LED-uri direct pe GPIO. Circuitul de alimentare: LiPo $\to$ TP4056 (încărcare USB-C) $\to$ MT3608 (boost 3.3\,V).}
+%% ESP → MUX (orizontală la centrul ESP)
+\draw[BI] (esp.east) -- node[above,lbl]{I2C} (mux.west);
+
+%% MUX → senzori (orizontale, pe rândul fiecărui senzor)
+\draw[A] (mux.east |- max.west)  -- (max.west);
+\draw[A] (mux.east |- oled.west) -- (oled.west);
+\draw[A] (mux.east |- mpu.west)  -- (mpu.west);
+\draw[A] (mux.east |- mlx.west)  -- (mlx.west);
+
+%% Alimentare: lanț orizontal + săgeată verticală spre ESP
+\draw[A] (lipo.east) -- (tp.west);
+\draw[A] (tp.east)   -- node[above,lbl]{3.7\,V} (mt.west);
+\draw[A] (mt.north) -- ++(0,0.6) -- node[above,lbl]{3.3\,V} ++($(esp.south)-(mt.north)-(0,0.6)$) -- (esp.south);
+
+\end{tikzpicture}}
+\caption{Schema de conexiuni a dispozitivului portabil: ESP32-C3 Mini conectat prin I2C la multiplexorul TCA9548A și la cei patru senzori pe canale separate, la modulul GPS prin UART, butoanele și LED-urile direct pe GPIO, și circuitul de alimentare LiPo $\to$ TP4056 (USB-C) $\to$ MT3608 (3.3\,V).}
 \label{fig:schema}
 \end{figure}
 
