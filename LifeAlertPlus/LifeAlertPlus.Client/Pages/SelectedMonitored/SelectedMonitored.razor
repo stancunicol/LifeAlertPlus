@@ -598,16 +598,6 @@
                                     <span>▶</span>
                                 </button>
                             }
-                            <div class="chart-zoom-controls">
-                                <button class="btn-zoom" @onclick="ZoomChartOut"
-                                        disabled="@(_chartZoom <= ChartMinZoom)"
-                                        title="@T("selected.zoomOut")">−</button>
-                                <button class="btn-zoom-reset" @onclick="ResetChartZoom"
-                                        title="@T("selected.zoomReset")">@ChartZoomLabel</button>
-                                <button class="btn-zoom" @onclick="ZoomChartIn"
-                                        disabled="@(_chartZoom >= ChartMaxZoom)"
-                                        title="@T("selected.zoomIn")">+</button>
-                            </div>
                         </div>
                         <div class="charts-scroll-outer">
                         <!-- Heart Rate -->
