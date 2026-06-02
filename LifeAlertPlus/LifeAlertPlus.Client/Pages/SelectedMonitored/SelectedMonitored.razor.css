@@ -2393,3 +2393,29 @@
     white-space: pre-wrap;
     word-wrap: break-word;
 }
+
+/* ── Mobile font-size overrides — bump up small text for readability ── */
+@media (max-width: 768px) {
+    .chart-unit-badge      { font-size: 12px; }
+    .chart-week-label      { font-size: 14px; }
+    .chart-item-title      { font-size: 14px; }
+    .alert-time,
+    .measurement-time      { font-size: 13px; }
+    .trend-stat-label,
+    .trend-stat-value      { font-size: 13px; }
+    .trend-buffer-info,
+    .trend-buffer-footer   { font-size: 12px; }
+    .ai-risk-label         { font-size: 13px; }
+    .ai-health-label       { font-size: 13px; }
+    .ai-state-label        { font-size: 13px; }
+    .ai-confidence-label   { font-size: 13px; }
+    .profile-updated-at    { font-size: 13px; }
+    .doctor-note-date      { font-size: 13px; }
+    .form-hint             { font-size: 13px; }
+    .stat-status           { font-size: 13px; }
+    .diag-label,
+    .diag-val              { font-size: 13px; }
+    .retention-banner      { font-size: 14px; }
+    .activity-slot-hour    { font-size: 11px; }
+    .legend-item           { font-size: 13px; }
+}
