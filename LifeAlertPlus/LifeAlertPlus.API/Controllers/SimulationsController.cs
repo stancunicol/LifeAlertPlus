@@ -73,6 +73,32 @@ namespace LifeAlertPlus.API.Controllers
         }
 
         /// <summary>
+        /// Seed today's measurements (one per 30 min from midnight to now) for chart population
+        /// </summary>
+        [HttpPost("seedToday/{personId}")]
+        public async Task<IActionResult> SeedToday(Guid personId)
+        {
+            if (personId == Guid.Empty)
+                return BadRequest(new { success = false, message = "Invalid person ID" });
+
+            await _simulationManager.SeedTodayAsync(personId);
+            return Ok(new { success = true, message = "Today's seed data generated" });
+        }
+
+        /// <summary>
+        /// Force reseed today — deletes existing zero-SpO2 measurements for today then reseeds
+        /// </summary>
+        [HttpPost("reseedToday/{personId}")]
+        public async Task<IActionResult> ReseedToday(Guid personId)
+        {
+            if (personId == Guid.Empty)
+                return BadRequest(new { success = false, message = "Invalid person ID" });
+
+            await _simulationManager.ReseedTodayAsync(personId);
+            return Ok(new { success = true, message = "Today's data reseeded with SpO2" });
+        }
+
+        /// <summary>
         /// Get list of currently running simulation IDs
         /// </summary>
         [HttpGet("running")]

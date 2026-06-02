@@ -110,6 +110,32 @@ namespace LifeAlertPlus.Client.Services
 		}
 
 		/// <summary>
+		/// Force-reseed today — removes zero-SpO2 seed rows then regenerates with correct values
+		/// </summary>
+		public async Task<bool> ReseedTodayAsync(Guid personId)
+		{
+			try
+			{
+				var response = await _httpClient.PostAsync($"api/simulations/reseedToday/{personId}", null);
+				return response.IsSuccessStatusCode;
+			}
+			catch { return false; }
+		}
+
+		/// <summary>
+		/// Seed today's chart data (one measurement per 30 min from midnight to now)
+		/// </summary>
+		public async Task<bool> SeedTodayAsync(Guid personId)
+		{
+			try
+			{
+				var response = await _httpClient.PostAsync($"api/simulations/seedToday/{personId}", null);
+				return response.IsSuccessStatusCode;
+			}
+			catch { return false; }
+		}
+
+		/// <summary>
 		/// Get list of currently running simulation person IDs
 		/// </summary>
 		public async Task<IEnumerable<Guid>> GetRunningSimulationsAsync()

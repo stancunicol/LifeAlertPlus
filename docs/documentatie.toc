@@ -116,14 +116,14 @@
 \contentsline {subsubsection}{\numberline {5.4.2}Autorizarea pe roluri și accesibilitatea}{54}{subsubsection.5.4.2}%
 \contentsline {subsubsection}{\numberline {5.4.3}Organizarea interfeței și gestionarea stării}{54}{subsubsection.5.4.3}%
 \contentsline {subsubsection}{\numberline {5.4.4}Vizualizarea datelor și funcționalitatea PWA}{55}{subsubsection.5.4.4}%
-\contentsline {subsubsection}{\numberline {5.4.5}Tabloul de bord și paginile aparținătorului}{55}{subsubsection.5.4.5}%
+\contentsline {subsubsection}{\numberline {5.4.5}Tabloul de bord și paginile aparținătorului}{56}{subsubsection.5.4.5}%
 \contentsline {subsubsection}{\numberline {5.4.6}Paginile informative și suportul}{56}{subsubsection.5.4.6}%
 \contentsline {subsubsection}{\numberline {5.4.7}Interfața de administrare}{56}{subsubsection.5.4.7}%
 \contentsline {subsubsection}{\numberline {5.4.8}Arhivarea persoanelor monitorizate}{57}{subsubsection.5.4.8}%
 \contentsline {subsubsection}{\numberline {5.4.9}Fluxul de acceptare a invitației de medic}{57}{subsubsection.5.4.9}%
 \contentsline {subsubsection}{\numberline {5.4.10}Consimțământul GDPR la înregistrare}{57}{subsubsection.5.4.10}%
 \contentsline {subsubsection}{\numberline {5.4.11}Editarea contului și schimbarea numărului de telefon}{57}{subsubsection.5.4.11}%
-\contentsline {subsubsection}{\numberline {5.4.12}Pagina de simulări (administrator)}{57}{subsubsection.5.4.12}%
+\contentsline {subsubsection}{\numberline {5.4.12}Pagina de simulări (administrator)}{58}{subsubsection.5.4.12}%
 \contentsline {subsubsection}{\numberline {5.4.13}Vizualizarea medicului}{58}{subsubsection.5.4.13}%
 \contentsline {subsection}{\numberline {5.5}Sistemul de notificări}{58}{subsection.5.5}%
 \contentsline {subsubsection}{\numberline {5.5.1}Temporizarea alertelor}{58}{subsubsection.5.5.1}%

@@ -84,33 +84,109 @@ namespace LifeAlertPlus.API.Services
                 .Where(m => !string.IsNullOrWhiteSpace(m.DeviceSerialNumber) && !m.IsArchived)
                 .ToListAsync();
 
+            var todayUtc = DateTime.UtcNow.Date;
+
             foreach (var m in monitoreds)
             {
                 var serial = m.DeviceSerialNumber.Trim();
-                if (_simulatedData.ContainsKey(serial)) continue;
 
                 var last = await db.Measurements
                     .Where(ms => ms.IdMonitored == m.Id)
                     .OrderByDescending(ms => ms.CreatedAt)
                     .FirstOrDefaultAsync();
 
-                if (last == null) continue;
-
-                _simulatedData[serial] = new LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO
+                // Populate live-data cache for the cards
+                if (!_simulatedData.ContainsKey(serial) && last != null)
                 {
-                    Serial      = serial,
-                    Date        = new DateTimeOffset(last.CreatedAt).ToUnixTimeSeconds(),
-                    IsAvailable = true,
-                    Bpm         = (int)last.Pulse,
-                    Spo2        = (int)last.SpO2,
-                    Temperature = last.Temperature,
-                    Neo6m       = string.IsNullOrWhiteSpace(last.Coordinates) ? null : last.Coordinates,
-                    IsFall      = last.IsFall,
-                    Activity    = last.Activity,
-                    Mpu6050     = new List<int>(),
-                    Gyro        = new List<int>()
-                };
+                    _simulatedData[serial] = new LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO
+                    {
+                        Serial      = serial,
+                        Date        = new DateTimeOffset(last.CreatedAt).ToUnixTimeSeconds(),
+                        IsAvailable = true,
+                        Bpm         = (int)last.Pulse,
+                        Spo2        = (int)last.SpO2,
+                        Temperature = last.Temperature,
+                        Neo6m       = string.IsNullOrWhiteSpace(last.Coordinates) ? null : last.Coordinates,
+                        IsFall      = last.IsFall,
+                        Activity    = last.Activity,
+                        Mpu6050     = new List<int>(),
+                        Gyro        = new List<int>()
+                    };
+                }
+
+                // Seed today if there are no measurements with valid SpO2 for today
+                var hasTodaySpO2 = await db.Measurements
+                    .AnyAsync(ms => ms.IdMonitored == m.Id
+                                 && ms.CreatedAt >= todayUtc
+                                 && ms.SpO2 > 0);
+
+                if (!hasTodaySpO2)
+                {
+                    _logger.LogInformation("No SpO2 data for today for {PersonId} — auto-seeding chart data", m.Id);
+                    await SeedTodayAsync(m.Id);
+                }
             }
+        }
+
+        // Generates measurements spread every 30 minutes from midnight to now for today,
+        // so the charts have data immediately after a fresh deploy or DB reset.
+        // Inserts directly into DbContext to avoid triggering alert notifications.
+        public async Task SeedTodayAsync(Guid personId)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
+
+            var monitored = await db.Monitoreds.FirstOrDefaultAsync(m => m.Id == personId);
+            if (monitored == null || string.IsNullOrWhiteSpace(monitored.DeviceSerialNumber)) return;
+
+            var serial = monitored.DeviceSerialNumber.Trim();
+            var nowUtc = DateTime.UtcNow;
+            var startOfDay = nowUtc.Date;
+
+            var measurements = new List<Domain.Entities.Measurement>();
+            var timestamp = startOfDay;
+            while (timestamp <= nowUtc)
+            {
+                var payload = ESPDataGenerator.GeneratePayload(serial);
+                measurements.Add(new Domain.Entities.Measurement
+                {
+                    Id          = Guid.NewGuid(),
+                    Name        = "Seed Data",
+                    Activity    = "stationary",
+                    IsFall      = false,
+                    IdMonitored = personId,
+                    Pulse       = payload.Bpm ?? 75,
+                    SpO2        = payload.Spo2 ?? 97,
+                    Temperature = payload.Temperature ?? 36.6,
+                    Coordinates = payload.Neo6m ?? string.Empty,
+                    CreatedAt   = timestamp
+                });
+                timestamp = timestamp.AddMinutes(30);
+            }
+
+            await db.Measurements.AddRangeAsync(measurements);
+            await db.SaveChangesAsync();
+            _logger.LogInformation("Seeded {Count} measurements for today for person {PersonId}", measurements.Count, personId);
+        }
+
+        // Deletes all zero-SpO2 seed measurements for today and regenerates with correct SpO2 values.
+        public async Task ReseedTodayAsync(Guid personId)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<Infrastructure.Context.LifeAlertPlusDbContext>();
+
+            var todayUtc = DateTime.UtcNow.Date;
+
+            var oldSeed = db.Measurements
+                .Where(ms => ms.IdMonitored == personId
+                          && ms.CreatedAt >= todayUtc
+                          && ms.SpO2 == 0
+                          && ms.Name == "Seed Data");
+            db.Measurements.RemoveRange(oldSeed);
+            await db.SaveChangesAsync();
+
+            await SeedTodayAsync(personId);
+            _logger.LogInformation("Reseeded today's data with SpO2 for person {PersonId}", personId);
         }
 
         public async Task StartSimulationAsync(Guid personId, TimeSpan? interval = null)

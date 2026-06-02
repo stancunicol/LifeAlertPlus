@@ -807,10 +807,12 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     LoadWeeklyChartData(measurementsList);
                 }
 
-                HeartRatePoints = ComputePointsWithRange(HeartRateHistory, 40, 140);
-                TemperaturePoints = ComputePointsWithRange(TemperatureHistory, 35, 39);
-                HrTooltipData = ComputeTooltipData(HeartRateHistory, 40, 120);
-                TempTooltipData = ComputeTooltipData(TemperatureHistory, 35, 39);
+                HeartRatePoints   = ComputePointsWithRange(HeartRateHistory,   40,  140);
+                TemperaturePoints = ComputePointsWithRange(TemperatureHistory,  35,   39);
+                SpO2Points        = ComputePointsWithRange(SpO2History,          85,  100);
+                HrTooltipData     = ComputeTooltipData(HeartRateHistory,   40,  120);
+                TempTooltipData   = ComputeTooltipData(TemperatureHistory,  35,   39);
+                SpO2TooltipData   = ComputeTooltipData(SpO2History,          85,  100);
 
                 // Ensure UI updates immediately after data is loaded so points appear
                 await InvokeAsync(StateHasChanged);
@@ -1231,12 +1233,15 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
         private void LoadEmptyChartData()
         {
-            HeartRateHistory = new List<ChartDataPoint>();
+            HeartRateHistory   = new List<ChartDataPoint>();
             TemperatureHistory = new List<ChartDataPoint>();
-            HeartRatePoints = new List<(double X, double Y)>();
-            TemperaturePoints = new List<(double X, double Y)>();
-            HrTooltipData = new List<TooltipPoint>();
-            TempTooltipData = new List<TooltipPoint>();
+            SpO2History        = new List<ChartDataPoint>();
+            HeartRatePoints    = new List<(double X, double Y)>();
+            TemperaturePoints  = new List<(double X, double Y)>();
+            SpO2Points         = new List<(double X, double Y)>();
+            HrTooltipData      = new List<TooltipPoint>();
+            TempTooltipData    = new List<TooltipPoint>();
+            SpO2TooltipData    = new List<TooltipPoint>();
         }
 
         // Spread close X positions so plotted circles don't visually overlap

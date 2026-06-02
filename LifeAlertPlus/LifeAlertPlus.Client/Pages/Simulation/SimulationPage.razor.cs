@@ -248,6 +248,49 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		StateHasChanged();
 	}
 
+	protected async Task ReseedTodayAsync(SimPerson person)
+	{
+		if (person.IsRunning || person.IsSending) return;
+		person.IsSending = true;
+		person.LastStatus = null;
+		StateHasChanged();
+		try
+		{
+			var ok = await SimulationService.ReseedTodayAsync(person.PersonId);
+			person.LastStatus = ok ? SimStatus.Ok("Reseeded w/ SpO2") : SimStatus.Warn("Reseed failed");
+		}
+		finally { person.IsSending = false; StateHasChanged(); }
+	}
+
+	protected async Task SeedTodayAsync(SimPerson person)
+	{
+		if (person.IsRunning || person.IsSending) return;
+		person.IsSending = true;
+		person.LastStatus = null;
+		StateHasChanged();
+		try
+		{
+			var ok = await SimulationService.SeedTodayAsync(person.PersonId);
+			person.LastStatus = ok ? SimStatus.Ok("Today seeded") : SimStatus.Warn("Seed failed");
+		}
+		finally { person.IsSending = false; StateHasChanged(); }
+	}
+
+	protected async Task SeedAllTodayAsync()
+	{
+		var candidates = SelectedPersons.Where(p => !p.IsRunning && !p.IsSending).ToList();
+		if (!candidates.Any()) return;
+		foreach (var p in candidates) { p.IsSending = true; p.LastStatus = null; }
+		StateHasChanged();
+		foreach (var person in candidates)
+		{
+			var ok = await SimulationService.SeedTodayAsync(person.PersonId);
+			person.LastStatus = ok ? SimStatus.Ok("Today seeded") : SimStatus.Warn("Seed failed");
+			person.IsSending = false;
+			StateHasChanged();
+		}
+	}
+
 	protected async Task ClearDataAsync(SimPerson person)
 	{
 		if (person.IsRunning || person.IsSending) return;
