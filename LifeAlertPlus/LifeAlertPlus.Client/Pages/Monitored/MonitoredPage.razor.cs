@@ -366,53 +366,42 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             return;
         }
 
-        var cards = new List<MonitoredCard>();
-
-        foreach (var person in _monitoredPeople)
+        var cardTasks = _monitoredPeople.Select(async person =>
         {
             token.ThrowIfCancellationRequested();
 
-            ESPDataResponseDTO? latestData = null;
-            DateTime lastMeasurementTime = DateTime.MinValue;
-            
-            try
-            {
-                latestData = await MonitoredApiClient.GetEspDataAsync(person.DeviceSerialNumber, token);
-            }
-            catch (TaskCanceledException)
-            {
-                throw;
-            }
-            catch
-            {
-                // Ignore per-device failures to keep other updates flowing.
-            }
+            var espTask = FetchEspAsync(person.DeviceSerialNumber, token);
+            var measTask = FetchLastMeasurementTimeAsync(person.Id);
+            await Task.WhenAll(espTask, measTask);
 
-            // Get the last measurement for this person
-            try
-            {
-                var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(person.Id, 1, 1);
-                var lastMeasurement = measurements?.FirstOrDefault();
-                if (lastMeasurement != null)
-                {
-                    lastMeasurementTime = lastMeasurement.CreatedAt;
-                }
-            }
-            catch
-            {
-                // If measurement fetch fails, continue with MinValue
-            }
-
-            cards.Add(new MonitoredCard
+            return new MonitoredCard
             {
                 Person = person,
-                LastData = latestData,
-                LastUpdatedUtc = lastMeasurementTime
-            });
-        }
+                LastData = await espTask,
+                LastUpdatedUtc = await measTask
+            };
+        });
 
-        _monitoredCards = cards;
+        var cards = await Task.WhenAll(cardTasks);
+        _monitoredCards = cards.ToList();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<ESPDataResponseDTO?> FetchEspAsync(string serial, CancellationToken token)
+    {
+        try { return await MonitoredApiClient.GetEspDataAsync(serial, token); }
+        catch (TaskCanceledException) { throw; }
+        catch { return null; }
+    }
+
+    private async Task<DateTime> FetchLastMeasurementTimeAsync(Guid personId)
+    {
+        try
+        {
+            var ms = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(personId, 1, 1);
+            return ms?.FirstOrDefault()?.CreatedAt ?? DateTime.MinValue;
+        }
+        catch { return DateTime.MinValue; }
     }
 
     private string GetInitials(string name)
@@ -442,11 +431,11 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     {
         return status.ToLower() switch
         {
-            "critical" => T("card.statusAlert"),
-            "warning" => T("card.statusCheckNeeded"),
-            "ok" => T("card.statusStable"),
-            "nodata" => T("card.statusNoEsp"),
-            _ => T("card.noData")
+            "critical" => T("card.statusCritical"),
+            "warning"  => T("card.statusCheckNeeded"),
+            "ok"       => T("card.statusStable"),
+            "nodata"   => T("card.statusNoEsp"),
+            _          => T("card.noData")
         };
     }
 
@@ -630,30 +619,25 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             return "NoData";
 
         var pulse = card.LastData?.Bpm ?? 0;
-        var spo2  = 0; // SpO2 algorithm not yet implemented in firmware
+        var spo2  = card.LastData?.Spo2 ?? 0;
         var temp  = card.LastData?.Temperature;
 
-        // Use patient-specific thresholds if set, otherwise use defaults
-        int minHR = card.Person.MinHeartRate ?? 50;
-        int maxHR = card.Person.MaxHeartRate ?? 100;
-        double minTemp = card.Person.MinTemperature ?? 36.0;
-        double maxTemp = card.Person.MaxTemperature ?? 39.0;
-        int minSpO2 = card.Person.MinSpO2 ?? 90;
-        int maxSpO2 = card.Person.MaxSpO2 ?? 100;
+        int effectiveMinHr  = card.Person.MinHeartRate  ?? 60;
+        int effectiveMaxHr  = card.Person.MaxHeartRate  ?? 100;
+        double effectiveMinT = card.Person.MinTemperature ?? 36.0;
+        double effectiveMaxT = card.Person.MaxTemperature ?? 37.5;
+        int effectiveMinSpO2 = card.Person.MinSpO2 ?? 95;
 
-        // Critical: fall, or readings exceed patient's threshold boundaries
-        if (IsFallEvent(card) || pulse < minHR || pulse > maxHR || spo2 < minSpO2 ||
-            (temp.HasValue && (temp < minTemp || temp > maxTemp)))
-            return "Critical";
+        // Critical — same thresholds as SelectedMonitored (guards for 0 values)
+        if (IsFallEvent(card)) return "Critical";
+        if (pulse > 0 && (pulse > effectiveMaxHr || pulse < effectiveMinHr - 10)) return "Critical";
+        if (spo2  > 0 && spo2 < 90) return "Critical";
+        if (temp.HasValue && temp > 0 && (temp > effectiveMaxT + 0.5 || temp < effectiveMinT - 0.5)) return "Critical";
 
-        // Warning: readings approaching boundaries (10% margin)
-        int hrMargin = (int)((maxHR - minHR) * 0.1);
-        int spo2Margin = (int)((maxSpO2 - minSpO2) * 0.1);
-        double tempMargin = (maxTemp - minTemp) * 0.1;
-
-        if (pulse <= minHR + hrMargin || pulse >= maxHR - hrMargin || spo2 <= minSpO2 + spo2Margin ||
-            (temp.HasValue && (temp <= minTemp + tempMargin || temp >= maxTemp - tempMargin)))
-            return "Warning";
+        // Warning
+        if (pulse > 0 && (pulse > effectiveMaxHr - 10 || pulse < effectiveMinHr)) return "Warning";
+        if (spo2  > 0 && spo2 < effectiveMinSpO2) return "Warning";
+        if (temp.HasValue && temp > 0 && (temp > effectiveMaxT || temp < effectiveMinT)) return "Warning";
 
         return "OK";
     }
