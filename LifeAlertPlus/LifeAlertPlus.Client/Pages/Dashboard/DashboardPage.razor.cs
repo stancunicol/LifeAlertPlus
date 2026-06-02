@@ -80,10 +80,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
             return;
         }
 
-        // Show onboarding modal on first visit (checked via localStorage)
         var onboardingDone = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", OnboardingKey);
-        if (string.IsNullOrEmpty(onboardingDone))
-            _showOnboarding = true;
 
         var apiFullName = $"{userFromApi.FirstName} {userFromApi.LastName}".Trim();
         if (!string.IsNullOrWhiteSpace(apiFullName))
@@ -103,12 +100,13 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         else
             await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
 
-        // Load monitored people
-        await LoadRecentMonitoredPeopleAsync();
-        
-        // Load today's measurements count
-        await LoadTodayMeasurementsCountAsync();
-        
+        // Load monitored people and today's count in parallel
+        await Task.WhenAll(LoadRecentMonitoredPeopleAsync(), LoadTodayMeasurementsCountAsync());
+
+        // Show onboarding only when it's truly the first visit AND there are no people yet
+        if (string.IsNullOrEmpty(onboardingDone) && !MonitoredSamples.Any())
+            _showOnboarding = true;
+
         // Start auto-refresh polling (30 seconds)
         StartPolling();
     }
@@ -199,44 +197,20 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
 
             TotalMonitored = monitoredPeople.Count;
 
-            var cards = new List<MonitoredCardData>();
-
-            foreach (var person in monitoredPeople)
+            // Fetch ESP data and last measurement for all people in parallel
+            var cardTasks = monitoredPeople.Select(async person =>
             {
-                Shared.DTOs.Responses.ESP.ESPDataResponseDTO? espData = null;
-                DateTime lastMeasurementTime = DateTime.MinValue;
-                
-                try
-                {
-                    espData = await MonitoredApiClient.GetEspDataAsync(person.DeviceSerialNumber);
-                }
-                catch
-                {
-                    // If ESP data fails, continue with null data
-                }
-
-                // Get the last measurement for this person
-                try
-                {
-                    var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(person.Id, 1, 1);
-                    var lastMeasurement = measurements?.FirstOrDefault();
-                    if (lastMeasurement != null)
-                    {
-                        lastMeasurementTime = lastMeasurement.CreatedAt;
-                    }
-                }
-                catch
-                {
-                    // If measurement fetch fails, continue with MinValue
-                }
-
-                cards.Add(new MonitoredCardData
+                var espTask  = FetchEspDataAsync(person.DeviceSerialNumber);
+                var measTask = FetchLastMeasurementTimeAsync(person.Id);
+                await Task.WhenAll(espTask, measTask);
+                return new MonitoredCardData
                 {
                     Person = person,
-                    EspData = espData,
-                    LastUpdatedUtc = lastMeasurementTime
-                });
-            }
+                    EspData = await espTask,
+                    LastUpdatedUtc = await measTask
+                };
+            });
+            var cards = (await Task.WhenAll(cardTasks)).ToList();
 
             // Statistics reflect the FULL set of monitored people, not just the
             // recent slice — otherwise the counts would silently drift below the
@@ -315,6 +289,22 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    private async Task<Shared.DTOs.Responses.ESP.ESPDataResponseDTO?> FetchEspDataAsync(string serial)
+    {
+        try { return await MonitoredApiClient.GetEspDataAsync(serial); }
+        catch { return null; }
+    }
+
+    private async Task<DateTime> FetchLastMeasurementTimeAsync(Guid personId)
+    {
+        try
+        {
+            var ms = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(personId, 1, 1);
+            return ms?.FirstOrDefault()?.CreatedAt ?? DateTime.MinValue;
+        }
+        catch { return DateTime.MinValue; }
+    }
+
     private string GetStatus(int heartRate, int spO2, double? temperature, bool isOnline,
         int? minHr = null, int? maxHr = null,
         double? minTemp = null, double? maxTemp = null,
@@ -333,7 +323,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
             return "Critical";
         if (spO2 > 0 && spO2 < 90)
             return "Critical";
-        if (temperature.HasValue && (temperature > effectiveMaxT + 0.5 || temperature < effectiveMinT - 0.5))
+        if (temperature.HasValue && temperature > 0 && (temperature > effectiveMaxT + 0.5 || temperature < effectiveMinT - 0.5))
             return "Critical";
 
         // Warning
@@ -341,7 +331,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
             return "Warning";
         if (spO2 > 0 && spO2 < effectiveMinSpO2)
             return "Warning";
-        if (temperature.HasValue && (temperature > effectiveMaxT || temperature < effectiveMinT))
+        if (temperature.HasValue && temperature > 0 && (temperature > effectiveMaxT || temperature < effectiveMinT))
             return "Warning";
 
         return "OK";

@@ -225,7 +225,7 @@ Termenul Internet of Things (IoT) descrie un ecosistem de dispozitive fizice ech
 
 Din punct de vedere arhitectural, un sistem IoT este organizat pe trei niveluri principale. Primul nivel, numit nivelul de percepție, cuprinde dispozitivele fizice și senzorii responsabili de achiziția datelor din mediu. Al doilea nivel, nivelul de rețea, asigură transmiterea datelor colectate către infrastructura de procesare, utilizând protocoale precum WiFi, Bluetooth Low Energy (BLE), MQTT sau HTTP. Al treilea nivel, nivelul de aplicație, include platformele software care procesează, stochează și prezintă datele utilizatorilor finali.
 
-În domeniul medical, IoT a generat un subdomeniu distinct, denumit Internet of Medical Things (IoMT), care cuprinde dispozitive precum brățări de monitorizare, pulsioximetre portabile, glucometre conectate și sisteme de monitorizare a semnelor vitale. Potrivit unui raport Fortune Business Insights din 2023, piața globală IoMT a depășit 50 de miliarde de dolari și este estimată să crească la peste 180 de miliarde până în 2030, reflectând cererea crescândă pentru soluții de monitorizare continuă în afara mediului clinic.
+În domeniul medical, IoT a generat un subdomeniu distinct, denumit Internet of Medical Things (IoMT), care cuprinde dispozitive precum brățări de monitorizare, pulsioximetre portabile, glucometre conectate și sisteme de monitorizare a semnelor vitale \cite{bandaru2025, pabitha2025}. Potrivit unui raport Fortune Business Insights din 2023, piața globală IoMT a depășit 50 de miliarde de dolari și este estimată să crească la peste 180 de miliarde până în 2030, reflectând cererea crescândă pentru soluții de monitorizare continuă în afara mediului clinic \cite{panahi2025ejiss}.
 
 Un aspect critic în sistemele IoT medicale este fiabilitatea comunicației. Spre deosebire de aplicațiile industriale sau de automatizare casnică, întreruperea transmisiei datelor într-un sistem medical poate avea consecințe directe asupra siguranței pacientului. Din acest motiv, arhitecturile IoMT includ în mod obișnuit mecanisme de stocare locală temporară a datelor, care asigură continuitatea înregistrării chiar și în absența conectivității la rețea, cu sincronizare automată la revenirea conexiunii.
 
@@ -304,7 +304,7 @@ Interacțiunea fizică cu dispozitivul este limitată la două butoane, în conc
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.72\textwidth]{figuri/interfata_dispozitiv.png}
+\includegraphics[width=0.72\textwidth]{figuri/interfata_dispozitiv.jpg}
 \caption{Interfața dispozitivului portabil LifeAlertPlus: ecranul OLED afișând parametrii vitali și starea sistemului, împreună cu LED-urile de stare și butoanele de interacțiune.}
 \label{fig:dispozitiv}
 \end{figure}
@@ -505,7 +505,7 @@ Totuși, și Withings ScanWatch este orientat spre auto-monitorizare, fără un 
 
 \subsubsection{Soluții academice și de cercetare}
 
-Literatura de specialitate propune numeroase sisteme IoT de monitorizare medicală dezvoltate în context academic, bazate frecvent pe platforme Arduino sau ESP32, senzori MAX30100/MAX30102 și protocoale MQTT pentru transmisia datelor. Aceste sisteme demonstrează viabilitatea tehnică a abordării, însă rămân în stadiul de prototip de laborator, fără interfețe utilizator complete, fără mecanisme de alertare multi-canal și fără considerarea aspectelor practice legate de autonomia bateriei, rezistența mecanică sau ușurința de utilizare pentru persoane fără competențe tehnice.
+Literatura de specialitate propune numeroase sisteme IoT de monitorizare medicală dezvoltate în context academic, bazate frecvent pe platforme Arduino sau ESP32, senzori MAX30100/MAX30102 și protocoale MQTT pentru transmisia datelor \cite{alshamrani2022, nancy2022, ali2025}. Aceste sisteme demonstrează viabilitatea tehnică a abordării, însă rămân în stadiul de prototip de laborator, fără interfețe utilizator complete, fără mecanisme de alertare multi-canal și fără considerarea aspectelor practice legate de autonomia bateriei, rezistența mecanică sau ușurința de utilizare pentru persoane fără competențe tehnice \cite{shah2026, mollabagher2026}.
 
 \subsection{Limitări identificate}
 
@@ -759,7 +759,7 @@ Modelul de date al sistemului este alcătuit din douăsprezece entități, fieca
 \item \textbf{Measurement}: o măsurătoare individuală transmisă de dispozitiv, cu valorile de puls, temperatură, \spo, activitatea detectată, indicatorul de cădere și coordonatele geografice.
 \item \textbf{MonitoredCondition}: o afecțiune medicală preexistentă a unei persoane monitorizate (hipertensiune, aritmie, diabet etc.), folosită de modulul AI pentru ajustarea evaluării.
 \item \textbf{ActivityProfile}: profilul de activitate al unei persoane, agregat pe ore ale zilei (puls mediu, rata de mișcare, probabilitatea de somn).
-\item \textbf{Notification}: o notificare generată de sistem, asociată unei persoane monitorizate și, opțional, unui utilizator destinatar. Pe lângă conținutul mesajului, înregistrează și \textbf{feedback-ul utilizatorului} cu privire la veridicitatea alertei. Mecanismul funcționează astfel: atunci când o stare critică a unui vârstnic se rezolvă (parametrii vitali revin la normal după ce o alertă a fost trimisă), ultima notificare critică din acel episod este marcată automat ca \textit{așteptând feedback} (\texttt{FeedbackRequestedAt}). La următoarea vizită a aparținătorului în aplicație, un popup îi solicită să confirme dacă alerta a fost reală sau o alarmă falsă. Dacă au avut loc mai multe episoade critice, feedback-ul se solicită pentru \textbf{ultima} notificare din fiecare episod, per utilizator. Răspunsul este înregistrat în câmpul \texttt{WasReal}.
+\item \textbf{Notification}: o notificare generată de sistem, asociată unei persoane monitorizate și, opțional, unui utilizator destinatar. Pe lângă conținutul mesajului, înregistrează și \textbf{feedback-ul utilizatorului} cu privire la veridicitatea alertei. Mecanismul funcționează astfel: atunci când o stare critică a unui vârstnic se rezolvă (parametrii vitali revin la normal după ce o alertă a fost trimisă), ultima notificare critică din acel episod este marcată automat ca \textit{așteptând feedback} (\texttt{FeedbackRequestedAt}). La următoarea accesare a paginii persoanei monitorizate, un banner vizibil solicită confirmarea dacă alerta a fost reală sau o alarmă falsă. Dacă au avut loc mai multe episoade critice, feedback-ul se solicită pentru \textbf{ultima} notificare din fiecare episod, per utilizator. Răspunsul este înregistrat în câmpul \texttt{WasReal}.
 \item \textbf{WifiNetwork}: o rețea WiFi configurată pentru dispozitivul fizic al unei persoane monitorizate (SSID + parolă). O persoană poate avea până la trei rețele înregistrate (de exemplu rețeaua de acasă și un hotspot mobil), pe care dispozitivul le încearcă la conectare în ordinea înregistrării.
 \item \textbf{DailyHistory} și \textbf{WeeklyHistory}: date agregate zilnic, respectiv săptămânal (valori minime/maxime, medii, numărul de căderi și de alerte), folosite pentru rapoarte și statistici.
 \item \textbf{Invitation}: o invitație trimisă unui medic pentru a-i acorda acces la datele unui pacient, identificată printr-un token unic cu termen de expirare.
@@ -1075,7 +1075,7 @@ Pentru a permite folosirea dispozitivului în mai multe medii (de exemplu, acas�
 
 \subsubsection{Feedback pentru alarme false}
 
-Pentru a permite ajustarea pragurilor și pentru a oferi date concrete despre rata de alerte false, sistemul implementează o \textbf{buclă de feedback} cu utilizatorul aparținător. Atunci când o stare de alertă (puls anormal, temperatură ridicată, \spo scăzut etc.) se rezolvă, adică valorile pacientului revin la normal după ce o notificare a fost deja trimisă, ultima notificare a episodului este marcată automat ca \textit{așteptând feedback}. La următoarea vizită a aparținătorului în aplicație, un popup neintruziv afișează informațiile alertei (pacient, momentul evenimentului) și întreabă explicit dacă alerta a fost reală sau o alarmă falsă. Răspunsul este înregistrat pe notificare și permite raportarea ulterioară a ratei reale de alerte false, calculată din datele etichetate de utilizator. Utilizatorul poate amâna răspunsul, caz în care popup-ul reapare la următoarea sesiune.
+Pentru a permite ajustarea pragurilor și pentru a oferi date concrete despre rata de alerte false, sistemul implementează o \textbf{buclă de feedback} cu utilizatorul aparținător. Atunci când o stare de alertă (puls anormal, temperatură ridicată, \spo scăzut etc.) se rezolvă, adică valorile pacientului revin la normal după ce o notificare a fost deja trimisă, ultima notificare a episodului este marcată automat ca \textit{așteptând feedback}. La următoarea accesare a paginii persoanei monitorizate, un banner vizibil afișează informațiile alertei (pacient, momentul evenimentului) și întreabă explicit dacă alerta a fost reală sau o alarmă falsă. Răspunsul este înregistrat pe notificare și permite raportarea ulterioară a ratei reale de alerte false, calculată din datele etichetate de utilizator. Utilizatorul poate amâna răspunsul, caz în care banner-ul reapare la următoarea accesare.
 
 \subsubsection{Politica de retenție a datelor}
 
@@ -1242,7 +1242,7 @@ Microcontrollerul ESP32-C3 Mini dispune de un număr limitat de pini GPIO de uz 
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.85\textwidth]{figuri/dispozitiv-breadboard.png}
+\includegraphics[width=0.85\textwidth]{figuri/dispozitiv-breadboard.jpg}
 \caption{Prototipul dispozitivului portabil asamblat, cu toți senzorii conectați la multiplexorul TCA9548A și la ESP32-C3 Mini.}
 \label{fig:prototip}
 \end{figure}
@@ -1404,13 +1404,13 @@ Fiecare cerere primită de API este validată înainte de a fi procesată: sunt 
 
 \subsection{Microserviciul de inteligență artificială}
 
-Microserviciul de inteligență artificială a fost implementat în limbajul \textbf{Python}, folosind framework-ul web \textbf{FastAPI}. La pornire, serviciul încarcă din fișierul de artefacte modelul Random Forest antrenat, împreună cu obiectele auxiliare necesare (scalatorul Min-Max și codificatorul de etichete), serializate anterior cu biblioteca joblib. Procesul de antrenare și evaluare a modelului a fost realizat în mediul \textbf{Google Colab}, care a oferit acces la resurse GPU fără configurare locală și a facilitat documentarea pas cu pas a experimentelor într-un notebook partajabil.
+Microserviciul de inteligență artificială a fost implementat în limbajul \textbf{Python}, folosind framework-ul web \textbf{FastAPI}. La pornire, serviciul încarcă din fișierul de artefacte modelul Random Forest antrenat, împreună cu obiectele auxiliare necesare (scalatorul Min-Max și codificatorul de etichete), serializate anterior cu biblioteca joblib. Procesul de antrenare și evaluare a modelului a fost realizat în mediul \textbf{Google Colab}, care a oferit acces la resurse GPU fără configurare locală și a facilitat documentarea pas cu pas a experimentelor într-un notebook partajabil. Integrarea inteligenței artificiale în sisteme de monitorizare medicală reprezintă o direcție activă de cercetare, cu dovezi tot mai solide privind capacitatea modelelor de a detecta devierile parametrilor vitali înaintea apariției evenimentelor clinice \cite{maswadi2026, panteli2025, panahi2025future}.
 
 \subsubsection{Antrenarea modelului}
 
-Modelul de inteligență artificială a fost antrenat separat de aplicație, printr-un proces reproductibil executat în Google Colab. Sunt încărcate mai întâi cele trei seturi de date publice menționate în subcapitolul 2.3, pe baza cărora este generat un \textbf{set de date sintetic} de \textbf{8\,000 de înregistrări} (câte \textasciitilde2\,667 per clasă: NORMAL, ALERT, CRITICAL), prin eșantionare cu adăugare de zgomot gaussian. Setul sintetic este împărțit în \textbf{6\,400 de exemple pentru antrenare} (80\%) și \textbf{1\,600 de exemple pentru testare} (20\%), cu stratificare pentru a păstra distribuția uniformă a claselor în ambele subseturi. Componentele de mișcare sunt normalizate cu un scalar Min-Max, iar modelul Random Forest este antrenat și evaluat.
+Modelul de inteligență artificială a fost antrenat separat de aplicație, printr-un proces reproductibil executat în Google Colab. Sunt încărcate mai întâi cele trei seturi de date publice menționate în subcapitolul 2.3, pe baza cărora este generat un \textbf{set de date sintetic} de \textbf{8\,000 de înregistrări} cu distribuție dezechilibrată, reflectând realitatea clinică: \textbf{6\,080 exemple NORMAL}, \textbf{1\,500 exemple CRITICAL} și \textbf{420 exemple ALERT}. Distribuția inegală a fost menținută intenționat, întrucât stările de alertă sunt în mod natural mai rare decât starea normală. Setul sintetic este împărțit în \textbf{6\,400 de exemple pentru antrenare} (80\%) și \textbf{1\,600 de exemple pentru testare} (20\%), cu stratificare pentru a păstra proporțiile claselor în ambele subseturi. Componentele de mișcare sunt normalizate cu un scalar Min-Max, iar modelul Random Forest este antrenat și evaluat.
 
-Un exemplu reprezentativ dintr-un rând al setului de date sintetic este prezentat în tabelul~\ref{tab:data-example}.
+Un exemplu reprezentativ dintr-un rând al setului de date sintetic este prezentat în tabelul~4.
 
 \begin{table}[H]
 \centering
@@ -1558,7 +1558,7 @@ La crearea unui cont nou, utilizatorul bifează o \textbf{căsuță de consimț�
 
 \subsubsection{Editarea contului și schimbarea numărului de telefon}
 
-Pagina de profil permite utilizatorului să modifice numele, numărul de telefon, adresa de email (cu confirmare prin email trimis la noua adresă) și parola. Dacă nicio fotografie de profil nu este asociată contului, inițialele numelui sunt afișate pe un fundal colorat în locul imaginii.
+Pagina de profil permite utilizatorului să modifice numele, numărul de telefon, adresa de email (cu confirmare prin email trimis la noua adresă) și parola. Utilizatorii nu pot încărca o fotografie de profil; în locul acesteia, interfața afișează inițialele numelui pe un fundal colorat, generat automat pe baza numelui contului.
 
 \subsubsection{Pagina de simulări (administrator)}
 
@@ -1566,7 +1566,7 @@ Administratorii pot porni \textbf{simulări} de date pentru orice dispozitiv, f�
 
 \subsubsection{Vizualizarea medicului}
 
-Odată acceptată invitația, medicul accesează o pagină dedicată cu aceleași vizualizări ca aparținătorul (vitale curente, grafice, profil de activitate, notițe medicale), dar fără funcțiile de editare a profilului, a pragurilor sau a rețelelor WiFi. Poate solicita prin email un export structurat al măsurătorilor pentru un interval selectabil, util evaluării clinice în afara aplicației.
+Odată acceptată invitația, medicul accesează o pagină dedicată cu aceleași vizualizări ca aparținătorul (vitale curente, grafice, profil de activitate, notițe medicale), dar fără funcțiile de editare a profilului, a pragurilor sau a rețelelor WiFi. Exportul datelor pacientului este posibil în două moduri: medicul poate genera direct un raport PDF din pagina de invitație (accesibilă prin token, fără autentificare), sau aparținătorul poate trimite prin email un export structurat al măsurătorilor pentru un interval de timp selectabil, util evaluării clinice în afara aplicației.
 
 \subsection{Sistemul de notificări}
 
@@ -1617,101 +1617,11 @@ Pe lângă alertele declanșate de situații de risc, sistemul generează, pentr
 
 \subsubsection{Feedback pentru alarme false}
 
-Pentru a îmbunătăți calitatea sistemului de alertare în timp și pentru a oferi date concrete despre rata reală de alerte false, aplicația implementează o buclă de feedback: atunci când o stare de alertă se rezolvă (vitalele revin la normal), ultima notificare a episodului este marcată automat în baza de date ca \textit{așteptând răspuns}. La următoarea accesare a paginii persoanei monitorizate, un banner vizibil la începutul paginii întreabă explicit dacă alerta a fost reală sau falsă. Răspunsul (\textit{Da, reală}, \textit{Nu, alarmă falsă} sau \textit{Întreabă-mă mai târziu}) este înregistrat pe notificare, iar prima opțiune fixează răspunsul definitiv, în timp ce ultima lasă banner-ul să reapară la accesul ulterior. Datele etichetate astfel permit, ulterior, calcularea ratei reale de alerte false raportate de utilizatori, metrică folosită și în capitolul de testare al lucrării.
+Pentru a îmbunătăți calitatea sistemului de alertare în timp și pentru a oferi date concrete despre rata reală de alerte false, aplicația implementează o buclă de feedback: atunci când o stare de alertă se rezolvă (vitalele revin la normal), ultima notificare a episodului este marcată automat în baza de date ca \textit{așteptând feedback}. La următoarea accesare a paginii persoanei monitorizate, un banner vizibil la începutul paginii întreabă explicit dacă alerta a fost reală sau falsă. Răspunsul (\textit{Da, reală}, \textit{Nu, alarmă falsă} sau \textit{Întreabă-mă mai târziu}) este înregistrat pe notificare, iar prima opțiune fixează răspunsul definitiv, în timp ce ultima lasă banner-ul să reapară la accesul ulterior. Datele etichetate astfel permit, ulterior, calcularea ratei reale de alerte false raportate de utilizatori, metrică folosită și în capitolul de testare al lucrării.
+
 
 \newpage
-\section{Testare și rezultate}
-
-Acest capitol prezintă metodologia de testare aplicată sistemului și rezultatele obținute. Sunt urmărite patru aspecte: corectitudinea funcțională, performanța modelului de inteligență artificială, latența sistemului și fiabilitatea mecanismului de alertare.
-
-\textit{[Notă: valorile numerice marcate mai jos cu paranteze drepte trebuie completate cu rezultatele măsurate efectiv în timpul testării. Metodologia este descrisă complet; doar cifrele finale rămân de inserat.]}
-
-\subsection{Metodologia de testare}
-
-Testarea sistemului a fost realizată pe mai multe planuri. \textbf{Testarea funcțională} a vizat verificarea fiecărui flux descris în subcapitolul 4.4, anume înregistrarea utilizatorilor, asocierea unei persoane monitorizate, recepția măsurătorilor, declanșarea alertelor și livrarea notificărilor.
-
-Pentru testarea fluxurilor care depind de dispozitivul fizic a fost utilizat un \textbf{mod de simulare}, integrat în aplicație, care permite generarea de măsurători cu valori controlate, fără a fi necesar hardware-ul real. Acest mecanism a permis reproducerea sistematică a scenariilor de risc, anume valori critice de \spo, tahicardie, febră și imobilitate, urmate de verificarea reacției corecte a sistemului în fiecare caz.
-
-\textbf{Performanța modelului de inteligență artificială} a fost evaluată separat, pe setul de date, folosind tehnicile de validare descrise mai jos.
-
-\subsection{Testare automată}
-
-Pe lângă testarea funcțională manuală, aplicația dispune de o suită de \textbf{180 de teste automate}, organizate în două categorii, executate automat la fiecare push în pipeline-ul CI/CD configurat cu GitHub Actions.
-
-\subsubsection{Teste unitare}
-
-Testele unitare verifică izolat comportamentul fiecărui serviciu și controler, folosind obiecte mock (prin biblioteca \textbf{Moq}) pentru a elimina dependențele externe (baza de date, email, SMS). Sunt acoperite: \texttt{AuthenticationService} (înregistrare, autentificare, verificare email, resetare parolă), \texttt{JwtService} (generare și validare token), \texttt{UserService}, \texttt{MeasurementService}, \texttt{MonitoredService}, \texttt{WifiNetworkService} și \texttt{ConditionRuleEngine} (motorul de reguli medicale deterministe). La nivel de controlere REST sunt testate scenariile principale de succes și de eșec pentru \texttt{AuthenticationController}, \texttt{MeasurementController}, \texttt{WifiController} și \texttt{ConfigController}.
-
-Aserțiunile sunt formulate cu biblioteca \textbf{FluentAssertions}, care produce mesaje de eroare explicite în caz de eșec, facilitând identificarea cauzei fără a interpreta stack trace-uri brute.
-
-\subsubsection{Teste de integrare}
-
-Testele de integrare verifică interacțiunea dintre servicii și baza de date, folosind o instanță \textbf{SQLite in-memory} izolată per test (fiecare test pornește cu o bază curată, creată prin \texttt{EnsureCreated}). Sunt acoperite: \texttt{UserRepository} (CRUD utilizatori, autentificare, confirmare email), \texttt{MeasurementRepository} (stocare și interogare măsurători cu filtre temporale), \texttt{WifiNetworkRepository} (adăugare și ștergere rețele WiFi per dispozitiv), \texttt{RetentionCleanupService} (verificarea că job-ul de curățare elimină corect datele mai vechi decât perioada de retenție) și \texttt{NotificationFeedbackService} (ciclul complet de creare, marcare ca \textit{așteptând feedback} și înregistrare a răspunsului utilizatorului).
-
-\subsubsection{Rezultate}
-
-Toate cele 180 de teste trec cu succes în configurația curentă (0 eșuate, 0 sărite). Durata totală de execuție a suitei complete este de aproximativ 24 de secunde, acceptabilă pentru un ciclu CI/CD. Integrarea în GitHub Actions asigură că orice regresie este detectată înainte de publicarea codului în producție.
-
-\subsection{Acuratețea datelor și performanța modelului AI}
-
-Performanța modelului Random Forest a fost estimată prin \textbf{validare încrucișată stratificată în 5 partiții}, metodă care împarte repetat setul de date în subseturi de antrenare și testare, păstrând în fiecare partiție distribuția claselor NORMAL, ALERT și CRITICAL. Au fost urmărite acuratețea, scorul F1 (în variantele macro și ponderată) și aria de sub curba ROC (AUC-ROC), calculată în regim \textit{one-vs-rest}.
-
-Setul de date utilizat la antrenare și evaluare a fost construit sintetic, pornind de la sursele publice menționate în subcapitolul 2.3. El cuprinde câteva mii de exemple corespunzătoare stării normale și câteva mii de exemple corespunzătoare stărilor ALERT și CRITICAL, generate în mod echilibrat astfel încât modelul să dispună de suficiente cazuri din fiecare clasă. Caracterul stratificat al validării garantează că această proporție este păstrată în fiecare partiție, evitând estimările optimiste care ar putea apărea dacă o clasă rară ar fi insuficient reprezentată în subsetul de testare.
-
-Rezultatele obținute sunt sintetizate în tabelul~\ref{tab:cv-results}.
-
-\begin{table}[H]
-\centering
-\small
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{|>{\raggedright\arraybackslash}p{5.5cm}|c|c|}
-\hline
-\textbf{Metrică} & \textbf{Medie} & \textbf{Abatere standard}\\
-\hline
-Acuratețe & [\ \ ] & [\ \ ]\\
-\hline
-Scor F1 (macro) & [\ \ ] & [\ \ ]\\
-\hline
-Scor F1 (ponderat) & [\ \ ] & [\ \ ]\\
-\hline
-AUC-ROC (one-vs-rest) & [\ \ ] & N/A\\
-\hline
-\end{tabular}
-\caption{Rezultatele validării încrucișate stratificate în 5 partiții.}
-\label{tab:cv-results}
-\end{table}
-
-Pentru a verifica absența supraînvățării (overfitting), a fost comparată acuratețea pe datele de antrenare cu cea pe datele de testare; o diferență mică între cele două indică o bună capacitate de generalizare a modelului \textit{(diferența măsurată: [\ \ ])}.
-
-Comportamentul modelului pe fiecare clasă a fost analizat prin \textbf{matricea de confuzie} (figura~\ref{fig:confuzie}), care evidențiază eventualele confuzii între stările apropiate. Importanța parametrilor de intrare a fost evaluată prin metoda \textbf{SHAP} (figura~\ref{fig:shap}), care a confirmat că saturația oxigenului, frecvența cardiacă și temperatura corporală sunt factorii dominanți în decizia modelului, în concordanță cu criteriile clinice de triaj.
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Spațiu pentru figură: matricea de confuzie a modelului pe cele trei clase (NORMAL, ALERT, CRITICAL), generată de scriptul de antrenare.]}
-\caption{Matricea de confuzie a modelului Random Forest.}
-\label{fig:confuzie}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\figplaceholder{[Spațiu pentru figură: graficul SHAP cu importanța globală a parametrilor de intrare, generat de scriptul de antrenare.]}
-\caption{Importanța parametrilor de intrare (analiză SHAP).}
-\label{fig:shap}
-\end{figure}
-
-\subsection{Latența sistemului}
-
-Latența reprezintă intervalul de timp scurs între achiziția unei măsurători pe dispozitiv și afișarea sau alertarea acesteia (obiectivul O5). Au fost măsurate două intervale: timpul \textit{dispozitiv $\rightarrow$ afișare}, de la citirea senzorilor până la actualizarea tabloului de bord, și timpul \textit{dispozitiv $\rightarrow$ alertă}, de la achiziție până la livrarea notificării push.
-
-Latența totală este suma mai multor componente: intervalul de transmitere configurat pe dispozitiv, timpul de procesare pe backend, timpul de răspuns al microserviciului AI și timpul de livrare prin SignalR. Valorile măsurate au fost: timp \textit{dispozitiv $\rightarrow$ afișare} de aproximativ [\ \ ] secunde și timp \textit{dispozitiv $\rightarrow$ alertă} de aproximativ [\ \ ] secunde, confirmând funcționarea în regim apropiat de timp real.
-
-\subsection{Fiabilitatea alertelor}
-
-Fiabilitatea mecanismului de alertare a fost evaluată din două perspective: capacitatea de a semnala situațiile reale de risc și capacitatea de a evita alertele false. Folosind modul de simulare, au fost generate scenarii de risc cunoscute și s-a verificat dacă sistemul declanșează alerta corespunzătoare. În paralel, au fost generate valori normale cu variații tranzitorii, pentru a verifica dacă pragul de persistență elimină alertele false.
-
-Rezultatele au arătat că, din [\ \ ] scenarii de risc testate, sistemul a declanșat corect alerta în [\ \ ] cazuri, iar pragul de persistență a redus numărul de alerte false cu [\ \ ]\% față de o variantă fără acest mecanism. A fost testat separat și comportamentul la pierderea conexiunii: măsurătorile acumulate în coada locală a dispozitivului au fost transmise integral și în ordine corectă la revenirea semnalului, fără pierderi de date.
-
-\newpage
+\setcounter{section}{6}
 \section{Concluzii și perspective}
 
 \subsection{Concluzii}
@@ -1731,7 +1641,6 @@ Cu toate că sistemul este funcțional, dezvoltarea sa în cadrul unei lucrări 
 \item \textbf{Antrenarea pe date sintetice}: modelul de inteligență artificială a fost antrenat pe date generate pornind de la seturi publice, nu pe date clinice reale colectate de la pacienți, ceea ce limitează validitatea concluziilor în condiții reale.
 \item \textbf{Validare la scară redusă}: testarea a fost realizată în regim de laborator, pe un număr mic de dispozitive, fără un studiu de utilizare pe termen lung cu utilizatori reali.
 \item \textbf{Dependența de servicii externe}: funcționarea alertării prin SMS și a autentificării prin Google depinde de servicii terțe și de disponibilitatea acestora.
-\item \textbf{Date de antrenare AI sintetice}: modelul de inteligență artificială a fost antrenat pe date sintetice, nu pe date clinice reale colectate de la pacienți, ceea ce limitează validitatea concluziilor în condiții reale.
 \end{itemize}
 
 \subsection{Direcții de dezvoltare ulterioară}
@@ -1739,50 +1648,88 @@ Cu toate că sistemul este funcțional, dezvoltarea sa în cadrul unei lucrări 
 Sistemul dezvoltat constituie o bază solidă pentru extinderi viitoare. Printre direcțiile de dezvoltare se numără:
 
 \begin{itemize}[leftmargin=1.5em]
-\item antrenarea și validarea modelului de inteligență artificială pe date clinice reale, obținute în cadrul unui studiu cu pacienți, eventual cu acordul unei instituții medicale;
-\item dezvoltarea unei aplicații mobile native pentru aparținători, complementară interfeței web;
-\item integrarea de senzori suplimentari, de exemplu pentru măsurarea ECG sau a tensiunii arteriale, în scopul unei evaluări medicale mai cuprinzătoare;
-\item optimizarea consumului de energie al dispozitivului, pentru creșterea autonomiei bateriei;
-\item integrarea cu sistemele informatice medicale, pentru ca datele să poată fi consultate direct de medicul curant în fișa electronică a pacientului;
-\item extinderea predicției de tendințe (descrisă în subcapitolul 4.4 pentru orizontul de câteva minute) cu o analiză pe termen lung, pe zile și săptămâni, pentru detectarea degradărilor lente ale stării de sănătate;
-\item validarea clinică a algoritmului de calcul \spo\ implementat în firmware pe un eșantion de pacienți, pentru calibrarea coeficienților modelului pătratic în funcție de caracteristicile specifice ale senzorului MAX30100;
-\item implementarea miniaturizată și certificată medical a dispozitivului portabil, cu integrarea unui modul de măsurare a tensiunii bateriei prin ADC, pentru afișarea nivelului real de încărcare în aplicație.
+\item \textbf{Antrenarea pe date clinice reale}: colectarea de date de la pacienți reali, în colaborare cu o instituție medicală, ar permite reantrenarea și validarea clinică a modelului, depășind limitarea actuală a datelor sintetice și îmbunătățind semnificativ acuratețea predicțiilor în condiții reale.
+
+\item \textbf{Retrenare continuă prin bucla de feedback}: sistemul colectează deja etichete reale/false de la utilizatori pentru fiecare alertă. Aceste date pot alimenta periodic un proces de reantrenare a modelului, reducând în timp rata alertelor false specifice unui pacient sau unui profil demografic.
+
+\item \textbf{Aplicație mobilă nativă}: o aplicație dedicată Android/iOS, complementară interfeței web, ar facilita primirea notificărilor push fiabile chiar și fără browser deschis și ar oferi o experiență mai fluentă aparținătorilor care accesează datele în principal de pe telefon.
+
+\item \textbf{Senzori suplimentari}: integrarea unui modul ECG ar permite detectarea aritmiilor; adăugarea unui senzor de tensiune arterială și a unuia de glucoză sanguină ar extinde semnificativ profilul clinic monitorizat, cu beneficii directe pentru pacienții cu hipertensiune și diabet.
+
+\item \textbf{Alerte accesibile pentru persoane cu dizabilități senzoriale}: integrarea unor modalități alternative de alertare — mesaje audio pentru utilizatorii cu deficiențe de vedere și semnale tactile (vibrații) pentru cei cu deficiențe de auz — ar extinde accesibilitatea sistemului la un public mai larg din rândul vârstnicilor.
+
+\item \textbf{Integrare cu serviciile de urgență}: o funcționalitate de alertare automată a serviciului 112 în situații critice confirmate, cu transmiterea coordonatelor GPS ale pacientului, ar reduce intervalul de răspuns în cazul căderilor sau al deteriorărilor rapide ale stării de sănătate.
+
+\item \textbf{Integrare cu sistemele EHR}: conectarea la sisteme informatice medicale standardizate (HL7 FHIR) ar permite medicului curent să consulte datele de monitorizare direct din fișa electronică a pacientului, fără a fi necesar accesul separat la aplicație.
+
+\item \textbf{Analiză longitudinală a stării de sănătate}: extinderea predicției de tendințe de la orizontul de minute (descris în subcapitolul 4.4) la o analiză pe zile și săptămâni ar permite detectarea degradărilor lente ale stării de sănătate, invizibile la nivelul unui singur episod, și corelarea acestora cu factorii contextuali precum activitatea fizică sau temperatura ambiantă.
+
+\item \textbf{Miniaturizare și certificare medicală}: prototipul actual demonstrează fezabilitatea conceptului; un produs comercializabil ar presupune redesignul hardware pe o placă PCB dedicată, miniaturizarea carcasei, optimizarea consumului pentru autonomie de câteva zile pe o singură încărcare și obținerea certificărilor medicale necesare comercializării.
 \end{itemize}
 
 În concluzie, LifeAlertPlus demonstrează că o soluție de monitorizare medicală accesibilă, fiabilă și inteligentă poate fi construită cu tehnologii open-source și hardware de uz general, adresând un segment real și insuficient acoperit: siguranța persoanelor vârstnice prin implicarea activă a aparținătorului.
 
 \newpage
 \phantomsection
+\setcounter{section}{7}
 \addcontentsline{toc}{section}{Bibliografie}
 \begin{thebibliography}{99}
 
-\bibitem{who2023} World Health Organization, \textit{Noncommunicable diseases. Fact sheet}, 2023. \url{https://www.who.int/news-room/fact-sheets/detail/noncommunicable-diseases} (accesat: 29.05.2026).
+\bibitem{who2023} World Health Organization, \textit{Noncommunicable diseases. Fact sheet}, 2023. \url{https://www.who.int/news-room/fact-sheets/detail/noncommunicable-diseases}.
 
-\bibitem{fbi2023} Fortune Business Insights, \textit{Internet of Medical Things (IoMT) Market Size, Share \& Industry Analysis}, 2023. \url{https://www.fortunebusinessinsights.com/internet-of-medical-things-iomt-market-101844} (accesat: 29.05.2026).
+\bibitem{fbi2023} Fortune Business Insights, \textit{Internet of Medical Things (IoMT) Market Size, Share \& Industry Analysis}, 2023. \url{https://www.fortunebusinessinsights.com/internet-of-medical-things-iomt-market-101844}.
 
-\bibitem{ashton1999} K. Ashton, \textit{That ``Internet of Things'' Thing}, RFID Journal, 1999. \url{https://www.rfidjournal.com/that-internet-of-things-thing} (accesat: 29.05.2026).
+\bibitem{ashton1999} K. Ashton, \textit{That ``Internet of Things'' Thing}, RFID Journal, 1999. \url{https://www.rfidjournal.com/that-internet-of-things-thing}.
 
-\bibitem{lundberg2017} S. M. Lundberg, S.-I. Lee, \textit{A Unified Approach to Interpreting Model Predictions}, în Advances in Neural Information Processing Systems (NeurIPS), 2017. \url{https://proceedings.neurips.cc/paper_files/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html} (accesat: 29.05.2026).
+\bibitem{lundberg2017} S. M. Lundberg, S.-I. Lee, \textit{A Unified Approach to Interpreting Model Predictions}, în Advances in Neural Information Processing Systems (NeurIPS), 2017. \url{https://proceedings.neurips.cc/paper_files/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html}.
 
-\bibitem{scikit} F. Pedregosa et al., \textit{Scikit-learn: Machine Learning in Python}, Journal of Machine Learning Research, vol. 12, pp. 2825--2830, 2011. \url{https://www.jmlr.org/papers/v12/pedregosa11a.html} (accesat: 29.05.2026).
+\bibitem{scikit} F. Pedregosa et al., \textit{Scikit-learn: Machine Learning in Python}, Journal of Machine Learning Research, vol. 12, pp. 2825--2830, 2011. \url{https://www.jmlr.org/papers/v12/pedregosa11a.html}.
 
-\bibitem{bidmc} PhysioNet, \textit{BIDMC PPG and Respiration Dataset}, v1.0.0. \url{https://physionet.org/content/bidmc/1.0.0/} (accesat: 29.05.2026).
+\bibitem{bidmc} PhysioNet, \textit{BIDMC PPG and Respiration Dataset}, v1.0.0. \url{https://physionet.org/content/bidmc/1.0.0/}.
 
-\bibitem{espressif} Espressif Systems, \textit{ESP32-C3 Series Datasheet}. \url{https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf} (accesat: 29.05.2026).
+\bibitem{espressif} Espressif Systems, \textit{ESP32-C3 Series Datasheet}. \url{https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf}.
 
-\bibitem{max30100} Analog Devices (Maxim Integrated), \textit{MAX30100. Pulse Oximeter and Heart-Rate Sensor IC for Wearable Health Datasheet}. \url{https://www.analog.com/media/en/technical-documentation/data-sheets/MAX30100.pdf} (accesat: 29.05.2026).
+\bibitem{max30100} Analog Devices (Maxim Integrated), \textit{MAX30100. Pulse Oximeter and Heart-Rate Sensor IC for Wearable Health Datasheet}. \url{https://www.analog.com/media/en/technical-documentation/data-sheets/MAX30100.pdf}.
 
-\bibitem{mlx90614} Melexis, \textit{MLX90614 Family. Single and Dual Zone Infra Red Thermometer in TO-39 Datasheet}. \url{https://www.melexis.com/en/documents/documentation/datasheets/datasheet-mlx90614} (accesat: 29.05.2026).
+\bibitem{mlx90614} Melexis, \textit{MLX90614 Family. Single and Dual Zone Infra Red Thermometer in TO-39 Datasheet}. \url{https://www.melexis.com/en/documents/documentation/datasheets/datasheet-mlx90614}.
 
-\bibitem{mpu6050} InvenSense (TDK), \textit{MPU-6000 and MPU-6050 Product Specification, Revision 3.4}. \url{https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf} (accesat: 29.05.2026).
+\bibitem{mpu6050} InvenSense (TDK), \textit{MPU-6000 and MPU-6050 Product Specification, Revision 3.4}. \url{https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf}.
 
-\bibitem{neo6m} u-blox, \textit{NEO-6 u-blox 6 GPS Modules Data Sheet}. \url{https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_\%28GPS.G6-HW-09005\%29.pdf} (accesat: 29.05.2026).
+\bibitem{neo6m} u-blox, \textit{NEO-6 u-blox 6 GPS Modules Data Sheet}. \url{https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_\%28GPS.G6-HW-09005\%29.pdf}.
 
-\bibitem{aspnetcore} Microsoft, \textit{ASP.NET Core documentation}. \url{https://learn.microsoft.com/en-us/aspnet/core/} (accesat: 29.05.2026).
+\bibitem{aspnetcore} Microsoft, \textit{ASP.NET Core documentation}. \url{https://learn.microsoft.com/en-us/aspnet/core/}.
 
-\bibitem{blazor} Microsoft, \textit{Blazor documentation: Build client-side and server-side web apps with .NET}. \url{https://learn.microsoft.com/en-us/aspnet/core/blazor/} (accesat: 29.05.2026).
+\bibitem{blazor} Microsoft, \textit{Blazor documentation: Build client-side and server-side web apps with .NET}. \url{https://learn.microsoft.com/en-us/aspnet/core/blazor/}.
 
-\bibitem{docker} Docker Inc., \textit{Docker Documentation}. \url{https://docs.docker.com/} (accesat: 29.05.2026).
+\bibitem{docker} Docker Inc., \textit{Docker Documentation}. \url{https://docs.docker.com/}.
+
+\bibitem{alshamrani2022} M. Alshamrani, ``IoT and artificial intelligence implementations for remote healthcare monitoring systems: A survey,'' \textit{Journal of King Saud University -- Computer and Information Sciences}, vol. 34, nr. 8, pp. 4687--4701, 2022. \url{https://doi.org/10.1016/j.jksuci.2021.06.005}.
+
+\bibitem{nancy2022} A. A. Nancy, D. Ravindran, P. M. D. R. Vincent, K. Srinivasan, D. G. Reina, ``IoT-Cloud-Based Smart Healthcare Monitoring System for Heart Disease Prediction via Deep Learning,'' \textit{Electronics}, vol. 11, nr. 15, art. 2292, 2022. \url{https://doi.org/10.3390/electronics11152292}.
+
+\bibitem{preprint2024} [Autor și titlu de completat manual], Preprints.org, 2024. \url{https://www.preprints.org/frontend/manuscript/c4e7dd57faaf69c0149d1da7b6cf8b05/download_pub}.
+
+\bibitem{shah2026} T. Shah, K. Dumasia, H. J. Lad, K. Shah, K. Nadiyadra, V. Suratwala, ``A systematic review of emerging trends of IoT in healthcare and IoMT frameworks,'' \textit{Discover Public Health}, vol. 23, nr. 1, art. 52, 2026. \url{https://doi.org/10.1186/s12982-026-01347-w}.
+
+\bibitem{bansal2026} J. C. Bansal, S. Borah, S. Hussain, S. Salhi (eds.), \textit{Computing and Machine Learning: Proceedings of CML 2025, vol. 1}. Springer Nature, 2026, ISBN 978-981-952-872-1.
+
+\bibitem{maswadi2026} K. Maswadi, A. Alhazmi, ``Towards Sustainable Health Management: The Role of Artificial Intelligence -- A Systematic Review, Challenges, and Future Directions,'' \textit{Sustainability}, vol. 18, nr. 2, art. 905, 2026. \url{https://doi.org/10.3390/su18020905}.
+
+\bibitem{pabitha2025} C. Pabitha, S. Benila, G. Sangeetha, A. Vidhya, ``IoT and Cloud-Enabled AI Predictive Maintenance for Manufacturing, Energy, Healthcare Systems,'' în \textit{Advanced Materials for Biomedical Devices}. CRC Press, 2025. \url{https://doi.org/10.1201/9781003651772-38}.
+
+\bibitem{mollabagher2026} M. Mollabagher, A. Hassanzadeh, M. M. Sepehri, A. Habibelahi, A. Sarabadani, ``Towards an Integrated Framework for Health Surveillance Systems: A Systematic Literature Review of Design Components and Implementation Challenges,'' \textit{Health Science Reports}, vol. 9, nr. 1, art. e71652, 2026. \url{https://doi.org/10.1002/hsr2.71652}.
+
+\bibitem{bandaru2025} V. K. R. Bandaru, S. R. Bandaru, ``The Rise of Sustainable IoT in Modern Healthcare Through Trends, Technologies, and Future Directions,'' în \textit{Development and Management of Eco-Conscious IoT Medical Devices}. IGI Global, 2025, pp. 1--28. \url{https://doi.org/10.4018/979-8-3373-4134-7.ch001}.
+
+\bibitem{panahi2025ejiss} O. Panahi, ``Secure IoT for Healthcare,'' \textit{European Journal of Innovative Studies and Sustainability}, vol. 1, nr. 1, pp. 17--23, 2025. \url{https://doi.org/10.59324/ejiss.2025.1(1).03}.
+
+\bibitem{ali2025} T. E. Ali, F. I. Ali, P. Dakić, A. D. Zoltan, ``Trends, prospects, challenges, and security in the healthcare internet of things,'' \textit{Computing}, vol. 107, nr. 1, art. 28, 2025. \url{https://doi.org/10.1007/s00607-024-01352-4}.
+
+\bibitem{panahi2025future} O. Panahi, ``The Future of Healthcare: AI, Public Health and the Digital Revolution,'' \textit{Medical \& Clinical Case Reports Journal}, vol. 3, nr. 1, pp. 763--766, 2025. \url{https://doi.org/10.51219/mccrj/omid-panahi/198}.
+
+\bibitem{panteli2025} D. Panteli et al., ``Artificial intelligence in public health: promises, challenges, and an agenda for policy makers and public health institutions,'' \textit{The Lancet Public Health}, vol. 10, nr. 5, pp. e428--e432, 2025. \url{https://doi.org/10.1016/S2468-2667(25)00036-2}.
+
+\bibitem{ahmadzadeh2024} M. Ahmadzadeh, S. M. Zahrai, M. Bitaraf, ``An integrated deep neural network model combining 1D CNN and LSTM for structural health monitoring utilizing multisensor time-series data,'' \textit{Structural Health Monitoring}, vol. 24, nr. 1, pp. 447--465, 2025. \url{https://doi.org/10.1177/14759217241239041}.
 
 \end{thebibliography}
 

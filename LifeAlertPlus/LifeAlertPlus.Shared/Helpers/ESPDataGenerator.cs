@@ -62,6 +62,8 @@ namespace LifeAlertPlus.Shared.Helpers
                 Serial = serial,
                 Date = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 IsAvailable = true,
+                Bpm = pulse,
+                Spo2 = spo2,
                 Mpu6050 = new List<int>
                 {
                     rnd.Next(SimulationConstants.AccelerometerMin, SimulationConstants.AccelerometerMax),
@@ -91,11 +93,9 @@ namespace LifeAlertPlus.Shared.Helpers
             var temp = SimulationConstants.TemperatureMin + (rnd.NextDouble() * SimulationConstants.TemperatureRange);
             var battery = SimulationConstants.BatteryMin + (rnd.NextDouble() * SimulationConstants.BatteryRange);
 
-            // generate a random coordinate near a reasonable default (small area jitter)
-            // (adjust baseLat/baseLon if you want a different simulation region)
-            var baseLat = 44.4268; // Bucharest center as default
+            var baseLat = 44.4268;
             var baseLon = 26.1025;
-            var lat = baseLat + (rnd.NextDouble() - 0.5) * 0.2; // +/- 0.1 degrees
+            var lat = baseLat + (rnd.NextDouble() - 0.5) * 0.2;
             var lon = baseLon + (rnd.NextDouble() - 0.5) * 0.2;
             var latStr = lat.ToString(CultureInfo.InvariantCulture);
             var lonStr = lon.ToString(CultureInfo.InvariantCulture);
@@ -105,6 +105,8 @@ namespace LifeAlertPlus.Shared.Helpers
                 Serial = serial,
                 Date = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 IsAvailable = true,
+                Bpm = pulse,
+                Spo2 = spo2,
                 Mpu6050 = new List<int>
                 {
                     rnd.Next(SimulationConstants.AccelerometerMin, SimulationConstants.AccelerometerMax),
@@ -118,7 +120,6 @@ namespace LifeAlertPlus.Shared.Helpers
                     rnd.Next(SimulationConstants.GyroMin, SimulationConstants.GyroMax)
                 },
                 Max30100 = new List<int> { pulse, spo2 },
-                // store coordinates as plain "lat,lon" (parsed by client map helpers)
                 Neo6m = $"{latStr},{lonStr}",
                 Temperature = Math.Round(temp, 1),
                 Battery = Math.Round(battery, 1),

@@ -110,39 +110,29 @@
 \contentsline {subsection}{\numberline {5.3}Microserviciul de inteligență artificială}{52}{subsection.5.3}%
 \contentsline {subsubsection}{\numberline {5.3.1}Antrenarea modelului}{52}{subsubsection.5.3.1}%
 \contentsline {subsubsection}{\numberline {5.3.2}Endpoint-urile serviciului}{52}{subsubsection.5.3.2}%
-\contentsline {subsubsection}{\numberline {5.3.3}Logica hibridă de decizie}{52}{subsubsection.5.3.3}%
-\contentsline {subsection}{\numberline {5.4}Frontend-ul web}{52}{subsection.5.4}%
-\contentsline {subsubsection}{\numberline {5.4.1}Comunicarea cu backend-ul}{53}{subsubsection.5.4.1}%
-\contentsline {subsubsection}{\numberline {5.4.2}Autorizarea pe roluri și accesibilitatea}{53}{subsubsection.5.4.2}%
+\contentsline {subsubsection}{\numberline {5.3.3}Logica hibridă de decizie}{53}{subsubsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.4}Frontend-ul web}{53}{subsection.5.4}%
+\contentsline {subsubsection}{\numberline {5.4.1}Comunicarea cu backend-ul}{54}{subsubsection.5.4.1}%
+\contentsline {subsubsection}{\numberline {5.4.2}Autorizarea pe roluri și accesibilitatea}{54}{subsubsection.5.4.2}%
 \contentsline {subsubsection}{\numberline {5.4.3}Organizarea interfeței și gestionarea stării}{54}{subsubsection.5.4.3}%
-\contentsline {subsubsection}{\numberline {5.4.4}Noi funcționalități ale interfeței}{55}{subsubsection.5.4.4}%
-\contentsline {subsubsection}{\numberline {5.4.5}Vizualizarea datelor și funcționalitatea PWA}{56}{subsubsection.5.4.5}%
-\contentsline {subsubsection}{\numberline {5.4.6}Tabloul de bord și paginile aparținătorului}{57}{subsubsection.5.4.6}%
-\contentsline {subsubsection}{\numberline {5.4.7}Paginile informative și suportul}{59}{subsubsection.5.4.7}%
-\contentsline {subsubsection}{\numberline {5.4.8}Interfața de administrare}{60}{subsubsection.5.4.8}%
-\contentsline {subsubsection}{\numberline {5.4.9}Arhivarea persoanelor monitorizate}{61}{subsubsection.5.4.9}%
-\contentsline {subsubsection}{\numberline {5.4.10}Fluxul de acceptare a invitației de medic}{61}{subsubsection.5.4.10}%
-\contentsline {subsubsection}{\numberline {5.4.11}Consimțământul GDPR la înregistrare}{61}{subsubsection.5.4.11}%
-\contentsline {subsubsection}{\numberline {5.4.12}Fotografia de profil și editarea contului}{62}{subsubsection.5.4.12}%
-\contentsline {subsubsection}{\numberline {5.4.13}Pagina de simulări (administrator)}{62}{subsubsection.5.4.13}%
-\contentsline {subsubsection}{\numberline {5.4.14}Vizualizarea medicului}{62}{subsubsection.5.4.14}%
-\contentsline {subsection}{\numberline {5.5}Sistemul de notificări}{62}{subsection.5.5}%
-\contentsline {subsubsection}{\numberline {5.5.1}Temporizarea alertelor}{63}{subsubsection.5.5.1}%
-\contentsline {subsubsection}{\numberline {5.5.2}Notificările push}{63}{subsubsection.5.5.2}%
-\contentsline {subsubsection}{\numberline {5.5.3}SMS și email}{64}{subsubsection.5.5.3}%
-\contentsline {subsubsection}{\numberline {5.5.4}Raportul zilnic}{65}{subsubsection.5.5.4}%
-\contentsline {subsubsection}{\numberline {5.5.5}Feedback pentru alarme false}{65}{subsubsection.5.5.5}%
-\contentsline {section}{\numberline {6}Testare și rezultate}{66}{section.6}%
-\contentsline {subsection}{\numberline {6.1}Metodologia de testare}{66}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}Testare automată}{66}{subsection.6.2}%
-\contentsline {subsubsection}{\numberline {6.2.1}Teste unitare}{66}{subsubsection.6.2.1}%
-\contentsline {subsubsection}{\numberline {6.2.2}Teste de integrare}{66}{subsubsection.6.2.2}%
-\contentsline {subsubsection}{\numberline {6.2.3}Rezultate}{67}{subsubsection.6.2.3}%
-\contentsline {subsection}{\numberline {6.3}Acuratețea datelor și performanța modelului AI}{67}{subsection.6.3}%
-\contentsline {subsection}{\numberline {6.4}Latența sistemului}{68}{subsection.6.4}%
-\contentsline {subsection}{\numberline {6.5}Fiabilitatea alertelor}{68}{subsection.6.5}%
-\contentsline {section}{\numberline {7}Concluzii și perspective}{69}{section.7}%
-\contentsline {subsection}{\numberline {7.1}Concluzii}{69}{subsection.7.1}%
-\contentsline {subsection}{\numberline {7.2}Limitări identificate}{69}{subsection.7.2}%
-\contentsline {subsection}{\numberline {7.3}Direcții de dezvoltare ulterioară}{69}{subsection.7.3}%
-\contentsline {section}{Bibliografie}{71}{section*.4}%
+\contentsline {subsubsection}{\numberline {5.4.4}Vizualizarea datelor și funcționalitatea PWA}{55}{subsubsection.5.4.4}%
+\contentsline {subsubsection}{\numberline {5.4.5}Tabloul de bord și paginile aparținătorului}{55}{subsubsection.5.4.5}%
+\contentsline {subsubsection}{\numberline {5.4.6}Paginile informative și suportul}{56}{subsubsection.5.4.6}%
+\contentsline {subsubsection}{\numberline {5.4.7}Interfața de administrare}{56}{subsubsection.5.4.7}%
+\contentsline {subsubsection}{\numberline {5.4.8}Arhivarea persoanelor monitorizate}{57}{subsubsection.5.4.8}%
+\contentsline {subsubsection}{\numberline {5.4.9}Fluxul de acceptare a invitației de medic}{57}{subsubsection.5.4.9}%
+\contentsline {subsubsection}{\numberline {5.4.10}Consimțământul GDPR la înregistrare}{57}{subsubsection.5.4.10}%
+\contentsline {subsubsection}{\numberline {5.4.11}Editarea contului și schimbarea numărului de telefon}{57}{subsubsection.5.4.11}%
+\contentsline {subsubsection}{\numberline {5.4.12}Pagina de simulări (administrator)}{57}{subsubsection.5.4.12}%
+\contentsline {subsubsection}{\numberline {5.4.13}Vizualizarea medicului}{58}{subsubsection.5.4.13}%
+\contentsline {subsection}{\numberline {5.5}Sistemul de notificări}{58}{subsection.5.5}%
+\contentsline {subsubsection}{\numberline {5.5.1}Temporizarea alertelor}{58}{subsubsection.5.5.1}%
+\contentsline {subsubsection}{\numberline {5.5.2}Notificările push}{58}{subsubsection.5.5.2}%
+\contentsline {subsubsection}{\numberline {5.5.3}SMS și email}{59}{subsubsection.5.5.3}%
+\contentsline {subsubsection}{\numberline {5.5.4}Raportul zilnic}{60}{subsubsection.5.5.4}%
+\contentsline {subsubsection}{\numberline {5.5.5}Feedback pentru alarme false}{60}{subsubsection.5.5.5}%
+\contentsline {section}{\numberline {7}Concluzii și perspective}{62}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Concluzii}{62}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Limitări identificate}{62}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Direcții de dezvoltare ulterioară}{62}{subsection.7.3}%
+\contentsline {section}{Bibliografie}{64}{section*.4}%

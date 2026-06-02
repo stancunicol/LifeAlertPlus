@@ -363,11 +363,15 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     double effectiveMinTemp = monitored.MinTemperature ?? _userMinTemp;
                     double effectiveMaxTemp = monitored.MaxTemperature ?? _userMaxTemp;
 
-                    if (heartRate > effectiveMaxHr || heartRate < effectiveMinHr - 10 || spO2 < 90 || temperature > effectiveMaxTemp + 0.5 || temperature < effectiveMinTemp - 0.5)
+                    if ((heartRate > 0 && (heartRate > effectiveMaxHr || heartRate < effectiveMinHr - 10)) ||
+                        (spO2 > 0 && spO2 < 90) ||
+                        (temperature > 0 && (temperature > effectiveMaxTemp + 0.5 || temperature < effectiveMinTemp - 0.5)))
                     {
                         status = "Critical";
                     }
-                    else if (heartRate > effectiveMaxHr - 10 || heartRate < effectiveMinHr || spO2 < 95 || temperature > effectiveMaxTemp || temperature < effectiveMinTemp)
+                    else if ((heartRate > 0 && (heartRate > effectiveMaxHr - 10 || heartRate < effectiveMinHr)) ||
+                             (spO2 > 0 && spO2 < 95) ||
+                             (temperature > 0 && (temperature > effectiveMaxTemp || temperature < effectiveMinTemp)))
                     {
                         status = "Warning";
                     }
