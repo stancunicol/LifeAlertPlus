@@ -167,25 +167,27 @@ public class AuthenticationControllerTests
     }
 
     [Fact]
-    public async Task ForgotPassword_Returns400_WhenUserNotFound()
+    public async Task ForgotPassword_Returns200_WhenUserNotFound()
     {
+        // Returns generic Ok to prevent email enumeration (security fix)
         _userSvc.Setup(s => s.GetUserByEmailAsync("ghost@test.com")).ReturnsAsync((User?)null);
 
         var result = await _sut.ForgotPassword(new UserForgotPasswordRequestDTO { Email = "ghost@test.com" });
 
-        result.Should().BeOfType<BadRequestObjectResult>();
+        result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
-    public async Task ForgotPassword_Returns400_WhenGoogleUser()
+    public async Task ForgotPassword_Returns200_WhenGoogleUser()
     {
+        // Returns generic Ok to prevent email enumeration (security fix)
         var user = TestDataFactory.CreateUser(email: "google@test.com");
         user.Provider = "Google";
         _userSvc.Setup(s => s.GetUserByEmailAsync("google@test.com")).ReturnsAsync(user);
 
         var result = await _sut.ForgotPassword(new UserForgotPasswordRequestDTO { Email = "google@test.com" });
 
-        result.Should().BeOfType<BadRequestObjectResult>();
+        result.Should().BeOfType<OkObjectResult>();
     }
 
     [Fact]
