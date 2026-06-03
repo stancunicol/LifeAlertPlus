@@ -45,7 +45,7 @@ builder.Services.AddHttpClient("AiService", client =>
 {
     var aiBaseUrl = builder.Configuration["Urls:AiServiceUrl"] ?? "http://localhost:8000";
     client.BaseAddress = new Uri(aiBaseUrl);
-    client.Timeout = TimeSpan.FromSeconds(3);
+    client.Timeout = TimeSpan.FromSeconds(10);
 });
 builder.Services.AddHttpClient("Anthropic", client =>
 {

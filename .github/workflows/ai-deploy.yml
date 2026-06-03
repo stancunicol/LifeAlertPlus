@@ -40,6 +40,7 @@ jobs:
             --name lifealertplus-ai \
             --image stancunicol/lifealertplus:ai-latest \
             --ports 8000 \
+            --ip-address Public \
             --cpu 1 \
             --memory 1.5 \
             --dns-name-label lifealertplus-ai \
@@ -50,14 +51,18 @@ jobs:
             --os-type Linux \
             --restart-policy Always
 
-      - name: Show AI service URL
+      - name: Update API App Service with AI URL
         run: |
           FQDN=$(az container show \
             --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
             --name lifealertplus-ai \
             --query "ipAddress.fqdn" -o tsv)
-          echo "AI Service URL: http://${FQDN}:8000"
-          echo ""
-          echo "Set this in Azure App Settings (API App Service):"
-          echo "  Name:  Urls__AiServiceUrl"
-          echo "  Value: http://${FQDN}:8000"
+          AI_URL="http://${FQDN}:8000"
+          echo "AI Service URL: ${AI_URL}"
+
+          az webapp config appsettings set \
+            --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ secrets.AZURE_NAME_API }}" \
+            --settings "Urls__AiServiceUrl=${AI_URL}"
+
+          echo "✅ Azure App Setting Urls__AiServiceUrl updated to: ${AI_URL}"
