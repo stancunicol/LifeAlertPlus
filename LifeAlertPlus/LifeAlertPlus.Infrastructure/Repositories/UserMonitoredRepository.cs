@@ -46,10 +46,14 @@ namespace LifeAlertPlus.Infrastructure.Repositories
         public async Task<IEnumerable<UserMonitored>> GetAllUserMonitoredWithDetailsAsync()
         {
             return await _context.UserMonitoreds
-                .Include(um => um.User)
+                .Include(um => um.User).ThenInclude(u => u.Role)
                 .Include(um => um.Monitored)
                 .ToListAsync();
         }
+
+        public async Task<bool> UserOwnsMonitoredAsync(Guid userId, Guid monitoredId) =>
+            await _context.UserMonitoreds
+                .AnyAsync(um => um.IdUser == userId && um.IdMonitored == monitoredId);
 
         public async Task AddMonitoredPersonToUserAsync(Guid userId, Guid monitoredPersonId)
         {

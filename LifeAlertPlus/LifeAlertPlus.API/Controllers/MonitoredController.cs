@@ -80,17 +80,9 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("serial/{deviceSerialNumber}")]
         public async Task<IActionResult> GetMonitoredPersonByDeviceSerialNumber([FromRoute] string deviceSerialNumber)
         {
-            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
-                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
-
             var monitoredPerson = await _monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(deviceSerialNumber);
             if (monitoredPerson == null)
                 return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
-
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
-            if (!owned.Any(m => m.Id == monitoredPerson.Id))
-                return Forbid();
 
             return Ok(monitoredPerson);
         }
@@ -98,16 +90,15 @@ namespace LifeAlertPlus.API.Controllers
         [HttpGet("id/{id:guid}")]
         public async Task<IActionResult> GetMonitoredPersonById([FromRoute] Guid id)
         {
-            var callerIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (callerIdStr == null || !Guid.TryParse(callerIdStr, out var callerId))
+            var callerId = GetCallerId();
+            if (callerId == null)
                 return Unauthorized(new { Message = ResponseMessages.InvalidToken });
 
             var monitoredPerson = await _monitoredService.GetMonitoredPersonByIdAsync(id);
             if (monitoredPerson == null)
                 return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
-            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
+            if (!IsAdminRole() && !await _userMonitoredService.UserOwnsMonitoredAsync(callerId.Value, id))
                 return Forbid();
 
             return Ok(monitoredPerson);
@@ -124,8 +115,7 @@ namespace LifeAlertPlus.API.Controllers
             if (existing == null)
                 return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId);
-            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
+            if (!IsAdminRole() && !await _userMonitoredService.UserOwnsMonitoredAsync(callerId, id))
                 return Forbid();
 
             if (dto.DeviceSerialNumber != existing.DeviceSerialNumber)
@@ -170,8 +160,7 @@ namespace LifeAlertPlus.API.Controllers
             if (existing == null)
                 return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
-            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
+            if (!IsAdminRole() && !await _userMonitoredService.UserOwnsMonitoredAsync(callerId.Value, id))
                 return Forbid();
 
             if (existing.IsArchived)
@@ -198,8 +187,7 @@ namespace LifeAlertPlus.API.Controllers
             if (existing == null)
                 return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
-            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
+            if (!IsAdminRole() && !await _userMonitoredService.UserOwnsMonitoredAsync(callerId.Value, id))
                 return Forbid();
 
             if (!existing.IsArchived)
@@ -226,8 +214,7 @@ namespace LifeAlertPlus.API.Controllers
             if (existing == null)
                 return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
 
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
-            if (!owned.Any(m => m.Id == id) && !IsAdminRole())
+            if (!IsAdminRole() && !await _userMonitoredService.UserOwnsMonitoredAsync(callerId.Value, id))
                 return Forbid();
 
             // Permanent delete is only allowed from the archive — guard against accidental

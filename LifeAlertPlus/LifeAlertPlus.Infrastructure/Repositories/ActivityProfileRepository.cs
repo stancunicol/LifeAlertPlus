@@ -43,15 +43,9 @@ namespace LifeAlertPlus.Infrastructure.Repositories
 
         public async Task DeleteByMonitoredIdAsync(Guid monitoredId)
         {
-            var profiles = await _db.ActivityProfiles
+            await _db.ActivityProfiles
                 .Where(p => p.IdMonitored == monitoredId)
-                .ToListAsync();
-
-            if (profiles.Count > 0)
-            {
-                _db.ActivityProfiles.RemoveRange(profiles);
-                await _db.SaveChangesAsync();
-            }
+                .ExecuteDeleteAsync();
         }
     }
 }

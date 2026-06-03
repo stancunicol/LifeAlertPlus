@@ -76,16 +76,11 @@ namespace LifeAlertPlus.Infrastructure.Repositories
 
                 if (exclusiveIds.Count > 0)
                 {
-                    _dbContext.Measurements.RemoveRange(
-                        await _dbContext.Measurements.Where(m => exclusiveIds.Contains(m.IdMonitored)).ToListAsync());
-                    _dbContext.Notifications.RemoveRange(
-                        await _dbContext.Notifications.Where(n => exclusiveIds.Contains(n.IdMonitored)).ToListAsync());
-                    _dbContext.DailyHistories.RemoveRange(
-                        await _dbContext.DailyHistories.Where(d => exclusiveIds.Contains(d.IdMonitored)).ToListAsync());
-                    _dbContext.WeeklyHistories.RemoveRange(
-                        await _dbContext.WeeklyHistories.Where(w => exclusiveIds.Contains(w.IdMonitored)).ToListAsync());
-                    _dbContext.Monitoreds.RemoveRange(
-                        await _dbContext.Monitoreds.Where(m => exclusiveIds.Contains(m.Id)).ToListAsync());
+                    await _dbContext.Measurements.Where(m => exclusiveIds.Contains(m.IdMonitored)).ExecuteDeleteAsync();
+                    await _dbContext.Notifications.Where(n => exclusiveIds.Contains(n.IdMonitored)).ExecuteDeleteAsync();
+                    await _dbContext.DailyHistories.Where(d => exclusiveIds.Contains(d.IdMonitored)).ExecuteDeleteAsync();
+                    await _dbContext.WeeklyHistories.Where(w => exclusiveIds.Contains(w.IdMonitored)).ExecuteDeleteAsync();
+                    await _dbContext.Monitoreds.Where(m => exclusiveIds.Contains(m.Id)).ExecuteDeleteAsync();
                 }
             }
 

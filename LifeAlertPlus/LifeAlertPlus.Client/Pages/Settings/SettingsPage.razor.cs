@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using LifeAlertPlus.Shared.DTOs.Requests.User;
 using LifeAlertPlus.Client.Services;
 using Microsoft.JSInterop;
+using Microsoft.Extensions.Configuration;
 
 namespace LifeAlertPlus.Client.Pages.Settings
 {
@@ -24,6 +25,9 @@ namespace LifeAlertPlus.Client.Pages.Settings
 
         [Inject]
         private LanguageService Lang { get; set; } = default!;
+
+        [Inject]
+        private IConfiguration Config { get; set; } = default!;
 
         private AppSettings Settings { get; set; } = new AppSettings
         {
@@ -238,13 +242,14 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 }
             }
             catch { }
+            await InvokeAsync(StateHasChanged);
         }
 
         private async Task SubscribeWebPushAsync()
         {
             try
             {
-                var apiBase = Navigation.BaseUri.TrimEnd('/');
+                var apiBase = (Config["ApiBaseUrl"] ?? Navigation.BaseUri).TrimEnd('/');
                 var token   = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "authToken") ?? "";
                 _webPushSubscribed = await JSRuntime.InvokeAsync<bool>("webPushSubscribe", apiBase, token);
                 _webPushPermission = await JSRuntime.InvokeAsync<string>("webPushGetPermission");
@@ -257,7 +262,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
         {
             try
             {
-                var apiBase = Navigation.BaseUri.TrimEnd('/');
+                var apiBase = (Config["ApiBaseUrl"] ?? Navigation.BaseUri).TrimEnd('/');
                 var token   = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "authToken") ?? "";
                 await JSRuntime.InvokeVoidAsync("webPushUnsubscribe", apiBase, token);
                 _webPushSubscribed = false;

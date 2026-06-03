@@ -25,8 +25,7 @@ namespace LifeAlertPlus.API.Controllers
             if (IsAdminRole()) return true;
             var callerId = GetCallerId();
             if (callerId == null) return false;
-            var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
-            return owned.Any(m => m.Id == monitoredId);
+            return await _userMonitoredService.UserOwnsMonitoredAsync(callerId.Value, monitoredId);
         }
 
         [HttpGet("monitored/{idMonitored:guid}")]

@@ -39,6 +39,12 @@ namespace LifeAlertPlus.API.Services
             if (payload == null || string.IsNullOrWhiteSpace(payload.Serial))
                 return;
 
+            // Normalize: if Bpm/Spo2 are missing but Max30100 is present, backfill
+            if (!payload.Bpm.HasValue && payload.Max30100?.Count >= 1)
+                payload.Bpm = payload.Max30100[0];
+            if (!payload.Spo2.HasValue && payload.Max30100?.Count >= 2)
+                payload.Spo2 = payload.Max30100[1];
+
             _simulatedData[payload.Serial.Trim()] = payload;
         }
 

@@ -356,28 +356,18 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 {
                     heartRate = espData.Bpm ?? 0;
                     spO2 = espData.Spo2 ?? 0;
-                    
                     temperature = espData.Temperature ?? 0;
                     gps = espData.Neo6m ?? "No data";
 
-                    // Determine status using per-person ranges (fallback to user defaults)
-                    int effectiveMinHr = monitored.MinHeartRate ?? _userMinHr;
-                    int effectiveMaxHr = monitored.MaxHeartRate ?? _userMaxHr;
-                    double effectiveMinTemp = monitored.MinTemperature ?? _userMinTemp;
-                    double effectiveMaxTemp = monitored.MaxTemperature ?? _userMaxTemp;
-
-                    if ((heartRate > 0 && (heartRate > effectiveMaxHr || heartRate < effectiveMinHr - 10)) ||
-                        (spO2 > 0 && spO2 < 90) ||
-                        (temperature > 0 && (temperature > effectiveMaxTemp + 0.5 || temperature < effectiveMinTemp - 0.5)))
-                    {
-                        status = "Critical";
-                    }
-                    else if ((heartRate > 0 && (heartRate > effectiveMaxHr - 10 || heartRate < effectiveMinHr)) ||
-                             (spO2 > 0 && spO2 < 95) ||
-                             (temperature > 0 && (temperature > effectiveMaxTemp || temperature < effectiveMinTemp)))
-                    {
-                        status = "Warning";
-                    }
+                    status = ComputeStatus(
+                        heartRate, spO2, temperature,
+                        espData.IsFall,
+                        monitored.MinHeartRate ?? _userMinHr,
+                        monitored.MaxHeartRate ?? _userMaxHr,
+                        monitored.MinTemperature ?? _userMinTemp,
+                        monitored.MaxTemperature ?? _userMaxTemp,
+                        monitored.MinSpO2 ?? 95,
+                        _conditions);
                 }
                 else
                 {
@@ -463,9 +453,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             var request = new AIPredictionRequestDTO
             {
                 MonitoredId = PersonId,
-                Pulse = espData.Max30100 != null && espData.Max30100.Count >= 1 ? espData.Max30100[0] : 0,
+                Pulse = espData.Bpm ?? (espData.Max30100?.Count >= 1 ? espData.Max30100[0] : 0),
                 Temperature = espData.Temperature ?? 0,
-                Spo2 = espData.Max30100 != null && espData.Max30100.Count >= 2 ? espData.Max30100[1] : 97.0,
+                Spo2 = espData.Spo2 ?? (espData.Max30100?.Count >= 2 ? espData.Max30100[1] : 97.0),
                 AccelX = espData.Mpu6050 != null && espData.Mpu6050.Count >= 1 ? espData.Mpu6050[0] : 0,
                 AccelY = espData.Mpu6050 != null && espData.Mpu6050.Count >= 2 ? espData.Mpu6050[1] : 0,
                 AccelZ = espData.Mpu6050 != null && espData.Mpu6050.Count >= 3 ? espData.Mpu6050[2] : 0,
@@ -595,8 +585,54 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             finally
             {
                 _conditionsLoading = false;
+                // Re-compute status now that conditions are known (unless person is offline)
+                if (Person != null && Person.Status != "Offline")
+                {
+                    Person.Status = ComputeStatus(
+                        Person.HeartRate, Person.SpO2, Person.Temperature,
+                        _espData?.IsFall == true,
+                        Person.MinHeartRate, Person.MaxHeartRate,
+                        Person.MinTemperature, Person.MaxTemperature,
+                        Person.MinSpO2,
+                        _conditions);
+                }
                 StateHasChanged();
             }
+        }
+
+        private string ComputeStatus(
+            int hr, int spo2, double temp, bool isFall,
+            int minHr, int maxHr, double minTemp, double maxTemp, int minSpo2,
+            IEnumerable<string>? conditions = null)
+        {
+            int effMinHr = minHr, effMaxHr = maxHr;
+            double effMinTemp = minTemp, effMaxTemp = maxTemp;
+            int effMinSpo2 = minSpo2;
+
+            foreach (var cond in conditions ?? Enumerable.Empty<string>())
+            {
+                if (_conditionProfiles.TryGetValue(cond, out var p))
+                {
+                    if (p.MinHr   < effMinHr)   effMinHr   = p.MinHr;
+                    if (p.MaxHr   > effMaxHr)   effMaxHr   = p.MaxHr;
+                    if (p.MinTemp < effMinTemp) effMinTemp = p.MinTemp;
+                    if (p.MaxTemp > effMaxTemp) effMaxTemp = p.MaxTemp;
+                    if (p.MinSpO2 < effMinSpo2) effMinSpo2 = p.MinSpO2;
+                }
+            }
+
+            if (isFall ||
+                (hr   > 0 && (hr   > effMaxHr            || hr   < effMinHr   - 10)) ||
+                (spo2 > 0 &&  spo2 < 90)                                              ||
+                (temp > 0 && (temp > effMaxTemp + 0.5     || temp < effMinTemp - 0.5)))
+                return "Critical";
+
+            if ((hr   > 0 && (hr   > effMaxHr - 10        || hr   < effMinHr))       ||
+                (spo2 > 0 &&  spo2 < effMinSpo2)                                      ||
+                (temp > 0 && (temp > effMaxTemp            || temp < effMinTemp)))
+                return "Warning";
+
+            return "OK";
         }
 
         private void OpenConditionsModal()
@@ -643,7 +679,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 if (p.MinHr   < minHr)   minHr   = p.MinHr;
                 if (p.MaxHr   > maxHr)   maxHr   = p.MaxHr;
                 if (p.MinTemp < minTemp) minTemp = p.MinTemp;
-                if (p.MaxTemp < maxTemp) maxTemp = p.MaxTemp;
+                if (p.MaxTemp > maxTemp) maxTemp = p.MaxTemp;
                 if (p.MinSpO2 < minSpO2) minSpO2 = p.MinSpO2;
             }
 
@@ -1338,21 +1374,24 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
                 var alerts = new List<Alert>();
 
+                int alertMinHr  = Person?.MinHeartRate  ?? 60;
+                int alertMaxHr  = Person?.MaxHeartRate  ?? 100;
+                double alertMaxTemp = Person?.MaxTemperature ?? 37.5;
+
                 foreach (var m in measurements.Take(10))
                 {
-                    // Check for critical conditions
-                    if (m.Pulse > 100 || m.Pulse < 50)
+                    if (m.Pulse > alertMaxHr || m.Pulse < alertMinHr)
                     {
                         alerts.Add(new Alert
                         {
                             Severity = "Critical",
-                            Title = m.Pulse > 100 ? "High Heart Rate" : "Low Heart Rate",
+                            Title = m.Pulse > alertMaxHr ? "High Heart Rate" : "Low Heart Rate",
                             Description = $"Heart rate: {m.Pulse} bpm",
                             Time = GetTimeAgo(m.CreatedAt)
                         });
                     }
 
-                    if (m.Temperature > 37.5)
+                    if (m.Temperature > alertMaxTemp)
                     {
                         alerts.Add(new Alert
                         {
@@ -1726,6 +1765,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         public async ValueTask DisposeAsync()
         {
             _disposed = true;
+            if (_instance == this) _instance = null;
             if (PushService != null)
             {
                 PushService.OnNotificationReceived -= OnPushNotificationReceived;

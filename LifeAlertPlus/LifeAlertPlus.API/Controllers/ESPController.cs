@@ -102,9 +102,16 @@ namespace LifeAlertPlus.API.Controllers
                 return Ok(new { Message = "Monitored person is archived. Data not persisted." });
             }
 
-            int pulse = payload.Bpm ?? 0;
+            // Normalize: firmware may send only Max30100 without Bpm/Spo2 fields
+            int pulse = payload.Bpm
+                ?? (payload.Max30100?.Count >= 1 ? payload.Max30100[0] : 0);
+            int spo2 = payload.Spo2
+                ?? (payload.Max30100?.Count >= 2 ? payload.Max30100[1] : 0);
             double temperature = payload.Temperature ?? 0;
-            int spo2 = payload.Spo2 ?? 0;
+
+            // Backfill Bpm/Spo2 so the in-memory cache stays consistent
+            payload.Bpm  ??= pulse;
+            payload.Spo2 ??= spo2;
             string coordinates = payload.Neo6m ?? string.Empty;
             bool isFall = payload.IsFall;
             // Firmware classifies movement over the last ~5s window from the same MPU

@@ -217,21 +217,21 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
             // Total when fewer than 4 people had measurements.
             OfflineCount   = cards.Count(c => !(c.EspData?.IsAvailable ?? false));
             ActiveAlerts   = cards.Count(c => GetStatus(
-                                c.EspData?.Max30100?.Count >= 1 ? c.EspData.Max30100[0] : 0,
-                                c.EspData?.Max30100?.Count >= 2 ? c.EspData.Max30100[1] : 0,
+                                ResolveHr(c.EspData), ResolveSpo2(c.EspData),
                                 c.EspData?.Temperature,
                                 c.EspData?.IsAvailable ?? false,
                                 c.Person.MinHeartRate, c.Person.MaxHeartRate,
                                 c.Person.MinTemperature, c.Person.MaxTemperature,
-                                c.Person.MinSpO2) == "Critical");
+                                c.Person.MinSpO2,
+                                c.EspData?.IsFall ?? false) == "Critical");
             StableCount    = cards.Count(c => GetStatus(
-                                c.EspData?.Max30100?.Count >= 1 ? c.EspData.Max30100[0] : 0,
-                                c.EspData?.Max30100?.Count >= 2 ? c.EspData.Max30100[1] : 0,
+                                ResolveHr(c.EspData), ResolveSpo2(c.EspData),
                                 c.EspData?.Temperature,
                                 c.EspData?.IsAvailable ?? false,
                                 c.Person.MinHeartRate, c.Person.MaxHeartRate,
                                 c.Person.MinTemperature, c.Person.MaxTemperature,
-                                c.Person.MinSpO2) == "OK");
+                                c.Person.MinSpO2,
+                                c.EspData?.IsFall ?? false) == "OK");
 
             // Show only the top 3 people who have at least one persisted measurement,
             // ordered by most recent. People with no data yet stay off the dashboard
@@ -246,19 +246,20 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
             {
                 var person = card.Person;
                 var espData = card.EspData;
-                var heartRate = espData?.Max30100?.Count >= 1 ? espData.Max30100[0] : 0;
-                var spO2Value = espData?.Max30100?.Count >= 2 ? espData.Max30100[1] : 0;
+                var heartRate = ResolveHr(espData);
+                var spO2Value = ResolveSpo2(espData);
                 var temperature = espData?.Temperature?.ToString("F1") ?? "N/A";
                 var isOnline = espData?.IsAvailable ?? false;
                 
                 var status = GetStatus(heartRate, spO2Value, espData?.Temperature, isOnline,
                     person.MinHeartRate, person.MaxHeartRate,
                     person.MinTemperature, person.MaxTemperature,
-                    person.MinSpO2);
+                    person.MinSpO2,
+                    espData?.IsFall ?? false);
                 var lastUpdate = GetLastUpdateText(card.LastUpdatedUtc);
 
                 var gps = FormatGpsLabel(espData?.Neo6m);
-                var fallDetection = !isOnline ? T("card.na") : (espData?.Mpu6050 != null ? T("card.fallStable") : T("card.noData"));
+                var fallDetection = !isOnline ? T("card.na") : (espData?.IsFall == true ? T("card.fallPossible") : T("card.fallStable"));
                 var lastUpdateFull = card.LastUpdatedUtc != DateTime.MinValue
                     ? card.LastUpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
                     : T("card.noData");
@@ -299,6 +300,14 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         return T("card.gpsIndoor");
     }
 
+    // Prefer the dedicated Bpm/Spo2 fields; fall back to Max30100 for firmware
+    // that only populates the raw array (older versions).
+    private static int ResolveHr(Shared.DTOs.Responses.ESP.ESPDataResponseDTO? d)
+        => d?.Bpm ?? (d?.Max30100?.Count >= 1 ? d.Max30100[0] : 0);
+
+    private static int ResolveSpo2(Shared.DTOs.Responses.ESP.ESPDataResponseDTO? d)
+        => d?.Spo2 ?? (d?.Max30100?.Count >= 2 ? d.Max30100[1] : 0);
+
     private async Task<Shared.DTOs.Responses.ESP.ESPDataResponseDTO?> FetchEspDataAsync(string serial)
     {
         try { return await MonitoredApiClient.GetEspDataAsync(serial); }
@@ -318,7 +327,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     private string GetStatus(int heartRate, int spO2, double? temperature, bool isOnline,
         int? minHr = null, int? maxHr = null,
         double? minTemp = null, double? maxTemp = null,
-        int? minSpO2 = null)
+        int? minSpO2 = null, bool isFall = false)
     {
         if (!isOnline) return "Offline";
 
@@ -328,7 +337,8 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         double effectiveMaxT = maxTemp ?? 37.5;
         int effectiveMinSpO2 = minSpO2 ?? 95;
 
-        // Critical — same thresholds as SelectedMonitored page
+        // Critical
+        if (isFall) return "Critical";
         if (heartRate > 0 && (heartRate > effectiveMaxHr || heartRate < effectiveMinHr - 10))
             return "Critical";
         if (spO2 > 0 && spO2 < 90)

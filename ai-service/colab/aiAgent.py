@@ -9,13 +9,13 @@ from typing import Dict, Any, Tuple, List, Union
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_validate
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
 from sklearn.metrics import (
     accuracy_score, classification_report, confusion_matrix,
     make_scorer, f1_score, roc_auc_score
 )
 from google.colab import files
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
 try:
     df_thermometry = pd.read_csv('thermometry.csv')
@@ -44,12 +44,10 @@ try:
     sensor_columns = ['ax', 'ay', 'az', 'gx', 'gy', 'gz']
     data_to_normalize = df_mpu[sensor_columns]
 
-    scaler = MinMaxScaler()
-
-    normalized_data = scaler.fit_transform(data_to_normalize)
+    _preview_scaler = MinMaxScaler()
+    normalized_data = _preview_scaler.fit_transform(data_to_normalize)
 
     df_mpu_normalized = pd.DataFrame(normalized_data, columns=[col + '_normalized' for col in sensor_columns])
-
     df_mpu_processed = pd.concat([df_mpu_normalized, df_mpu[['label']]], axis=1)
 
     print("\nFirst 5 rows of 'mpu6050_dataset.csv' after normalization:")
@@ -91,15 +89,6 @@ except Exception as e:
     print(f"An error occurred while processing '{example_bidmc_file}': {e}")
 
 def categorize_temperature(temp_celsius: float) -> str:
-    """
-    Categorizes body temperature into predefined health states.
-
-    Args:
-        temp_celsius: Body temperature in Celsius.
-
-    Returns:
-        A string representing the health state ('CRITICAL', 'ALERT', 'NORMAL', 'Unknown').
-    """
     if pd.isna(temp_celsius):
         return 'Unknown'
     if temp_celsius < 35:
@@ -114,15 +103,6 @@ def categorize_temperature(temp_celsius: float) -> str:
         return "CRITICAL"
 
 def categorize_hr(hr: float) -> str:
-    """
-    Categorizes heart rate into predefined health states.
-
-    Args:
-        hr: Heart rate in beats per minute (bpm).
-
-    Returns:
-        A string representing the health state ('CRITICAL', 'ALERT', 'NORMAL', 'Unknown').
-    """
     if pd.isna(hr):
         return 'Unknown'
     if hr < 50:
@@ -137,15 +117,6 @@ def categorize_hr(hr: float) -> str:
         return "CRITICAL"
 
 def categorize_spo2(spo2: float) -> str:
-    """
-    Categorizes blood oxygen saturation (SpO2) into predefined health states.
-
-    Args:
-        spo2: SpO2 percentage.
-
-    Returns:
-        A string representing the health state ('CRITICAL', 'ALERT', 'NORMAL', 'Unknown').
-    """
     if pd.isna(spo2):
         return "Unknown"
     if spo2 < 90:
@@ -156,31 +127,11 @@ def categorize_spo2(spo2: float) -> str:
         return "NORMAL"
 
 def calculate_acceleration_magnitude(ax: float, ay: float, az: float) -> float:
-    """
-    Calculates the magnitude of acceleration from its components.
-
-    Args:
-        ax: Acceleration along the x-axis.
-        ay: Acceleration along the y-axis.
-        az: Acceleration along the z-axis.
-
-    Returns:
-        The magnitude of the acceleration vector.
-    """
     if pd.isna(ax) or pd.isna(ay) or pd.isna(az):
         return np.nan
     return np.sqrt(ax**2 + ay**2 + az**2)
 
 def combined_rule_based_label(row: pd.Series) -> str:
-    """
-    Applies a combined rule-based logic to determine an overall health state.
-
-    Args:
-        row: A pandas Series containing 'spo2', 'hr', 'temp', and 'acc' values.
-
-    Returns:
-        A string representing the combined health state ('CRITICAL', 'ALERT', 'NORMAL').
-    """
     if row['spo2'] < 90:
         return "CRITICAL"
 
@@ -219,31 +170,6 @@ def analyze_patient_data(
     feature_columns: List[str],
     scaler: MinMaxScaler
 ) -> Tuple[str, float, str, int, str, int, str]:
-    """
-    Analyzes patient data using both an ML model and rule-based logic to determine health state,
-    health score, explanation, and confidence.
-
-    Args:
-        temp: Body temperature in Celsius.
-        hr: Heart rate in bpm.
-        spo2: Blood oxygen saturation percentage.
-        ax, ay, az: Acceleration components from MPU6050.
-        gx, gy, gz: Gyroscope components from MPU6050.
-        model: Trained RandomForestClassifier model.
-        label_encoder: LabelEncoder used for target variable.
-        feature_columns: List of feature names expected by the model.
-        scaler: MinMaxScaler used for MPU6050 data.
-
-    Returns:
-        A tuple containing:
-        - predicted_state_model (str): Health state predicted by the ML model.
-        - model_confidence (float): Confidence of the ML model's prediction.
-        - combined_rule_based_state (str): Health state determined by combined rule-based logic.
-        - healthscore_final (int): Final aggregated health score (0-100).
-        - explanation_final (str): Detailed explanation for the final state.
-        - system_confidence_final (int): Overall system confidence in the final state.
-        - final_state (str): The ultimate health state after applying medical rules.
-    """
     if not (0 < spo2 <= 100 and 20 < hr < 250 and 30 < temp < 45):
         return "UNKNOWN", 0.0, "UNKNOWN", 0, "Invalid sensor data detected.", 0, "UNKNOWN"
 
@@ -369,21 +295,9 @@ def analyze_patient_data(
 
 def generate_synthetic_data(
     df_thermometry: pd.DataFrame, df_bidmc: pd.DataFrame, df_mpu: pd.DataFrame,
-    num_base_samples: int, num_critical_alert_samples: int
+    num_base_samples: int, num_critical_samples: int, num_alert_samples: int
 ) -> pd.DataFrame:
-    """
-    Generates synthetic patient data for model training.
-
-    Args:
-        df_thermometry: DataFrame containing thermometry data.
-        df_bidmc: DataFrame containing BIDMC data.
-        df_mpu: DataFrame containing MPU6050 data.
-        num_base_samples: Number of normal/base samples to generate.
-        num_critical_alert_samples: Number of critical/alert samples to generate.
-
-    Returns:
-        A combined DataFrame with synthetic data and calculated acceleration magnitude.
-    """
+    # ── NORMAL base samples (from real datasets) ──────────────────────────────
     synthetic_temp_fahrenheit_base: pd.Series = df_thermometry['body.temp'].sample(n=num_base_samples, replace=True, random_state=42).reset_index(drop=True)
     synthetic_temp_celsius_base: pd.Series = (synthetic_temp_fahrenheit_base - 32) * 5/9
     synthetic_temp_celsius_base += np.random.normal(0, 0.2, num_base_samples)
@@ -407,55 +321,55 @@ def generate_synthetic_data(
 
     df_synthetic_base: pd.DataFrame = pd.DataFrame({
         'temp': synthetic_temp_celsius_base,
-        'hr': synthetic_hr_base,
+        'hr':   synthetic_hr_base,
         'spo2': synthetic_spo2_base,
     })
     df_synthetic_base = pd.concat([df_synthetic_base, synthetic_mpu_data_base], axis=1)
 
+    # ── CRITICAL samples (guaranteed score >= 4 or spo2 < 90) ────────────────
     critical_samples_raw: pd.DataFrame = pd.DataFrame({
-        "temp": np.random.uniform(39.5, 41.5, num_critical_alert_samples),
-        "hr": np.random.uniform(130, 165, num_critical_alert_samples),
-        "spo2": np.random.uniform(75, 89.9, num_critical_alert_samples),
-        "ax": np.random.normal(0, 0.5, num_critical_alert_samples),
-        "ay": np.random.normal(0, 0.5, num_critical_alert_samples),
-        "az": np.random.normal(9.8, 0.5, num_critical_alert_samples),
-        "gx": np.random.normal(0, 10, num_critical_alert_samples),
-        "gy": np.random.normal(0, 10, num_critical_alert_samples),
-        "gz": np.random.normal(0, 10, num_critical_alert_samples),
+        "temp": np.random.uniform(39.5, 41.5, num_critical_samples),
+        "hr":   np.random.uniform(130,  165,  num_critical_samples),
+        "spo2": np.random.uniform(75,   89.9, num_critical_samples),
+        "ax": np.random.normal(0, 0.5, num_critical_samples),
+        "ay": np.random.normal(0, 0.5, num_critical_samples),
+        "az": np.random.normal(9.8, 0.5, num_critical_samples),
+        "gx": np.random.normal(0, 10, num_critical_samples),
+        "gy": np.random.normal(0, 10, num_critical_samples),
+        "gz": np.random.normal(0, 10, num_critical_samples),
     })
 
+    # ── ALERT samples (guaranteed score == 3 → ALERT) ────────────────────────
+    # spo2 90-94.9 (+1) + hr 111-129 (+1) + temp 38.1-38.9 (+1) = score 3 → ALERT
+    # temp stays strictly below 39 to avoid score +2; hr stays below 130 to avoid score +3
     alert_samples_raw: pd.DataFrame = pd.DataFrame({
-        "temp": np.random.uniform(37.5, 39.0, num_critical_alert_samples),
-        "hr": np.random.uniform(95, 120, num_critical_alert_samples),
-        "spo2": np.random.uniform(90, 94.9, num_critical_alert_samples),
-        "ax": np.random.normal(0, 1.0, num_critical_alert_samples),
-        "ay": np.random.normal(0, 1.0, num_critical_alert_samples),
-        "az": np.random.normal(9.8, 1.0, num_critical_alert_samples),
-        "gx": np.random.normal(0, 20, num_critical_alert_samples),
-        "gy": np.random.normal(0, 20, num_critical_alert_samples),
-        "gz": np.random.normal(0, 20, num_critical_alert_samples),
+        "temp": np.random.uniform(38.1, 38.9, num_alert_samples),
+        "hr":   np.random.uniform(111,  129,  num_alert_samples),
+        "spo2": np.random.uniform(90.0, 94.9, num_alert_samples),
+        "ax": np.random.normal(0, 1.0, num_alert_samples),
+        "ay": np.random.normal(0, 1.0, num_alert_samples),
+        "az": np.random.normal(9.8, 1.0, num_alert_samples),
+        "gx": np.random.normal(0, 20, num_alert_samples),
+        "gy": np.random.normal(0, 20, num_alert_samples),
+        "gz": np.random.normal(0, 20, num_alert_samples),
     })
 
-    df_synthetic_combined: pd.DataFrame = pd.concat([df_synthetic_base, critical_samples_raw, alert_samples_raw], ignore_index=True)
-    df_synthetic_combined['acc'] = df_synthetic_combined.apply(lambda row: calculate_acceleration_magnitude(row['ax'], row['ay'], row['az']), axis=1)
+    df_synthetic_combined: pd.DataFrame = pd.concat(
+        [df_synthetic_base, critical_samples_raw, alert_samples_raw],
+        ignore_index=True
+    )
+    df_synthetic_combined['acc'] = df_synthetic_combined.apply(
+        lambda row: calculate_acceleration_magnitude(row['ax'], row['ay'], row['az']), axis=1
+    )
     return df_synthetic_combined
 
 def train_unified_model(
     df_synthetic_combined: pd.DataFrame
-) -> Tuple[RandomForestClassifier, LabelEncoder, MinMaxScaler, pd.Index, pd.Series, pd.Series, pd.Series, pd.Series]:
-    """
-    Trains a RandomForestClassifier model on the synthetic data.
-
-    Args:
-        df_synthetic_combined: DataFrame containing the synthetic data.
-
-    Returns:
-        A tuple containing the trained model, label encoder, scaler, feature columns,
-        training features, test features, training labels, and test labels.
-    """
+) -> Tuple[RandomForestClassifier, LabelEncoder, MinMaxScaler, pd.Index, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     print("\n--- Training a Unified Model ---")
     X_synthetic: pd.DataFrame = df_synthetic_combined[['temp', 'hr', 'spo2', 'ax', 'ay', 'az', 'gx', 'gy', 'gz', 'acc']].copy()
-    # Boost SpO2 importance: multiply by 2 so the model weighs it more heavily
+    # Boost SpO2 importance: multiply by 2 so the model weighs it more heavily.
+    # NOTE: the same *2 transform is applied in main.py before inference (consistent).
     X_synthetic['spo2'] = X_synthetic['spo2'] * 2
 
     le_overall_state: LabelEncoder = LabelEncoder()
@@ -470,16 +384,17 @@ def train_unified_model(
     scaler: MinMaxScaler = MinMaxScaler()
     scaler.fit(X_train_synthetic[mpu_cols])
 
-    # Apply scaler to MPU columns so model trains on normalized data
     X_train_synthetic = X_train_synthetic.copy()
-    X_test_synthetic = X_test_synthetic.copy()
+    X_test_synthetic  = X_test_synthetic.copy()
     X_train_synthetic[mpu_cols] = scaler.transform(X_train_synthetic[mpu_cols])
-    X_test_synthetic[mpu_cols] = scaler.transform(X_test_synthetic[mpu_cols])
+    X_test_synthetic[mpu_cols]  = scaler.transform(X_test_synthetic[mpu_cols])
 
     print(f"Synthetic training set X_train_synthetic: {X_train_synthetic.shape}")
-    print(f"Synthetic test set X_test_synthetic: {X_test_synthetic.shape}")
+    print(f"Synthetic test set     X_test_synthetic:  {X_test_synthetic.shape}")
 
-    single_unified_model: RandomForestClassifier = RandomForestClassifier(n_estimators=150, max_depth=10, class_weight="balanced", random_state=42)
+    single_unified_model: RandomForestClassifier = RandomForestClassifier(
+        n_estimators=150, max_depth=10, class_weight="balanced", random_state=42
+    )
     single_unified_model.fit(X_train_synthetic, y_train_synthetic)
 
     print("Unified model (RandomForestClassifier) successfully trained on normalized synthetic data.")
@@ -489,26 +404,15 @@ def evaluate_model(
     model: RandomForestClassifier,
     X_test: pd.DataFrame, y_test: pd.Series, label_encoder: LabelEncoder
 ) -> None:
-    """
-    Evaluates the trained model and displays performance metrics.
-
-    Args:
-        model: Trained RandomForestClassifier model.
-        X_test: Test features.
-        y_test: Test labels.
-        label_encoder: LabelEncoder used for target variable.
-    """
     print("\n--- Unified Model Evaluation ---")
     y_pred: np.ndarray = model.predict(X_test)
 
     accuracy: float = accuracy_score(y_test, y_pred)
     report: str = classification_report(
-        y_test,
-        y_pred,
+        y_test, y_pred,
         target_names=label_encoder.classes_,
         zero_division=0
     )
-
     print(f"Accuracy: {accuracy:.4f}")
     print("Classification Report:\n", report)
 
@@ -519,13 +423,12 @@ def evaluate_model(
     plt.xlabel('Predicted Label')
     plt.ylabel('True Label')
     plt.title('Confusion Matrix')
+    plt.tight_layout()
     plt.show()
 
     importances: np.ndarray = model.feature_importances_
-    feature_names: pd.Index = X_test.columns
-    feature_importances_df: pd.DataFrame = pd.DataFrame({'feature': feature_names, 'importance': importances})
+    feature_importances_df: pd.DataFrame = pd.DataFrame({'feature': X_test.columns, 'importance': importances})
     feature_importances_df = feature_importances_df.sort_values(by='importance', ascending=False)
-
     print("\nFeature Importances:\n")
     print(feature_importances_df)
 
@@ -534,73 +437,76 @@ def evaluate_model(
     plt.title('Feature Importances for Unified Model')
     plt.xlabel('Importance')
     plt.ylabel('Feature')
+    plt.tight_layout()
     plt.show()
 
 def run_prediction_examples(
-    model: RandomForestClassifier, label_encoder: LabelEncoder, feature_columns: pd.Index, scaler: MinMaxScaler
+    model: RandomForestClassifier, label_encoder: LabelEncoder,
+    feature_columns: pd.Index, scaler: MinMaxScaler
 ) -> None:
-    """
-    Runs example predictions to demonstrate the model's functionality.
-
-    Args:
-        model: Trained RandomForestClassifier model.
-        label_encoder: LabelEncoder used for target variable.
-        feature_columns: List of feature names expected by the model.
-        scaler: MinMaxScaler used for MPU6050 data.
-    """
     print("\n--- Unified Model Prediction Examples (Detailed Analysis) ---")
 
     examples: List[Tuple[str, Dict[str, float]]] = [
-        ("Normal Situation", {"temp": 37.2, "hr": 85, "spo2": 97, "ax": 0.01, "ay": -0.02, "az": 0.98, "gx": 0.0, "gy": 0.0, "gz": 0.0}),
-        ("CRITICAL Situation (spo2 < 90)", {"temp": 37.0, "hr": 70, "spo2": 88, "ax": 0.5, "ay": 0.5, "az": 9.8, "gx": 0.0, "gy": 0.0, "gz": 0.0}),
-        ("ALERT Situation (high temperature)", {"temp": 38.5, "hr": 90, "spo2": 96, "ax": 0.1, "ay": 0.05, "az": 9.85, "gx": 0.0, "gy": 0.0, "gz": 0.0})
+        ("Normal Situation",                  {"temp": 37.2, "hr": 85, "spo2": 97, "ax": 0.01, "ay": -0.02, "az": 0.98, "gx": 0.0, "gy": 0.0, "gz": 0.0}),
+        ("CRITICAL Situation (spo2 < 90)",    {"temp": 37.0, "hr": 70, "spo2": 88, "ax": 0.5,  "ay":  0.5,  "az": 9.8,  "gx": 0.0, "gy": 0.0, "gz": 0.0}),
+        ("ALERT Situation (high temperature)",{"temp": 38.5, "hr": 90, "spo2": 96, "ax": 0.1,  "ay":  0.05, "az": 9.85, "gx": 0.0, "gy": 0.0, "gz": 0.0}),
     ]
 
     for title, example_input_data in examples:
         print(f"\n--- {title} ---")
         predicted_state_model, model_confidence, combined_rule_based_state, healthscore_final, explanation_final, system_confidence_final, final_state = analyze_patient_data(
             example_input_data['temp'], example_input_data['hr'], example_input_data['spo2'],
-            example_input_data['ax'], example_input_data['ay'], example_input_data['az'],
-            example_input_data['gx'], example_input_data['gy'], example_input_data['gz'],
+            example_input_data['ax'],  example_input_data['ay'], example_input_data['az'],
+            example_input_data['gx'],  example_input_data['gy'], example_input_data['gz'],
             model, label_encoder, feature_columns, scaler
         )
-
         print(f"Input: {example_input_data}")
-        print(f"State (ML Model): {predicted_state_model} (Model Confidence: {model_confidence:.2f}%)")
-        print(f"State (Combined Rule-Based Logic): {combined_rule_based_state}")
+        print(f"State (ML Model): {predicted_state_model} (Confidence: {model_confidence:.2f}%)")
+        print(f"State (Combined Rule-Based): {combined_rule_based_state}")
         print(f"Health Score: {healthscore_final} / 100")
         print(f"System Confidence: {system_confidence_final:.2f}%")
         print(f"Explanation: {explanation_final}")
         print(f"Final State (including medical rules): {final_state}")
 
 
-# --- Main Execution Block ---
+# =============================================================================
+# MAIN EXECUTION BLOCK
+# =============================================================================
 
 # 1. Generate Synthetic Data
 print("\n" + "=" * 60)
 print("SYNTHETIC DATA GENERATION")
 print("=" * 60)
+
 required_dfs: List[str] = ['df_thermometry', 'df_bidmc', 'df_mpu']
 for df_name in required_dfs:
     if df_name not in globals():
         print(f"Error: DataFrame '{df_name}' not found. Please run the previous cells to load and preprocess the data.")
         exit()
 
-num_base_samples: int = 5000
-num_critical_alert_samples: int = 1500
-df_synthetic_combined = generate_synthetic_data(df_thermometry, df_bidmc, df_mpu, num_base_samples, num_critical_alert_samples)
+num_base_samples: int     = 5000
+num_critical_samples: int = 1500
+num_alert_samples: int    = 1500   # now guaranteed to produce ~1500 ALERT labels
 
-print(f"Generated {num_base_samples} base records, {num_critical_alert_samples} CRITICAL and {num_critical_alert_samples} ALERT records.")
+df_synthetic_combined = generate_synthetic_data(
+    df_thermometry, df_bidmc, df_mpu,
+    num_base_samples, num_critical_samples, num_alert_samples
+)
+
+print(f"Generated {num_base_samples} base, {num_critical_samples} CRITICAL, {num_alert_samples} ALERT records.")
 print(f"Total synthetic records: {len(df_synthetic_combined)}")
 print("First 5 rows from the combined synthetic dataset:")
 display(df_synthetic_combined.head())
 
 print("\nDistribution of 'overall_state' labels in the combined synthetic dataset:")
 df_synthetic_combined['overall_state'] = df_synthetic_combined.apply(
-    lambda row: combined_rule_based_label(row),
-    axis=1
+    lambda row: combined_rule_based_label(row), axis=1
 )
-print(df_synthetic_combined['overall_state'].value_counts())
+dist = df_synthetic_combined['overall_state'].value_counts()
+print(dist)
+
+# Sanity check: each class must have at least 300 samples for reliable training
+assert all(dist >= 300), f"WARNING: a class has < 300 samples — increase num_alert_samples. Distribution:\n{dist}"
 
 # 2. Train Unified Model
 model, le_overall_state, scaler, feature_columns, X_train_synthetic, X_test_synthetic, y_train_synthetic, y_test_synthetic = train_unified_model(df_synthetic_combined)
@@ -617,54 +523,37 @@ print("=" * 60)
 print("STRATIFIED 5-FOLD CROSS-VALIDATION")
 print("=" * 60)
 
-# Build a pipeline that scales MPU columns per fold, then classifies
 mpu_cols_cv: List[str] = ['ax', 'ay', 'az', 'gx', 'gy', 'gz']
-passthrough_cols_cv: List[str] = ['temp', 'hr', 'spo2', 'acc']
 
 cv_preprocessor = ColumnTransformer(
-    transformers=[
-        ('mpu_scaler', MinMaxScaler(), mpu_cols_cv),
-    ],
-    remainder='passthrough'  # temp, hr, spo2, acc passed as-is
+    transformers=[('mpu_scaler', MinMaxScaler(), mpu_cols_cv)],
+    remainder='passthrough'
 )
 
 cv_pipeline = Pipeline([
     ('preprocess', cv_preprocessor),
     ('clf', RandomForestClassifier(
-        n_estimators=150,
-        max_depth=10,
-        class_weight="balanced",
-        random_state=RANDOM_STATE
+        n_estimators=150, max_depth=10,
+        class_weight="balanced", random_state=RANDOM_STATE
     ))
 ])
 
-# Use full X_synthetic (raw) — the pipeline scales per fold
 X_synthetic_cv: pd.DataFrame = df_synthetic_combined[['temp', 'hr', 'spo2', 'ax', 'ay', 'az', 'gx', 'gy', 'gz', 'acc']].copy()
-X_synthetic_cv['spo2'] = X_synthetic_cv['spo2'] * 2  # Match training boost
+X_synthetic_cv['spo2'] = X_synthetic_cv['spo2'] * 2   # match training boost
 y_synthetic_cv: np.ndarray = le_overall_state.transform(df_synthetic_combined['overall_state'])
 
 skf: StratifiedKFold = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
 
 scorers: Dict[str, Any] = {
-    "accuracy":        make_scorer(accuracy_score),
-    "f1_macro":        make_scorer(f1_score, average="macro",    zero_division=0),
-    "f1_weighted":     make_scorer(f1_score, average="weighted", zero_division=0),
-    "roc_auc_ovr":     make_scorer(
-                           roc_auc_score,
-                           needs_proba=True,
-                           multi_class="ovr",
-                           average="macro"
-                       ),
+    "accuracy":    make_scorer(accuracy_score),
+    "f1_macro":    make_scorer(f1_score, average="macro",    zero_division=0),
+    "f1_weighted": make_scorer(f1_score, average="weighted", zero_division=0),
+    "roc_auc_ovr": make_scorer(roc_auc_score, needs_proba=True, multi_class="ovr", average="macro"),
 }
 
 cv_results: Dict[str, Any] = cross_validate(
-    cv_pipeline,
-    X_synthetic_cv,
-    y_synthetic_cv,
-    cv=skf,
-    scoring=scorers,
-    return_train_score=True,
-    n_jobs=-1
+    cv_pipeline, X_synthetic_cv, y_synthetic_cv,
+    cv=skf, scoring=scorers, return_train_score=True, n_jobs=-1
 )
 
 metrics: List[str] = ["accuracy", "f1_macro", "f1_weighted", "roc_auc_ovr"]
@@ -672,52 +561,40 @@ print(f"\n{'Metric':<22} {'Mean':>8}  {'Std':>8}  {'Min':>8}  {'Max':>8}")
 print("-" * 60)
 for m in metrics:
     vals: np.ndarray = cv_results[f"test_{m}"]
-    print(f"{m:<22} {vals.mean():>8.4f}  {vals.std():>8.4f}  "
-          f"{vals.min():>8.4f}  {vals.max():>8.4f}")
+    print(f"{m:<22} {vals.mean():>8.4f}  {vals.std():>8.4f}  {vals.min():>8.4f}  {vals.max():>8.4f}")
 
 print("\n── Overfitting check (train vs test accuracy) ──")
 train_acc: np.ndarray = cv_results["train_accuracy"]
-test_acc: np.ndarray = cv_results["test_accuracy"]
-print(f"  Train accuracy:  {train_acc.mean():.4f} \u00b1 {train_acc.std():.4f}")
-print(f"  Test  accuracy:  {test_acc.mean():.4f} \u00b1 {test_acc.std():.4f}")
+test_acc:  np.ndarray = cv_results["test_accuracy"]
+print(f"  Train accuracy:  {train_acc.mean():.4f} ± {train_acc.std():.4f}")
+print(f"  Test  accuracy:  {test_acc.mean():.4f} ± {test_acc.std():.4f}")
 gap: float = train_acc.mean() - test_acc.mean()
 print(f"  Gap (overfit indicator): {gap:.4f}  "
-      f"{f'[OK \u2014 <0.05]' if gap < 0.05 else '[WARNING \u2014 possible overfit]'}")
+      f"{'[OK — <0.05]' if gap < 0.05 else '[WARNING — possible overfit]'}")
 
 fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-
 fold_labels: List[str] = [f"Fold {i+1}" for i in range(5)]
 
 axes[0].plot(fold_labels, cv_results["test_accuracy"],  marker="o", label="Test")
-axes[0].plot(fold_labels, cv_results["train_accuracy"], marker="s", linestyle="--",
-             label="Train", alpha=0.6)
-axes[0].set_title("Accuracy per fold")
-axes[0].set_ylabel("Accuracy")
-axes[0].set_ylim(0.8, 1.01)
-axes[0].legend()
-axes[0].grid(alpha=0.3)
+axes[0].plot(fold_labels, cv_results["train_accuracy"], marker="s", linestyle="--", label="Train", alpha=0.6)
+axes[0].set_title("Accuracy per fold"); axes[0].set_ylabel("Accuracy")
+axes[0].set_ylim(0.8, 1.01); axes[0].legend(); axes[0].grid(alpha=0.3)
 
 axes[1].plot(fold_labels, cv_results["test_f1_macro"],    marker="o", label="F1 macro")
 axes[1].plot(fold_labels, cv_results["test_roc_auc_ovr"], marker="^", label="AUC-ROC (OvR)")
-axes[1].set_title("F1 macro and AUC-ROC per fold")
-axes[1].set_ylabel("Score")
-axes[1].set_ylim(0.8, 1.01)
-axes[1].legend()
-axes[1].grid(alpha=0.3)
+axes[1].set_title("F1 macro and AUC-ROC per fold"); axes[1].set_ylabel("Score")
+axes[1].set_ylim(0.8, 1.01); axes[1].legend(); axes[1].grid(alpha=0.3)
 
 plt.suptitle("5-Fold Cross-Validation Results", fontsize=13)
 plt.tight_layout()
 plt.show()
 
+# Final model retrained on train split for SHAP (consistent with saved artifact)
 final_model: RandomForestClassifier = RandomForestClassifier(
-    n_estimators=150,
-    max_depth=10,
-    class_weight="balanced",
-    random_state=RANDOM_STATE
+    n_estimators=150, max_depth=10, class_weight="balanced", random_state=RANDOM_STATE
 )
 final_model.fit(X_train_synthetic, y_train_synthetic)
-
-print("\n\u2713 Final model retrained on train split for SHAP analysis.")
+print("\n✓ Final model retrained on train split for SHAP analysis.")
 
 print("\n" + "=" * 60)
 print("SHAP EXPLAINABILITY")
@@ -732,7 +609,6 @@ print(f"Classes (in SHAP order): {class_names}")
 print(f"shap_values_raw type: {type(shap_values_raw)}, shape: {np.array(shap_values_raw).shape}")
 
 arr: np.ndarray = np.array(shap_values_raw)
-shap_values: List[np.ndarray]
 if arr.ndim == 3:
     shap_values = [arr[:, :, i] for i in range(arr.shape[2])]
     print(f"Detected new SHAP format (3D). Reshaped to {len(shap_values)} arrays of {shap_values[0].shape}.")
@@ -749,14 +625,9 @@ except Exception as e:
 
 for i, cls in enumerate(class_names):
     plt.figure(figsize=(9, 5))
-    shap.summary_plot(
-        shap_values[i],
-        X_test_synthetic,
-        feature_names=list(X_test_synthetic.columns),
-        show=False,
-        max_display=10
-    )
-    plt.title(f"SHAP summary \u2014 class: {cls}", fontsize=13)
+    shap.summary_plot(shap_values[i], X_test_synthetic,
+                      feature_names=list(X_test_synthetic.columns), show=False, max_display=10)
+    plt.title(f"SHAP summary — class: {cls}", fontsize=13)
     plt.tight_layout()
     plt.show()
 
@@ -767,9 +638,7 @@ shap_importance_df: pd.DataFrame = pd.DataFrame({
 }).sort_values("mean_|SHAP|", ascending=False)
 
 plt.figure(figsize=(9, 4))
-plt.barh(shap_importance_df["feature"][::-1],
-         shap_importance_df["mean_|SHAP|"][::-1],
-         color="#4C72B0")
+plt.barh(shap_importance_df["feature"][::-1], shap_importance_df["mean_|SHAP|"][::-1], color="#4C72B0")
 plt.xlabel("Mean |SHAP value|")
 plt.title("Global feature importance (SHAP)", fontsize=13)
 plt.tight_layout()
@@ -785,20 +654,13 @@ if len(critical_indices) > 0:
     sample_idx: int = critical_indices[0]
     sample_row: pd.DataFrame = X_test_synthetic.iloc[[sample_idx]]
     sv_single_raw = explainer.shap_values(sample_row, check_additivity=False)
-
     sv_arr: np.ndarray = np.array(sv_single_raw)
-    sv_single: List[np.ndarray]
-    if sv_arr.ndim == 3:
-        sv_single = [sv_arr[:, :, i] for i in range(sv_arr.shape[2])]
-    else:
-        sv_single = list(sv_single_raw)
+    sv_single = [sv_arr[:, :, i] for i in range(sv_arr.shape[2])] if sv_arr.ndim == 3 else list(sv_single_raw)
 
-    print(f"\n\u2500\u2500 Waterfall for test sample #{sample_idx} \u2500\u2500")
+    print(f"\n── Waterfall for test sample #{sample_idx} ──")
     print(f"   True:      {class_names[y_test_synthetic.iloc[sample_idx]]}")
     print(f"   Predicted: {class_names[final_model.predict(sample_row)[0]]}")
-    print(f"   SpO\u2082={sample_row['spo2'].values[0]:.1f}%  "
-          f"HR={sample_row['hr'].values[0]:.0f} bpm  "
-          f"Temp={sample_row['temp'].values[0]:.1f}\u00b0C")
+    print(f"   SpO₂={sample_row['spo2'].values[0]:.1f}%  HR={sample_row['hr'].values[0]:.0f} bpm  Temp={sample_row['temp'].values[0]:.1f}°C")
 
     shap_exp = shap.Explanation(
         values        = sv_single[critical_class_idx][0],
@@ -808,28 +670,56 @@ if len(critical_indices) > 0:
     )
     plt.figure(figsize=(9, 5))
     shap.waterfall_plot(shap_exp, show=False)
-    plt.title(f"SHAP waterfall \u2014 CRITICAL (sample #{sample_idx})", fontsize=12)
+    plt.title(f"SHAP waterfall — CRITICAL (sample #{sample_idx})", fontsize=12)
     plt.tight_layout()
     plt.show()
 else:
-    print("No CRITICAL samples in test set \u2014 skipping waterfall.")
+    print("No CRITICAL samples in test set — skipping waterfall.")
+
 print("\n" + "=" * 60)
 print("THESIS REPORTING SUMMARY")
 print("=" * 60)
 print(f"""
 Cross-validation (Stratified 5-Fold):
-  Accuracy:       {cv_results['test_accuracy'].mean():.4f} \u00b1 {cv_results['test_accuracy'].std():.4f}
-  F1 (macro):     {cv_results['test_f1_macro'].mean():.4f} \u00b1 {cv_results['test_f1_macro'].std():.4f}
-  F1 (weighted):  {cv_results['test_f1_weighted'].mean():.4f} \u00b1 {cv_results['test_f1_weighted'].std():.4f}
+  Accuracy:       {cv_results['test_accuracy'].mean():.4f} ± {cv_results['test_accuracy'].std():.4f}
+  F1 (macro):     {cv_results['test_f1_macro'].mean():.4f} ± {cv_results['test_f1_macro'].std():.4f}
+  F1 (weighted):  {cv_results['test_f1_weighted'].mean():.4f} ± {cv_results['test_f1_weighted'].std():.4f}
   AUC-ROC (OvR):  {auc:.4f}
 
 Recommended thesis wording:
   "Model performance was estimated using stratified 5-fold cross-validation
    to ensure each fold preserves the NORMAL/ALERT/CRITICAL class distribution.
-   Mean accuracy was {cv_results['test_accuracy'].mean():.2%} (\u00b1{cv_results['test_accuracy'].std():.2%}),
+   Mean accuracy was {cv_results['test_accuracy'].mean():.2%} (±{cv_results['test_accuracy'].std():.2%}),
    with a macro-averaged AUC-ROC of {auc:.4f},
    indicating strong separability across all three health states.
    Feature importance was assessed using SHAP (SHapley Additive exPlanations),
-   which identified SpO\u2082, heart rate, and body temperature as the dominant
+   which identified SpO₂, heart rate, and body temperature as the dominant
    predictors, consistent with established clinical triage criteria."
 """)
+
+# =============================================================================
+# SAVE ARTIFACT
+# Fix 1: filename matches Dockerfile ENV ARTIFACT_FILE
+# Fix 2: save final_model (consistent with SHAP analysis above)
+# Fix 3: feature_order uses feature_columns (X_synthetic is out of scope here)
+# =============================================================================
+unified_artifact_filename = 'patient_monitor_artifacts (3).joblib'
+
+artifacts_to_save = {
+    'model':        final_model,        # FIX: was 'model'; use final_model (same as SHAP)
+    'scaler':       scaler,
+    'encoder':      le_overall_state,
+    'features':     feature_columns,
+    'feature_order': list(feature_columns)  # FIX: was list(X_synthetic.columns) → NameError
+}
+
+joblib.dump(artifacts_to_save, unified_artifact_filename)
+print(f"All model artifacts saved as '{unified_artifact_filename}'")
+
+try:
+    files.download(unified_artifact_filename)
+    print(f"'{unified_artifact_filename}' downloaded successfully.")
+except FileNotFoundError:
+    print(f"Error: '{unified_artifact_filename}' not found.")
+except Exception as e:
+    print(f"An error occurred while downloading '{unified_artifact_filename}': {e}")

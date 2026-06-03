@@ -585,21 +585,10 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return T("card.gpsIndoor");
     }
 
-    private bool IsFallEvent(MonitoredCard card)
-    {
-        var mpu = card.LastData?.Mpu6050;
-        var gyro = card.LastData?.Gyro;
-
-        double accelScore = 0;
-        if (mpu != null && mpu.Count >= 3)
-            accelScore = Math.Sqrt(mpu[0] * (double)mpu[0] + mpu[1] * (double)mpu[1] + mpu[2] * (double)mpu[2]);
-
-        double gyroScore = 0;
-        if (gyro != null && gyro.Count >= 3)
-            gyroScore = Math.Sqrt(gyro[0] * (double)gyro[0] + gyro[1] * (double)gyro[1] + gyro[2] * (double)gyro[2]);
-
-        return accelScore > 35000 || gyroScore > 4000;
-    }
+    // Use the firmware's own fall decision (3-state machine: freefall → impact → stillness).
+    // The app must not re-implement fall detection from raw LSB data — thresholds differ.
+    private static bool IsFallEvent(MonitoredCard card)
+        => card.LastData?.IsFall == true;
 
     private string FormatFallRisk(MonitoredCard card)
         => IsFallEvent(card) ? T("card.fallPossible") : T("card.fallStable");
@@ -609,8 +598,9 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         if (card.LastData == null || !card.LastData.IsAvailable)
             return "NoData";
 
-        var pulse = card.LastData?.Bpm ?? 0;
-        var spo2  = card.LastData?.Spo2 ?? 0;
+        var d     = card.LastData;
+        var pulse = d?.Bpm  ?? (d?.Max30100?.Count >= 1 ? d.Max30100[0] : 0);
+        var spo2  = d?.Spo2 ?? (d?.Max30100?.Count >= 2 ? d.Max30100[1] : 0);
         var temp  = card.LastData?.Temperature;
 
         int effectiveMinHr  = card.Person.MinHeartRate  ?? 60;

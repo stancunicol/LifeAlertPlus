@@ -31,6 +31,8 @@ namespace LifeAlertPlus.Infrastructure.Context
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<User>().HasKey(u => u.Id);
+            modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
+            modelBuilder.Entity<User>().HasIndex(u => u.PhoneNumber);
             modelBuilder.Entity<Monitored>().HasKey(m => m.Id);
             modelBuilder.Entity<Measurement>().HasKey(m => m.Id);
             modelBuilder.Entity<Notification>().HasKey(n => n.Id);
@@ -60,6 +62,9 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<Measurement>()
                 .HasIndex(m => m.IdMonitored);
 
+            modelBuilder.Entity<Measurement>()
+                .HasIndex(m => m.CreatedAt);
+
             modelBuilder.Entity<Notification>()
                 .HasIndex(n => n.IdMonitored);
 
@@ -78,6 +83,9 @@ namespace LifeAlertPlus.Infrastructure.Context
 
             modelBuilder.Entity<Notification>()
                 .HasIndex(n => n.IdUser);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => new { n.IdUser, n.IsRead });
 
             modelBuilder.Entity<DailyHistory>()
                 .HasIndex(d => d.IdMonitored);

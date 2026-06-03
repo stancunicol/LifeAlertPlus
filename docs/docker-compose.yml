@@ -1,7 +1,7 @@
 services:
   ai-service:
     build:
-      context: .
+      context: ..
       dockerfile: ai-service/Dockerfile
     ports:
       - "8000:8000"
@@ -17,7 +17,7 @@ services:
 
   api:
     build:
-      context: .
+      context: ..
       dockerfile: .github/workflows/Dockerfile.api
     ports:
       - "8080:8080"
@@ -41,7 +41,7 @@ services:
 
   client:
     build:
-      context: .
+      context: ..
       dockerfile: .github/workflows/Dockerfile.client
       args:
         # Development → appsettings.json (ApiBaseUrl: https://localhost:8443)
