@@ -6,6 +6,7 @@ namespace LifeAlertPlus.Shared.DTOs.Responses.User
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
         public string? ProfilePictureUrl { get; set; }
         public bool IsEmailConfirmed { get; set; }
         public string? Provider { get; set; }
