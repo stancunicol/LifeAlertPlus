@@ -45,11 +45,16 @@ namespace LifeAlertPlus.Client.Services
             var response = await _httpClient.PatchAsJsonAsync("api/authentication/change-email", request);
 
             if (response.IsSuccessStatusCode)
+                return await response.Content.ReadFromJsonAsync<UserUpdateEmailResponseDTO>();
+
+            // Surface error messages (e.g. 409 Conflict for duplicate email)
+            try
             {
-                var result = await response.Content.ReadFromJsonAsync<UserUpdateEmailResponseDTO>();
-                return result;
+                var err = await response.Content.ReadFromJsonAsync<UserUpdateEmailResponseDTO>();
+                if (err != null) return new UserUpdateEmailResponseDTO { Success = false, Message = err.Message };
             }
-            return null;
+            catch { }
+            return new UserUpdateEmailResponseDTO { Success = false, Message = "Failed to change email." };
         }
 
         public async Task<bool> UpdatePasswordAsync(UserChangePasswordRequestDTO request)

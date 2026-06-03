@@ -257,7 +257,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                     person.MinSpO2);
                 var lastUpdate = GetLastUpdateText(card.LastUpdatedUtc);
 
-                var gps = espData?.Neo6m ?? T("card.noData");
+                var gps = FormatGpsLabel(espData?.Neo6m);
                 var fallDetection = !isOnline ? T("card.na") : (espData?.Mpu6050 != null ? T("card.fallStable") : T("card.noData"));
                 var lastUpdateFull = card.LastUpdatedUtc != DateTime.MinValue
                     ? card.LastUpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")
@@ -287,6 +287,16 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         {
             MonitoredSamples = Array.Empty<MonitoredSample>();
         }
+    }
+
+    private string FormatGpsLabel(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return T("card.gpsIndoor");
+        // NMEA "V" flag = no fix
+        if (raw.Contains(",V,", StringComparison.OrdinalIgnoreCase)) return T("card.gpsIndoor");
+        // Plain "lat,lon" or NMEA with valid fix
+        if (TryParseGpsToLatLon(raw, out _, out _)) return T("card.gpsOutdoor");
+        return T("card.gpsIndoor");
     }
 
     private async Task<Shared.DTOs.Responses.ESP.ESPDataResponseDTO?> FetchEspDataAsync(string serial)

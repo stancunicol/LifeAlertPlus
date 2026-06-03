@@ -16,7 +16,7 @@
             </button>
             <div class="top-actions">
                 <button class="btn-action-main" @onclick="ExportPdfAsync">📤 @T("selected.export")</button>
-                @if (_showEditButton)
+                @if (_showEditButton && !(Person?.IsArchived ?? false))
                 {
                     <button class="btn-action-main" @onclick="OpenInviteModal">✉️ @T("invite.sendToDoctor")</button>
                     <button class="btn-action-main" @onclick="OpenWifiModalAsync">📶 @T("wifi.manage")</button>
@@ -60,7 +60,7 @@
                         <span class="contact-text">@T("selected.device") @Person.DeviceSerial</span>
                     </div>
                 </div>
-                @if (_showEditButton)
+                @if (_showEditButton && !(Person?.IsArchived ?? false))
                 {
                     <div class="action-buttons">
                         <button class="btn-action-main" @onclick="OpenEditModal">⚙️ @T("selected.editProfile")</button>
@@ -162,14 +162,15 @@
                 <div class="stat-icon-huge">📍</div>
                 <div class="stat-content">
                     <h3>@T("selected.gpsLocation")</h3>
-                    <div class="stat-value-gps">@Person.GPS</div>
                     @if (GetGPSStatus(Person.GPS) == "disabled")
                     {
+                        <div class="stat-value-huge no-data-value">@T("selected.noRecentMeasurements")</div>
                         <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
                     else
                     {
-                        <p class="stat-status @GetGPSStatus(Person.GPS)">@GetGPSStatusText(Person.GPS)</p>
+                        <div class="stat-value-gps">@Person.GPS</div>
+                        <p class="stat-status normal gps-last-coords">@T("selected.gpsLastCoords")</p>
                     }
                 </div>
             </div>
@@ -728,7 +729,7 @@
                                 </div>
                             }
                             <div class="chart-svg-scroll @(SpO2Points.Count == 0 ? "chart-svg-hidden" : "")">
-                            <svg class="chart-svg" style="@ChartSvgStyle" viewBox="@ChartViewBoxAttr" preserveAspectRatio="xMidYMid meet">
+                            <svg @ref="_spo2SvgRef" class="chart-svg" style="@ChartSvgStyle" viewBox="@ChartViewBoxAttr" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="spo2Gradient" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stop-color="#1565c0" stop-opacity="0.30" />

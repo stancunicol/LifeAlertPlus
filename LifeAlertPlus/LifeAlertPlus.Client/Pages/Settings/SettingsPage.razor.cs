@@ -161,6 +161,8 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 ProfilePictureUrl = string.Empty;
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
             }
+
+            await LoadWebPushStateAsync();
         }
 
         private void ResetThresholds()
@@ -216,6 +218,52 @@ namespace LifeAlertPlus.Client.Pages.Settings
 
             // System
             public string Language { get; set; } = string.Empty;
+        }
+
+        // ── Web Push browser subscription ─────────────────────────────────────
+        private bool _webPushSupported;
+        private bool _webPushSubscribed;
+        private string _webPushPermission = "default";
+
+        private async Task LoadWebPushStateAsync()
+        {
+            try
+            {
+                _webPushSupported  = await JSRuntime.InvokeAsync<bool>("webPushIsSupported");
+                _webPushPermission = await JSRuntime.InvokeAsync<string>("webPushGetPermission");
+                if (_webPushSupported && _webPushPermission == "granted")
+                {
+                    _webPushSubscribed = await JSRuntime.InvokeAsync<bool>("eval",
+                        "navigator.serviceWorker.ready.then(r=>r.pushManager.getSubscription()).then(s=>!!s)");
+                }
+            }
+            catch { }
+        }
+
+        private async Task SubscribeWebPushAsync()
+        {
+            try
+            {
+                var apiBase = Navigation.BaseUri.TrimEnd('/');
+                var token   = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "authToken") ?? "";
+                _webPushSubscribed = await JSRuntime.InvokeAsync<bool>("webPushSubscribe", apiBase, token);
+                _webPushPermission = await JSRuntime.InvokeAsync<string>("webPushGetPermission");
+                StateHasChanged();
+            }
+            catch { }
+        }
+
+        private async Task UnsubscribeWebPushAsync()
+        {
+            try
+            {
+                var apiBase = Navigation.BaseUri.TrimEnd('/');
+                var token   = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "authToken") ?? "";
+                await JSRuntime.InvokeVoidAsync("webPushUnsubscribe", apiBase, token);
+                _webPushSubscribed = false;
+                StateHasChanged();
+            }
+            catch { }
         }
     }
 }

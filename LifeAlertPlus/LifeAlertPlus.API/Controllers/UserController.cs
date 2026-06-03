@@ -59,6 +59,8 @@ namespace LifeAlertPlus.API.Controllers
 
             user.FirstName = updatedUser.FirstName ?? user.FirstName;
             user.LastName = updatedUser.LastName ?? user.LastName;
+            if (updatedUser.PhoneNumber != null)
+                user.PhoneNumber = string.IsNullOrWhiteSpace(updatedUser.PhoneNumber) ? null : updatedUser.PhoneNumber.Trim();
             if (!string.IsNullOrEmpty(updatedUser.FirstDayOfTheWeek)) user.FirstDayOfTheWeek = updatedUser.FirstDayOfTheWeek;
             if (!string.IsNullOrEmpty(updatedUser.Language)) user.Language = updatedUser.Language;
             user.MinHeartRate = updatedUser.MinHeartRate ?? user.MinHeartRate;

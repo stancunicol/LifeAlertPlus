@@ -181,23 +181,28 @@ namespace LifeAlertPlus.Client.Pages.Profile
             EditUser = new UserUpdateRequestDTO
             {
                 FirstName = CurrentUser.FirstName,
-                LastName = CurrentUser.LastName
+                LastName = CurrentUser.LastName,
+                PhoneNumber = CurrentUser.PhoneNumber
             };
             IsEditingPersonal = true;
         }
 
         private async Task SavePersonalInfo()
         {
-            if(!string.IsNullOrWhiteSpace(EditUser.FirstName))
+            if (!string.IsNullOrWhiteSpace(EditUser.FirstName))
                 CurrentUser.FirstName = EditUser.FirstName;
 
-            if(!string.IsNullOrWhiteSpace(EditUser.LastName))
+            if (!string.IsNullOrWhiteSpace(EditUser.LastName))
                 CurrentUser.LastName = EditUser.LastName;
+
+            // PhoneNumber can be cleared (empty string → null)
+            CurrentUser.PhoneNumber = string.IsNullOrWhiteSpace(EditUser.PhoneNumber) ? null : EditUser.PhoneNumber!.Trim();
 
             var updateRequest = new UserUpdateRequestDTO
             {
                 FirstName = CurrentUser.FirstName,
-                LastName = CurrentUser.LastName
+                LastName = CurrentUser.LastName,
+                PhoneNumber = CurrentUser.PhoneNumber ?? string.Empty
             };
 
             var request = await UserApiClient.UpdateUserAsync(CurrentUser.Id, updateRequest);
@@ -233,6 +238,39 @@ namespace LifeAlertPlus.Client.Pages.Profile
         {
             _showNewPassword = !_showNewPassword;
         }
+
+        // Password strength for change-password modal
+        private int NewPasswordStrength => ComputeStrength(PasswordChange.NewPassword ?? string.Empty);
+
+        private static int ComputeStrength(string pw)
+        {
+            if (string.IsNullOrEmpty(pw)) return 0;
+            int score = 0;
+            if (pw.Length >= 8)  score++;
+            if (pw.Length >= 12) score++;
+            if (pw.Any(char.IsUpper) && pw.Any(char.IsLower)) score++;
+            if (pw.Any(char.IsDigit)) score++;
+            if (pw.Any(ch => !char.IsLetterOrDigit(ch))) score++;
+            return Math.Min(score, 4);
+        }
+
+        private string NewPasswordStrengthLabel => NewPasswordStrength switch
+        {
+            1 => T("password.strengthWeak"),
+            2 => T("password.strengthFair"),
+            3 => T("password.strengthGood"),
+            4 => T("password.strengthStrong"),
+            _ => string.Empty
+        };
+
+        private string NewPasswordStrengthClass => NewPasswordStrength switch
+        {
+            1 => "strength-weak",
+            2 => "strength-fair",
+            3 => "strength-good",
+            4 => "strength-strong",
+            _ => string.Empty
+        };
 
         private void ToggleConfirmPasswordVisibility()
         {

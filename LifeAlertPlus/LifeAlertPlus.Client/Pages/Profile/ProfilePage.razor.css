@@ -693,3 +693,15 @@ input:checked + .slider:before {
 
 .push-status.denied { background: #ffeaea; color: #c62828; }
 .push-status.unsupported { background: #f5f5f5; color: #888; }
+
+
+/* Password strength bar (change-password modal) */
+.password-strength-bar { height: 4px; background: #eee; border-radius: 4px; overflow: hidden; }
+.strength-fill { height: 100%; border-radius: 4px; transition: width 0.3s ease, background 0.3s ease; }
+.strength-label { font-size: 0.78rem; margin: 2px 0 4px; font-weight: 500; }
+.strength-weak   .strength-fill, .strength-fill.strength-weak   { background: #e53935; }
+.strength-fair   .strength-fill, .strength-fill.strength-fair   { background: #fb8c00; }
+.strength-good   .strength-fill, .strength-fill.strength-good   { background: #fdd835; }
+.strength-strong .strength-fill, .strength-fill.strength-strong { background: #43a047; }
+.strength-weak   { color: #e53935; } .strength-fair { color: #fb8c00; }
+.strength-good   { color: #f9a825; } .strength-strong { color: #2e7d32; }

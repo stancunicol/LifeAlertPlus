@@ -95,6 +95,33 @@
                 </div>
                 <div class="setting-item">
                     <div class="setting-info">
+                        <h3>@T("profile.webPushTitle")</h3>
+                        <p>@T("profile.webPushDesc")</p>
+                    </div>
+                    <div>
+                        @if (_webPushSupported)
+                        {
+                            @if (_webPushPermission == "denied")
+                            {
+                                <span class="push-status denied">@T("profile.webPushDenied")</span>
+                            }
+                            else if (_webPushSubscribed)
+                            {
+                                <button class="btn-security" @onclick="UnsubscribeWebPushAsync">@T("profile.webPushDisable")</button>
+                            }
+                            else
+                            {
+                                <button class="btn-security" @onclick="SubscribeWebPushAsync">@T("profile.webPushEnable")</button>
+                            }
+                        }
+                        else
+                        {
+                            <span class="push-status unsupported">@T("profile.webPushUnsupported")</span>
+                        }
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div class="setting-info">
                         <h3>@T("settings.notifySms")</h3>
                         <p>@T("settings.notifySmsDesc")</p>
                     </div>

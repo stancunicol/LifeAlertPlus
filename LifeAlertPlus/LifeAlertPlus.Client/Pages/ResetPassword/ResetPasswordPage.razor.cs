@@ -26,6 +26,39 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
 
         private void ToggleShowPassword() => _showPassword = !_showPassword;
         private void ToggleShowConfirmPassword() => _showConfirmPassword = !_showConfirmPassword;
+
+        // Password strength (0=empty, 1=weak, 2=fair, 3=good, 4=strong)
+        private int PasswordStrength => ComputeStrength(Password);
+
+        private static int ComputeStrength(string pw)
+        {
+            if (string.IsNullOrEmpty(pw)) return 0;
+            int score = 0;
+            if (pw.Length >= 8)  score++;
+            if (pw.Length >= 12) score++;
+            if (pw.Any(char.IsUpper) && pw.Any(char.IsLower)) score++;
+            if (pw.Any(char.IsDigit)) score++;
+            if (pw.Any(ch => !char.IsLetterOrDigit(ch))) score++;
+            return Math.Min(score, 4);
+        }
+
+        private string PasswordStrengthLabel => PasswordStrength switch
+        {
+            1 => T("password.strengthWeak"),
+            2 => T("password.strengthFair"),
+            3 => T("password.strengthGood"),
+            4 => T("password.strengthStrong"),
+            _ => string.Empty
+        };
+
+        private string PasswordStrengthClass => PasswordStrength switch
+        {
+            1 => "strength-weak",
+            2 => "strength-fair",
+            3 => "strength-good",
+            4 => "strength-strong",
+            _ => string.Empty
+        };
         private string ErrorMessage { get; set; } = string.Empty;
         private string SuccessMessage { get; set; } = string.Empty;
         private string ResetToken { get; set; } = string.Empty;

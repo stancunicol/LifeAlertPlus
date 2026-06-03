@@ -6,9 +6,6 @@ namespace LifeAlertPlus.Client.Pages.Register
     public partial class RegisterPage : ComponentBase
     {
         [Inject]
-        private HttpClient Http { get; set; } = default!;
-
-        [Inject]
         private NavigationManager Navigation { get; set; } = default!;
 
         [Inject]
@@ -89,6 +86,12 @@ namespace LifeAlertPlus.Client.Pages.Register
                 return;
             }
 
+            if (!IsValidEmail(Email.Trim()))
+            {
+                ErrorMessage = T("register.error.invalidEmail");
+                return;
+            }
+
             var passwordValidation = ValidatePassword(Password);
             if (!passwordValidation.IsValid)
             {
@@ -105,6 +108,17 @@ namespace LifeAlertPlus.Client.Pages.Register
             // All field-level validation passed — show consent modal.
             ConsentChecked = false;
             ShowConsentModal = true;
+        }
+
+        private static bool IsValidEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return false;
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email && email.Contains('.') && !email.EndsWith('.');
+            }
+            catch { return false; }
         }
 
         // Called when the user dismisses the consent modal without agreeing.

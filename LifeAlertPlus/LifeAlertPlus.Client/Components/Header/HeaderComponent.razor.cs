@@ -57,6 +57,12 @@ namespace LifeAlertPlus.Client.Components.Header
             UserStateService.OnChange += HandleUserNameChanged;
             Lang.OnLanguageChanged += HandleLanguageChanged;
             Navigation.LocationChanged += HandleLocationChanged;
+            NotificationService.OnUnreadCountChanged += HandleUnreadCountChanged;
+            await RefreshUnreadCountAsync();
+        }
+
+        private async void HandleUnreadCountChanged()
+        {
             await RefreshUnreadCountAsync();
         }
 
@@ -106,6 +112,7 @@ namespace LifeAlertPlus.Client.Components.Header
             UserStateService.OnChange -= HandleUserNameChanged;
             Lang.OnLanguageChanged -= HandleLanguageChanged;
             Navigation.LocationChanged -= HandleLocationChanged;
+            NotificationService.OnUnreadCountChanged -= HandleUnreadCountChanged;
         }
 
         private bool IsActive(string path)

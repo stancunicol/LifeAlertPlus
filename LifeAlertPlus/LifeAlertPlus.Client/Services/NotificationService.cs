@@ -26,15 +26,19 @@ namespace LifeAlertPlus.Client.Services
             return await _httpClient.GetFromJsonAsync<NotificationPagedResponseDTO>(url);
         }
 
+        public event Action? OnUnreadCountChanged;
+
         public async Task<bool> MarkAsReadAsync(Guid id)
         {
             var response = await _httpClient.PatchAsync($"api/notification/{id}/read", null);
+            if (response.IsSuccessStatusCode) OnUnreadCountChanged?.Invoke();
             return response.IsSuccessStatusCode;
         }
 
         public async Task<bool> MarkAllAsReadAsync()
         {
             var response = await _httpClient.PatchAsync("api/notification/read-all", null);
+            if (response.IsSuccessStatusCode) OnUnreadCountChanged?.Invoke();
             return response.IsSuccessStatusCode;
         }
 

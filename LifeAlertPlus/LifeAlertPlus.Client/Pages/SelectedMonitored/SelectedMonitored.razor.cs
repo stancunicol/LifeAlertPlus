@@ -60,6 +60,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private ElementReference _hrSvgRef;
         private ElementReference _tempSvgRef;
+        private ElementReference _spo2SvgRef;
         private ElementReference _hrScrollRef;
         private ElementReference _tempScrollRef;
         private ElementReference _mapRef;
@@ -98,6 +99,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private string _chartWeekLabel = "";
         private bool _hasPrevWeekData = false;
         private int _dayOffset = 0; // 0 = today, -1 = yesterday, etc.
+        private HashSet<DateTime> _daysWithData = new();
+        private HashSet<DateTime> _weeksWithData = new(); // week-start dates
         private string _chartDayLabel = "";
         private bool _hasPrevDayData = false;
         private System.Threading.Timer? _refreshTimer;
@@ -833,9 +836,13 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             else
                 _chartDayLabel = targetDay.ToString("dddd, dd MMM yyyy");
 
-            // Check if previous day has data
-            var prevDay = targetDay.AddDays(-1);
-            _hasPrevDayData = measurements.Any(m => m.CreatedAt.ToLocalTime().Date == prevDay);
+            // Cache all days with data so navigation can jump directly to them
+            _daysWithData = measurements
+                .Select(m => m.CreatedAt.ToLocalTime().Date)
+                .ToHashSet();
+
+            // Enable back-arrow whenever any day before targetDay has data
+            _hasPrevDayData = _daysWithData.Any(d => d < targetDay);
 
             var todayMs = measurements
                 .Where(m => m.CreatedAt.ToLocalTime().Date == targetDay)
@@ -1018,15 +1025,36 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private async Task GoToPreviousDay()
         {
             if (!_hasPrevDayData) return;
-            _dayOffset--;
-            await ReloadChartAsync();
+            var currentDay = DateTime.Now.Date.AddDays(_dayOffset);
+            // Jump to the most recent day BEFORE currentDay that has data
+            for (int i = 1; i <= 365; i++)
+            {
+                var candidate = currentDay.AddDays(-i);
+                if (_daysWithData.Contains(candidate))
+                {
+                    _dayOffset = (int)(candidate - DateTime.Now.Date).TotalDays;
+                    await ReloadChartAsync();
+                    return;
+                }
+            }
         }
 
         private async Task GoToNextDay()
         {
             if (_dayOffset >= 0) return;
-            _dayOffset++;
-            await ReloadChartAsync();
+            var currentDay = DateTime.Now.Date.AddDays(_dayOffset);
+            // Jump to the nearest day AFTER currentDay that has data (up to today)
+            for (int i = 1; i <= 365; i++)
+            {
+                var candidate = currentDay.AddDays(i);
+                if (candidate > DateTime.Now.Date) break;
+                if (_daysWithData.Contains(candidate))
+                {
+                    _dayOffset = (int)(candidate - DateTime.Now.Date).TotalDays;
+                    await ReloadChartAsync();
+                    return;
+                }
+            }
         }
 
         private async Task ReloadChartAsync()
@@ -1680,7 +1708,14 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     await JSRuntime.InvokeVoidAsync("chartTooltip.init", _tempSvgRef, "temp", tempData, "#FF9A6C", "°C", 1, prefix);
                 }
 
-                _tooltipsInitialized = HrTooltipData.Count > 0 || TempTooltipData.Count > 0;
+                if (SpO2TooltipData.Count > 0)
+                {
+                    var spo2Data = SpO2TooltipData.Select(p => new { x = p.X, y = p.Y, value = p.Value, label = p.Label }).ToArray();
+                    int spo2Decimals = CurrentChartView == ChartViewMode.Weekly ? 1 : 0;
+                    await JSRuntime.InvokeVoidAsync("chartTooltip.init", _spo2SvgRef, "spo2", spo2Data, "#1565c0", "%", spo2Decimals, prefix);
+                }
+
+                _tooltipsInitialized = HrTooltipData.Count > 0 || TempTooltipData.Count > 0 || SpO2TooltipData.Count > 0;
             }
             catch
             {
@@ -1702,6 +1737,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             {
                 await JSRuntime.InvokeVoidAsync("chartTooltip.dispose", "hr");
                 await JSRuntime.InvokeVoidAsync("chartTooltip.dispose", "temp");
+                await JSRuntime.InvokeVoidAsync("chartTooltip.dispose", "spo2");
                 await JSRuntime.InvokeVoidAsync("chartSync.detach", $"selected-{PersonId}");
             }
             catch { }

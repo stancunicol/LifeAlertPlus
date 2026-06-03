@@ -561,37 +561,28 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private string FormatGpsStatus(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
-            return T("card.gpsNoData");
+            return T("card.gpsIndoor");
 
-        var lines = raw.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (lines.Any(l => l.Contains(",V,", StringComparison.OrdinalIgnoreCase)))
-            return T("card.gpsNoFix");
+        // NMEA "V" flag = no fix (indoors / weak signal)
+        if (raw.Contains(",V,", StringComparison.OrdinalIgnoreCase))
+            return T("card.gpsIndoor");
 
-        var gprmc = lines.FirstOrDefault(l => l.StartsWith("$GPRMC", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(gprmc))
+        // Plain "lat,lon" string
+        var trimmed = raw.Trim();
+        if (!trimmed.StartsWith("$") && trimmed.Contains(','))
         {
-            var parts = gprmc.Split(',');
-            if (parts.Length > 6 && !string.IsNullOrWhiteSpace(parts[3]) && !string.IsNullOrWhiteSpace(parts[5]))
-            {
-                var lat = parts[3] + parts.ElementAtOrDefault(4);
-                var lon = parts[5] + parts.ElementAtOrDefault(6);
-                return $"{T("card.gpsCoordinates")}: {lat} {lon}";
-            }
+            var parts = trimmed.Split(',');
+            if (parts.Length >= 2 &&
+                double.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _) &&
+                double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _))
+                return T("card.gpsOutdoor");
         }
 
-        var gpgll = lines.FirstOrDefault(l => l.StartsWith("$GPGLL", StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(gpgll))
-        {
-            var parts = gpgll.Split(',');
-            if (parts.Length > 5 && !string.IsNullOrWhiteSpace(parts[1]) && !string.IsNullOrWhiteSpace(parts[3]))
-            {
-                var lat = parts[1] + parts.ElementAtOrDefault(2);
-                var lon = parts[3] + parts.ElementAtOrDefault(4);
-                return $"{T("card.gpsCoordinates")}: {lat} {lon}";
-            }
-        }
+        // NMEA with valid fix
+        if (raw.Contains("$GPRMC") || raw.Contains("$GPGLL"))
+            return T("card.gpsOutdoor");
 
-        return T("card.gpsActive");
+        return T("card.gpsIndoor");
     }
 
     private bool IsFallEvent(MonitoredCard card)

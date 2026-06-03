@@ -185,18 +185,17 @@ namespace LifeAlertPlus.API.Controllers
             }
 
             var user = await _userService.GetUserByEmailAsync(request.Email);
-            if (user == null)
+
+            // Email doesn't exist or uses OAuth — return generic message to prevent email enumeration
+            if (user == null || user.Provider != "Local")
             {
-                return BadRequest(new UserResponseDTO { Success = false, Message = "This email is not registered." });
-            }
-            if(user.Provider != "Local")
-            {
-                return BadRequest(new UserResponseDTO { Success = false, Message = "This email is registered via a third-party provider. Password reset is not applicable." });
+                return Ok(new UserResponseDTO { Success = true, Message = "Dacă adresa de email există, vei primi un link de resetare în câteva minute." });
             }
 
-            if(!user.IsEmailConfirmed)
+            // Email exists but not confirmed — reveal this specifically (per UX requirement)
+            if (!user.IsEmailConfirmed)
             {
-                return BadRequest(new UserResponseDTO { Success = false, Message = "Email not confirmed. Cannot reset password." });
+                return BadRequest(new UserResponseDTO { Success = false, Message = "Adresa de email nu a fost confirmată. Verificați inbox-ul pentru emailul de confirmare trimis la înregistrare." });
             }
 
             await _userService.InitiatePasswordResetAsync(user);
@@ -212,7 +211,7 @@ namespace LifeAlertPlus.API.Controllers
                 _logger.LogError(ex, "Failed to send password reset email for {Email}", request.Email);
             }
 
-            return Ok(new UserResponseDTO { Success = true, Message = "If the email exists, a password reset link has been sent." });
+            return Ok(new UserResponseDTO { Success = true, Message = "Un email cu linkul de resetare a parolei a fost trimis. Verificați inbox-ul." });
         }
 
         [Authorize]

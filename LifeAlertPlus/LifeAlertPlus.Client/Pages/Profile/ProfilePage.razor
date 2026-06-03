@@ -72,6 +72,15 @@
                         {
                             <input type="text" @bind="EditUser.LastName" class="input-edit" />
                         }
+                        <label>@T("profile.phoneNumber")</label>
+                        @if (!IsEditingPersonal)
+                        {
+                            <p>@(string.IsNullOrWhiteSpace(CurrentUser.PhoneNumber) ? "—" : CurrentUser.PhoneNumber)</p>
+                        }
+                        else
+                        {
+                            <input type="tel" @bind="EditUser.PhoneNumber" class="input-edit" placeholder="+40 7XX XXX XXX" />
+                        }
                     </div>
                 </div>
             </div>
@@ -87,7 +96,7 @@
                     <div class="security-item">
                         <div class="security-info">
                             <h3>@T("profile.changePassword")</h3>
-                            <p>@T("profile.lastChanged") @(CurrentUser.LastChangedPasswordAt.HasValue ? CurrentUser.LastChangedPasswordAt.Value.ToString("MMMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture) : T("profile.never"))</p>
+                            <p>@T("profile.lastChanged") @(CurrentUser.LastChangedPasswordAt.HasValue ? CurrentUser.LastChangedPasswordAt.Value.ToLocalTime().ToString("dd MMMM yyyy", Lang.CurrentLanguage == "ro" ? new System.Globalization.CultureInfo("ro-RO") : System.Globalization.CultureInfo.InvariantCulture) : T("profile.never"))</p>
                         </div>
                         <button class="btn-security" @onclick="OpenChangePasswordModal">@T("profile.changePasswordBtn")</button>
                     </div>
@@ -118,33 +127,10 @@
                 <h2>🔔 @T("profile.notificationsTitle")</h2>
             </div>
             <div class="section-content">
-                <div class="notification-toggle-row">
-                    <div class="notification-toggle-info">
-                        <strong>@T("profile.webPushTitle")</strong>
-                        <p>@T("profile.webPushDesc")</p>
-                    </div>
-                    <div class="notification-toggle-actions">
-                        @if (_webPushSupported)
-                        {
-                            @if (_webPushPermission == "denied")
-                            {
-                                <span class="push-status denied">@T("profile.webPushDenied")</span>
-                            }
-                            else if (_webPushSubscribed)
-                            {
-                                <button class="btn-secondary-action" @onclick="UnsubscribeWebPushAsync">@T("profile.webPushDisable")</button>
-                            }
-                            else
-                            {
-                                <button class="btn-primary-action" @onclick="SubscribeWebPushAsync">@T("profile.webPushEnable")</button>
-                            }
-                        }
-                        else
-                        {
-                            <span class="push-status unsupported">@T("profile.webPushUnsupported")</span>
-                        }
-                    </div>
-                </div>
+                <p style="color:#666;font-size:0.95rem;">
+                    @T("profile.notificationsRedirect")
+                    <a href="/settings" style="color:#4CAF50;font-weight:600;">@T("profile.notificationsSettingsLink")</a>
+                </p>
             </div>
         </div>
 
@@ -205,9 +191,16 @@
                 <div class="form-group">
                     <label>@T("profile.newPassword")</label>
                     <div class="password-field">
-                        <input type="@(_showNewPassword ? "text" : "password")" @bind="PasswordChange.NewPassword" placeholder="@T("profile.newPasswordPh")" class="input-modal" />
+                        <input type="@(_showNewPassword ? "text" : "password")" @bind="PasswordChange.NewPassword" @bind:event="oninput" placeholder="@T("profile.newPasswordPh")" class="input-modal" />
                         <button type="button" class="password-toggle" @onclick="ToggleNewPasswordVisibility" aria-label="Toggle new password visibility">👁</button>
                     </div>
+                    @if (!string.IsNullOrEmpty(PasswordChange.NewPassword))
+                    {
+                        <div class="password-strength-bar" style="margin-top:6px;">
+                            <div class="strength-fill @NewPasswordStrengthClass" style="width:@(NewPasswordStrength * 25)%"></div>
+                        </div>
+                        <p class="strength-label @NewPasswordStrengthClass">@NewPasswordStrengthLabel</p>
+                    }
                 </div>
                 <div class="form-group">
                     <label>@T("profile.confirmNewPassword")</label>

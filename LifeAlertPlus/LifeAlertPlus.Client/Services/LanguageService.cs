@@ -94,6 +94,7 @@ namespace LifeAlertPlus.Client.Services
 
             // Register errors
             ["register.error.allRequired"] = "All fields are required.",
+            ["register.error.invalidEmail"] = "Please enter a valid email address.",
             ["register.error.passwordMismatch"] = "Passwords do not match. Please make sure both passwords are identical.",
             ["register.error.emailInUse"] = "An account with this email address already exists.",
             ["register.error.phoneInUse"] = "This phone number is already associated with another account.",
@@ -158,6 +159,8 @@ namespace LifeAlertPlus.Client.Services
             ["time.h"] = "h",
             ["card.gpsCoordinates"] = "Coordinates",
             ["card.gpsActive"] = "Active: acquiring data",
+            ["card.gpsOutdoor"] = "Exterior — semnal GPS activ",
+            ["card.gpsIndoor"] = "Interior / fără semnal GPS",
             ["card.fallPossible"] = "Possible event (fall/impact)",
             ["card.fallStable"] = "Stable",
             ["card.statusOffline"] = "Offline",
@@ -256,6 +259,8 @@ namespace LifeAlertPlus.Client.Services
             ["consent.saving"] = "Saving…",
             ["consent.saveFailed"] = "Failed to save consent. Please try again.",
             ["profile.notificationsTitle"] = "Notifications",
+            ["profile.notificationsRedirect"] = "Notification preferences are managed in ",
+            ["profile.notificationsSettingsLink"] = "Settings → Notifications",
             ["profile.webPushTitle"] = "Browser notifications",
             ["profile.webPushDesc"] = "Receive alerts and critical notifications directly in your browser, even when the app is not open.",
             ["profile.webPushEnable"] = "Enable",
@@ -369,6 +374,7 @@ namespace LifeAlertPlus.Client.Services
             ["profile.cancel"] = "✖️ Cancel",
             ["profile.firstName"] = "First Name",
             ["profile.lastName"] = "Last Name",
+            ["profile.phoneNumber"] = "Phone Number",
             ["profile.security"] = "🔒 Security",
             ["profile.changePassword"] = "Change Password",
 
@@ -769,6 +775,7 @@ namespace LifeAlertPlus.Client.Services
             ["selected.bloodOxygen"] = "Blood Oxygen (SpO₂)",
             ["selected.temperature"] = "Temperature",
             ["selected.gpsLocation"] = "GPS Location",
+            ["selected.gpsLastCoords"] = "Last GPS coordinates received",
             ["selected.currentLocation"] = "Current Location",
             ["selected.noCoordinates"] = "No coordinates available.",
             ["selected.vitalSigns"] = "Vital Signs Evolution",
@@ -1170,6 +1177,7 @@ namespace LifeAlertPlus.Client.Services
 
             // Register errors
             ["register.error.allRequired"] = "Toate câmpurile sunt obligatorii.",
+            ["register.error.invalidEmail"] = "Introduceți o adresă de email validă.",
             ["register.error.passwordMismatch"] = "Parolele nu coincid. Asigură-te că ambele parole sunt identice.",
             ["register.error.emailInUse"] = "Există deja un cont cu această adresă de email.",
             ["register.error.phoneInUse"] = "Acest număr de telefon este deja asociat unui alt cont.",
@@ -1234,6 +1242,8 @@ namespace LifeAlertPlus.Client.Services
             ["card.gpsNoFix"] = "Fără fix (semnal slab)",
             ["card.gpsCoordinates"] = "Coordonate",
             ["card.gpsActive"] = "Activ: date în curs",
+            ["card.gpsOutdoor"] = "Exterior — semnal GPS activ",
+            ["card.gpsIndoor"] = "Interior / fără semnal GPS",
             ["card.fallPossible"] = "Posibil eveniment (cădere/impact)",
             ["card.fallStable"] = "Stabil",
             ["card.statusOffline"] = "Offline",
@@ -1332,6 +1342,8 @@ namespace LifeAlertPlus.Client.Services
             ["consent.saving"] = "Se salvează…",
             ["consent.saveFailed"] = "Salvarea consimțământului a eșuat. Încearcă din nou.",
             ["profile.notificationsTitle"] = "Notificări",
+            ["profile.notificationsRedirect"] = "Preferințele de notificări se gestionează în ",
+            ["profile.notificationsSettingsLink"] = "Setări → Notificări",
             ["profile.webPushTitle"] = "Notificări browser",
             ["profile.webPushDesc"] = "Primește alerte și notificări critice direct în browser, chiar și când aplicația nu e deschisă.",
             ["profile.webPushEnable"] = "Activează",
@@ -1445,6 +1457,7 @@ namespace LifeAlertPlus.Client.Services
             ["profile.cancel"] = "✖️ Anulare",
             ["profile.firstName"] = "Prenume",
             ["profile.lastName"] = "Nume",
+            ["profile.phoneNumber"] = "Număr de telefon",
             ["profile.security"] = "🔒 Securitate",
             ["profile.changePassword"] = "Schimbare parolă",
 
@@ -1845,6 +1858,7 @@ namespace LifeAlertPlus.Client.Services
             ["selected.bloodOxygen"] = "Oxigen în sânge (SpO₂)",
             ["selected.temperature"] = "Temperatură",
             ["selected.gpsLocation"] = "Locație GPS",
+            ["selected.gpsLastCoords"] = "Ultimele coordonate GPS primite",
             ["selected.currentLocation"] = "Locație curentă",
             ["selected.noCoordinates"] = "Coordonate indisponibile.",
             ["selected.vitalSigns"] = "Evoluția semnelor vitale",
