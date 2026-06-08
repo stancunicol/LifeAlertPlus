@@ -1,12 +1,12 @@
 /*
  * LifeAlertPlus — ESP32-C3 Mini Firmware
  *
- * Sensors  : MPU6050 (accel/gyro), MAX30100 (SpO2/HR), DS18B20 (temp), NEO-6M GPS
+ * Sensors  : MPU6050 (accel/gyro), MAX30100 (SpO2/HR), MLX90614ESF GY-906 (temp IR), NEO-6M GPS
  * Display  : OLED SSD1306 via PCA9548 multiplexer (ch 1)
  * Network  : WiFi → HTTPS POST to LifeAlertPlus API every API_POST_MS ms
  *
  * GPIO map (ESP32-C3 Mini):
- *   GPIO 0  — DS18B20 (1-Wire)
+ *   GPIO 0  — (liber)
  *   GPIO 1  — GPS TX (NEO-6M)    → ESP RX  (UART1 RX)
  *   GPIO 2  — GPS RX (NEO-6M)    → ESP TX  (UART1 TX)
  *   GPIO 3  — Button 1 (panic alert)
@@ -122,9 +122,10 @@
 #define OLED_CMD_BYTE    0x00
 #define OLED_DATA_BYTE   0x40
 
-// ─── DS18B20 (1-Wire) ─────────────────────────────────────────────────────────
-#define DS18B20_PIN      0
-#define DS18B20_CONV_MS  750
+// ─── MLX90614ESF GY-906 (infraroșu non-contact, I2C) ─────────────────────────
+#define MLX90614_ADDR     0x5A
+#define MLX90614_TOBJ_REG 0x07   // Object temperature register (Tobj1)
+#define MUX_CH_MLX90614   3      // SD3 / SC3
 
 // ─── GPS NEO-6M ───────────────────────────────────────────────────────────────
 #define GPS_UART_NUM     UART_NUM_1
@@ -185,7 +186,7 @@ static esp_timer_handle_t s_sleep_off_timer = NULL;
 static bool g_oled_ok = false;
 static bool g_mpu_ok  = false;
 static bool g_max_ok  = false;
-static bool g_ds_ok   = false;
+static bool g_mlx_ok  = false;
 
 // Mutex I2C recursiv — serializează accesul la magistrală + mux între task-uri
 // concurente (main loop, pulse_task, btn_task). Recursiv pentru ca o funcţie de nivel
@@ -800,9 +801,9 @@ static void oled_write_str(uint8_t page, uint8_t col, const char *s)
 }
 
 // Afişează ultimele date citite pe OLED (apelat la fiecare POST)
-//   ds_read_ok = succesul ultimei citiri de temperatură
+//   mlx_read_ok = succesul ultimei citiri de temperatură
 //   Pulsul (BPM) e produs de pulse_task şi citit din globala g_bpm.
-static void oled_show_data(bool ds_read_ok, float ds_temp)
+static void oled_show_data(bool mlx_read_ok, float mlx_temp)
 {
     if (!g_oled_ok) return;
 
@@ -826,9 +827,9 @@ static void oled_show_data(bool ds_read_ok, float ds_temp)
     oled_write_str(2, 0, line);
 
     // Page 3: Temperatură
-    if (ds_read_ok) {
-        bool neg = (ds_temp < 0.0f);
-        int ti = (int)(fabsf(ds_temp) * 10.0f + 0.5f);
+    if (mlx_read_ok) {
+        bool neg = (mlx_temp < 0.0f);
+        int ti = (int)(fabsf(mlx_temp) * 10.0f + 0.5f);
         snprintf(line, sizeof(line), "Temp:%c%d.%dC",
                  neg ? '-' : ' ', ti / 10, ti % 10);
     } else {
@@ -851,11 +852,11 @@ static void oled_show_data(bool ds_read_ok, float ds_temp)
     oled_write_str(5, 0, line);
 
     // Page 7: stare globală — eroare doar dacă init la boot a eşuat sau wifi off
-    if (!g_mpu_ok || !g_max_ok || !g_ds_ok) {
+    if (!g_mpu_ok || !g_max_ok || !g_mlx_ok) {
         snprintf(line, sizeof(line), "Err:%s%s%s",
                  g_mpu_ok ? "" : " MPU",
                  g_max_ok ? "" : " MAX",
-                 g_ds_ok  ? "" : " DS");
+                 g_mlx_ok ? "" : " MLX");
     } else if (!s_wifi_ok) {
         snprintf(line, sizeof(line), "Stare: OFFLINE");
     } else {
@@ -880,102 +881,33 @@ static void oled_show_sleep(void)
 }
 
 // =============================================================================
-// DS18B20 (1-Wire) — non-blocking: start conversion, read on the next cycle
+// MLX90614ESF GY-906 — infraroșu non-contact, I2C, canal TCA9548 ch3
+// Citire registru 0x07 (Tobj1): 3 octeți → DataLow, DataHigh, PEC
+// T[K] = raw * 0.02 ; T[°C] = T[K] - 273.15 ; bit15 al raw = flag eroare
 // =============================================================================
-static void ow_low(void)  { gpio_set_level((gpio_num_t)DS18B20_PIN, 0); }
-static void ow_hi(void)   { gpio_set_level((gpio_num_t)DS18B20_PIN, 1); }
-static int  ow_pin(void)  { return gpio_get_level((gpio_num_t)DS18B20_PIN); }
-
-static bool ow_reset(void)
+static bool mlx_setup(void)
 {
-    for (int t = 0; t < 3; t++) {
-        ow_low();  esp_rom_delay_us(500);
-        ow_hi();   esp_rom_delay_us(80);
-        bool p = (ow_pin() == 0);
-        esp_rom_delay_us(420);
-        if (p) return true;
-        esp_rom_delay_us(2000);
-    }
-    return false;
+    mux_open(MUX_CH_MLX90614);
+    vTaskDelay(pdMS_TO_TICKS(10));
+    bool found = i2c_probe(MLX90614_ADDR);
+    mux_close();
+    return found;
 }
 
-static void ow_write_bit(int bit)
+static bool mlx_read_temp(float *out)
 {
-    if (bit) { ow_low(); esp_rom_delay_us(6);  ow_hi(); esp_rom_delay_us(64); }
-    else     { ow_low(); esp_rom_delay_us(60); ow_hi(); esp_rom_delay_us(10); }
-}
-
-static int ow_read_bit(void)
-{
-    ow_low(); esp_rom_delay_us(6);
-    ow_hi();  esp_rom_delay_us(9);
-    int b = ow_pin();
-    esp_rom_delay_us(55);
-    return b;
-}
-
-static void ow_write_byte(uint8_t byte)
-{
-    for (int i = 0; i < 8; i++) { ow_write_bit(byte & 1); byte >>= 1; }
-}
-
-static uint8_t ow_read_byte(void)
-{
-    uint8_t b = 0;
-    for (int i = 0; i < 8; i++) { b >>= 1; if (ow_read_bit()) b |= 0x80; }
-    return b;
-}
-
-static uint8_t ds_crc8(const uint8_t *data, size_t len)
-{
-    uint8_t crc = 0;
-    for (size_t i = 0; i < len; i++) {
-        uint8_t v = data[i];
-        for (int j = 0; j < 8; j++) {
-            if ((crc ^ v) & 1) crc = (crc >> 1) ^ 0x8C;
-            else               crc >>= 1;
-            v >>= 1;
-        }
-    }
-    return crc;
-}
-
-static void ds_gpio_init(void)
-{
-    gpio_config_t c = {};
-    c.pin_bit_mask = (1ULL << DS18B20_PIN);
-    c.mode         = GPIO_MODE_INPUT_OUTPUT_OD;
-    c.pull_up_en   = GPIO_PULLUP_ENABLE;
-    c.intr_type    = GPIO_INTR_DISABLE;
-    gpio_config(&c);
-    ow_hi();
-}
-
-static bool ds_start_conv(void)
-{
-    if (!ow_reset()) return false;
-    ow_write_byte(0xCC);   // Skip ROM
-    ow_write_byte(0x44);   // Convert T
-    ow_hi();
-    return true;
-}
-
-static bool ds_read_temp(float *out)
-{
-    uint8_t sp[9];
-    ow_hi();
-    if (!ow_reset()) return false;
-    ow_write_byte(0xCC);
-    ow_write_byte(0xBE);   // Read Scratchpad
-    for (int i = 0; i < 9; i++) sp[i] = ow_read_byte();
-    if (ds_crc8(sp, 8) != sp[8]) return false;
-    bool all0 = true, allF = true;
-    for (int i = 0; i < 9; i++) {
-        if (sp[i] != 0x00) all0 = false;
-        if (sp[i] != 0xFF) allF = false;
-    }
-    if (all0 || allF || (sp[1] == 0x05 && sp[0] == 0x50)) return false;
-    *out = (float)(int16_t)((sp[1] << 8) | sp[0]) / 16.0f;
+    i2c_lock();
+    mux_open(MUX_CH_MLX90614);
+    uint8_t reg = MLX90614_TOBJ_REG;
+    uint8_t d[3];
+    esp_err_t e = i2c_master_write_read_device(
+        I2C_PORT, MLX90614_ADDR, &reg, 1, d, 3, pdMS_TO_TICKS(I2C_TIMEOUT_MS));
+    mux_close();
+    i2c_unlock();
+    if (e != ESP_OK) return false;
+    uint16_t raw = (uint16_t)((d[1] << 8) | d[0]);
+    if (raw & 0x8000) return false;  // error flag
+    *out = (float)raw * 0.02f - 273.15f;
     return true;
 }
 
@@ -1972,17 +1904,12 @@ static void sensors_self_test(bool mpu_present, bool max_present,
     printf("[SENS] SSD1306:  %s (addr 0x%02X ch%d)\n",
            oled_present ? "FUNCTIONAL" : "FAULT", OLED_ADDR, MUX_CH_OLED);
 
-    // DS18B20 — full convert cycle: start, wait 750ms, read
-    printf("[SENS] DS18B20:  starting conversion...\n");
-    bool ds_started = ds_start_conv();
-    if (ds_started) {
-        vTaskDelay(pdMS_TO_TICKS(DS18B20_CONV_MS + 50));
+    // MLX90614ESF — citire directă prin I2C (fără fereastră de conversie)
+    {
         float t = 0.0f;
-        bool ok = ds_read_temp(&t);
-        printf("[SENS] DS18B20:  %s | temp=%.2f C\n",
-               ok ? "FUNCTIONAL" : "FAULT (no response / CRC)", t);
-    } else {
-        printf("[SENS] DS18B20:  FAULT (no presence pulse on GPIO%d)\n", DS18B20_PIN);
+        bool ok = mlx_read_temp(&t);
+        printf("[SENS] MLX90614: %s | temp=%.2f C\n",
+               ok ? "FUNCTIONAL" : "FAULT (no I2C response)", t);
     }
 
     // GPS — citeşte 200 ms din UART, verifică dacă vin caractere NMEA
@@ -2007,7 +1934,7 @@ static void sensors_self_test(bool mpu_present, bool max_present,
 static void build_json(char *buf, size_t sz,
                        bool mpu_ok, const int16_t *accel, const int16_t *gyro,
                        bool max_ok, uint16_t ir, uint16_t red,
-                       bool ds_ok,  float temp,
+                       bool mlx_ok, float temp,
                        uint64_t ts)
 {
     // Consum atomic al flag-ului de cădere (set de fall_task, raportat o singură dată)
@@ -2052,8 +1979,8 @@ static void build_json(char *buf, size_t sz,
     if (max_ok) n += snprintf(buf+n, sz-n, "\"bpm\":%d,\"spo2\":%d,", g_bpm, g_spo2);
     else        n += snprintf(buf+n, sz-n, "\"bpm\":0,\"spo2\":0,");
 
-    if (ds_ok) n += snprintf(buf+n, sz-n, "\"temperature\":%.2f,", temp);
-    else       n += snprintf(buf+n, sz-n, "\"temperature\":null,");
+    if (mlx_ok) n += snprintf(buf+n, sz-n, "\"temperature\":%.2f,", temp);
+    else        n += snprintf(buf+n, sz-n, "\"temperature\":null,");
 
     if (g_gps.valid)
         snprintf(buf+n, sz-n, "\"neo6m\":\"%.6f,%.6f\"}", g_gps.lat, g_gps.lon);
@@ -2109,13 +2036,10 @@ extern "C" void app_main(void)
     if (g_oled_ok) { oled_clear(); oled_show_title(); }
     printf("[OLED    ] %s | ch%d 0x%02X\n", g_oled_ok ? "OK " : "---", MUX_CH_OLED, OLED_ADDR);
 
-    ds_gpio_init();
-    bool ds_conv    = ds_start_conv();
-    g_ds_ok = ds_conv;
-    uint32_t ds_t0  = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    float    ds_temp = 0.0f;
-    bool     ds_ready = false;
-    printf("[DS18B20 ] %s | GPIO %d\n", ds_conv ? "OK " : "---", DS18B20_PIN);
+    g_mlx_ok = mlx_setup();
+    float    mlx_temp  = 0.0f;
+    bool     mlx_ready = false;
+    printf("[MLX90614] %s | I2C ch%d 0x%02X\n", g_mlx_ok ? "OK " : "---", MUX_CH_MLX90614, MLX90614_ADDR);
 
     gps_setup();
     printf("[GPS     ] OK | TX=%d RX=%d\n", GPS_TX_PIN, GPS_RX_PIN);
@@ -2135,10 +2059,6 @@ extern "C" void app_main(void)
 
     // Verifică prezenţa ŞI funcţionalitatea senzorilor (citire reală de valori)
     sensors_self_test(mpu_ok, max_ok, g_oled_ok, mux_ok);
-
-    // Reia conversia DS18B20 după self-test (acesta a făcut propriul ciclu)
-    ds_conv = ds_start_conv();
-    ds_t0   = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
     // WiFi — LED2 lights up on connect
     bool wifi_ok = wifi_setup();
@@ -2201,15 +2121,8 @@ extern "C" void app_main(void)
         // MPU6050: citit la fiecare iteraţie pentru detecţia căzăturilor
         bool mpu_ok_r = mpu_ok && mpu_read(accel, gyro);
 
-        // DS18B20 non-blocking: citeşte rezultatul după fereastra de 750 ms
-        if (ds_conv && (now - ds_t0) >= DS18B20_CONV_MS) {
-            ds_ready = ds_read_temp(&ds_temp);
-            ds_conv  = false;
-        }
-        if (!ds_conv) {
-            ds_conv = ds_start_conv();
-            ds_t0   = now;
-        }
+        // MLX90614: citire directă prin I2C (măsurare continuă, fără fereastră de conversie)
+        if (g_mlx_ok) mlx_ready = mlx_read_temp(&mlx_temp);
 
         // GPS — UART driver bufferează datele, citim pasiv
         // Dacă nu s-a obținut fix în GPS_FIX_TIMEOUT_MS, oprim UART-ul GPS
@@ -2235,12 +2148,12 @@ extern "C" void app_main(void)
                 red = g_last_red;
                 bool max_ok_r = g_max_ok && g_finger_on;
 
-                oled_show_data(ds_ready, ds_temp);
+                oled_show_data(mlx_ready, mlx_temp);
 
                 build_json(json_buf, sizeof(json_buf),
                            mpu_ok_r, accel, gyro,
                            max_ok_r, ir, red,
-                           ds_ready, ds_temp,
+                           mlx_ready, mlx_temp,
                            (uint64_t)now);
                 printf("[JSON] %s\n", json_buf);
                 if (s_wifi_ok) {
