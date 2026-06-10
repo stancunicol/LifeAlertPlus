@@ -17,7 +17,8 @@ namespace LifeAlertPlus.API.Controllers
         IMonitoredService monitoredService,
         IUserMonitoredService userMonitoredService,
         IMeasurementService measurementService,
-        IWifiNetworkService wifiNetworkService) : BaseApiController
+        IWifiNetworkService wifiNetworkService,
+        Services.DeviceTestLogService deviceTestLogService) : BaseApiController
     {
         [HttpGet("data/{serial}")]
         public async Task<IActionResult> GetESPData(string serial)
@@ -136,6 +137,20 @@ namespace LifeAlertPlus.API.Controllers
             };
             await measurementService.AddMeasurementAsync(measurement);
 
+            deviceTestLogService.Log(new Services.DeviceTestLogEntry
+            {
+                Type        = isFall ? "fall" : "measurement",
+                Timestamp   = DateTime.UtcNow.ToString("O"),
+                Serial      = payload.Serial,
+                Pulse       = pulse,
+                SpO2        = spo2,
+                Temperature = temperature,
+                Coordinates = string.IsNullOrWhiteSpace(coordinates) ? null : coordinates,
+                Activity    = string.IsNullOrWhiteSpace(activity) ? null : activity,
+                IsFall      = isFall ? true : null,
+                Battery     = payload.Battery
+            });
+
             _ = Task.Run(async () =>
             {
                 try
@@ -188,6 +203,15 @@ namespace LifeAlertPlus.API.Controllers
 
             await alertMonitorService.TriggerPanicAlertAsync(monitored.Id, payload.Coordinates);
             logger.LogWarning("Panic alert triggered by device {Serial}", payload.Serial);
+
+            deviceTestLogService.Log(new Services.DeviceTestLogEntry
+            {
+                Type        = "panic",
+                Timestamp   = DateTime.UtcNow.ToString("O"),
+                Serial      = payload.Serial,
+                Coordinates = string.IsNullOrWhiteSpace(payload.Coordinates) ? null : payload.Coordinates
+            });
+
             return Ok();
         }
 

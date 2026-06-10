@@ -67,6 +67,7 @@ builder.Services.AddScoped<RetentionCleanupService>();
 builder.Services.AddHostedService<RetentionCleanupBackgroundService>();
 builder.Services.AddHostedService<ActivityProfileRebuildBackgroundService>();
 builder.Services.AddSingleton<AuditService>();
+builder.Services.AddSingleton<DeviceTestLogService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

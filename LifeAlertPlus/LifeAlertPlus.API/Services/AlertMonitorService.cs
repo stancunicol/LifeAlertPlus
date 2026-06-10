@@ -25,6 +25,7 @@ namespace LifeAlertPlus.API.Services
         private readonly ActivityProfileService _activityProfileService;
         private readonly ConditionRuleEngine _conditionRuleEngine;
         private readonly NearestHospitalService _nearestHospitalService;
+        private readonly DeviceTestLogService _deviceTestLogService;
 
         // Per-person threshold cache: patient-specific HR, temperature and SpO2 limits
         private readonly ConcurrentDictionary<Guid, (DateTime CachedAt, int? MaxHr, int? MinHr, double? MaxTemp, double? MinTemp, int? MinSpO2, int? MaxSpO2)> _thresholdCache = new();
@@ -54,7 +55,7 @@ namespace LifeAlertPlus.API.Services
             public Queue<(DateTime Timestamp, double Value)> SpO2 = new();
         }
 
-        public AlertMonitorService(IServiceScopeFactory scopeFactory, ILogger<AlertMonitorService> logger, IConfiguration configuration, IPushNotificationService pushNotificationService, ActivityProfileService activityProfileService, ConditionRuleEngine conditionRuleEngine, NearestHospitalService nearestHospitalService)
+        public AlertMonitorService(IServiceScopeFactory scopeFactory, ILogger<AlertMonitorService> logger, IConfiguration configuration, IPushNotificationService pushNotificationService, ActivityProfileService activityProfileService, ConditionRuleEngine conditionRuleEngine, NearestHospitalService nearestHospitalService, DeviceTestLogService deviceTestLogService)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
@@ -62,6 +63,7 @@ namespace LifeAlertPlus.API.Services
             _activityProfileService = activityProfileService;
             _conditionRuleEngine = conditionRuleEngine;
             _nearestHospitalService = nearestHospitalService;
+            _deviceTestLogService = deviceTestLogService;
             _sendCriticalSmsImmediately = bool.TryParse(configuration["AlertMonitor:SendCriticalSmsImmediately"], out var immediate) && immediate;
             _sendAlertSmsImmediately = bool.TryParse(configuration["AlertMonitor:SendAlertSmsImmediately"], out var immediateAlert) && immediateAlert;
 
@@ -226,6 +228,22 @@ namespace LifeAlertPlus.API.Services
         // Wraps fire-and-forget work so background failures are logged instead of
         // disappearing into a forgotten Task. Used for behavioral checks, notification
         // sends, hospital lookups, etc.
+        private void LogAlertFired(Guid monitoredId, AlertState state)
+        {
+            _deviceTestLogService.Log(new DeviceTestLogEntry
+            {
+                Type        = "alert",
+                Timestamp   = DateTime.UtcNow.ToString("O"),
+                MonitoredId = monitoredId.ToString(),
+                Severity    = state.Severity.ToString(),
+                Pulse       = state.LastPulse,
+                Temperature = state.LastTemperature,
+                SpO2        = state.LastSpO2,
+                IsFall      = state.IsFall ? true : null,
+                Coordinates = string.IsNullOrWhiteSpace(state.LastCoordinates) ? null : state.LastCoordinates
+            });
+        }
+
         private void FireAndForget(Func<Task> work, string operation, Guid? monitoredId = null)
         {
             _ = Task.Run(async () =>
@@ -369,6 +387,7 @@ namespace LifeAlertPlus.API.Services
                     _lastNotificationSent[monitoredId] = now;
                     state.ConsecutiveCount = 0;
                     _logger.LogInformation("ImmediateAction triggered for {MonitoredId} (condition-based fall detection). Bypassing all cooldowns.", monitoredId);
+                    LogAlertFired(monitoredId, state);
                     FireAndForget(() => SendNotificationsAsync(monitoredId, state), "SendNotifications(immediate)", monitoredId);
                     return;
                 }
@@ -392,6 +411,7 @@ namespace LifeAlertPlus.API.Services
                         _lastNotificationSent[monitoredId] = now;
                         state.ConsecutiveCount = 0;
                         _logger.LogInformation("Triggering notification send for monitored {MonitoredId} with severity {Severity} (every 2 minutes while critical persists).", monitoredId, state.Severity);
+                        LogAlertFired(monitoredId, state);
                         FireAndForget(() => SendNotificationsAsync(monitoredId, state), "SendNotifications(critical)", monitoredId);
                         return;
                     }
@@ -405,6 +425,7 @@ namespace LifeAlertPlus.API.Services
                         _lastNotificationSent[monitoredId] = now;
                         state.ConsecutiveCount = 0;
                         _logger.LogInformation("Triggering notification send for monitored {MonitoredId} with severity {Severity} (every 2 minutes while critical persists, test mode).", monitoredId, state.Severity);
+                        LogAlertFired(monitoredId, state);
                         FireAndForget(() => SendNotificationsAsync(monitoredId, state), "SendNotifications(critical-immediate)", monitoredId);
                     }
                     return;
@@ -433,6 +454,7 @@ namespace LifeAlertPlus.API.Services
                     state.FirstDetected = now;
 
                     _logger.LogInformation("Triggering notification send for monitored {MonitoredId} with severity {Severity}.", monitoredId, state.Severity);
+                    LogAlertFired(monitoredId, state);
                     FireAndForget(() => SendNotificationsAsync(monitoredId, state), "SendNotifications(alert)", monitoredId);
                 }
             } // lock(state.Sync)
