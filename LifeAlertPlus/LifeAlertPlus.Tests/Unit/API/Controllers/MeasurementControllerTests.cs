@@ -9,6 +9,7 @@ using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
 using LifeAlertPlus.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;
 using Moq;
@@ -54,6 +55,8 @@ public class MeasurementControllerTests
         var activityProfileSvc = new ActivityProfileService(scopeFactory.Object, TestDataFactory.CreateLogger<ActivityProfileService>());
         var nearestHospitalSvc = new NearestHospitalService(Mock.Of<IHttpClientFactory>(), TestDataFactory.CreateLogger<NearestHospitalService>());
 
+        var testLogSvc = new DeviceTestLogService(new ConfigurationBuilder().Build());
+
         return new AlertMonitorService(
             scopeFactory.Object,
             TestDataFactory.CreateLogger<AlertMonitorService>(),
@@ -61,7 +64,8 @@ public class MeasurementControllerTests
             Mock.Of<IPushNotificationService>(),
             activityProfileSvc,
             conditionEngine,
-            nearestHospitalSvc);
+            nearestHospitalSvc,
+            testLogSvc);
     }
 
     private static MeasurementRequestDTO ValidDto(Guid? monitoredId = null) => new()
