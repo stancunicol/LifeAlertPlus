@@ -62,7 +62,10 @@ namespace LifeAlertPlus.API.Services
         public DeviceTestLogService(IConfiguration configuration)
         {
             _enabled = bool.TryParse(configuration["DeviceTestLog:Enabled"], out var e) && e;
-            _filePath = configuration["DeviceTestLog:Path"] ?? "device_test_log.json";
+            var configured = configuration["DeviceTestLog:Path"];
+            _filePath = string.IsNullOrWhiteSpace(configured)
+                ? Path.Combine(AppContext.BaseDirectory, "device_test_log.json")
+                : configured;
         }
 
         public bool IsEnabled => _enabled;
