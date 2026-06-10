@@ -36,8 +36,8 @@ public class WifiControllerTests
     private void GrantOwnership(Guid monitoredId)
     {
         _userMonitoredSvc
-            .Setup(s => s.GetMonitoredPeopleByUserIdAsync(_callerId))
-            .ReturnsAsync(new[] { new Monitored { Id = monitoredId } });
+            .Setup(s => s.UserOwnsMonitoredAsync(_callerId, monitoredId))
+            .ReturnsAsync(true);
     }
 
     [Fact]
