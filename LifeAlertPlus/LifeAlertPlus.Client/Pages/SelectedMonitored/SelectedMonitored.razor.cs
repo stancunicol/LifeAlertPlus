@@ -245,6 +245,15 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private double _userMaxTemp = 37.5;
         private int _userUpdateFrequency = 30;
 
+        private bool _isCurrentDataFresh;
+
+        private bool IsEspDataFresh(Shared.DTOs.Responses.ESP.ESPDataResponseDTO? esp, int updateFrequencySeconds)
+        {
+            if (esp == null || !esp.IsAvailable) return false;
+            if (esp.Date <= 0) return true;
+            return (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - esp.Date) <= updateFrequencySeconds + 15L;
+        }
+
         // Edit modal state
         private bool _showEditModal;
         // control whether edit button is shown (can be toggled via query param)
@@ -345,16 +354,17 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 // Get ESP data (stored as field so the device diagnostics card can access it)
                 var espData = await MonitoredApiClient.GetEspDataAsync(monitored.DeviceSerialNumber);
                 _espData = espData;
-                
+                _isCurrentDataFresh = IsEspDataFresh(espData, monitored.UpdateFrequency ?? _userUpdateFrequency);
+
                 int heartRate = 0;
                 int spO2 = 0;
                 double temperature = 0;
                 string gps = "No data";
                 string status = "OK";
 
-                if (espData?.IsAvailable == true)
+                if (_isCurrentDataFresh)
                 {
-                    heartRate = espData.Bpm ?? 0;
+                    heartRate = espData!.Bpm ?? 0;
                     spO2 = espData.Spo2 ?? 0;
                     temperature = espData.Temperature ?? 0;
                     gps = espData.Neo6m ?? "No data";

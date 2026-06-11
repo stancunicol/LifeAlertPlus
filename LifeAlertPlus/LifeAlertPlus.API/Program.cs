@@ -58,9 +58,11 @@ builder.Services.AddHttpClient("Overpass", client =>
 });
 builder.Services.AddScoped<ChatbotService>();
 builder.Services.AddSingleton<SimulationManager>();
+builder.Services.AddSingleton<ISimulationManager>(sp => sp.GetRequiredService<SimulationManager>());
 builder.Services.AddSingleton<ActivityProfileService>();
 builder.Services.AddSingleton<ConditionRuleEngine>();
 builder.Services.AddSingleton<AlertMonitorService>();
+builder.Services.AddSingleton<IAlertMonitorService>(sp => sp.GetRequiredService<AlertMonitorService>());
 builder.Services.AddScoped<DailyReportService>();
 builder.Services.AddHostedService<DailyReportBackgroundService>();
 builder.Services.AddScoped<RetentionCleanupService>();
@@ -68,6 +70,7 @@ builder.Services.AddHostedService<RetentionCleanupBackgroundService>();
 builder.Services.AddHostedService<ActivityProfileRebuildBackgroundService>();
 builder.Services.AddSingleton<AuditService>();
 builder.Services.AddSingleton<DeviceTestLogService>();
+builder.Services.AddSingleton<IDeviceTestLogService>(sp => sp.GetRequiredService<DeviceTestLogService>());
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

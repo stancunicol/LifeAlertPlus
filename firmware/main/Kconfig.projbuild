@@ -7,12 +7,12 @@ menu "LifeAlertPlus Configuration"
             Base URL of the LifeAlertPlus backend API. Include the trailing slash.
             Set the production Azure URL here for deployed builds.
 
-    config LIFEALERT_API_DEVICE_KEY
-        string "ESP device API key (X-Device-Key header)"
+    config LIFEALERT_API_DEVICE_SECRET
+        string "ESP device shared secret (used to derive per-device X-Device-Key via HMAC-SHA256)"
         default ""
         help
-            Shared secret sent in the X-Device-Key header on every request.
-            Must match the Urls:EspDeviceKey value in the API's appsettings.
+            Shared secret used to compute the per-device key: HMAC-SHA256(secret, serial).
+            Must match the Urls:EspDeviceSecret value in the API's appsettings.
             Leave empty in committed defaults; set the real value in your
             local sdkconfig (which is gitignored).
 

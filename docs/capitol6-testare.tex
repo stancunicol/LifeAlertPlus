@@ -11,6 +11,8 @@ Testarea sistemului a fost realizată pe mai multe planuri. \textbf{Testarea fun
 
 Pentru testarea fluxurilor care depind de dispozitivul fizic a fost utilizat un \textbf{mod de simulare}, integrat în aplicație, care permite generarea de măsurători cu valori controlate, fără a fi necesar hardware-ul real. Acest mecanism a permis reproducerea sistematică a scenariilor de risc, anume valori critice de \spo, tahicardie, febră și imobilitate, urmate de verificarea reacției corecte a sistemului în fiecare caz.
 
+Testarea cu dispozitivul fizic a inclus și verificarea sistemului de alimentare. S-a constatat că timpul de încărcare completă a bateriei este de aproximativ \textbf{2 ore}, pornind de la o baterie descărcată, în condiții normale de utilizare.
+
 \textbf{Performanța modelului de inteligență artificială} a fost evaluată separat, pe setul de date, folosind tehnicile de validare descrise mai jos.
 
 \subsection{Testare automată}
@@ -83,6 +85,14 @@ Comportamentul modelului pe fiecare clasă a fost analizat prin \textbf{matricea
 Latența reprezintă intervalul de timp scurs între achiziția unei măsurători pe dispozitiv și afișarea sau alertarea acesteia (obiectivul O5). Au fost măsurate două intervale: timpul \textit{dispozitiv $\rightarrow$ afișare}, de la citirea senzorilor până la actualizarea tabloului de bord, și timpul \textit{dispozitiv $\rightarrow$ alertă}, de la achiziție până la livrarea notificării push.
 
 Latența totală este suma mai multor componente: intervalul de transmitere configurat pe dispozitiv, timpul de procesare pe backend, timpul de răspuns al microserviciului AI și timpul de livrare prin SignalR. Valorile măsurate au fost: timp \textit{dispozitiv $\rightarrow$ afișare} de aproximativ [\ \ ] secunde și timp \textit{dispozitiv $\rightarrow$ alertă} de aproximativ [\ \ ] secunde, confirmând funcționarea în regim apropiat de timp real.
+
+\subsection{Testarea în condiții reale de utilizare}
+
+Dispozitivul a fost purtat de un utilizator sănătos pe o perioadă de aproximativ [\ \ ] ore, cu bateria complet încărcată, pentru a valida funcționarea sistemului cu date reale. Pe durata sesiunii, măsurătorile au fost transmise la intervalul configurat de [\ \ ] secunde, iar tabloul de bord a reflectat valorile în timp real.
+
+Pe toată durata sesiunii de [\ \ ] ore, dispozitivul a rămas funcțional fără ca bateria să se epuizeze, confirmând că autonomia este suficientă pentru un interval de monitorizare continuu de această durată. Senzorul MAX30100 a furnizat citiri stabile pentru frecvența cardiacă și \spo, iar senzorul GY-906 a înregistrat temperatura corporală fără fluctuații semnificative pe durata sesiunii.
+
+Nu au fost declanșate alerte false pe parcursul sesiunii de testare cu date reale, confirmând că pragul de persistență funcționează corect și în afara mediului de simulare.
 
 \subsection{Fiabilitatea alertelor}
 

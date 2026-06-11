@@ -382,6 +382,34 @@
     margin-bottom: 1.5rem;
 }
 
+.card-no-data-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem 1rem;
+    gap: 0.35rem;
+    text-align: center;
+}
+
+.card-no-data-icon {
+    font-size: 1.75rem;
+    opacity: 0.5;
+    margin-bottom: 0.1rem;
+}
+
+.card-no-data-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.card-no-data-hint {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    opacity: 0.75;
+}
+
 .vital-box {
     display: flex;
     flex-direction: column;

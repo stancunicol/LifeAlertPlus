@@ -8,6 +8,6 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedUser
         [Inject]
         private LanguageService Lang { get; set; } = default!;
 
-        private string T(string key) => Lang.T(key);
+        private string T(string key) => Lang.TEnglish(key);
     }
 }

@@ -38,7 +38,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 		[Inject]
 		private LanguageService Lang { get; set; } = default!;
 
-		private string T(string key) => Lang.T(key);
+		private string T(string key) => Lang.TEnglish(key);
 
 		protected List<MonitoredUserDTO> Users { get; private set; } = new();
 		protected List<MonitoredPersonRow> MonitoredRows { get; private set; } = new();

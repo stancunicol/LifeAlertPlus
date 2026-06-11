@@ -30,7 +30,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 		[Inject]
 		private LanguageService Lang { get; set; } = default!;
 
-		private string T(string key) => Lang.T(key);
+		private string T(string key) => Lang.TEnglish(key);
 
 		protected List<UserListItemDTO> Users { get; private set; } = new();
 		protected string UserFullName { get; private set; } = "Admin";

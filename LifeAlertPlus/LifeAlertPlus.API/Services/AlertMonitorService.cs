@@ -6,7 +6,7 @@ using LifeAlertPlus.Shared.DTOs.Responses.Monitoring;
 
 namespace LifeAlertPlus.API.Services
 {
-    public class AlertMonitorService
+    public class AlertMonitorService : IAlertMonitorService
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<AlertMonitorService> _logger;

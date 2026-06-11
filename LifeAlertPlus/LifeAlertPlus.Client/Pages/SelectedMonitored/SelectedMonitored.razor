@@ -70,16 +70,15 @@
         </div>
 
         @* ── Stale data banner ── *@
-        @if (!Person.IsArchived && _espData?.Date > 0)
+        @if (!Person.IsArchived && !_isCurrentDataFresh && _espData != null)
         {
-            var dataAgeMinutes = (DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(_espData!.Date)).TotalMinutes;
-            if (dataAgeMinutes > 15)
-            {
-                <div class="stale-data-banner">
-                    <span>⚠️</span>
-                    <span>@string.Format(T("selected.staleData"), (int)dataAgeMinutes)</span>
-                </div>
-            }
+            var dataAgeMinutes = _espData.Date > 0
+                ? (int)(DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(_espData.Date)).TotalMinutes
+                : 0;
+            <div class="stale-data-banner">
+                <span>⚠️</span>
+                <span>@(dataAgeMinutes > 0 ? string.Format(T("selected.staleData"), dataAgeMinutes) : T("selected.deviceOffline"))</span>
+            </div>
         }
 
         @* ── False-alarm feedback banner ── *@

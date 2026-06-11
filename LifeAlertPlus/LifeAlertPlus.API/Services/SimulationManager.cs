@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LifeAlertPlus.API.Services
 {
-    public class SimulationManager
+    public class SimulationManager : ISimulationManager
     {
         private readonly ConcurrentDictionary<Guid, (CancellationTokenSource Cts, Task RunningTask)> _runs = new();
         private readonly ConcurrentDictionary<string, ESPDataResponseDTO> _simulatedData = new(StringComparer.OrdinalIgnoreCase);

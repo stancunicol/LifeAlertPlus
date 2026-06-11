@@ -52,8 +52,8 @@
 						<button class="danger" @onclick="StopAllAutoAsync" disabled="@(!SelectedPersons.Any(p => p.IsRunning))">
 							@T("sim.stopAutoAll")
 						</button>
-						<button class="secondary" @onclick="SeedAllTodayAsync" disabled="@(!SelectedPersons.Any(p => !p.IsRunning && !p.IsSending))" title="Generează date la fiecare 30 min din ziua de azi pentru grafice">
-							📅 Seed azi
+						<button class="secondary" @onclick="SeedAllTodayAsync" disabled="@(!SelectedPersons.Any(p => !p.IsRunning && !p.IsSending))" title="@T("sim.seedTodayAllTitle")">
+							📅 @T("sim.seedTodayAllBtn")
 						</button>
 						<button class="ghost" @onclick="RefreshAsync">@T("sim.refresh")</button>
 					</div>
@@ -126,10 +126,10 @@
 									<button class="danger" @onclick="() => StopAutoAsync(p)" disabled="@(!p.IsRunning)">
 										@T("sim.stop")
 									</button>
-									<button class="secondary" @onclick="() => SeedTodayAsync(p)" disabled="@(p.IsRunning || p.IsSending)" title="Seed grafice ziua de azi (o măsurătoare la 30 min)">
+									<button class="secondary" @onclick="() => SeedTodayAsync(p)" disabled="@(p.IsRunning || p.IsSending)" title="@T("sim.seedTodayTitle")">
 										📅
 									</button>
-									<button class="secondary" @onclick="() => ReseedTodayAsync(p)" disabled="@(p.IsRunning || p.IsSending)" title="Reseed SpO2 — șterge datele fără SpO2 și regenerează">
+									<button class="secondary" @onclick="() => ReseedTodayAsync(p)" disabled="@(p.IsRunning || p.IsSending)" title="@T("sim.reseedSpO2Title")">
 										🔄
 									</button>
 									<button class="secondary" @onclick="() => ClearDataAsync(p)" disabled="@(p.IsRunning || p.IsSending)" title="@T("sim.clearData")">

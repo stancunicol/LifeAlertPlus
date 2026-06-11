@@ -45,6 +45,7 @@
 #include "cJSON.h"
 #include "esp_http_server.h"
 #include "esp_task_wdt.h"
+#include "mbedtls/md.h"
 
 // ─── WiFi / API ───────────────────────────────────────────────────────────────
 // All secrets / deployment-specific values come from sdkconfig (gitignored),
@@ -60,7 +61,7 @@
 #define API_PANIC_PATH       "/api/ESP/panic"
 #define API_HEARTBEAT_PATH   "/api/ESP/heartbeat"
 #define API_WIFI_CONFIG_PATH "/api/ESP/wifi-config/"  // serial appended at call site
-#define API_DEVICE_KEY       CONFIG_LIFEALERT_API_DEVICE_KEY
+#define API_DEVICE_SECRET    CONFIG_LIFEALERT_API_DEVICE_SECRET
 #define FIRMWARE_VERSION     "1.1.0"
 
 // ─── Timing ───────────────────────────────────────────────────────────────────
@@ -1146,28 +1147,29 @@ static esp_err_t prov_save_handler(httpd_req_t *req)
 // Intră în modul de provisionare — nu se întoarce niciodată (esp_restart() la final)
 static void provisioning_mode(void)
 {
-    // SSID hotspot: "LifeAlert-XXXXXX" (ultimele 6 caractere din serial)
+    // SSID: "LifeAlert-XXXXXX" (ultimele 6 din serial), parolă: ultimele 8 din serial
     char ap_ssid[24];
+    char ap_pass[16];
     const char *suffix = g_serial + strlen(g_serial) - 6;
     snprintf(ap_ssid, sizeof(ap_ssid), "LifeAlert-%.6s", suffix);
+    snprintf(ap_pass, sizeof(ap_pass), "%.8s", g_serial + strlen(g_serial) - 8);
 
-    printf("\n[PROV] Nicio retea configurata — pornesc hotspot: \"%s\"\n", ap_ssid);
-    printf("[PROV] Conectati-va la hotspot si accesati http://192.168.4.1\n");
+    printf("\n[PROV] Hotspot: \"%s\"  Parola: %s\n", ap_ssid, ap_pass);
+    printf("[PROV] Dupa conectare deschide: http://192.168.4.1\n");
 
     if (g_oled_ok) {
         oled_clear();
         oled_write_str(0, 10, "-- CONFIGURARE --");
-        oled_write_str(2, 0,  "WiFi hotspot:");
+        oled_write_str(2, 0,  "WiFi:");
         oled_write_str(3, 0,  ap_ssid);
-        oled_write_str(5, 0,  "192.168.4.1");
-        oled_write_str(7, 0,  "Conecteaza-te!");
+        oled_write_str(4, 0,  "Parola:");
+        oled_write_str(5, 0,  ap_pass);
+        oled_write_str(7, 0,  "-> 192.168.4.1");
     }
 
-    // LED galben pornit fix în timpul provisionarii
     gpio_set_level((gpio_num_t)LED_GREEN_PIN,  0);
     gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);
 
-    // Inițializare WiFi în mod AP
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_ap();
@@ -1177,14 +1179,19 @@ static void provisioning_mode(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
 
     wifi_config_t ap_cfg = {};
-    strncpy((char *)ap_cfg.ap.ssid, ap_ssid, sizeof(ap_cfg.ap.ssid) - 1);
-    ap_cfg.ap.ssid_len       = (uint8_t)strlen(ap_ssid);
-    ap_cfg.ap.channel        = 1;
-    ap_cfg.ap.authmode       = WIFI_AUTH_OPEN;   // fără parolă pe hotspot
-    ap_cfg.ap.max_connection = 4;
+    strncpy((char *)ap_cfg.ap.ssid,     ap_ssid, sizeof(ap_cfg.ap.ssid)     - 1);
+    strncpy((char *)ap_cfg.ap.password, ap_pass, sizeof(ap_cfg.ap.password) - 1);
+    ap_cfg.ap.ssid_len        = (uint8_t)strlen(ap_ssid);
+    ap_cfg.ap.channel         = 1;
+    ap_cfg.ap.authmode        = WIFI_AUTH_WPA2_PSK;
+    ap_cfg.ap.max_connection  = 4;
+    ap_cfg.ap.beacon_interval = 100;
+    ap_cfg.ap.ssid_hidden     = 0;
 
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_cfg));
     ESP_ERROR_CHECK(esp_wifi_start());
+    esp_wifi_set_ps(WIFI_PS_NONE);
+    esp_wifi_set_max_tx_power(80);
 
     // Server HTTP pe portul 80
     httpd_handle_t server = NULL;
@@ -1239,7 +1246,10 @@ static void on_wifi_event(void *, esp_event_base_t base, int32_t id, void *data)
 
 // Load up to 3 WiFi networks from NVS namespace "wifi_cfg".
 // Falls back to compile-time defaults if nothing is stored.
-static uint8_t s_wifi_net_count = 0;
+static uint8_t  s_wifi_net_count  = 0;
+static bool     s_wifi_from_nvs   = false;  // true only when credentials came from NVS (not compiled default)
+static uint32_t g_post_interval_ms = API_POST_MS;  // updated from server via wifi-config
+static char     g_device_key[65]   = "";            // HMAC-SHA256(secret, serial) — set after serial is known
 static char    s_wifi_ssids[3][33];
 static char    s_wifi_passes[3][65];
 
@@ -1262,6 +1272,7 @@ static void wifi_load_credentials(void)
         }
         nvs_close(h);
     }
+    s_wifi_from_nvs = (s_wifi_net_count > 0);
     if (s_wifi_net_count == 0 && WIFI_SSID_DEFAULT[0] != '\0') {
         // No NVS entries — fall back to the compile-time default if set.
         strncpy(s_wifi_ssids[0],  WIFI_SSID_DEFAULT, sizeof(s_wifi_ssids[0]) - 1);
@@ -1283,8 +1294,9 @@ static bool wifi_try_connect(uint8_t idx)
     wifi_config_t wc = {};
     strncpy((char *)wc.sta.ssid,     s_wifi_ssids[idx],  sizeof(wc.sta.ssid)  - 1);
     strncpy((char *)wc.sta.password, s_wifi_passes[idx], sizeof(wc.sta.password) - 1);
-    // Rețelele fără parolă (open) nu trec de WPA2 — folosim WPA doar dacă există parolă
-    wc.sta.threshold.authmode = (s_wifi_passes[idx][0] != '\0') ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
+    wc.sta.threshold.authmode = (s_wifi_passes[idx][0] != '\0') ? WIFI_AUTH_WPA_WPA2_PSK : WIFI_AUTH_OPEN;
+    wc.sta.pmf_cfg.capable   = true;
+    wc.sta.pmf_cfg.required  = false;
 
     esp_wifi_disconnect();
     esp_wifi_set_config(WIFI_IF_STA, &wc);
@@ -1309,10 +1321,9 @@ static bool wifi_setup(void)
 
     wifi_load_credentials();
 
-    // Nicio rețea configurată și nicio valoare implicită la compilare → provisioning mode.
-    // provisioning_mode() nu se întoarce: servește formularul, salvează în NVS, face restart.
     if (s_wifi_net_count == 0) {
-        provisioning_mode();
+        printf("[WiFi] Nicio retea configurata — porneste offline\n");
+        return false;
     }
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -1356,7 +1367,7 @@ static bool http_post_to(const char *path, const char *json)
     if (!client) return false;
 
     esp_http_client_set_header(client, "Content-Type", "application/json");
-    esp_http_client_set_header(client, "X-Device-Key", API_DEVICE_KEY);
+    esp_http_client_set_header(client, "X-Device-Key", g_device_key);
     esp_http_client_set_post_field(client, json, (int)strlen(json));
 
     esp_err_t err = esp_http_client_perform(client);
@@ -1424,7 +1435,7 @@ static bool http_get_to(const char *path, char *out, int out_sz, int *out_status
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
     if (!client) return false;
 
-    esp_http_client_set_header(client, "X-Device-Key", API_DEVICE_KEY);
+    esp_http_client_set_header(client, "X-Device-Key", g_device_key);
 
     esp_err_t err = esp_http_client_perform(client);
     bool ok = false;
@@ -1603,6 +1614,11 @@ static void wifi_config_fetch_and_store(void)
             strncpy(passes[valid], p->valuestring, sizeof(passes[valid]) - 1);
         valid++;
     }
+
+    cJSON *interval = cJSON_GetObjectItem(root, "updateIntervalMs");
+    if (cJSON_IsNumber(interval) && interval->valueint >= 5000)
+        g_post_interval_ms = (uint32_t)interval->valueint;
+
     cJSON_Delete(root);
 
     // Skip the NVS write if config is unchanged — avoids flash wear and log noise.
@@ -1630,7 +1646,16 @@ static void wifi_config_fetch_and_store(void)
     }
     nvs_commit(h);
     nvs_close(h);
-    printf("[WIFI-CFG] updated NVS with %d network(s) — active on next reboot\n", valid);
+
+    // Also update the in-memory credential arrays so the new network is usable
+    // immediately on the next reconnect attempt, without requiring a reboot.
+    s_wifi_net_count = (uint8_t)valid;
+    s_wifi_from_nvs  = (valid > 0);
+    for (int i = 0; i < valid; i++) {
+        strncpy(s_wifi_ssids[i],  ssids[i],  sizeof(s_wifi_ssids[i])  - 1);
+        strncpy(s_wifi_passes[i], passes[i], sizeof(s_wifi_passes[i]) - 1);
+    }
+    printf("[WIFI-CFG] updated NVS + memory with %d network(s)\n", valid);
 }
 
 // =============================================================================
@@ -1806,7 +1831,7 @@ static void btn_task(void *)
                         gpio_set_level((gpio_num_t)LED_GREEN_PIN,  1);
                         // Reset OLED — main loop va popula datele la următorul POST
                         if (g_oled_ok) { oled_clear(); oled_show_title(); }
-                        printf("[BTN] >>> SISTEM PORNIT — POST activ la %d ms\n", API_POST_MS);
+                        printf("[BTN] >>> SISTEM PORNIT — POST activ la %lu ms\n", (unsigned long)g_post_interval_ms);
                     }
                 }
         }
@@ -2004,8 +2029,8 @@ extern "C" void app_main(void)
     printf("\n=== LifeAlertPlus | ESP32-C3 Mini ===\n\n");
 
     // Sanity check on Kconfig-provided secrets — make missing values loud rather than silent.
-    if (API_DEVICE_KEY[0] == '\0')
-        printf("[CFG] WARNING: CONFIG_LIFEALERT_API_DEVICE_KEY is empty. API calls will be rejected (401).\n");
+    if (API_DEVICE_SECRET[0] == '\0')
+        printf("[CFG] WARNING: CONFIG_LIFEALERT_API_DEVICE_SECRET is empty. Device key cannot be derived — API calls will be rejected (401).\n");
     if (API_BASE_URL[0] == '\0')
         printf("[CFG] WARNING: CONFIG_LIFEALERT_API_BASE_URL is empty. No HTTP requests will be issued.\n");
 
@@ -2015,6 +2040,28 @@ extern "C" void app_main(void)
     snprintf(g_serial, sizeof(g_serial), "ESP32-%02X%02X%02X%02X%02X%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     printf("[ID] %s\n", g_serial);
+
+    // Derive per-device key: HMAC-SHA256(secret=API_DEVICE_SECRET, data=serial) → hex string.
+    // Each device produces a different key; compromising one device does not expose others.
+    if (API_DEVICE_SECRET[0] != '\0') {
+        uint8_t hmac_raw[32];
+        mbedtls_md_context_t hmac_ctx;
+        const mbedtls_md_info_t *hmac_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+        mbedtls_md_init(&hmac_ctx);
+        mbedtls_md_setup(&hmac_ctx, hmac_info, 1);
+        mbedtls_md_hmac_starts(&hmac_ctx,
+            (const uint8_t *)API_DEVICE_SECRET, strlen(API_DEVICE_SECRET));
+        mbedtls_md_hmac_update(&hmac_ctx,
+            (const uint8_t *)g_serial, strlen(g_serial));
+        mbedtls_md_hmac_finish(&hmac_ctx, hmac_raw);
+        mbedtls_md_free(&hmac_ctx);
+        for (int i = 0; i < 32; i++)
+            snprintf(g_device_key + i * 2, 3, "%02x", hmac_raw[i]);
+        g_device_key[64] = '\0';
+        printf("[AUTH] Device key derived (HMAC-SHA256)\n");
+    } else {
+        printf("[AUTH] WARNING: API_DEVICE_SECRET is empty — requests will be rejected (401).\n");
+    }
 
     // I2C + multiplexer
     i2c_setup();
@@ -2107,7 +2154,7 @@ extern "C" void app_main(void)
     // Timestamp GPS start pentru timeout
     s_gps_start_ms = xTaskGetTickCount() * portTICK_PERIOD_MS;
 
-    printf("\n[SYS] Monitoring active | POST every %d ms\n", API_POST_MS);
+    printf("\n[SYS] Monitoring active | POST every %lu ms\n", (unsigned long)g_post_interval_ms);
     printf("=====================================\n\n");
 
     int16_t accel[3] = {}, gyro[3] = {};
@@ -2140,7 +2187,7 @@ extern "C" void app_main(void)
 
         // La intervalul de POST: trezeşte MAX30100, citeşte, pune-l la somn,
         // actualizează OLED şi trimite datele (skipped complet în sleep mode)
-        if ((now - last_post_ms) >= (uint32_t)API_POST_MS) {
+        if ((now - last_post_ms) >= g_post_interval_ms) {
             last_post_ms = now;  // actualizează mereu — evită POST imediat la wake
             if (!g_sleep_mode) {
                 // MAX30100 e eşantionat continuu de pulse_task — luăm valorile actuale

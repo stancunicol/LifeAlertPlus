@@ -36,6 +36,8 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
 
     private string T(string key) => Lang.T(key);
 
+    private int _userUpdateFrequency = 30;
+
     protected string UserFullName { get; set; } = "";
     protected string ProfilePictureUrl { get; set; } = "";
     // Start with zeros to avoid showing placeholder/demo values that then reset.
@@ -99,6 +101,9 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
             await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "profilePictureUrl", ProfilePictureUrl);
         else
             await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
+
+        if (userFromApi.UpdateFrequency > 0)
+            _userUpdateFrequency = userFromApi.UpdateFrequency;
 
         // Load monitored people and today's count in parallel
         await Task.WhenAll(LoadRecentMonitoredPeopleAsync(), LoadTodayMeasurementsCountAsync());
@@ -215,11 +220,11 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
             // Statistics reflect the FULL set of monitored people, not just the
             // recent slice — otherwise the counts would silently drift below the
             // Total when fewer than 4 people had measurements.
-            OfflineCount   = cards.Count(c => !(c.EspData?.IsAvailable ?? false));
+            OfflineCount   = cards.Count(c => !IsDataCurrent(c));
             ActiveAlerts   = cards.Count(c => GetStatus(
                                 ResolveHr(c.EspData), ResolveSpo2(c.EspData),
                                 c.EspData?.Temperature,
-                                c.EspData?.IsAvailable ?? false,
+                                IsDataCurrent(c),
                                 c.Person.MinHeartRate, c.Person.MaxHeartRate,
                                 c.Person.MinTemperature, c.Person.MaxTemperature,
                                 c.Person.MinSpO2,
@@ -227,7 +232,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
             StableCount    = cards.Count(c => GetStatus(
                                 ResolveHr(c.EspData), ResolveSpo2(c.EspData),
                                 c.EspData?.Temperature,
-                                c.EspData?.IsAvailable ?? false,
+                                IsDataCurrent(c),
                                 c.Person.MinHeartRate, c.Person.MaxHeartRate,
                                 c.Person.MinTemperature, c.Person.MaxTemperature,
                                 c.Person.MinSpO2,
@@ -249,7 +254,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
                 var heartRate = ResolveHr(espData);
                 var spO2Value = ResolveSpo2(espData);
                 var temperature = espData?.Temperature?.ToString("F1") ?? "N/A";
-                var isOnline = espData?.IsAvailable ?? false;
+                var isOnline = IsDataCurrent(card);
                 
                 var status = GetStatus(heartRate, spO2Value, espData?.Temperature, isOnline,
                     person.MinHeartRate, person.MaxHeartRate,
@@ -298,6 +303,15 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         // Plain "lat,lon" or NMEA with valid fix
         if (TryParseGpsToLatLon(raw, out _, out _)) return T("card.gpsOutdoor");
         return T("card.gpsIndoor");
+    }
+
+    private bool IsDataCurrent(MonitoredCardData card)
+    {
+        var esp = card.EspData;
+        if (esp == null || !esp.IsAvailable) return false;
+        if (esp.Date <= 0) return true;
+        var freq = (card.Person.UpdateFrequency ?? 0) > 0 ? card.Person.UpdateFrequency!.Value : _userUpdateFrequency;
+        return (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - esp.Date) <= freq + 15L;
     }
 
     // Prefer the dedicated Bpm/Spo2 fields; fall back to Max30100 for firmware

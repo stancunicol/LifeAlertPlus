@@ -52,7 +52,7 @@ namespace LifeAlertPlus.API.Services
         public string? Severity { get; set; }
     }
 
-    public class DeviceTestLogService
+    public class DeviceTestLogService : IDeviceTestLogService
     {
         private readonly bool _enabled;
         private readonly string _filePath;

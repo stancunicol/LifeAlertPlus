@@ -35,6 +35,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     private string T(string key) => Lang.T(key);
 
+    private int _userUpdateFrequency = 30;
+
     private string UserFullName = string.Empty;
     private string ProfilePictureUrl = string.Empty;
     private MonitorCreateRequestDTO newPerson = new();
@@ -145,6 +147,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
                 UserFullName = apiName;
             if (!string.IsNullOrWhiteSpace(userProfile.ProfilePictureUrl))
                 ProfilePictureUrl = userProfile.ProfilePictureUrl;
+            if (userProfile.UpdateFrequency > 0)
+                _userUpdateFrequency = userProfile.UpdateFrequency;
         }
     }
 
@@ -593,9 +597,21 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private string FormatFallRisk(MonitoredCard card)
         => IsFallEvent(card) ? T("card.fallPossible") : T("card.fallStable");
 
+    private int GetEffectiveUpdateFrequency(LifeAlertPlus.Domain.Entities.Monitored person)
+        => (person.UpdateFrequency ?? 0) > 0 ? person.UpdateFrequency!.Value : _userUpdateFrequency;
+
+    private bool IsDataCurrent(MonitoredCard card)
+    {
+        var esp = card.LastData;
+        if (esp == null || !esp.IsAvailable) return false;
+        if (esp.Date <= 0) return true;
+        var threshold = GetEffectiveUpdateFrequency(card.Person) + 15L;
+        return (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - esp.Date) <= threshold;
+    }
+
     private string GetCardStatus(MonitoredCard card)
     {
-        if (card.LastData == null || !card.LastData.IsAvailable)
+        if (!IsDataCurrent(card))
             return "NoData";
 
         var d     = card.LastData;
