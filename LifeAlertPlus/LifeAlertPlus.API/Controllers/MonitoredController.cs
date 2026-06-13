@@ -203,6 +203,85 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { Message = "Monitored person restored successfully." });
         }
 
+        /// <summary>
+        /// Smart remove: if caller is the last owner, soft-deletes the monitored person
+        /// (DeletedAt set; retention job hard-deletes after 7 days).
+        /// If other owners exist, only removes the caller's UserMonitored link.
+        /// Admin always soft-deletes regardless of owner count.
+        /// </summary>
+        [HttpDelete("{id:guid}/remove")]
+        public async Task<IActionResult> RemoveMonitoredPerson([FromRoute] Guid id)
+        {
+            var callerId = GetCallerId();
+            if (callerId == null)
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
+
+            var existing = await _monitoredService.GetMonitoredPersonByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
+
+            bool isAdmin = IsAdminRole();
+
+            if (!isAdmin && !await _userMonitoredService.UserOwnsMonitoredAsync(callerId.Value, id))
+                return Forbid();
+
+            if (isAdmin)
+            {
+                var ok = await _monitoredService.SoftDeleteMonitoredPersonAsync(id);
+                if (!ok) return StatusCode(500, new { Message = "Failed to delete monitored person." });
+                _alertMonitorService.InvalidateArchivedCache(id);
+                _logger.LogWarning("Admin {UserId} soft-deleted monitored {MonitoredId}", callerId, id);
+                _auditService.LogAsync(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? callerId!.Value.ToString(),
+                    "SoftDeletePatient", $"Admin soft-deleted patient {existing.FirstName} {existing.LastName} (id={id})", "Patient");
+                return Ok(new { wasLastOwner = true, message = "Persoana monitorizată a fost marcată pentru ștergere și va fi eliminată definitiv după 7 zile." });
+            }
+
+            var ownerCount = await _userMonitoredService.CountUsersForMonitoredAsync(id);
+            if (ownerCount > 1)
+            {
+                await _userMonitoredService.RemoveUserMonitoredLinkAsync(callerId.Value, id);
+                _logger.LogInformation("User {UserId} unlinked from monitored {MonitoredId} ({Count} owners remain)", callerId, id, ownerCount - 1);
+                _auditService.LogAsync(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? callerId!.Value.ToString(),
+                    "UnlinkPatient", $"User unlinked from patient {existing.FirstName} {existing.LastName} (id={id})", "Patient");
+                return Ok(new { wasLastOwner = false, message = "Ai fost deconectat de la această persoană monitorizată." });
+            }
+            else
+            {
+                var ok = await _monitoredService.SoftDeleteMonitoredPersonAsync(id);
+                if (!ok) return StatusCode(500, new { Message = "Failed to delete monitored person." });
+                _alertMonitorService.InvalidateArchivedCache(id);
+                _logger.LogWarning("User {UserId} soft-deleted monitored {MonitoredId} (was last owner)", callerId, id);
+                _auditService.LogAsync(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? callerId!.Value.ToString(),
+                    "SoftDeletePatient", $"Soft-deleted patient {existing.FirstName} {existing.LastName} (id={id})", "Patient");
+                return Ok(new { wasLastOwner = true, message = "Persoana monitorizată a fost marcată pentru ștergere și va fi eliminată definitiv după 7 zile." });
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("reactivate/{id:guid}")]
+        public async Task<IActionResult> ReactivateMonitoredPerson([FromRoute] Guid id)
+        {
+            var callerId = GetCallerId();
+            if (callerId == null)
+                return Unauthorized(new { Message = ResponseMessages.InvalidToken });
+
+            var existing = await _monitoredService.GetMonitoredPersonByIdAsync(id);
+            if (existing == null)
+                return NotFound(new { Message = ResponseMessages.MonitoredPersonNotFound });
+
+            if (existing.DeletedAt == null)
+                return BadRequest(new { Message = "Persoana monitorizată nu este marcată pentru ștergere." });
+
+            var ok = await _monitoredService.ReactivateMonitoredPersonAsync(id);
+            if (!ok) return StatusCode(500, new { Message = "Failed to reactivate monitored person." });
+
+            _alertMonitorService.InvalidateArchivedCache(id);
+            _logger.LogInformation("Admin {UserId} reactivated monitored {MonitoredId}", callerId, id);
+            _auditService.LogAsync(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? callerId!.Value.ToString(),
+                "ReactivatePatient", $"Reactivated patient {existing.FirstName} {existing.LastName} (id={id})", "Patient");
+            return Ok(new { Message = "Persoana monitorizată a fost reactivată." });
+        }
+
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteMonitoredPerson([FromRoute] Guid id)
         {

@@ -83,5 +83,20 @@ namespace LifeAlertPlus.Client.Services
             var response = await _httpClient.DeleteAsync($"api/monitored/{id}");
             return response.IsSuccessStatusCode;
         }
+
+        public async Task<RemoveMonitoredResult?> RemoveMonitoredAsync(Guid id)
+        {
+            var response = await _httpClient.DeleteAsync($"api/monitored/{id}/remove");
+            if (!response.IsSuccessStatusCode) return null;
+            return await response.Content.ReadFromJsonAsync<RemoveMonitoredResult>();
+        }
+
+        public async Task<bool> ReactivateMonitoredAsync(Guid id)
+        {
+            var response = await _httpClient.PutAsync($"api/monitored/reactivate/{id}", null);
+            return response.IsSuccessStatusCode;
+        }
     }
+
+    public record RemoveMonitoredResult(bool WasLastOwner, string Message);
 }

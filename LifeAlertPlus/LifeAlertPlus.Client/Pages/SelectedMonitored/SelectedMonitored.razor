@@ -16,7 +16,7 @@
             </button>
             <div class="top-actions">
                 <button class="btn-action-main" @onclick="ExportPdfAsync">📤 @T("selected.export")</button>
-                @if (_showEditButton && !(Person?.IsArchived ?? false))
+                @if (_showEditButton && !(Person?.IsReadOnly ?? false))
                 {
                     <button class="btn-action-main" @onclick="OpenInviteModal">✉️ @T("invite.sendToDoctor")</button>
                     <button class="btn-action-main" @onclick="OpenWifiModalAsync">📶 @T("wifi.manage")</button>
@@ -60,17 +60,39 @@
                         <span class="contact-text">@T("selected.device") @Person.DeviceSerial</span>
                     </div>
                 </div>
-                @if (_showEditButton && !(Person?.IsArchived ?? false))
+                @if (_showEditButton && !(Person?.IsReadOnly ?? false) && !_isDoctorUser)
                 {
                     <div class="action-buttons">
                         <button class="btn-action-main" @onclick="OpenEditModal">⚙️ @T("selected.editProfile")</button>
+                        <button class="btn-danger" @onclick="OpenDeleteModal">🗑️ Șterge</button>
                     </div>
                 }
             </div>
         </div>
 
+        @* ── Pending deletion banner ── *@
+        @if (Person.DeletedAt.HasValue)
+        {
+            var daysLeft = (int)Math.Ceiling((Person.DeletedAt.Value.AddDays(7) - DateTime.UtcNow).TotalDays);
+            <div class="deletion-pending-banner">
+                <span>🗑️</span>
+                <span>
+                    Această persoană este programată pentru ștergere definitivă.
+                    @if (daysLeft > 0)
+                    {
+                        <span> Va fi eliminată în <strong>@daysLeft @(daysLeft == 1 ? "zi" : "zile")</strong>.</span>
+                    }
+                    else
+                    {
+                        <span> Ștergerea este iminentă.</span>
+                    }
+                    Contactați un administrator pentru reactivare.
+                </span>
+            </div>
+        }
+
         @* ── Stale data banner ── *@
-        @if (!Person.IsArchived && !_isCurrentDataFresh && _espData != null)
+        @if (!Person.IsReadOnly && !_isCurrentDataFresh && _espData != null)
         {
             var dataAgeMinutes = _espData.Date > 0
                 ? (int)(DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(_espData.Date)).TotalMinutes
@@ -107,7 +129,7 @@
         }
 
         <div class="stats-overview">
-            @if (!Person.IsArchived)
+            @if (!Person.IsReadOnly)
             {
             <div class="stat-card-large heart-rate @(Person.HeartRate <= 0 ? "no-data" : "")">
                 <div class="stat-icon-huge">❤️</div>
@@ -176,7 +198,7 @@
             } @* end !IsArchived vital signs *@
 
             @* Device diagnostics card — shown only when at least one heartbeat field is present *@
-            @if (!Person.IsArchived && _espData != null && _espData.RssiDbm.HasValue)
+            @if (!Person.IsReadOnly && _espData != null && _espData.RssiDbm.HasValue)
             {
                 <div class="stat-card-device-diag">
                     <div class="device-diag-title">
@@ -242,7 +264,7 @@
             </div>
         }
 
-        @if (!Person.IsArchived)
+        @if (!Person.IsReadOnly)
         {
         <div class="ai-prediction-section section-card">
             <div class="section-header">
@@ -536,7 +558,7 @@
             }
         </div>
 
-        @if (!Person.IsArchived)
+        @if (!Person.IsReadOnly)
         {
         <div class="map-section section-card">
             <div class="section-header">
@@ -1204,6 +1226,35 @@
                 <button class="btn-cancel" @onclick="CloseDoctorNotesModal">@T("common.cancel")</button>
                 <button class="btn-save" @onclick="SaveDoctorNoteAsync" disabled="@(_isSavingDoctorNote || string.IsNullOrWhiteSpace(_doctorNoteContent))">
                     @(_isSavingDoctorNote ? T("doctorNotes.saving") : "💾 " + T("common.save"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showDeleteModal)
+{
+    <div class="modal-overlay" @onclick="CloseDeleteModal">
+        <div class="modal-content" @onclick:stopPropagation="true" style="max-width:480px;">
+            <div class="modal-header">
+                <h2>🗑️ Șterge persoana monitorizată</h2>
+                <button class="modal-close" @onclick="CloseDeleteModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Ești sigur că vrei să ștergi <strong>@Person?.Name</strong>?</p>
+                <p style="margin-top:8px;color:var(--color-text-secondary);font-size:0.9rem;">
+                    Dacă ești singurul utilizator care monitorizează această persoană, aceasta va fi marcată pentru ștergere
+                    și eliminată definitiv după 7 zile. Dacă există alți utilizatori, vei fi doar deconectat de la ea.
+                </p>
+                @if (_deleteError != null)
+                {
+                    <p class="form-error" style="margin-top:8px;">@_deleteError</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseDeleteModal" disabled="@_isDeleting">Anulează</button>
+                <button class="btn-danger" @onclick="ExecuteDeleteAsync" disabled="@_isDeleting">
+                    @(_isDeleting ? "Se șterge..." : "🗑️ Confirmă ștergerea")
                 </button>
             </div>
         </div>

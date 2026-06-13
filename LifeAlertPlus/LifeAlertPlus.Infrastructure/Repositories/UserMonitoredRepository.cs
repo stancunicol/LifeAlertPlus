@@ -55,6 +55,21 @@ namespace LifeAlertPlus.Infrastructure.Repositories
             await _context.UserMonitoreds
                 .AnyAsync(um => um.IdUser == userId && um.IdMonitored == monitoredId);
 
+        public async Task<int> CountUsersForMonitoredAsync(Guid monitoredId) =>
+            await _context.UserMonitoreds
+                .CountAsync(um => um.IdMonitored == monitoredId);
+
+        public async Task RemoveUserMonitoredLinkAsync(Guid userId, Guid monitoredId)
+        {
+            var link = await _context.UserMonitoreds
+                .FirstOrDefaultAsync(um => um.IdUser == userId && um.IdMonitored == monitoredId);
+            if (link != null)
+            {
+                _context.UserMonitoreds.Remove(link);
+                await _context.SaveChangesAsync();
+            }
+        }
+
         public async Task AddMonitoredPersonToUserAsync(Guid userId, Guid monitoredPersonId)
         {
             // Check if relationship already exists

@@ -351,6 +351,31 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+.btn-danger {
+    background: #fff0f0;
+    color: #c62828;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-family: var(--font-body);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #c62828;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(198, 40, 40, 0.3);
+}
+
+.btn-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .stats-overview {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -2205,6 +2230,21 @@
 .profile-warmup-progress { font-size: 0.82rem; color: #7cb342; font-weight: 500; }
 
 /* Stale data banner */
+.deletion-pending-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    background: #fce4e4;
+    border: 1px solid #ef9a9a;
+    border-left: 4px solid #c62828;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #7f0000;
+}
+
 .stale-data-banner {
     display: flex;
     align-items: center;

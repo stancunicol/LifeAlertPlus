@@ -327,6 +327,11 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _isSavingDoctorNote;
         private bool _isDoctorUser = false; // True if accessing via /doctor/patient route
 
+        // Delete modal state
+        private bool _showDeleteModal;
+        private bool _isDeleting;
+        private string? _deleteError;
+
         private static SelectedMonitored? _instance;
 
         private enum ChartViewMode
@@ -415,14 +420,13 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     UpdateFrequency = monitored.UpdateFrequency ?? _userUpdateFrequency,
                     IsArchived = monitored.IsArchived,
                     ArchivedAt = monitored.ArchivedAt,
+                    DeletedAt = monitored.DeletedAt,
                     DataRetentionDays = monitored.DataRetentionDays,
                     ArchiveRetentionDays = monitored.ArchiveRetentionDays
                 };
 
-                // Skip live/predictive features for archived persons — they have no active
-                // monitoring, so AI predictions, trend predictions and activity profile
-                // would always show stale or empty data.
-                if (!monitored.IsArchived)
+                // Skip live/predictive features for archived or soft-deleted persons.
+                if (!monitored.IsArchived && monitored.DeletedAt == null)
                 {
                     if (espData?.IsAvailable == true)
                         _ = LoadAIPredictionAsync(espData);
@@ -2850,6 +2854,43 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        private void OpenDeleteModal()
+        {
+            _deleteError = null;
+            _showDeleteModal = true;
+        }
+
+        private void CloseDeleteModal()
+        {
+            _showDeleteModal = false;
+            _deleteError = null;
+        }
+
+        private async Task ExecuteDeleteAsync()
+        {
+            _isDeleting = true;
+            _deleteError = null;
+            try
+            {
+                var result = await MonitoredApiClient.RemoveMonitoredAsync(PersonId);
+                if (result == null)
+                {
+                    _deleteError = "Operațiunea a eșuat. Încearcă din nou.";
+                    return;
+                }
+                _showDeleteModal = false;
+                NavigationManager.NavigateTo("/monitored");
+            }
+            catch (Exception ex)
+            {
+                _deleteError = $"Eroare: {ex.Message}";
+            }
+            finally
+            {
+                _isDeleting = false;
+            }
+        }
+
         public class PersonDetail
         {
             public Guid Id { get; set; }
@@ -2874,6 +2915,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             public int UpdateFrequency { get; set; } = 30;
             public bool IsArchived { get; set; }
             public DateTime? ArchivedAt { get; set; }
+            public DateTime? DeletedAt { get; set; }
+            public bool IsReadOnly => IsArchived || DeletedAt.HasValue;
             public int? DataRetentionDays { get; set; }
             public int? ArchiveRetentionDays { get; set; }
         }

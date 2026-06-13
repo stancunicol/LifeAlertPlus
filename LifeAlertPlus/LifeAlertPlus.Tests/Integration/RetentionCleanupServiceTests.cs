@@ -249,4 +249,42 @@ public class RetentionCleanupServiceTests : IDisposable
         using var ctx2 = NewScope();
         ctx2.Measurements.Count(m => m.IdMonitored == id).Should().Be(1);
     }
+
+    // ── Grace-period hard-delete (7 days) ────────────────────────────────────
+
+    [Fact]
+    public async Task RunAsync_HardDeletesMonitoredPerson_AfterGracePeriodExpires()
+    {
+        var id = Guid.NewGuid();
+        using (var ctx = NewScope())
+        {
+            var m = TestDataFactory.CreateMonitored(id);
+            m.DeletedAt = DateTime.UtcNow.AddDays(-(RetentionCleanupService.GracePeriodDays + 1));
+            ctx.Monitoreds.Add(m);
+            await ctx.SaveChangesAsync();
+        }
+
+        await _sut.RunAsync();
+
+        using var verify = NewScope();
+        verify.Monitoreds.Any(m => m.Id == id).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RunAsync_DoesNotHardDelete_WhenGracePeriodNotYetExpired()
+    {
+        var id = Guid.NewGuid();
+        using (var ctx = NewScope())
+        {
+            var m = TestDataFactory.CreateMonitored(id);
+            m.DeletedAt = DateTime.UtcNow.AddDays(-3); // within 7-day window
+            ctx.Monitoreds.Add(m);
+            await ctx.SaveChangesAsync();
+        }
+
+        await _sut.RunAsync();
+
+        using var verify = NewScope();
+        verify.Monitoreds.Any(m => m.Id == id).Should().BeTrue();
+    }
 }

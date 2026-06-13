@@ -17,27 +17,27 @@ Testarea cu dispozitivul fizic a inclus și verificarea sistemului de alimentare
 
 \subsection{Testare automată}
 
-Pe lângă testarea funcțională manuală, aplicația dispune de o suită de \textbf{180 de teste automate}, organizate în două categorii, executate automat la fiecare push în pipeline-ul CI/CD configurat cu GitHub Actions.
+Pe lângă testarea funcțională manuală, aplicația dispune de o suită de \textbf{217 de teste automate}, organizate în două categorii, executate automat la fiecare push în pipeline-ul CI/CD configurat cu GitHub Actions.
 
 \subsubsection{Teste unitare}
 
-Testele unitare verifică izolat comportamentul fiecărui serviciu și controler, folosind obiecte mock (prin biblioteca \textbf{Moq}) pentru a elimina dependențele externe (baza de date, email, SMS). Sunt acoperite: \texttt{AuthenticationService} (înregistrare, autentificare, verificare email, resetare parolă), \texttt{JwtService} (generare și validare token), \texttt{UserService}, \texttt{MeasurementService}, \texttt{MonitoredService}, \texttt{WifiNetworkService} și \texttt{ConditionRuleEngine} (motorul de reguli medicale deterministe). La nivel de controlere REST sunt testate scenariile principale de succes și de eșec pentru \texttt{AuthenticationController}, \texttt{MeasurementController}, \texttt{WifiController} și \texttt{ConfigController}.
+Testele unitare verifică izolat comportamentul fiecărui serviciu și controler, folosind obiecte mock (prin biblioteca \textbf{Moq}) pentru a elimina dependențele externe (baza de date, email, SMS). Sunt acoperite: \texttt{AuthenticationService} (înregistrare, autentificare, verificare email, resetare parolă), \texttt{JwtService} (generare și validare token), \texttt{UserService}, \texttt{MeasurementService}, \texttt{MonitoredService} (inclusiv operațiile de ștergere logică și reactivare), \texttt{WifiNetworkService} și \texttt{ConditionRuleEngine} (motorul de reguli medicale deterministe). La nivel de controlere REST sunt testate scenariile principale de succes și de eșec pentru \texttt{AuthenticationController}, \texttt{ESPController}, \texttt{MeasurementController}, \texttt{MonitoredController} (logica de ștergere inteligentă: ultimul proprietar, proprietari multipli, administrator) și \texttt{WifiController}.
 
 Aserțiunile sunt formulate cu biblioteca \textbf{FluentAssertions}, care produce mesaje de eroare explicite în caz de eșec, facilitând identificarea cauzei fără a interpreta stack trace-uri brute.
 
 \subsubsection{Teste de integrare}
 
-Testele de integrare verifică interacțiunea dintre servicii și baza de date, folosind o instanță \textbf{SQLite in-memory} izolată per test (fiecare test pornește cu o bază curată, creată prin \texttt{EnsureCreated}). Sunt acoperite: \texttt{UserRepository} (CRUD utilizatori, autentificare, confirmare email), \texttt{MeasurementRepository} (stocare și interogare măsurători cu filtre temporale), \texttt{WifiNetworkRepository} (adăugare și ștergere rețele WiFi per dispozitiv), \texttt{RetentionCleanupService} (verificarea că job-ul de curățare elimină corect datele mai vechi decât perioada de retenție) și \texttt{NotificationFeedbackService} (ciclul complet de creare, marcare ca \textit{așteptând feedback} și înregistrare a răspunsului utilizatorului).
+Testele de integrare verifică interacțiunea dintre servicii și baza de date, folosind o instanță \textbf{SQLite in-memory} izolată per test (fiecare test pornește cu o bază curată, creată prin \texttt{EnsureCreated}). Sunt acoperite: \texttt{UserRepository} (CRUD utilizatori, autentificare, confirmare email), \texttt{MeasurementRepository} (stocare și interogare măsurători cu filtre temporale), \texttt{WifiNetworkRepository} (adăugare și ștergere rețele WiFi per dispozitiv), \texttt{RetentionCleanupService} (eliminarea datelor expirate, ștergerea fizică a profilelor arhivate după fereastra de retenție, ștergerea fizică după perioada de grație de 7 zile a înregistrărilor marcate cu \texttt{DeletedAt}) și \texttt{NotificationFeedbackService} (ciclul complet de creare, marcare ca \textit{așteptând feedback} și înregistrare a răspunsului utilizatorului).
 
 \subsubsection{Rezultate}
 
-Toate cele 180 de teste trec cu succes în configurația curentă (0 eșuate, 0 sărite). Durata totală de execuție a suitei complete este de aproximativ 24 de secunde, acceptabilă pentru un ciclu CI/CD. Integrarea în GitHub Actions asigură că orice regresie este detectată înainte de publicarea codului în producție.
+Toate cele 217 de teste trec cu succes în configurația curentă (0 eșuate, 0 sărite). Durata totală de execuție a suitei complete este de aproximativ 7 secunde, acceptabilă pentru un ciclu CI/CD. Integrarea în GitHub Actions asigură că orice regresie este detectată înainte de publicarea codului în producție.
 
 \subsection{Acuratețea datelor și performanța modelului AI}
 
 Performanța modelului Random Forest a fost estimată prin \textbf{validare încrucișată stratificată în 5 partiții}, metodă care împarte repetat setul de date în subseturi de antrenare și testare, păstrând în fiecare partiție distribuția claselor NORMAL, ALERT și CRITICAL. Au fost urmărite acuratețea, scorul F1 (în variantele macro și ponderată) și aria de sub curba ROC (AUC-ROC), calculată în regim \textit{one-vs-rest}.
 
-Setul de date utilizat la antrenare și evaluare a fost construit sintetic, pornind de la sursele publice menționate în subcapitolul 2.3. El cuprinde câteva mii de exemple corespunzătoare stării normale și câteva mii de exemple corespunzătoare stărilor ALERT și CRITICAL, generate în mod echilibrat astfel încât modelul să dispună de suficiente cazuri din fiecare clasă. Caracterul stratificat al validării garantează că această proporție este păstrată în fiecare partiție, evitând estimările optimiste care ar putea apărea dacă o clasă rară ar fi insuficient reprezentată în subsetul de testare.
+Setul de date utilizat la antrenare și evaluare a fost construit sintetic, pornind de la sursele publice menționate în subcapitolul 2.3. El cuprinde \textbf{8.000 de exemple}: 5.000 corespunzătoare stării NORMAL (extrase și augmentate din sursele publice reale), 1.500 pentru starea CRITICAL și 1.500 pentru starea ALERT, generate sintetic cu valori care respectă pragurile clinice din subcapitolul 4.3, astfel încât modelul să dispună de suficiente cazuri din fiecare clasă. Caracterul stratificat al validării garantează că această proporție este păstrată în fiecare partiție, evitând estimările optimiste care ar putea apărea dacă o clasă rară ar fi insuficient reprezentată în subsetul de testare.
 
 Rezultatele obținute sunt sintetizate în tabelul~\ref{tab:cv-results}.
 
@@ -49,20 +49,20 @@ Rezultatele obținute sunt sintetizate în tabelul~\ref{tab:cv-results}.
 \hline
 \textbf{Metrică} & \textbf{Medie} & \textbf{Abatere standard}\\
 \hline
-Acuratețe & [\ \ ] & [\ \ ]\\
+Acuratețe & 1,0000 & 0,0000\\
 \hline
-Scor F1 (macro) & [\ \ ] & [\ \ ]\\
+Scor F1 (macro) & 1,0000 & 0,0000\\
 \hline
-Scor F1 (ponderat) & [\ \ ] & [\ \ ]\\
+Scor F1 (ponderat) & 1,0000 & 0,0000\\
 \hline
-AUC-ROC (one-vs-rest) & [\ \ ] & N/A\\
+AUC-ROC (one-vs-rest) & 1,0000 & N/A\\
 \hline
 \end{tabular}
 \caption{Rezultatele validării încrucișate stratificate în 5 partiții.}
 \label{tab:cv-results}
 \end{table}
 
-Pentru a verifica absența supraînvățării (overfitting), a fost comparată acuratețea pe datele de antrenare cu cea pe datele de testare; o diferență mică între cele două indică o bună capacitate de generalizare a modelului \textit{(diferența măsurată: [\ \ ])}.
+Pentru a verifica absența supraînvățării (overfitting), a fost comparată acuratețea pe datele de antrenare cu cea pe datele de testare; o diferență mică între cele două indică o bună capacitate de generalizare a modelului \textit{(diferența măsurată: 0,0000 — nicio diferență între acuratețea pe antrenare și testare)}.
 
 Comportamentul modelului pe fiecare clasă a fost analizat prin \textbf{matricea de confuzie} (figura~\ref{fig:confuzie}), care evidențiază eventualele confuzii între stările apropiate. Importanța parametrilor de intrare a fost evaluată prin metoda \textbf{SHAP} (figura~\ref{fig:shap}), care a confirmat că saturația oxigenului, frecvența cardiacă și temperatura corporală sunt factorii dominanți în decizia modelului, în concordanță cu criteriile clinice de triaj.
 

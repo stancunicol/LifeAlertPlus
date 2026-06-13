@@ -43,5 +43,11 @@ namespace LifeAlertPlus.Application.Services
 
         public async Task<bool> UserOwnsMonitoredAsync(Guid userId, Guid monitoredId) =>
             await _userMonitoredRepository.UserOwnsMonitoredAsync(userId, monitoredId);
+
+        public async Task<int> CountUsersForMonitoredAsync(Guid monitoredId) =>
+            await _userMonitoredRepository.CountUsersForMonitoredAsync(monitoredId);
+
+        public async Task RemoveUserMonitoredLinkAsync(Guid userId, Guid monitoredId) =>
+            await _userMonitoredRepository.RemoveUserMonitoredLinkAsync(userId, monitoredId);
     }
 }

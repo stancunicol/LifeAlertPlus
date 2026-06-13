@@ -347,12 +347,22 @@ public partial class AdminPage : ComponentBase
 		public string PatientName { get; set; } = string.Empty;
 		public string DeviceSerialNumber { get; set; } = string.Empty;
 		public bool IsArchived { get; set; }
+		public bool IsDeleted { get; set; }
+		public DateTime? DeletedAt { get; set; }
 		public bool IsOnline { get; set; }
 		public double? Battery { get; set; }
 		public int? RssiDbm { get; set; }
 		public int? UptimeSeconds { get; set; }
 		public int? HeartbeatAgeSec { get; set; }
 		public long? LastDataDate { get; set; }
+	}
+
+	protected async Task ReactivateMonitoredAsync(Guid id)
+	{
+		var ok = await MonitoredApiClient.ReactivateMonitoredAsync(id);
+		if (ok)
+			await LoadDeviceStatusesAsync();
+		StateHasChanged();
 	}
 
 	protected void GoToDevicePage(int page)

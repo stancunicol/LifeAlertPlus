@@ -12,5 +12,7 @@ namespace LifeAlertPlus.Domain.IRepositories
         Task DeleteMonitoredPersonAsync(Guid id);
         Task<bool> ArchiveMonitoredPersonAsync(Guid id, DateTime archivedAt);
         Task<bool> RestoreMonitoredPersonAsync(Guid id);
+        Task<bool> SoftDeleteMonitoredPersonAsync(Guid id, DateTime deletedAt);
+        Task<bool> ReactivateMonitoredPersonAsync(Guid id);
     }
 }

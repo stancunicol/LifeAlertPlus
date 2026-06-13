@@ -15,8 +15,8 @@ namespace LifeAlertPlus.API.Controllers
         public async Task<IActionResult> GetDeviceStatus()
         {
             var devices = await db.Monitoreds
-                .Where(m => m.DeletedAt == null && !string.IsNullOrWhiteSpace(m.DeviceSerialNumber))
-                .Select(m => new { m.Id, m.FirstName, m.LastName, m.DeviceSerialNumber, m.IsArchived })
+                .Where(m => !string.IsNullOrWhiteSpace(m.DeviceSerialNumber))
+                .Select(m => new { m.Id, m.FirstName, m.LastName, m.DeviceSerialNumber, m.IsArchived, m.DeletedAt })
                 .ToListAsync();
 
             var result = devices.Select(d =>
@@ -29,7 +29,9 @@ namespace LifeAlertPlus.API.Controllers
                     PatientName = $"{d.FirstName} {d.LastName}".Trim(),
                     d.DeviceSerialNumber,
                     d.IsArchived,
-                    IsOnline = espData?.IsAvailable ?? false,
+                    IsDeleted = d.DeletedAt != null,
+                    d.DeletedAt,
+                    IsOnline = d.DeletedAt == null && (espData?.IsAvailable ?? false),
                     Battery = espData?.Battery,
                     RssiDbm = hb?.Data.RssiDbm,
                     UptimeSeconds = hb?.Data.UptimeSeconds,

@@ -11,5 +11,7 @@ namespace LifeAlertPlus.Domain.IRepositories
         Task<IEnumerable<UserMonitored>> GetAllUserMonitoredWithDetailsAsync();
         Task AddMonitoredPersonToUserAsync(Guid userId, Guid monitoredPersonId);
         Task<bool> UserOwnsMonitoredAsync(Guid userId, Guid monitoredId);
+        Task<int> CountUsersForMonitoredAsync(Guid monitoredId);
+        Task RemoveUserMonitoredLinkAsync(Guid userId, Guid monitoredId);
     }
 }

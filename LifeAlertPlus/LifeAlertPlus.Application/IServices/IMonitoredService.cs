@@ -13,5 +13,7 @@ namespace LifeAlertPlus.Application.IServices
         Task DeleteMonitoredPersonAsync(Guid id);
         Task<bool> ArchiveMonitoredPersonAsync(Guid id);
         Task<bool> RestoreMonitoredPersonAsync(Guid id);
+        Task<bool> SoftDeleteMonitoredPersonAsync(Guid id);
+        Task<bool> ReactivateMonitoredPersonAsync(Guid id);
     }
 }

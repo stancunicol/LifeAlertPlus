@@ -603,6 +603,26 @@
 .badge-online  { background: #e8f5e9; color: #2e7d32; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
 .badge-offline { background: #fff3e0; color: #e65100; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
 .badge-archived{ background: #eceff1; color: #607d8b; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+.badge-deleted { background: #fce4e4; color: #c62828; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+
+.device-table .row-deleted td { color: #c62828; opacity: 0.7; }
+
+.btn-reactivate {
+	background: #e8f5e9;
+	color: #2e7d32;
+	border: none;
+	padding: 4px 12px;
+	border-radius: 8px;
+	font-size: 0.8rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.btn-reactivate:hover {
+	background: #2e7d32;
+	color: #fff;
+}
 
 /* Pagination Controls */
 .pagination-controls {

@@ -98,6 +98,56 @@ public class MonitoredServiceTests
         _repo.Verify(r => r.DeleteMonitoredPersonAsync(id), Times.Once);
     }
 
+    // ── SoftDeleteMonitoredPersonAsync ───────────────────────────────────────
+
+    [Fact]
+    public async Task SoftDeleteMonitoredPersonAsync_ReturnsTrueAndDelegatesToRepository()
+    {
+        var id = Guid.NewGuid();
+        _repo.Setup(r => r.SoftDeleteMonitoredPersonAsync(id, It.IsAny<DateTime>())).ReturnsAsync(true);
+
+        var result = await _sut.SoftDeleteMonitoredPersonAsync(id);
+
+        result.Should().BeTrue();
+        _repo.Verify(r => r.SoftDeleteMonitoredPersonAsync(id, It.IsAny<DateTime>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SoftDeleteMonitoredPersonAsync_ReturnsFalse_WhenRepositoryReturnsFalse()
+    {
+        var id = Guid.NewGuid();
+        _repo.Setup(r => r.SoftDeleteMonitoredPersonAsync(id, It.IsAny<DateTime>())).ReturnsAsync(false);
+
+        var result = await _sut.SoftDeleteMonitoredPersonAsync(id);
+
+        result.Should().BeFalse();
+    }
+
+    // ── ReactivateMonitoredPersonAsync ───────────────────────────────────────
+
+    [Fact]
+    public async Task ReactivateMonitoredPersonAsync_ReturnsTrueAndDelegatesToRepository()
+    {
+        var id = Guid.NewGuid();
+        _repo.Setup(r => r.ReactivateMonitoredPersonAsync(id)).ReturnsAsync(true);
+
+        var result = await _sut.ReactivateMonitoredPersonAsync(id);
+
+        result.Should().BeTrue();
+        _repo.Verify(r => r.ReactivateMonitoredPersonAsync(id), Times.Once);
+    }
+
+    [Fact]
+    public async Task ReactivateMonitoredPersonAsync_ReturnsFalse_WhenRepositoryReturnsFalse()
+    {
+        var id = Guid.NewGuid();
+        _repo.Setup(r => r.ReactivateMonitoredPersonAsync(id)).ReturnsAsync(false);
+
+        var result = await _sut.ReactivateMonitoredPersonAsync(id);
+
+        result.Should().BeFalse();
+    }
+
     // ── UpdateMonitoredPersonAsync ───────────────────────────────────────────
 
     [Fact]

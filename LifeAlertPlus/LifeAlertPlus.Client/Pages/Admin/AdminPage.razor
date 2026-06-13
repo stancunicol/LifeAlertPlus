@@ -132,16 +132,25 @@
 						<th>@T("admin.signal")</th>
 						<th>@T("admin.uptime")</th>
 						<th>@T("admin.heartbeatAge")</th>
+						<th>Acțiuni</th>
 					</tr>
 				</thead>
 				<tbody>
 					@foreach (var d in PaginatedDevices)
 					{
-						<tr class="@(d.IsArchived ? "row-archived" : d.IsOnline ? "" : "row-offline")">
-							<td>@d.PatientName @(d.IsArchived ? "(archived)" : "")</td>
+						<tr class="@(d.IsDeleted ? "row-deleted" : d.IsArchived ? "row-archived" : d.IsOnline ? "" : "row-offline")">
+							<td>
+								@d.PatientName
+								@if (d.IsArchived) { <span> (archived)</span> }
+								@if (d.IsDeleted) { <span> (deleted)</span> }
+							</td>
 							<td><code>@d.DeviceSerialNumber</code></td>
 							<td>
-								@if (d.IsArchived)
+								@if (d.IsDeleted)
+								{
+									<span class="badge-deleted">Deleted</span>
+								}
+								else if (d.IsArchived)
 								{
 									<span class="badge-archived">Archived</span>
 								}
@@ -158,6 +167,14 @@
 							<td>@(d.RssiDbm.HasValue ? $"{d.RssiDbm} dBm" : "-")</td>
 							<td>@FormatUptime(d.UptimeSeconds)</td>
 							<td>@(d.HeartbeatAgeSec.HasValue ? $"{d.HeartbeatAgeSec}s ago" : "-")</td>
+							<td>
+								@if (d.IsDeleted)
+								{
+									<button class="btn-reactivate" @onclick="() => ReactivateMonitoredAsync(d.Id)">
+										↩️ Reactivează
+									</button>
+								}
+							</td>
 						</tr>
 					}
 				</tbody>

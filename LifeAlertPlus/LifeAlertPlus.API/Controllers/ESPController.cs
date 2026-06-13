@@ -112,10 +112,10 @@ namespace LifeAlertPlus.API.Controllers
                 return Ok();
             }
 
-            if (monitored.IsArchived)
+            if (monitored.IsArchived || monitored.DeletedAt != null)
             {
-                logger.LogInformation("ESP data from {Serial} ignored — monitored {MonitoredId} is archived", payload.Serial, monitored.Id);
-                return Ok(new { Message = "Monitored person is archived. Data not persisted." });
+                logger.LogInformation("ESP data from {Serial} ignored — monitored {MonitoredId} is archived or pending deletion", payload.Serial, monitored.Id);
+                return Ok(new { Message = "Monitored person is archived or pending deletion. Data not persisted." });
             }
 
             // Normalize: firmware may send only Max30100 without Bpm/Spo2 fields
@@ -208,10 +208,10 @@ namespace LifeAlertPlus.API.Controllers
             if (monitored == null)
                 return NotFound(new { Message = "Device not found." });
 
-            if (monitored.IsArchived)
+            if (monitored.IsArchived || monitored.DeletedAt != null)
             {
-                logger.LogInformation("Panic alert from {Serial} ignored — monitored {MonitoredId} is archived", payload.Serial, monitored.Id);
-                return Ok(new { Message = "Monitored person is archived. Panic alert not triggered." });
+                logger.LogInformation("Panic alert from {Serial} ignored — monitored {MonitoredId} is archived or pending deletion", payload.Serial, monitored.Id);
+                return Ok(new { Message = "Monitored person is archived or pending deletion. Panic alert not triggered." });
             }
 
             await alertMonitorService.TriggerPanicAlertAsync(monitored.Id, payload.Coordinates);
