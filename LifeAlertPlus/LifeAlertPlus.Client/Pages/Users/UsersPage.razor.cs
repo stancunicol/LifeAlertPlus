@@ -40,6 +40,10 @@ namespace LifeAlertPlus.Client.Pages.Users
 		protected bool IsLoading { get; private set; } = true;
 		protected string? ErrorMessage { get; private set; }
 
+		private UserListItemDTO? _userToDelete;
+		private bool _showUserDeleteConfirm;
+		private bool _isProcessingUserDelete;
+
 		protected int TotalUsers => Users.Count;
 		protected int ActiveUsers => Users.Count(u => u.DeletedAt == null);
 		protected int ConfirmedUsers => Users.Count(u => u.IsEmailConfirmed);
@@ -150,24 +154,34 @@ namespace LifeAlertPlus.Client.Pages.Users
 			}
 		}
 
-		protected async Task ConfirmDelete(UserListItemDTO user)
+		protected void ConfirmDelete(UserListItemDTO user)
 		{
-			var ok = await JSRuntime.InvokeAsync<bool>("confirm", $"Delete user {user.Email}? This cannot be undone.");
-			if (!ok) return;
-			await DeleteUser(user);
+			_userToDelete = user;
+			_showUserDeleteConfirm = true;
 		}
 
-		protected async Task DeleteUser(UserListItemDTO user)
+		protected void CloseUserDeleteConfirm()
 		{
-			var success = await UserApiClient.DeleteUserAsync(user.Id);
-			if (success)
+			_showUserDeleteConfirm = false;
+			_userToDelete = null;
+		}
+
+		protected async Task ConfirmUserSoftDeleteAsync()
+		{
+			if (_userToDelete == null) return;
+			_isProcessingUserDelete = true;
+			try
 			{
-				Users.Remove(user);
-				MonitoredCounts.Remove(user.Id);
+				var success = await UserApiClient.DeactivateUserAsync(_userToDelete.Id);
+				if (success)
+					_userToDelete.DeletedAt = DateTime.UtcNow;
+				else
+					ErrorMessage = "Failed to delete user.";
 			}
-			else
+			finally
 			{
-				ErrorMessage = "Failed to delete user.";
+				_isProcessingUserDelete = false;
+				CloseUserDeleteConfirm();
 			}
 		}
 

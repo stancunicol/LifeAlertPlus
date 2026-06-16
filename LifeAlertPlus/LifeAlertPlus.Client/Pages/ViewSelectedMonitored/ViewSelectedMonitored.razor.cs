@@ -41,7 +41,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         [Inject]
         private NotificationService NotificationSvc { get; set; } = default!;
 
-        private string T(string key) => Lang.T(key);
+        private string T(string key) => Lang.TEnglish(key);
 
         private ElementReference _hrSvgRef;
         private ElementReference _tempSvgRef;
@@ -89,6 +89,17 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         private double _userMaxTemp = 37.5;
         private int _userUpdateFrequency = 30;
 
+        private bool _isCurrentDataFresh;
+        private bool _isLastKnownGps;
+
+        private static bool IsEspDataFresh(
+            LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO? esp, int updateFrequencySeconds)
+        {
+            if (esp == null || !esp.IsAvailable) return false;
+            if (esp.Date <= 0) return true;
+            return (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - esp.Date) <= updateFrequencySeconds + 15L;
+        }
+
         private enum ChartViewMode
         {
             Daily,
@@ -111,23 +122,24 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                     return;
                 }
 
-                // Get ESP data
+                // Get ESP data and check freshness
                 var espData = await MonitoredApiClient.GetEspDataAsync(monitored.DeviceSerialNumber);
-                
+                _isCurrentDataFresh = IsEspDataFresh(espData, monitored.UpdateFrequency ?? _userUpdateFrequency);
+
                 int heartRate = 0;
                 int spO2 = 0;
                 double temperature = 0;
                 string gps = "No data";
                 string status = "OK";
 
-                if (espData?.IsAvailable == true)
+                if (_isCurrentDataFresh)
                 {
-                    if (espData.Max30100 != null && espData.Max30100.Count >= 2)
+                    if (espData!.Max30100 != null && espData.Max30100.Count >= 2)
                     {
                         heartRate = espData.Max30100.ElementAtOrDefault(0);
                         spO2 = espData.Max30100.ElementAtOrDefault(1);
                     }
-                    
+
                     temperature = espData.Temperature ?? 0;
                     gps = espData.Neo6m ?? "No data";
 
@@ -138,13 +150,9 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                     double effectiveMaxTemp = monitored.MaxTemperature ?? _userMaxTemp;
 
                     if (heartRate > effectiveMaxHr || heartRate < effectiveMinHr - 10 || spO2 < 90 || temperature > effectiveMaxTemp + 0.5 || temperature < effectiveMinTemp - 0.5)
-                    {
                         status = "Critical";
-                    }
                     else if (heartRate > effectiveMaxHr - 10 || heartRate < effectiveMinHr || spO2 < 95 || temperature > effectiveMaxTemp || temperature < effectiveMinTemp)
-                    {
                         status = "Warning";
-                    }
                 }
                 else
                 {
@@ -154,6 +162,14 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 // Get last measurement time
                 var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(monitored.Id, 1, 1);
                 var lastMeasurement = measurements?.FirstOrDefault();
+
+                // When live data is stale, use the last stored GPS coordinates as fallback
+                _isLastKnownGps = false;
+                if (!_isCurrentDataFresh && !string.IsNullOrWhiteSpace(lastMeasurement?.Coordinates))
+                {
+                    gps = lastMeasurement!.Coordinates;
+                    _isLastKnownGps = true;
+                }
                 string lastUpdate = lastMeasurement != null 
                     ? lastMeasurement.CreatedAt.ToLocalTime().ToString("MMMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture)
                     : "No data";
@@ -348,10 +364,10 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         {
             if (data == null || data.Count == 0) return new();
 
-            const double paddingLeft = 90;
+            const double paddingLeft = 110;
             const double paddingRight = 15;
             const double paddingTop = 15;
-            var usableWidth = 800 - paddingLeft - paddingRight;  // 695
+            var usableWidth = 2400 - paddingLeft - paddingRight;  // 695
             var usableHeight = 145.0;  // 200 - 15 - 40
 
             double minVal, maxVal;
@@ -397,9 +413,9 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
         private List<(string Label, double X)> GetXAxisLabels()
         {
-            const double paddingLeft = 90;
+            const double paddingLeft = 110;
             const double paddingRight = 15;
-            var usableWidth = 800 - paddingLeft - paddingRight;
+            var usableWidth = 2400 - paddingLeft - paddingRight;
 
             if (CurrentChartView == ChartViewMode.Daily)
             {
@@ -716,7 +732,6 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
 
             await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
-            _ = LoadDoctorNotesAsync(PersonId);
             _ = LoadPendingFeedbackAsync();
 
             _refreshTimer = new System.Threading.Timer(_ => _ = RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
@@ -1011,10 +1026,10 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         {
             if (data == null || data.Count == 0) return new();
 
-            const double paddingLeft = 90;
+            const double paddingLeft = 110;
             const double paddingRight = 15;
             const double paddingTop = 15;
-            var usableWidth = 800 - paddingLeft - paddingRight;
+            var usableWidth = 2400 - paddingLeft - paddingRight;
             var usableHeight = 145.0;
 
             double minVal = fixedMin;

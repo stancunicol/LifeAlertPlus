@@ -371,7 +371,7 @@
 }
 
 .card-body-white {
-    padding: 1.5rem;
+    padding: 1.5rem 1.5rem 3.5rem;
     background: white;
 }
 
@@ -855,6 +855,72 @@
     .card-archive-btn:active {
         transform: translateY(0);
         box-shadow: 0 2px 6px rgba(102, 187, 106, 0.4);
+    }
+
+/* Remove (soft-delete) button — mirrors archive-btn, positioned bottom-left */
+.card-remove-btn {
+    position: absolute;
+    top: auto;
+    bottom: 0.85rem;
+    left: 0.85rem;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    height: 40px;
+    width: 40px;
+    padding: 0;
+    border-radius: 20px;
+    border: 1.5px solid rgba(198, 40, 40, 0.2);
+    background: rgba(255, 255, 255, 0.88);
+    color: #c62828;
+    font-size: 0.82rem;
+    font-family: var(--font-body);
+    font-weight: 600;
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: width 0.25s ease, padding 0.25s ease, gap 0.25s ease,
+                background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+    .card-remove-btn .archive-btn-icon {
+        flex: 0 0 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+
+    .card-remove-btn .archive-btn-label {
+        max-width: 0;
+        opacity: 0;
+        transform: translateX(-4px);
+        transition: max-width 0.25s ease, opacity 0.2s ease, transform 0.25s ease;
+    }
+
+    .card-remove-btn:hover,
+    .card-remove-btn:focus-visible {
+        width: 130px;
+        padding-right: 1rem;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, #fce4e4 0%, #ef9a9a 100%);
+        color: #7f0000;
+        border-color: transparent;
+        box-shadow: 0 6px 16px rgba(198, 40, 40, 0.25);
+        transform: translateY(-1px);
+    }
+
+        .card-remove-btn:hover .archive-btn-label,
+        .card-remove-btn:focus-visible .archive-btn-label {
+            max-width: 100px;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+    .card-remove-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 6px rgba(198, 40, 40, 0.35);
     }
 
 .person-card-detailed {

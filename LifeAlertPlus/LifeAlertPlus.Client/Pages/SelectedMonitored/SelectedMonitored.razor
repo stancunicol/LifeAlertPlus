@@ -91,18 +91,6 @@
             </div>
         }
 
-        @* ── Stale data banner ── *@
-        @if (!Person.IsReadOnly && !_isCurrentDataFresh && _espData != null)
-        {
-            var dataAgeMinutes = _espData.Date > 0
-                ? (int)(DateTimeOffset.UtcNow - DateTimeOffset.FromUnixTimeSeconds(_espData.Date)).TotalMinutes
-                : 0;
-            <div class="stale-data-banner">
-                <span>⚠️</span>
-                <span>@(dataAgeMinutes > 0 ? string.Format(T("selected.staleData"), dataAgeMinutes) : T("selected.deviceOffline"))</span>
-            </div>
-        }
-
         @* ── False-alarm feedback banner ── *@
         @if (_pendingFeedback != null)
         {
@@ -191,7 +179,7 @@
                     else
                     {
                         <div class="stat-value-gps">@Person.GPS</div>
-                        <p class="stat-status normal gps-last-coords">@T("selected.gpsLastCoords")</p>
+                        <p class="stat-status normal gps-last-coords">@(_isLastKnownGps ? T("selected.gpsLastKnown") : T("selected.gpsLastCoords"))</p>
                     }
                 </div>
             </div>
@@ -299,10 +287,13 @@
                             <span class="ai-state-label">@T("selected.aiDetectedState")</span>
                             <span class="ai-state-value">@AIPrediction.Prediction</span>
                         </div>
+                        @if (_isCurrentDataFresh)
+                        {
                         <div class="ai-health-score">
                             <span class="ai-health-label">@T("selected.aiHealthScore")</span>
                             <span class="ai-health-value @(AIPrediction.HealthScore >= 80 ? "critical" : AIPrediction.HealthScore >= 40 ? "alert" : "normal")">@(100 - AIPrediction.HealthScore) / 100</span>
                         </div>
+                        }
                     </div>
                     <div class="ai-details">
                         <p>@AIPrediction.Details</p>
@@ -562,7 +553,7 @@
         {
         <div class="map-section section-card">
             <div class="section-header">
-                <h2>📍 @T("selected.currentLocation")</h2>
+                <h2>📍 @(_isLastKnownGps ? T("selected.gpsLastKnown") : T("selected.currentLocation"))</h2>
             </div>
             <div class="map-wrapper">
                 @if (GetGPSStatus(Person.GPS) == "disabled")

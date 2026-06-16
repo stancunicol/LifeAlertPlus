@@ -120,17 +120,7 @@ namespace LifeAlertPlus.API.Services
                     };
                 }
 
-                // Seed today if there are no measurements with valid SpO2 for today
-                var hasTodaySpO2 = await db.Measurements
-                    .AnyAsync(ms => ms.IdMonitored == m.Id
-                                 && ms.CreatedAt >= todayUtc
-                                 && ms.SpO2 > 0);
 
-                if (!hasTodaySpO2)
-                {
-                    _logger.LogInformation("No SpO2 data for today for {PersonId} — auto-seeding chart data", m.Id);
-                    await SeedTodayAsync(m.Id);
-                }
             }
         }
 

@@ -54,6 +54,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private bool _showArchiveConfirm;
     private bool _showRestoreConfirm;
     private bool _showDeleteConfirm;
+    private bool _showSoftDeleteConfirm;
     private LifeAlertPlus.Domain.Entities.Monitored? _personPendingAction;
     private string _actionError = string.Empty;
     private bool _isProcessingAction;
@@ -89,11 +90,11 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             // Apply online/offline filter
             if (FilterOnlineStatus == "Online")
             {
-                filtered = filtered.Where(c => c.LastData?.IsAvailable == true);
+                filtered = filtered.Where(c => IsDataCurrent(c));
             }
             else if (FilterOnlineStatus == "Offline")
             {
-                filtered = filtered.Where(c => c.LastData?.IsAvailable != true);
+                filtered = filtered.Where(c => !IsDataCurrent(c));
             }
 
             return filtered;
@@ -103,8 +104,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private int CriticalCount => _monitoredCards.Count(c => GetCardStatus(c) == "Critical");
     private int WarningCount => _monitoredCards.Count(c => GetCardStatus(c) == "Warning");
     private int StableCount => _monitoredCards.Count(c => GetCardStatus(c) == "OK");
-    private int OnlineCount => _monitoredCards.Count(c => c.LastData?.IsAvailable == true);
-    private int OfflineCount => _monitoredCards.Count(c => c.LastData?.IsAvailable != true);
+    private int OnlineCount => _monitoredCards.Count(c => IsDataCurrent(c));
+    private int OfflineCount => _monitoredCards.Count(c => !IsDataCurrent(c));
 
     protected override async Task OnInitializedAsync()
     {
@@ -247,11 +248,19 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         _showDeleteConfirm = true;
     }
 
+    private void OpenSoftDeleteConfirm(LifeAlertPlus.Domain.Entities.Monitored person)
+    {
+        _personPendingAction = person;
+        _actionError = string.Empty;
+        _showSoftDeleteConfirm = true;
+    }
+
     private void CloseActionModal()
     {
         _showArchiveConfirm = false;
         _showRestoreConfirm = false;
         _showDeleteConfirm = false;
+        _showSoftDeleteConfirm = false;
         _personPendingAction = null;
         _actionError = string.Empty;
     }
@@ -317,6 +326,29 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
             }
             CloseActionModal();
             await LoadArchivedPeopleAsync();
+        }
+        finally
+        {
+            _isProcessingAction = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ConfirmSoftDeleteAsync()
+    {
+        if (_personPendingAction == null) return;
+        _isProcessingAction = true;
+        _actionError = string.Empty;
+        try
+        {
+            var result = await MonitoredApiClient.RemoveMonitoredAsync(_personPendingAction.Id);
+            if (result == null)
+            {
+                _actionError = T("archive.actionFailed");
+                return;
+            }
+            CloseActionModal();
+            await LoadMonitoredPeopleAsync();
         }
         finally
         {
@@ -595,7 +627,10 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         => card.LastData?.IsFall == true;
 
     private string FormatFallRisk(MonitoredCard card)
-        => IsFallEvent(card) ? T("card.fallPossible") : T("card.fallStable");
+    {
+        if (!IsDataCurrent(card)) return T("card.statusOffline");
+        return IsFallEvent(card) ? T("card.fallPossible") : T("card.fallStable");
+    }
 
     private int GetEffectiveUpdateFrequency(LifeAlertPlus.Domain.Entities.Monitored person)
         => (person.UpdateFrequency ?? 0) > 0 ? person.UpdateFrequency!.Value : _userUpdateFrequency;

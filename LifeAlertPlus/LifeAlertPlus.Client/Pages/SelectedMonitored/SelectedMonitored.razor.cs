@@ -246,6 +246,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private int _userUpdateFrequency = 30;
 
         private bool _isCurrentDataFresh;
+        private bool _isLastKnownGps;
 
         private bool IsEspDataFresh(Shared.DTOs.Responses.ESP.ESPDataResponseDTO? esp, int updateFrequencySeconds)
         {
@@ -392,9 +393,17 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 // Get last measurement time
                 var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(monitored.Id, 1, 1);
                 var lastMeasurement = measurements?.FirstOrDefault();
-                string lastUpdate = lastMeasurement != null 
+                string lastUpdate = lastMeasurement != null
                     ? lastMeasurement.CreatedAt.ToLocalTime().ToString("MMMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture)
                     : "No data";
+
+                // When live data is stale, use the last stored GPS coordinates as fallback
+                _isLastKnownGps = false;
+                if (!_isCurrentDataFresh && !string.IsNullOrWhiteSpace(lastMeasurement?.Coordinates))
+                {
+                    gps = lastMeasurement.Coordinates;
+                    _isLastKnownGps = true;
+                }
 
                 Person = new PersonDetail
                 {
@@ -428,8 +437,10 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 // Skip live/predictive features for archived or soft-deleted persons.
                 if (!monitored.IsArchived && monitored.DeletedAt == null)
                 {
-                    if (espData?.IsAvailable == true)
+                    if (_isCurrentDataFresh && espData != null)
                         _ = LoadAIPredictionAsync(espData);
+                    else
+                        AIPrediction = null;
                     _ = LoadTrendPredictionsAsync(PersonId);
                     _ = LoadActivityProfileAsync(PersonId);
                 }

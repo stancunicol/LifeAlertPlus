@@ -514,6 +514,21 @@ model, le_overall_state, scaler, feature_columns, X_train_synthetic, X_test_synt
 # 3. Evaluate Model
 evaluate_model(model, X_test_synthetic, y_test_synthetic, le_overall_state)
 
+print("\n" + "=" * 60)
+print("NOTE ON SYNTHETIC TEST-SET ACCURACY")
+print("=" * 60)
+print("""
+The accuracy printed above is expected to be ~1.0000 on the synthetic
+test set. This is a structural consequence of the experimental setup:
+training labels are assigned by the same rule-based function
+(combined_rule_based_label) that defines the class boundaries, making
+the classification boundaries perfectly learnable by the RF.
+
+This result validates that the pipeline is correct, NOT that the model
+generalises to real patients. The cross-validation below provides a
+methodologically sounder (though structurally similar) evaluation.
+""")
+
 # 4. Run Prediction Examples
 run_prediction_examples(model, le_overall_state, feature_columns, scaler)
 
@@ -686,15 +701,48 @@ Cross-validation (Stratified 5-Fold):
   F1 (weighted):  {cv_results['test_f1_weighted'].mean():.4f} ± {cv_results['test_f1_weighted'].std():.4f}
   AUC-ROC (OvR):  {auc:.4f}
 
+⚠ SYSTEM LIMITATIONS (must be disclosed in thesis):
+  1. SYNTHETIC DATA: all training and evaluation examples were generated
+     programmatically using the same rule-based thresholds that define the
+     class labels. Near-perfect accuracy is structurally expected and does
+     NOT indicate clinical generalisation ability.
+  2. NO CLINICAL VALIDATION: the model has not been evaluated on real
+     patient cohorts and has not been reviewed by medical professionals.
+  3. PROOF OF CONCEPT / TECHNOLOGICAL DEMONSTRATOR: this system must be
+     described as a monitoring support tool, not as a diagnostic system.
+  4. SENSOR ACCURACY: real-world performance depends on sensor placement,
+     patient cooperation, and device calibration.
+
+ROLE OF RANDOM FOREST vs. PURE RULES:
+  — Provides calibrated probability scores for each health state,
+    not just hard binary labels.
+  — SHAP explainability makes individual predictions interpretable
+    and auditable.
+  — The model can be fine-tuned on real patient data without
+    rewriting application logic.
+  — Handles continuous feature interactions more gracefully than
+    threshold-based rules under sensor noise.
+  — Validates that the rule set is internally consistent and learnable.
+
 Recommended thesis wording:
-  "Model performance was estimated using stratified 5-fold cross-validation
-   to ensure each fold preserves the NORMAL/ALERT/CRITICAL class distribution.
-   Mean accuracy was {cv_results['test_accuracy'].mean():.2%} (±{cv_results['test_accuracy'].std():.2%}),
-   with a macro-averaged AUC-ROC of {auc:.4f},
-   indicating strong separability across all three health states.
-   Feature importance was assessed using SHAP (SHapley Additive exPlanations),
-   which identified SpO₂, heart rate, and body temperature as the dominant
-   predictors, consistent with established clinical triage criteria."
+  "A Random Forest classifier was trained on {num_base_samples + num_critical_samples + num_alert_samples} synthetic examples
+   generated from physiological signal ranges aligned with clinical
+   triage protocols (NORMAL / ALERT / CRITICAL). Class labels were
+   assigned by a deterministic rule-based function, making the
+   classification boundaries precisely learnable; near-perfect
+   accuracy on the synthetic test set is therefore an expected
+   consequence of the experimental setup rather than evidence of
+   clinical generalisation. Stratified 5-fold cross-validation
+   confirmed consistent performance across splits
+   (mean accuracy {cv_results['test_accuracy'].mean():.2%} ± {cv_results['test_accuracy'].std():.2%},
+   macro-F1 {cv_results['test_f1_macro'].mean():.2%} ± {cv_results['test_f1_macro'].std():.2%},
+   AUC-ROC {auc:.4f}). Feature importance assessed via SHAP
+   (SHapley Additive exPlanations) identified SpO₂, heart rate, and
+   body temperature as the dominant predictors, consistent with
+   established triage criteria. The system is presented as a
+   proof-of-concept technological demonstrator for IoT-based patient
+   monitoring; clinical deployment would require prospective validation
+   on real patient cohorts under medical supervision."
 """)
 
 # =============================================================================

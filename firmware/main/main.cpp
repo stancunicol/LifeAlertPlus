@@ -177,7 +177,6 @@ static bool          s_btn_disabled[2] = { false, false }; // [0]=panic, [1]=sle
 static volatile bool g_sleep_mode = false;
 
 // Heartbeat
-static esp_timer_handle_t s_hb_timer = NULL;
 
 // Sleep auto-off: după 5s în sleep mode, stinge LED galben + OLED display
 static esp_timer_handle_t s_sleep_off_timer = NULL;
@@ -234,7 +233,10 @@ static bool     s_gps_enabled   = true;
 static uint32_t s_gps_start_ms  = 0;
 
 // Netif handle — necesar pentru a seta DNS backup după connect
-static esp_netif_t *s_wifi_netif = NULL;
+static esp_netif_t  *s_wifi_netif = NULL;
+// IP primit la ultima conexiune — stocat din handler, logat în wifi_setup (printf e prea
+// greu pentru stiva mică a sys_evt: _vfprintf_r alocă 1072 bytes și provoacă overflow)
+static esp_ip4_addr_t s_got_ip    = {};
 
 // Offline queue counters (used by oled_show_data and queue functions)
 static uint32_t s_q_head = 0, s_q_tail = 0, s_q_count = 0;
@@ -552,6 +554,26 @@ static void pulse_task(void *)
     }
 }
 
+// Software square root — replaces sqrtf() because the Espressif newlib ships
+// __ieee754_sqrtf compiled with F-extension instructions (fmv.w.x, fsqrt.s)
+// that the ESP32-C3 (rv32imc, no FPU) does not implement. This version uses
+// only basic arithmetic routed through libgcc's soft-float (__mulsf3/__divsf3).
+static float soft_sqrtf(float s)
+{
+    if (s <= 0.0f) return 0.0f;
+    // Bit-manipulation initial estimate (integer ops only — no FP hardware)
+    uint32_t i;
+    memcpy(&i, &s, sizeof i);
+    i = 0x1fbb3b70u + (i >> 1);
+    float r;
+    memcpy(&r, &i, sizeof r);
+    // Three Newton-Raphson iterations; converges to <0.01% for values 0–16 (g²)
+    r = 0.5f * (r + s / r);
+    r = 0.5f * (r + s / r);
+    r = 0.5f * (r + s / r);
+    return r;
+}
+
 // =============================================================================
 // Fall detection task — eşantionează MPU6050 la ~50 Hz şi rulează state machine:
 //   IDLE → FREE_FALL → STILLNESS_MONITOR → confirm (sau abort).
@@ -590,7 +612,7 @@ static void fall_task(void *)
         float ax  = accel[0] / 16384.0f;
         float ay  = accel[1] / 16384.0f;
         float az  = accel[2] / 16384.0f;
-        float mag = sqrtf(ax * ax + ay * ay + az * az);
+        float mag = soft_sqrtf(ax * ax + ay * ay + az * az);
 
         // Acumulăm abaterea de la 1g (gravitaţie) pentru clasificarea activităţii.
         // build_json consumă acumulatorul atomic la fiecare POST şi îl resetează.
@@ -620,8 +642,9 @@ static void fall_task(void *)
                     if ((now_ms - freefall_start_ms) >= FALL_FREEFALL_MIN_MS) {
                         state          = FALL_MONITORING_STILLNESS;
                         state_start_ms = now_ms;
-                        printf("[FALL] Impact dupa %lldms free-fall (|a|=%.2fg)\n",
-                               now_ms - freefall_start_ms, mag);
+                        int mag_i = (int)(mag * 100 + 0.5f);
+                        printf("[FALL] Impact dupa %lldms free-fall (|a|=%d.%02dg)\n",
+                               now_ms - freefall_start_ms, mag_i/100, mag_i%100);
                     } else {
                         state = FALL_IDLE;  // free-fall prea scurt = fals trigger
                     }
@@ -1224,16 +1247,16 @@ static void on_wifi_event(void *, esp_event_base_t base, int32_t id, void *data)
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
         s_wifi_ok = false;
-        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);  // yellow on = offline
+        gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 1);
         if (s_wifi_retry < WIFI_MAX_RETRY) {
+            ++s_wifi_retry;          // printf omis — sys_evt stack prea mic pentru vfprintf
             esp_wifi_connect();
-            printf("[WiFi] Reconnecting (%d/%d)...\n", ++s_wifi_retry, WIFI_MAX_RETRY);
         } else {
             xEventGroupSetBits(s_wifi_eg, WIFI_FAIL_BIT);
         }
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
-        ip_event_got_ip_t *e = (ip_event_got_ip_t *)data;
-        printf("[WiFi] IP: " IPSTR "\n", IP2STR(&e->ip_info.ip));
+        // printf omis — vfprintf alocă ~1072B pe stivă și provoacă stack overflow în sys_evt
+        s_got_ip     = ((ip_event_got_ip_t *)data)->ip_info.ip;
         s_wifi_retry = 0;
         s_wifi_ok    = true;
         // Setează 8.8.8.8 direct în tabelul LWIP (index 1 = backup).
@@ -1322,8 +1345,8 @@ static bool wifi_setup(void)
     wifi_load_credentials();
 
     if (s_wifi_net_count == 0) {
-        printf("[WiFi] Nicio retea configurata — porneste offline\n");
-        return false;
+        provisioning_mode();   // starts SoftAP + HTTP form; calls esp_restart() on save
+        return false;          // unreachable
     }
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -1341,8 +1364,13 @@ static bool wifi_setup(void)
 
     // Try each stored network in sequence
     for (uint8_t i = 0; i < s_wifi_net_count; i++) {
-        if (wifi_try_connect(i)) return true;
-        printf("[WiFi] \"%s\" failed, trying next...\n", s_wifi_ssids[i]);
+        if (wifi_try_connect(i)) {
+            // Log IP here — safe context with full stack (unlike sys_evt event handler)
+            printf("[WiFi] IP: " IPSTR "\n", IP2STR(&s_got_ip));
+            return true;
+        }
+        printf("[WiFi] \"%s\" failed (after %d retries), trying next...\n",
+               s_wifi_ssids[i], s_wifi_retry);
     }
     return false;
 }
@@ -1678,7 +1706,7 @@ static void sleep_off_cb(void *)
     printf("[SLP] LED galben + OLED stinse (5s după intrarea în sleep)\n");
 }
 
-static void heartbeat_send(void *)
+static void heartbeat_send(void)
 {
     if (!s_wifi_ok || g_sleep_mode) return;
     int rssi = 0;
@@ -1933,8 +1961,10 @@ static void sensors_self_test(bool mpu_present, bool max_present,
     {
         float t = 0.0f;
         bool ok = mlx_read_temp(&t);
-        printf("[SENS] MLX90614: %s | temp=%.2f C\n",
-               ok ? "FUNCTIONAL" : "FAULT (no I2C response)", t);
+        { int ti = (int)(t * 100 + (t >= 0 ? 0.5f : -0.5f));
+          printf("[SENS] MLX90614: %s | temp=%s%d.%02dC\n",
+                 ok ? "FUNCTIONAL" : "FAULT (no I2C response)",
+                 ti < 0 ? "-" : "", (ti < 0 ? -ti : ti)/100, (ti < 0 ? -ti : ti)%100); }
     }
 
     // GPS — citeşte 200 ms din UART, verifică dacă vin caractere NMEA
@@ -2004,11 +2034,21 @@ static void build_json(char *buf, size_t sz,
     if (max_ok) n += snprintf(buf+n, sz-n, "\"bpm\":%d,\"spo2\":%d,", g_bpm, g_spo2);
     else        n += snprintf(buf+n, sz-n, "\"bpm\":0,\"spo2\":0,");
 
-    if (mlx_ok) n += snprintf(buf+n, sz-n, "\"temperature\":%.2f,", temp);
-    else        n += snprintf(buf+n, sz-n, "\"temperature\":null,");
+    if (mlx_ok) {
+        int ti = (int)(temp * 100 + (temp >= 0 ? 0.5f : -0.5f));
+        n += snprintf(buf+n, sz-n, "\"temperature\":%s%d.%02d,",
+                      ti < 0 ? "-" : "", (ti < 0 ? -ti : ti)/100, (ti < 0 ? -ti : ti)%100);
+    } else {
+        n += snprintf(buf+n, sz-n, "\"temperature\":null,");
+    }
 
-    if (g_gps.valid)
-        snprintf(buf+n, sz-n, "\"neo6m\":\"%.6f,%.6f\"}", g_gps.lat, g_gps.lon);
+    if (g_gps.valid) {
+        int lat_i = (int)(g_gps.lat * 1000000 + (g_gps.lat >= 0 ? 0.5f : -0.5f));
+        int lon_i = (int)(g_gps.lon * 1000000 + (g_gps.lon >= 0 ? 0.5f : -0.5f));
+        snprintf(buf+n, sz-n, "\"neo6m\":\"%s%d.%06d,%s%d.%06d\"}",
+                 lat_i < 0 ? "-" : "", (lat_i < 0 ? -lat_i : lat_i)/1000000, (lat_i < 0 ? -lat_i : lat_i)%1000000,
+                 lon_i < 0 ? "-" : "", (lon_i < 0 ? -lon_i : lon_i)/1000000, (lon_i < 0 ? -lon_i : lon_i)%1000000);
+    }
     else
         snprintf(buf+n, sz-n, "\"neo6m\":null}");
 }
@@ -2121,13 +2161,6 @@ extern "C" void app_main(void)
     queue_init();
     panic_queue_init();
 
-    // Heartbeat timer — fires every HEARTBEAT_MS
-    esp_timer_create_args_t hb_args = {};
-    hb_args.callback = heartbeat_send;
-    hb_args.name     = "heartbeat";
-    esp_timer_create(&hb_args, &s_hb_timer);
-    esp_timer_start_periodic(s_hb_timer, (uint64_t)HEARTBEAT_MS * 1000ULL);
-
     // Sleep-off timer (one-shot) — stinge LED galben + OLED după 5s în sleep
     esp_timer_create_args_t so_args = {};
     so_args.callback = sleep_off_cb;
@@ -2160,6 +2193,7 @@ extern "C" void app_main(void)
     int16_t accel[3] = {}, gyro[3] = {};
     uint16_t ir = 0, red = 0;
     uint32_t last_post_ms = 0;
+    uint32_t last_hb_ms   = 0;
     static char json_buf[512];
 
     while (true) {
@@ -2220,6 +2254,13 @@ extern "C" void app_main(void)
                     queue_push(json_buf);
                 }
             }
+        }
+
+        // Heartbeat runs in main-loop context (not a timer callback) to avoid stack
+        // overflow in the esp_timer task — mbedTLS HTTPS needs ~6KB, timer task has ~4KB.
+        if ((now - last_hb_ms) >= HEARTBEAT_MS) {
+            last_hb_ms = now;
+            heartbeat_send();
         }
 
         esp_task_wdt_reset();   // confirmă că main loop-ul rulează

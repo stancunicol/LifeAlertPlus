@@ -104,12 +104,16 @@
 							<tbody>
 								@foreach (var row in FilteredRows)
 								{
-									<tr class="@GetRowClass(row.Online)">
+									<tr class="@GetRowClass(row.Online) @(row.DeletedAt != null ? "row-pending-delete" : "")">
 										<td>
 											<div class="person-inline">
 												<div class="mini-avatar">@GetInitials(row.PersonName)</div>
 												<div class="person-inline-info">
 													<span class="person-name">@row.PersonName</span>
+													@if (row.DeletedAt != null)
+													{
+														<span class="days-remaining-badge">@DaysUntilDeletion(row.DeletedAt.Value)d left</span>
+													}
 												</div>
 											</div>
 										</td>
@@ -131,12 +135,20 @@
 											</span>
 											@if (row.HasAlert)
 											{
-												<span class="alert-badge">⚠️</span>
+												<span class="alert-badge">&#x26A0;&#xFE0F;</span>
 											}
 										</td>
 										<td class="date-cell">@row.LastUpdate</td>
 										<td class="actions-cell">
-											<button class="btn-details" @onclick='@(() => NavigateToSelected(row.PersonId))'>@T("monUsers.details")</button>
+											@if (row.DeletedAt == null)
+											{
+												<button class="btn-details" @onclick='@(() => NavigateToSelected(row.PersonId))'>@T("monUsers.details")</button>
+												<button class="btn-delete-row" @onclick='@(() => OpenDeleteConfirm(row))'>Delete</button>
+											}
+											else
+											{
+												<button class="btn-restore-row" @onclick='@(async () => await ReactivateAsync(row.PersonId))'>&#8617; Restore</button>
+											}
 										</td>
 									</tr>
 								}
@@ -148,3 +160,25 @@
 		}
 	</div>
 </div>
+
+@if (_showDeleteConfirm && _deleteTarget != null)
+{
+    <div class="modal-overlay" @onclick="CloseDeleteConfirm">
+        <div class="modal-content modal-confirm" @onclick:stopPropagation="true">
+            <div class="modal-icon-header delete">&#x1F5D1;&#xFE0F;</div>
+            <div class="modal-header">
+                <h3>@T("card.confirmRemoveTitle")</h3>
+                <button class="close-btn" @onclick="CloseDeleteConfirm">&#x2715;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-message">@string.Format(T("card.confirmRemoveBody"), _deleteTarget.PersonName)</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn secondary" @onclick="CloseDeleteConfirm" disabled="@_isProcessingDelete">@T("modal.cancel")</button>
+                <button type="button" class="modal-btn danger" @onclick="ConfirmSoftDeleteAsync" disabled="@_isProcessingDelete">
+                    @(_isProcessingDelete ? T("archive.processing") : T("card.removeAction"))
+                </button>
+            </div>
+        </div>
+    </div>
+}

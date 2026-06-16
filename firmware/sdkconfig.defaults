@@ -1,7 +1,14 @@
 # Default project configuration committed to source control.
 # Override in your local sdkconfig (gitignored) — do NOT put real secrets here.
 
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
 CONFIG_LIFEALERT_API_BASE_URL="http://localhost:5176/"
 CONFIG_LIFEALERT_API_DEVICE_SECRET="idontknowwhattoputhere"
 CONFIG_LIFEALERT_DEFAULT_WIFI_SSID=""
 CONFIG_LIFEALERT_DEFAULT_WIFI_PASS=""
+
+# sys_evt stack: default 2304 bytes overflows when WiFi driver calls vfprintf internally.
+# vfprintf_r alone needs 1072 bytes; 4096 gives enough headroom for the full dispatch chain.
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=4096

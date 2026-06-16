@@ -22,7 +22,7 @@ app.add_middleware(
 )
 
 MODEL_DIR = os.environ.get("MODEL_DIR", os.path.join(os.path.dirname(__file__), "models"))
-ARTIFACT_FILE = os.environ.get("ARTIFACT_FILE", "patient_monitor_artifacts (3).joblib")
+ARTIFACT_FILE = os.environ.get("ARTIFACT_FILE", "patient_monitor_artifacts (3) (2).joblib")
 
 model = None
 scaler = None

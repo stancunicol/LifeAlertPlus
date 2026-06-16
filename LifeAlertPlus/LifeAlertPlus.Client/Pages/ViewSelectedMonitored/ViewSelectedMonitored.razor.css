@@ -348,6 +348,7 @@
     display: flex;
     flex-direction: column;
     gap: 25px;
+    min-width: 0;
 }
 
 .sidebar-section {
@@ -361,6 +362,7 @@
     border-radius: 20px;
     padding: 30px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    min-width: 0;
 }
 
 .section-header {
@@ -419,10 +421,19 @@
     flex-direction: column;
     gap: 28px;
     padding-top: 4px;
+    min-width: 0;
 }
 
 .chart-item {
     width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.charts-scroll-outer .chart-item {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .chart-item-title {
@@ -433,7 +444,7 @@
     font-size: 13px;
     color: #777;
     margin-bottom: 6px;
-    padding-left: 90px;
+    padding-left: 110px;
 }
 
 .chart-color-dot {
@@ -444,13 +455,18 @@
 }
 
 .chart-color-dot.hr {
-    background: #A5D6A7;
-    box-shadow: 0 0 0 2px rgba(165, 214, 167, 0.25);
+    background: #66BB6A;
+    box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.2);
 }
 
 .chart-color-dot.temp {
-    background: #FF9A6C;
-    box-shadow: 0 0 0 2px rgba(255, 154, 108, 0.25);
+    background: #FF7043;
+    box-shadow: 0 0 0 3px rgba(255, 112, 67, 0.2);
+}
+
+.chart-color-dot.spo2 {
+    background: #1565c0;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.2);
 }
 
 .chart-unit-badge {
@@ -463,10 +479,47 @@
     letter-spacing: 0.03em;
 }
 
+/* ── Charts scroll outer wrapper ────────────────────────── */
+.charts-scroll-outer {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    min-width: 0;
+}
+
+/* ── Scrollable chart container ─────────────────────────── */
+.chart-svg-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: #A5D6A7 #f0f0f0;
+}
+
+.chart-svg-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.chart-svg-scroll::-webkit-scrollbar-track {
+    background: #f4f5f7;
+    border-radius: 4px;
+}
+
+.chart-svg-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #A5D6A7, #66BB6A);
+    border-radius: 4px;
+}
+
+.chart-svg-hidden {
+    display: none;
+}
+
 /* ── SVG base ───────────────────────────────────────────── */
 .chart-svg {
-    width: 100%;
-    height: auto;
+    width: 3300px;
+    height: 275px;
     overflow: visible;
     display: block;
 }
@@ -501,6 +554,13 @@
     text-anchor: start;
 }
 
+/* ── Chart area background ──────────────────────────────── */
+.chart-bg {
+    fill: #F9FDF9;
+    stroke: #EAF3EA;
+    stroke-width: 1;
+}
+
 /* ── Area fill ──────────────────────────────────────────── */
 .chart-area {
     stroke: none;
@@ -518,14 +578,20 @@
 }
 
 .hr-line {
-    stroke: #A5D6A7;
-    filter: drop-shadow(0 1px 3px rgba(165, 214, 167, 0.4));
+    stroke: #66BB6A;
+    filter: drop-shadow(0 2px 4px rgba(102, 187, 106, 0.45));
 }
 
 .temp-line {
-    stroke: #FF9A6C;
-    filter: drop-shadow(0 1px 3px rgba(255, 154, 108, 0.4));
+    stroke: #FF7043;
+    filter: drop-shadow(0 2px 4px rgba(255, 112, 67, 0.45));
     animation-delay: 0.15s;
+}
+
+.spo2-line {
+    stroke: #1565c0;
+    filter: drop-shadow(0 2px 4px rgba(21, 101, 192, 0.45));
+    animation-delay: 0.30s;
 }
 
 /* ── Data dots ──────────────────────────────────────────── */
@@ -540,14 +606,23 @@
 
 .hr-dot {
     fill: white;
-    stroke: #A5D6A7;
-    stroke-width: 2;
+    stroke: #66BB6A;
+    stroke-width: 2.5;
+    filter: drop-shadow(0 1px 3px rgba(102, 187, 106, 0.3));
 }
 
 .temp-dot {
     fill: white;
-    stroke: #FF9A6C;
-    stroke-width: 2;
+    stroke: #FF7043;
+    stroke-width: 2.5;
+    filter: drop-shadow(0 1px 3px rgba(255, 112, 67, 0.3));
+}
+
+.spo2-dot {
+    fill: white;
+    stroke: #1565c0;
+    stroke-width: 2.5;
+    filter: drop-shadow(0 1px 3px rgba(21, 101, 192, 0.3));
 }
 
 @keyframes drawLine {

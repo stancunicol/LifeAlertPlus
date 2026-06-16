@@ -365,6 +365,7 @@ public partial class AdminPage : ComponentBase
 		StateHasChanged();
 	}
 
+
 	protected void GoToDevicePage(int page)
 	{
 		if (page >= 1 && page <= DeviceTotalPages)

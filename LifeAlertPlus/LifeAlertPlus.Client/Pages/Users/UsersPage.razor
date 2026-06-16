@@ -132,3 +132,25 @@
 		}
 	</div>
 </div>
+
+@if (_showUserDeleteConfirm && _userToDelete != null)
+{
+    <div class="modal-overlay" @onclick="CloseUserDeleteConfirm">
+        <div class="modal-content modal-confirm" @onclick:stopPropagation="true">
+            <div class="modal-icon-header delete">🗑️</div>
+            <div class="modal-header">
+                <h3>Delete user?</h3>
+                <button class="close-btn" @onclick="CloseUserDeleteConfirm">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-message">@string.Format(T("card.confirmRemoveBody"), $"{_userToDelete.FirstName} {_userToDelete.LastName}".Trim())</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn secondary" @onclick="CloseUserDeleteConfirm" disabled="@_isProcessingUserDelete">Cancel</button>
+                <button type="button" class="modal-btn danger" @onclick="ConfirmUserSoftDeleteAsync" disabled="@_isProcessingUserDelete">
+                    @(_isProcessingUserDelete ? "Processing…" : "Delete")
+                </button>
+            </div>
+        </div>
+    </div>
+}

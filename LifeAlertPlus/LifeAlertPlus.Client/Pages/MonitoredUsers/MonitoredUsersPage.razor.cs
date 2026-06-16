@@ -7,6 +7,7 @@ using LifeAlertPlus.Client.Services;
 using LifeAlertPlus.Shared.DTOs.Requests.Monitored;
 using LifeAlertPlus.Shared.DTOs.Responses.UserMonitored;
 using LifeAlertPlus.Shared.DTOs.Responses.Measurement;
+using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using System.Text.Json;
@@ -49,6 +50,10 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 		protected bool IsLoading { get; private set; } = true;
 		protected string? ErrorMessage { get; private set; }
 		private string? _currentUserEmail;
+
+		private MonitoredPersonRow? _deleteTarget;
+		private bool _showDeleteConfirm;
+		private bool _isProcessingDelete;
 
 		protected int TotalMonitors => MonitoredRows
 			.SelectMany(r => r.Monitors)
@@ -150,7 +155,8 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 					person.IsActive && person.DeletedAt == null,
 					FormatDate(person.UpdatedAt ?? person.CreatedAt),
 					monitors,
-					false));
+					false,
+					person.DeletedAt));
 			}
 
 			return rows;
@@ -219,6 +225,52 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			}
 		}
 
+		protected void OpenDeleteConfirm(MonitoredPersonRow row)
+		{
+			_deleteTarget = row;
+			_showDeleteConfirm = true;
+		}
+
+		protected void CloseDeleteConfirm()
+		{
+			_showDeleteConfirm = false;
+			_deleteTarget = null;
+		}
+
+		protected async Task ConfirmSoftDeleteAsync()
+		{
+			if (_deleteTarget == null) return;
+			_isProcessingDelete = true;
+			try
+			{
+				await MonitoredApiClient.RemoveMonitoredAsync(_deleteTarget.PersonId);
+				await LoadDataAsync();
+			}
+			finally
+			{
+				_isProcessingDelete = false;
+				CloseDeleteConfirm();
+			}
+		}
+
+		protected async Task ReactivateAsync(Guid id)
+		{
+			await MonitoredApiClient.ReactivateMonitoredAsync(id);
+			await LoadDataAsync();
+		}
+
+		private static bool IsEspDataFresh(ESPDataResponseDTO esp, int thresholdSeconds)
+		{
+			if (esp.Date <= 0) return false;
+			return (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - esp.Date) <= thresholdSeconds;
+		}
+
+		protected static int DaysUntilDeletion(DateTime deletedAt)
+		{
+			var remaining = deletedAt.AddDays(7) - DateTime.UtcNow;
+			return Math.Max(0, (int)Math.Ceiling(remaining.TotalDays));
+		}
+
 		protected string FullName(MonitoredUserDTO user)
 		{
 			return $"{user.FirstName} {user.LastName}".Trim();
@@ -238,7 +290,8 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			bool Online,
 			string LastUpdate,
 			IReadOnlyList<MonitorInfo> Monitors,
-			bool HasAlert);
+			bool HasAlert,
+			DateTime? DeletedAt);
 
 		private async Task PopulateOnlineAndAlertsAsync()
 		{
@@ -258,7 +311,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 						try
 						{
 							var esp = await MonitoredApiClient.GetEspDataAsync(device);
-							online = esp?.IsAvailable == true;
+							online = esp?.IsAvailable == true && IsEspDataFresh(esp, 300);
 						}
 						catch { online = false; }
 

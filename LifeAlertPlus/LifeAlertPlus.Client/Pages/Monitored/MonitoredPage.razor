@@ -121,6 +121,13 @@
                             <span class="archive-btn-icon">📦</span>
                             <span class="archive-btn-label">@T("archive.archiveAction")</span>
                         </button>
+                        <button class="card-remove-btn"
+                                title="@T("card.removeAction")"
+                                @onclick="() => OpenSoftDeleteConfirm(card.Person)"
+                                @onclick:stopPropagation="true">
+                            <span class="archive-btn-icon">🗑️</span>
+                            <span class="archive-btn-label">@T("card.removeAction")</span>
+                        </button>
                         <div class="card-header-colored @GetCardStatus(card).ToLower()">
                             <div class="header-top">
                                 <div class="person-avatar-big">@GetInitials($"{card.Person.FirstName} {card.Person.LastName}")</div>
@@ -342,6 +349,32 @@ else
                 <button type="button" class="modal-btn secondary" @onclick="CloseActionModal" disabled="@_isProcessingAction">@T("modal.cancel")</button>
                 <button type="button" class="modal-btn primary" @onclick="ConfirmRestoreAsync" disabled="@_isProcessingAction">
                     @(_isProcessingAction ? T("archive.processing") : T("archive.restoreAction"))
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showSoftDeleteConfirm && _personPendingAction != null)
+{
+    <div class="modal-overlay" @onclick="CloseActionModal">
+        <div class="modal-content modal-confirm" @onclick:stopPropagation="true">
+            <div class="modal-icon-header delete">🗑️</div>
+            <div class="modal-header">
+                <h3>@T("card.confirmRemoveTitle")</h3>
+                <button class="close-btn" @onclick="CloseActionModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-message">@string.Format(T("card.confirmRemoveBody"), $"{_personPendingAction.FirstName} {_personPendingAction.LastName}")</p>
+                @if (!string.IsNullOrEmpty(_actionError))
+                {
+                    <div class="error-alert">@_actionError</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn secondary" @onclick="CloseActionModal" disabled="@_isProcessingAction">@T("modal.cancel")</button>
+                <button type="button" class="modal-btn danger" @onclick="ConfirmSoftDeleteAsync" disabled="@_isProcessingAction">
+                    @(_isProcessingAction ? T("archive.processing") : T("card.removeAction"))
                 </button>
             </div>
         </div>

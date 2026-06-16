@@ -13,7 +13,6 @@
                 <span class="back-icon">←</span> @T("selected.goBack")
             </button>
             <div class="top-actions">
-                <button class="btn-action-main">📤 @T("selected.export")</button>
             </div>
         </div>
 
@@ -138,6 +137,10 @@
                     {
                         <p class="stat-status no-data-status">@T("selected.noData")</p>
                     }
+                    else if (_isLastKnownGps)
+                    {
+                        <p class="stat-status normal gps-last-coords">@T("selected.gpsLastKnown")</p>
+                    }
                     else
                     {
                         <p class="stat-status @GetGPSStatus(Person.GPS)">@GetGPSStatusText(Person.GPS)</p>
@@ -148,7 +151,7 @@
 
         <div class="map-section section-card">
             <div class="section-header">
-                <h2>📍 @T("selected.currentLocation")</h2>
+                <h2>📍 @(_isLastKnownGps ? T("selected.gpsLastKnown") : T("selected.currentLocation"))</h2>
             </div>
             <div class="map-wrapper">
                 @if (GetGPSStatus(Person.GPS) == "disabled")
@@ -179,6 +182,7 @@
                     </div>
 
                     <div class="charts-wrapper">
+                        <div class="charts-scroll-outer">
                         <!-- Heart Rate -->
                         <div class="chart-item">
                             <div class="chart-item-title">
@@ -186,24 +190,33 @@
                                 @T("selected.heartRate")
                                 <span class="chart-unit-badge">bpm</span>
                             </div>
-                            <svg @ref="_hrSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
+                            @if (HeartRatePoints.Count == 0 && !IsLoading)
+                            {
+                                <div class="chart-empty-state">
+                                    <span class="chart-empty-icon">📈</span>
+                                    <p>@T("selected.noChartData")</p>
+                                </div>
+                            }
+                            <div class="chart-svg-scroll @(HeartRatePoints.Count == 0 ? "chart-svg-hidden" : "")">
+                            <svg @ref="_hrSvgRef" class="chart-svg" viewBox="0 0 2400 200" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="hrGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="#A5D6A7" stop-opacity="0.3" />
-                                        <stop offset="100%" stop-color="#A5D6A7" stop-opacity="0.02" />
+                                        <stop offset="0%" stop-color="#66BB6A" stop-opacity="0.35" />
+                                        <stop offset="100%" stop-color="#66BB6A" stop-opacity="0.03" />
                                     </linearGradient>
                                 </defs>
-                                <line x1="90" y1="15" x2="785" y2="15" class="grid-line" />
-                                <line x1="90" y1="51" x2="785" y2="51" class="grid-line" />
-                                <line x1="90" y1="88" x2="785" y2="88" class="grid-line" />
-                                <line x1="90" y1="124" x2="785" y2="124" class="grid-line" />
-                                <line x1="90" y1="160" x2="785" y2="160" class="grid-line" />
-                                <line x1="90" y1="15" x2="90" y2="160" class="axis-line" />
-                                <line x1="90" y1="160" x2="785" y2="160" class="axis-line" />
-                                <g>@((MarkupString)"<text x=\"58\" y=\"19\" class=\"chart-y-label\">120</text>")</g>
-                                <g>@((MarkupString)"<text x=\"58\" y=\"55\" class=\"chart-y-label\">100</text>")</g>
-                                <g>@((MarkupString)"<text x=\"58\" y=\"92\" class=\"chart-y-label\">80</text>")</g>
-                                <g>@((MarkupString)"<text x=\"58\" y=\"128\" class=\"chart-y-label\">60</text>")</g>
+                                <rect x="110" y="15" width="2275" height="145" rx="3" class="chart-bg" />
+                                <line x1="110" y1="15" x2="2385" y2="15" class="grid-line" />
+                                <line x1="110" y1="51" x2="2385" y2="51" class="grid-line" />
+                                <line x1="110" y1="88" x2="2385" y2="88" class="grid-line" />
+                                <line x1="110" y1="124" x2="2385" y2="124" class="grid-line" />
+                                <line x1="110" y1="160" x2="2385" y2="160" class="grid-line" />
+                                <line x1="110" y1="15" x2="110" y2="160" class="axis-line" />
+                                <line x1="110" y1="160" x2="2385" y2="160" class="axis-line" />
+                                <g>@((MarkupString)"<text x=\"58\" y=\"19\" class=\"chart-y-label\">140</text>")</g>
+                                <g>@((MarkupString)"<text x=\"58\" y=\"55\" class=\"chart-y-label\">115</text>")</g>
+                                <g>@((MarkupString)"<text x=\"58\" y=\"92\" class=\"chart-y-label\">90</text>")</g>
+                                <g>@((MarkupString)"<text x=\"58\" y=\"128\" class=\"chart-y-label\">65</text>")</g>
                                 <g>@((MarkupString)"<text x=\"58\" y=\"164\" class=\"chart-y-label\">40</text>")</g>
                                 @if (HeartRatePoints.Count >= 1)
                                 {
@@ -223,6 +236,7 @@
                                     <g>@((MarkupString)$"<text x=\"{lx}\" y=\"180\" class=\"chart-x-label\" text-anchor=\"middle\">{lbl.Label}</text>")</g>
                                 }
                             </svg>
+                            </div>
                         </div>
 
                         <!-- Temperature -->
@@ -232,20 +246,29 @@
                                 @T("selected.temperature")
                                 <span class="chart-unit-badge">°C</span>
                             </div>
-                            <svg @ref="_tempSvgRef" class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
+                            @if (TemperaturePoints.Count == 0 && !IsLoading)
+                            {
+                                <div class="chart-empty-state">
+                                    <span class="chart-empty-icon">🌡️</span>
+                                    <p>@T("selected.noChartData")</p>
+                                </div>
+                            }
+                            <div class="chart-svg-scroll @(TemperaturePoints.Count == 0 ? "chart-svg-hidden" : "")">
+                            <svg @ref="_tempSvgRef" class="chart-svg" viewBox="0 0 2400 200" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="tempGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="#FF9A6C" stop-opacity="0.3" />
-                                        <stop offset="100%" stop-color="#FF9A6C" stop-opacity="0.02" />
+                                        <stop offset="0%" stop-color="#FF7043" stop-opacity="0.35" />
+                                        <stop offset="100%" stop-color="#FF7043" stop-opacity="0.03" />
                                     </linearGradient>
                                 </defs>
-                                <line x1="90" y1="15" x2="785" y2="15" class="grid-line" />
-                                <line x1="90" y1="51" x2="785" y2="51" class="grid-line" />
-                                <line x1="90" y1="88" x2="785" y2="88" class="grid-line" />
-                                <line x1="90" y1="124" x2="785" y2="124" class="grid-line" />
-                                <line x1="90" y1="160" x2="785" y2="160" class="grid-line" />
-                                <line x1="90" y1="15" x2="90" y2="160" class="axis-line" />
-                                <line x1="90" y1="160" x2="785" y2="160" class="axis-line" />
+                                <rect x="110" y="15" width="2275" height="145" rx="3" class="chart-bg" />
+                                <line x1="110" y1="15" x2="2385" y2="15" class="grid-line" />
+                                <line x1="110" y1="51" x2="2385" y2="51" class="grid-line" />
+                                <line x1="110" y1="88" x2="2385" y2="88" class="grid-line" />
+                                <line x1="110" y1="124" x2="2385" y2="124" class="grid-line" />
+                                <line x1="110" y1="160" x2="2385" y2="160" class="grid-line" />
+                                <line x1="110" y1="15" x2="110" y2="160" class="axis-line" />
+                                <line x1="110" y1="160" x2="2385" y2="160" class="axis-line" />
                                 <g>@((MarkupString)"<text x=\"58\" y=\"19\" class=\"chart-y-label\">39°</text>")</g>
                                 <g>@((MarkupString)"<text x=\"58\" y=\"55\" class=\"chart-y-label\">38°</text>")</g>
                                 <g>@((MarkupString)"<text x=\"58\" y=\"92\" class=\"chart-y-label\">37°</text>")</g>
@@ -253,7 +276,7 @@
                                 <g>@((MarkupString)"<text x=\"58\" y=\"164\" class=\"chart-y-label\">35°</text>")</g>
                                 @if (TemperaturePoints.Count >= 1)
                                 {
-                                    <path d="@GenerateAreaPath(TemperaturePoints)" class="chart-area temp-area" fill="url(#tempGradient)" />
+                                    <path d="@GenerateAreaPath(TemperaturePoints)" class="chart-area" fill="url(#tempGradient)" />
                                     <path d="@GenerateSmoothPath(TemperaturePoints)" class="chart-line temp-line" />
                                     @foreach (var pt in TemperaturePoints)
                                     {
@@ -269,6 +292,7 @@
                                     <g>@((MarkupString)$"<text x=\"{lx}\" y=\"180\" class=\"chart-x-label\" text-anchor=\"middle\">{lbl.Label}</text>")</g>
                                 }
                             </svg>
+                            </div>
                         </div>
                         <!-- SpO2 -->
                         <div class="chart-item">
@@ -285,21 +309,21 @@
                                 </div>
                             }
                             <div class="chart-svg-scroll @(SpO2Points.Count == 0 ? "chart-svg-hidden" : "")">
-                            <svg class="chart-svg" viewBox="0 0 800 200" preserveAspectRatio="xMidYMid meet">
+                            <svg class="chart-svg" viewBox="0 0 2400 200" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <linearGradient id="spo2GradientV" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="0%" stop-color="#1565c0" stop-opacity="0.30" />
                                         <stop offset="100%" stop-color="#1565c0" stop-opacity="0.03" />
                                     </linearGradient>
                                 </defs>
-                                <rect x="90" y="15" width="710" height="145" rx="3" class="chart-bg" />
-                                <line x1="90" y1="15" x2="800" y2="15" class="grid-line" />
-                                <line x1="90" y1="51" x2="800" y2="51" class="grid-line" />
-                                <line x1="90" y1="88" x2="800" y2="88" class="grid-line" />
-                                <line x1="90" y1="124" x2="800" y2="124" class="grid-line" />
-                                <line x1="90" y1="160" x2="800" y2="160" class="grid-line" />
-                                <line x1="90" y1="15" x2="90" y2="160" class="axis-line" />
-                                <line x1="90" y1="160" x2="800" y2="160" class="axis-line" />
+                                <rect x="110" y="15" width="2275" height="145" rx="3" class="chart-bg" />
+                                <line x1="110" y1="15" x2="2385" y2="15" class="grid-line" />
+                                <line x1="110" y1="51" x2="2385" y2="51" class="grid-line" />
+                                <line x1="110" y1="88" x2="2385" y2="88" class="grid-line" />
+                                <line x1="110" y1="124" x2="2385" y2="124" class="grid-line" />
+                                <line x1="110" y1="160" x2="2385" y2="160" class="grid-line" />
+                                <line x1="110" y1="15" x2="110" y2="160" class="axis-line" />
+                                <line x1="110" y1="160" x2="2385" y2="160" class="axis-line" />
                                 <g>@((MarkupString)"<text x=\"55\" y=\"19\" class=\"chart-y-label\">100%</text>")</g>
                                 <g>@((MarkupString)"<text x=\"55\" y=\"55\" class=\"chart-y-label\">96%</text>")</g>
                                 <g>@((MarkupString)"<text x=\"55\" y=\"92\" class=\"chart-y-label\">93%</text>")</g>
@@ -324,6 +348,7 @@
                                 }
                             </svg>
                             </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -368,43 +393,7 @@
                     </div>
                 </div>
 
-                <div class="section-card">
-                    <div class="section-header">
-                        <h2>📝 @T("doctorNotes.title")</h2>
-                        <button class="btn-action-secondary" @onclick="OpenDoctorNotesModal">✏️ @T("doctorNotes.add")</button>
-                    </div>
 
-                    @if (_doctorNotesLoading)
-                    {
-                        <div class="doctor-notes-loading">
-                            <div class="ai-spinner"></div>
-                        </div>
-                    }
-                    else if (_doctorNotes.Count == 0)
-                    {
-                        <div class="doctor-notes-empty">
-                            <span class="doctor-notes-empty-icon">📝</span>
-                            <p>@T("doctorNotes.none")</p>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="doctor-notes-list">
-                            @foreach (var note in _doctorNotes.OrderByDescending(n => n.CreatedAt))
-                            {
-                                <div class="doctor-note-card">
-                                    <div class="doctor-note-header">
-                                        <div class="doctor-note-doctor">
-                                            <span class="doctor-note-email">@note.DoctorEmail</span>
-                                        </div>
-                                        <span class="doctor-note-date">@note.UpdatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</span>
-                                    </div>
-                                    <div class="doctor-note-content">@note.Content</div>
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
             </div>
         </div>
     }
@@ -418,26 +407,3 @@
     }
 </div>
 
-@if (_showDoctorNotesModal)
-{
-    <div class="modal-overlay" @onclick="CloseDoctorNotesModal">
-        <div class="modal-content email-modal" @onclick:stopPropagation="true">
-            <div class="modal-header">
-                <h2>📝 @T("doctorNotes.addNote")</h2>
-                <button class="modal-close" @onclick="CloseDoctorNotesModal">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>@T("doctorNotes.noteContent")</label>
-                    <textarea @bind="_doctorNoteContent" placeholder="@T("doctorNotes.placeholder")" rows="6"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" @onclick="CloseDoctorNotesModal">@T("common.cancel")</button>
-                <button class="btn-save" @onclick="SaveDoctorNoteAsync" disabled="@(_isSavingDoctorNote || string.IsNullOrWhiteSpace(_doctorNoteContent))">
-                    @(_isSavingDoctorNote ? T("doctorNotes.saving") : "💾 " + T("common.save"))
-                </button>
-            </div>
-        </div>
-    </div>
-}

@@ -241,6 +241,9 @@ namespace LifeAlertPlus.Client.Services
             ["archive.confirmDeleteBody"] = "Permanently delete {0}? This will erase all measurements, notifications and aggregates linked to this person.",
             ["archive.confirmDeleteWarning"] = "⚠️ This action cannot be undone.",
             ["archive.selectedNotice"] = "Live monitoring, alerts and predictions are paused. Historical measurements and charts are still available below.",
+            ["card.removeAction"] = "Delete",
+            ["card.confirmRemoveTitle"] = "Delete patient?",
+            ["card.confirmRemoveBody"] = "Remove {0}? They will remain active and visible to the admin for 7 days. A restore button will be available during this period, after which data is permanently deleted.",
 
             // GDPR
             ["register.consentText"] = "",
@@ -779,6 +782,7 @@ namespace LifeAlertPlus.Client.Services
             ["selected.temperature"] = "Temperature",
             ["selected.gpsLocation"] = "GPS Location",
             ["selected.gpsLastCoords"] = "Last GPS coordinates received",
+            ["selected.gpsLastKnown"] = "Last known location",
             ["selected.currentLocation"] = "Current Location",
             ["selected.noCoordinates"] = "No coordinates available.",
             ["selected.vitalSigns"] = "Vital Signs Evolution",
@@ -1331,6 +1335,9 @@ namespace LifeAlertPlus.Client.Services
             ["archive.confirmDeleteBody"] = "Ștergi definitiv pe {0}? Toate măsurătorile, notificările și agregările asociate vor fi eliminate.",
             ["archive.confirmDeleteWarning"] = "⚠️ Această acțiune nu poate fi anulată.",
             ["archive.selectedNotice"] = "Monitorizarea live, alertele și predicțiile sunt suspendate. Măsurătorile și graficele istorice sunt disponibile mai jos.",
+            ["card.removeAction"] = "Șterge",
+            ["card.confirmRemoveTitle"] = "Ștergi pacientul?",
+            ["card.confirmRemoveBody"] = "Ștergi pe {0}? Va rămâne activ și vizibil pentru admin timp de 7 zile. Un buton de refacere va fi disponibil în acest interval, după care datele vor fi șterse definitiv.",
 
             // GDPR
             ["register.consentText"] = "",
@@ -1869,6 +1876,7 @@ namespace LifeAlertPlus.Client.Services
             ["selected.temperature"] = "Temperatură",
             ["selected.gpsLocation"] = "Locație GPS",
             ["selected.gpsLastCoords"] = "Ultimele coordonate GPS primite",
+            ["selected.gpsLastKnown"] = "Ultima locație cunoscută",
             ["selected.currentLocation"] = "Locație curentă",
             ["selected.noCoordinates"] = "Coordonate indisponibile.",
             ["selected.vitalSigns"] = "Evoluția semnelor vitale",

@@ -78,31 +78,6 @@
 		</div>
 	</div>
 
-	<div class="notifications-panel">
-		<div class="notifications-header">
-			<h2>@T("admin.notifications")</h2>
-			<span class="notif-summary">@AlertsCount alerts • @Notifications.Count notifications</span>
-		</div>
-		@if (!Notifications.Any())
-		{
-			<div class="no-notifs">@T("admin.noNotifications")</div>
-		}
-		else
-		{
-			<ul class="notifications-list">
-				@foreach (var n in Notifications)
-				{
-					<li class="notif-item @n.Level">
-						<div class="notif-main">
-							<strong>@n.Title</strong>
-							<div class="notif-message">@n.Message</div>
-						</div>
-						<div class="notif-time">@((n.Time.HasValue) ? FormatDate(n.Time.Value) : "")</div>
-					</li>
-				}
-			</ul>
-		}
-	</div>
 
 	@* ── Device status table ── *@
 	@if (DeviceStatuses.Any())
@@ -132,7 +107,6 @@
 						<th>@T("admin.signal")</th>
 						<th>@T("admin.uptime")</th>
 						<th>@T("admin.heartbeatAge")</th>
-						<th>Acțiuni</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -167,14 +141,6 @@
 							<td>@(d.RssiDbm.HasValue ? $"{d.RssiDbm} dBm" : "-")</td>
 							<td>@FormatUptime(d.UptimeSeconds)</td>
 							<td>@(d.HeartbeatAgeSec.HasValue ? $"{d.HeartbeatAgeSec}s ago" : "-")</td>
-							<td>
-								@if (d.IsDeleted)
-								{
-									<button class="btn-reactivate" @onclick="() => ReactivateMonitoredAsync(d.Id)">
-										↩️ Reactivează
-									</button>
-								}
-							</td>
 						</tr>
 					}
 				</tbody>

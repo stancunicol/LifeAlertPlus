@@ -89,7 +89,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							@foreach (var entry in FilteredEntries)
+							@foreach (var entry in PagedEntries)
 							{
 								<tr>
 									<td>@FormatDate(entry.Timestamp)</td>
@@ -100,6 +100,13 @@
 							}
 						</tbody>
 					</table>
+				</div>
+				<div class="pagination-footer">
+					<span class="pagination-info">Page @HistoryPage of @HistoryTotalPages (@FilteredEntries.Count() total)</span>
+					<div class="pagination-buttons">
+						<button @onclick="() => GoToHistoryPage(HistoryPage - 1)" disabled="@(HistoryPage <= 1)" class="btn-pagination">← Previous</button>
+						<button @onclick="() => GoToHistoryPage(HistoryPage + 1)" disabled="@(HistoryPage >= HistoryTotalPages)" class="btn-pagination">Next →</button>
+					</div>
 				</div>
 			}
 		</div>
