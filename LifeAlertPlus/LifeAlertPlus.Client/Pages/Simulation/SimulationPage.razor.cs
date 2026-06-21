@@ -97,6 +97,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			try
 			{
 				var users = await UserMonitoredApiClient.GetAllMonitoredUsersAsync();
+				var seenIds = new HashSet<Guid>();
 				foreach (var user in users)
 				{
 					if (user.MonitoredPeople == null)
@@ -108,6 +109,9 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 							continue;
 
 						if (person.IsArchived)
+							continue;
+
+						if (!seenIds.Add(person.Id))
 							continue;
 
 						Persons.Add(new SimPerson

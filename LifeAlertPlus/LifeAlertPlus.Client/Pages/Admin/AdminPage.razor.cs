@@ -116,8 +116,12 @@ public partial class AdminPage : ComponentBase
 			// Reset computed status
 			PersonStatuses = new Dictionary<Guid, PersonStatus>();
 
-			// Build list of all monitored people
-			var allPersons = AdminUsers.SelectMany(u => u.MonitoredPeople).ToList();
+			// Build deduplicated list — a person linked to multiple users must appear only once
+			var allPersons = AdminUsers
+				.SelectMany(u => u.MonitoredPeople)
+				.GroupBy(p => p.Id)
+				.Select(g => g.First())
+				.ToList();
 
 			// Parallel fetch ESP data and latest measurement per monitored person (limited concurrency)
 			var semaphore = new System.Threading.SemaphoreSlim(10);

@@ -1044,7 +1044,7 @@ namespace LifeAlertPlus.Client.Services
             // Trend predictions
             ["selected.trendTitle"] = "Trend Predictions (last 2 min)",
             ["selected.trendNoData"] = "Not enough data yet. Predictions appear after a few measurements.",
-            ["selected.trendNone"] = "All vital signs are stable. No concerning trends detected.",
+            ["selected.trendNone"] = "No trends detected.",
             ["selected.trendRising"] = "Rising",
             ["selected.trendFalling"] = "Falling",
             ["selected.trendRate"] = "Rate",
@@ -2129,7 +2129,7 @@ namespace LifeAlertPlus.Client.Services
             // Predicții trend
             ["selected.trendTitle"] = "Predicții Tendințe (ultimele 2 min)",
             ["selected.trendNoData"] = "Date insuficiente. Predicțiile apar după câteva măsurători.",
-            ["selected.trendNone"] = "Toate semnele vitale sunt stabile. Nicio tendință îngrijorătoare detectată.",
+            ["selected.trendNone"] = "Nicio tendință detectată.",
             ["selected.trendRising"] = "Creștere",
             ["selected.trendFalling"] = "Scădere",
             ["selected.trendRate"] = "Rată",

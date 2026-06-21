@@ -9,7 +9,7 @@ COPY ai-service/*.py .
 COPY ai-service/models/ ./models/
 
 ENV MODEL_DIR=/app/models
-ENV ARTIFACT_FILE="patient_monitor_artifacts (3).joblib"
+ENV ARTIFACT_FILE="patient_monitor_artifacts (3) (2).joblib"
 
 EXPOSE 8000
 
