@@ -101,13 +101,16 @@ namespace LifeAlertPlus.API.Services
                     .OrderByDescending(ms => ms.CreatedAt)
                     .FirstOrDefaultAsync();
 
-                // Populate live-data cache for the cards
+                // Populate live-data cache for the cards.
+                // Date is set to 0 so the freshness check treats seeded data as "unknown age"
+                // (shows last known values) rather than immediately marking the device offline.
+                // The real Date gets set on the next actual ESP ingest or simulation cycle.
                 if (!_simulatedData.ContainsKey(serial) && last != null)
                 {
                     _simulatedData[serial] = new LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO
                     {
                         Serial      = serial,
-                        Date        = new DateTimeOffset(last.CreatedAt).ToUnixTimeSeconds(),
+                        Date        = 0,
                         IsAvailable = true,
                         Bpm         = (int)last.Pulse,
                         Spo2        = (int)last.SpO2,

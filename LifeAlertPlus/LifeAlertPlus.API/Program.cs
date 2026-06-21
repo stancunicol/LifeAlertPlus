@@ -227,6 +227,19 @@ catch (Exception seedEx)
     seedLogger.LogError(seedEx, "Seed failed — app will continue without seed data.");
 }
 
+// VAPID configuration check — warn early if keys are missing so push notifications never silently fail
+{
+    var vapidLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    var vapidPub  = builder.Configuration["WebPush:VapidPublicKey"];
+    var vapidPriv = builder.Configuration["WebPush:VapidPrivateKey"];
+    if (string.IsNullOrEmpty(vapidPub) || string.IsNullOrEmpty(vapidPriv))
+        vapidLogger.LogWarning(
+            "VAPID keys are NOT configured. Web Push notifications will be disabled. " +
+            "Set WebPush__VapidPublicKey and WebPush__VapidPrivateKey in Azure App Service Configuration.");
+    else
+        vapidLogger.LogInformation("VAPID keys detected — Web Push notifications are enabled.");
+}
+
 // Step 3: pre-populează SimulationManager cu ultimele măsurători din DB.
 // Fără acest pas, după orice restart utilizatorii văd "no data" pentru câteva secunde.
 try

@@ -16,13 +16,15 @@ namespace LifeAlertPlus.API.Controllers
         {
             var devices = await db.Monitoreds
                 .Where(m => !string.IsNullOrWhiteSpace(m.DeviceSerialNumber))
-                .Select(m => new { m.Id, m.FirstName, m.LastName, m.DeviceSerialNumber, m.IsArchived, m.DeletedAt })
+                .Select(m => new { m.Id, m.FirstName, m.LastName, m.DeviceSerialNumber, m.IsArchived, m.DeletedAt, m.UpdateFrequency })
                 .ToListAsync();
 
+            var nowSec = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var result = devices.Select(d =>
             {
                 var espData = simulationManager.GetData(d.DeviceSerialNumber!);
                 var hb = simulationManager.GetHeartbeat(d.DeviceSerialNumber!);
+                var freshnessThreshold = Math.Max(180, (d.UpdateFrequency ?? 60) * 2 + 60);
                 return new
                 {
                     d.Id,
@@ -32,7 +34,7 @@ namespace LifeAlertPlus.API.Controllers
                     IsDeleted = d.DeletedAt != null,
                     d.DeletedAt,
                     IsOnline = d.DeletedAt == null && espData != null && espData.IsAvailable
-                        && (espData.Date <= 0 || (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - espData.Date) < 120),
+                        && (espData.Date <= 0 || (nowSec - espData.Date) < freshnessThreshold),
                     Battery = espData?.Battery,
                     RssiDbm = hb?.Data.RssiDbm,
                     UptimeSeconds = hb?.Data.UptimeSeconds,

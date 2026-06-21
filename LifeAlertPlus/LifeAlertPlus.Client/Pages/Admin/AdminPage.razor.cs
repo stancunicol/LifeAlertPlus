@@ -139,7 +139,7 @@ public partial class AdminPage : ComponentBase
 							var esp = await MonitoredApiClient.GetEspDataAsync(person.DeviceSerialNumber);
 							var nowSec = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 							online = esp?.IsAvailable == true
-								&& (esp.Date <= 0 || (nowSec - esp.Date) < 120);
+								&& (esp.Date <= 0 || (nowSec - esp.Date) < 300);
 						}
 						catch { online = false; }
 

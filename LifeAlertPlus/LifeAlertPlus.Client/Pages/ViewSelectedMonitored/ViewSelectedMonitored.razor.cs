@@ -671,17 +671,16 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
         private string GetTimeAgo(DateTime dateTime)
         {
-            var timeSpan = DateTime.UtcNow - dateTime;
-
-            if (timeSpan.TotalMinutes < 1)
-                return "Just now";
-            if (timeSpan.TotalHours < 1)
-                return $"{(int)timeSpan.TotalMinutes}m ago";
-            if (timeSpan.TotalDays < 1)
-                return $"{(int)timeSpan.TotalHours}h ago";
-            if (timeSpan.TotalDays < 7)
-                return $"{(int)timeSpan.TotalDays}d ago";
-            return dateTime.ToLocalTime().ToString("MMM dd", System.Globalization.CultureInfo.InvariantCulture);
+            var local = dateTime.Kind == DateTimeKind.Utc ? dateTime.ToLocalTime() : dateTime;
+            var today = DateTime.Now.Date;
+            var culture = Lang.CurrentLanguage == "ro"
+                ? new System.Globalization.CultureInfo("ro-RO")
+                : System.Globalization.CultureInfo.InvariantCulture;
+            if (local.Date == today)
+                return local.ToString("HH:mm", culture);
+            if (local.Year == today.Year)
+                return local.ToString("dd MMM HH:mm", culture);
+            return local.ToString("dd MMM yyyy HH:mm", culture);
         }
 
         private string GetInitials(string name)
