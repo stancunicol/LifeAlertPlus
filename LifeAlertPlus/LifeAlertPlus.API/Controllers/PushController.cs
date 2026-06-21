@@ -19,31 +19,39 @@ namespace LifeAlertPlus.API.Controllers
             var userId = GetCallerId();
             if (userId == null) return Unauthorized();
 
-            var existing = await db.PushSubscriptions
-                .FirstOrDefaultAsync(p => p.Endpoint == req.Endpoint);
+            try
+            {
+                var existing = await db.PushSubscriptions
+                    .FirstOrDefaultAsync(p => p.Endpoint == req.Endpoint);
 
-            if (existing != null)
-            {
-                existing.P256dh = req.P256dh;
-                existing.Auth   = req.Auth;
-                existing.UserId = userId.Value;
-            }
-            else
-            {
-                db.PushSubscriptions.Add(new Domain.Entities.PushSubscription
+                if (existing != null)
                 {
-                    Id        = Guid.NewGuid(),
-                    UserId    = userId.Value,
-                    Endpoint  = req.Endpoint,
-                    P256dh    = req.P256dh,
-                    Auth      = req.Auth,
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
+                    existing.P256dh = req.P256dh;
+                    existing.Auth   = req.Auth;
+                    existing.UserId = userId.Value;
+                }
+                else
+                {
+                    db.PushSubscriptions.Add(new Domain.Entities.PushSubscription
+                    {
+                        Id        = Guid.NewGuid(),
+                        UserId    = userId.Value,
+                        Endpoint  = req.Endpoint,
+                        P256dh    = req.P256dh,
+                        Auth      = req.Auth,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
 
-            await db.SaveChangesAsync();
-            logger.LogInformation("Push subscription saved for user {UserId}", userId);
-            return Ok();
+                await db.SaveChangesAsync();
+                logger.LogInformation("Push subscription saved for user {UserId}", userId);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to save push subscription for user {UserId}", userId);
+                return StatusCode(500, new { Message = ex.Message, Detail = ex.InnerException?.Message });
+            }
         }
 
         [HttpDelete("subscribe")]
