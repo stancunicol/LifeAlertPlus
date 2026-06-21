@@ -31,7 +31,8 @@ namespace LifeAlertPlus.API.Controllers
                     d.IsArchived,
                     IsDeleted = d.DeletedAt != null,
                     d.DeletedAt,
-                    IsOnline = d.DeletedAt == null && (espData?.IsAvailable ?? false),
+                    IsOnline = d.DeletedAt == null && espData != null && espData.IsAvailable
+                        && (espData.Date <= 0 || (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - espData.Date) < 120),
                     Battery = espData?.Battery,
                     RssiDbm = hb?.Data.RssiDbm,
                     UptimeSeconds = hb?.Data.UptimeSeconds,

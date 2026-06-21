@@ -38,6 +38,11 @@ window.webPushSubscribe = async function (apiBase, authToken) {
             body: JSON.stringify({ endpoint: sub.endpoint, p256dh: keys.p256dh, auth: keys.auth })
         });
         console.log('Web Push: subscription saved, status', saveRes.status);
+        if (!saveRes.ok) {
+            const body = await saveRes.text().catch(() => '');
+            console.warn('Web Push: server error saving subscription:', body);
+            return false;
+        }
         return true;
     } catch (e) {
         console.warn('Web Push subscription failed:', e);

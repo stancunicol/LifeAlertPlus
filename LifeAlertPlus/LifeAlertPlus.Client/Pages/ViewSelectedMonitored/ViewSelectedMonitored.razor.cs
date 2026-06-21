@@ -134,12 +134,10 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
                 if (_isCurrentDataFresh)
                 {
-                    if (espData!.Max30100 != null && espData.Max30100.Count >= 2)
-                    {
-                        heartRate = espData.Max30100.ElementAtOrDefault(0);
-                        spO2 = espData.Max30100.ElementAtOrDefault(1);
-                    }
-
+                    heartRate = espData!.Bpm
+                        ?? (espData.Max30100?.Count >= 1 ? espData.Max30100[0] : 0);
+                    spO2 = espData.Spo2
+                        ?? (espData.Max30100?.Count >= 2 ? espData.Max30100[1] : 0);
                     temperature = espData.Temperature ?? 0;
                     gps = espData.Neo6m ?? "No data";
 
@@ -598,20 +596,24 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
                 var alerts = new List<Alert>();
 
+                int alertMinHr  = Person?.MinHeartRate  ?? 60;
+                int alertMaxHr  = Person?.MaxHeartRate  ?? 100;
+                double alertMaxTemp = Person?.MaxTemperature ?? 37.5;
+
                 foreach (var m in measurements.Take(10))
                 {
-                    if (m.Pulse > 100 || m.Pulse < 50)
+                    if (m.Pulse > alertMaxHr || m.Pulse < alertMinHr)
                     {
                         alerts.Add(new Alert
                         {
                             Severity = "Critical",
-                            Title = m.Pulse > 100 ? "High Heart Rate" : "Low Heart Rate",
+                            Title = m.Pulse > alertMaxHr ? "High Heart Rate" : "Low Heart Rate",
                             Description = $"Heart rate: {m.Pulse} bpm",
                             Time = GetTimeAgo(m.CreatedAt)
                         });
                     }
 
-                    if (m.Temperature > 37.5)
+                    if (m.Temperature > alertMaxTemp)
                     {
                         alerts.Add(new Alert
                         {
@@ -731,7 +733,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 UserFullName = "User";
             }
 
-            await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
+            await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentMeasurementsAsync());
+            await LoadRecentAlertsAsync();
             _ = LoadPendingFeedbackAsync();
 
             _refreshTimer = new System.Threading.Timer(_ => _ = RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
@@ -745,7 +748,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             {
                 await InvokeAsync(async () =>
                 {
-                    await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
+                    await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentMeasurementsAsync());
+                    await LoadRecentAlertsAsync();
                     // Reset map so it re-initializes with fresh GPS coordinates
                     _mapInitialized = false;
                     StateHasChanged();

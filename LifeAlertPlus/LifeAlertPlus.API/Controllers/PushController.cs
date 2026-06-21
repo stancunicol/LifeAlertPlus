@@ -39,7 +39,7 @@ namespace LifeAlertPlus.API.Controllers
                         Endpoint  = req.Endpoint,
                         P256dh    = req.P256dh,
                         Auth      = req.Auth,
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc)
                     });
                 }
 

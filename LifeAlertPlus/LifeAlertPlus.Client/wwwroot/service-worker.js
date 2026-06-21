@@ -12,10 +12,11 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache =>
       Promise.allSettled(PRECACHE_URLS.map(url => cache.add(url)))
-    ).then(self.skipWaiting())
+    )
   );
 });
 

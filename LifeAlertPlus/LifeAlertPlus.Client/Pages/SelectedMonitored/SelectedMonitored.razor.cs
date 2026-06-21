@@ -1568,7 +1568,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 UserFullName = "User";
             }
 
-            await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
+            await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentMeasurementsAsync());
+            await LoadRecentAlertsAsync();
 
             PushService.OnNotificationReceived += OnPushNotificationReceived;
             MeasurementApiClient.OnMeasurementAdded += OnMeasurementAdded;
@@ -1598,7 +1599,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             {
                 await InvokeAsync(async () =>
                 {
-                    await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentAlertsAsync(), LoadRecentMeasurementsAsync());
+                    await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentMeasurementsAsync());
+                    await LoadRecentAlertsAsync();
                     // Reset map so it re-initializes with fresh GPS coordinates
                     _mapInitialized = false;
                     _ = LoadTrendPredictionsAsync(PersonId);
