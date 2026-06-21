@@ -187,6 +187,7 @@ static bool g_oled_ok = false;
 static bool g_mpu_ok  = false;
 static bool g_max_ok  = false;
 static bool g_mlx_ok  = false;
+static bool g_gps_ok  = false;  // true după prima propoziție NMEA validă recepționată
 
 // Mutex I2C recursiv — serializează accesul la magistrală + mux între task-uri
 // concurente (main loop, pulse_task, btn_task). Recursiv pentru ca o funcţie de nivel
@@ -876,11 +877,12 @@ static void oled_show_data(bool mlx_read_ok, float mlx_temp)
     oled_write_str(5, 0, line);
 
     // Page 7: stare globală — eroare doar dacă init la boot a eşuat sau wifi off
-    if (!g_mpu_ok || !g_max_ok || !g_mlx_ok) {
-        snprintf(line, sizeof(line), "Err:%s%s%s",
+    if (!g_mpu_ok || !g_max_ok || !g_mlx_ok || !g_gps_ok) {
+        snprintf(line, sizeof(line), "Err:%s%s%s%s",
                  g_mpu_ok ? "" : " MPU",
                  g_max_ok ? "" : " MAX",
-                 g_mlx_ok ? "" : " MLX");
+                 g_mlx_ok ? "" : " MLX",
+                 g_gps_ok ? "" : " GPS");
     } else if (!s_wifi_ok) {
         snprintf(line, sizeof(line), "Stare: OFFLINE");
     } else {
@@ -974,6 +976,7 @@ static void gps_parse(const char *line)
 {
     if (!nmea_cksum_ok(line)) return;
     g_gps.has_nmea = true;
+    g_gps_ok = true;
     char f[20];
     if (strncmp(line, "$GPRMC", 6) == 0 || strncmp(line, "$GNRMC", 6) == 0) {
         char time[16], status[4], lat[16], ns[4], lon[16], ew[4], spd[16], date[10];
@@ -1035,10 +1038,15 @@ static void gps_setup(void)
     c.parity    = UART_PARITY_DISABLE;
     c.stop_bits = UART_STOP_BITS_1;
     c.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
-    uart_param_config(GPS_UART_NUM, &c);
-    uart_set_pin(GPS_UART_NUM, GPS_TX_PIN, GPS_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-    uart_driver_install(GPS_UART_NUM, GPS_RX_BUF, 0, 0, NULL, 0);
+    esp_err_t e;
+    e = uart_param_config(GPS_UART_NUM, &c);
+    if (e != ESP_OK) { printf("[GPS] uart_param_config FAILED: %s\n", esp_err_to_name(e)); return; }
+    e = uart_set_pin(GPS_UART_NUM, GPS_TX_PIN, GPS_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    if (e != ESP_OK) { printf("[GPS] uart_set_pin FAILED: %s\n", esp_err_to_name(e)); return; }
+    e = uart_driver_install(GPS_UART_NUM, GPS_RX_BUF, 0, 0, NULL, 0);
+    if (e != ESP_OK) { printf("[GPS] uart_driver_install FAILED: %s\n", esp_err_to_name(e)); return; }
     uart_flush_input(GPS_UART_NUM);
+    printf("[GPS] UART1 init OK — TX=GPIO%d RX=GPIO%d @ 9600\n", GPS_TX_PIN, GPS_RX_PIN);
 }
 
 // =============================================================================
@@ -2129,7 +2137,7 @@ extern "C" void app_main(void)
     printf("[MLX90614] %s | I2C ch%d 0x%02X\n", g_mlx_ok ? "OK " : "---", MUX_CH_MLX90614, MLX90614_ADDR);
 
     gps_setup();
-    printf("[GPS     ] OK | TX=%d RX=%d\n", GPS_TX_PIN, GPS_RX_PIN);
+    printf("[GPS     ] UART init | TX=%d RX=%d (detectie dupa prima fraza NMEA)\n", GPS_TX_PIN, GPS_RX_PIN);
 
     // LEDs
     gpio_config_t led_conf = {};
@@ -2173,15 +2181,17 @@ extern "C" void app_main(void)
     // Fall detection task — eşantionează MPU6050 la 50Hz şi rulează state machine free-fall/impact/stillness
     if (g_mpu_ok) xTaskCreate(fall_task, "fall", 4096, NULL, 5, NULL);
 
-    // Watchdog task — resetează ESP-ul dacă main loop-ul îngheață > 30s
+    // Watchdog — WDT e deja inițializat de sistem (CONFIG_ESP_TASK_WDT_INIT=y).
+    // esp_task_wdt_init() ar returna ESP_ERR_INVALID_STATE și ar lăsa timeout-ul
+    // la valoarea din sdkconfig (60s). Folosim reconfigure ca să fie explicit.
     {
         esp_task_wdt_config_t wdt_cfg = {};
-        wdt_cfg.timeout_ms    = 30000;   // 30s timeout
+        wdt_cfg.timeout_ms    = 60000;   // 60s — trebuie să depășească timeout-ul HTTP (15s) + queue flush
         wdt_cfg.idle_core_mask = 0;
-        wdt_cfg.trigger_panic  = false;  // reset, nu panic
-        esp_task_wdt_init(&wdt_cfg);
+        wdt_cfg.trigger_panic  = false;
+        esp_task_wdt_reconfigure(&wdt_cfg);
         esp_task_wdt_add(NULL);          // înregistrează task-ul curent (app_main)
-        printf("[WDT] Task watchdog activ — timeout 30s\n");
+        printf("[WDT] Task watchdog activ — timeout 60s\n");
     }
 
     // Timestamp GPS start pentru timeout
@@ -2210,7 +2220,11 @@ extern "C" void app_main(void)
         // pentru a economisi ~30mA. Se reactivează la heartbeat.
         if (s_gps_enabled) {
             int gps_n = uart_read_bytes(GPS_UART_NUM, g_gps_rx, sizeof(g_gps_rx) - 1, pdMS_TO_TICKS(20));
-            if (gps_n > 0) gps_feed(g_gps_rx, gps_n);
+            if (gps_n > 0) {
+                g_gps_rx[gps_n] = 0;
+                printf("[GPS-RAW] %d bytes: %s\n", gps_n, (char *)g_gps_rx);
+                gps_feed(g_gps_rx, gps_n);
+            }
             if (!g_gps.valid && (now - s_gps_start_ms) > GPS_FIX_TIMEOUT_MS) {
                 uart_driver_delete(GPS_UART_NUM);
                 s_gps_enabled = false;

@@ -12,3 +12,11 @@ CONFIG_LIFEALERT_DEFAULT_WIFI_PASS=""
 # sys_evt stack: default 2304 bytes overflows when WiFi driver calls vfprintf internally.
 # vfprintf_r alone needs 1072 bytes; 4096 gives enough headroom for the full dispatch chain.
 CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=4096
+
+# app_main stack: default 3584 bytes is too small for HTTPS (mbedTLS needs ~6-8KB).
+# http_post_to calls esp_http_client_perform over TLS from main-loop context.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# Task WDT timeout must exceed the HTTP client timeout (15s) plus worst-case queue flush.
+# Default 5s fires during normal HTTPS operations and resets the board.
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=60

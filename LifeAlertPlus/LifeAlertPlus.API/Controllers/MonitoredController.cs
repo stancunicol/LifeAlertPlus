@@ -51,9 +51,17 @@ namespace LifeAlertPlus.API.Controllers
             }
 
             var existingPerson = await _monitoredService.GetMonitoredPersonByDeviceSerialNumberAsync(newPerson.DeviceSerialNumber);
-            if(existingPerson != null)
+            if (existingPerson != null)
             {
-                return Conflict(new { Message = "A monitored person with the same device serial number already exists." });
+                if (existingPerson.DeletedAt != null)
+                    return Conflict(new { Message = "A monitored person with this device serial number is pending deletion." });
+
+                // Person exists and is active — silently link the caller to it.
+                await _userMonitoredService.AddMonitoredPersonToUserAsync(callerId, existingPerson.Id);
+                _logger.LogInformation("User {UserId} linked to existing monitored {MonitoredId} via add", callerId, existingPerson.Id);
+                _auditService.LogAsync(User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ?? callerId.ToString(),
+                    "LinkPatient", $"User linked to existing patient {existingPerson.FirstName} {existingPerson.LastName} (id={existingPerson.Id})", "Patient");
+                return Ok(new { Message = "Monitored person added successfully.", MonitoredPerson = existingPerson });
             }
 
             try
