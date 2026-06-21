@@ -113,6 +113,10 @@
                             {
                                 <button class="btn-security" @onclick="SubscribeWebPushAsync">@T("profile.webPushEnable")</button>
                             }
+                            @if (_webPushError != null)
+                            {
+                                <p style="color:red;font-size:0.8rem;margin-top:4px;">@_webPushError</p>
+                            }
                         }
                         else
                         {

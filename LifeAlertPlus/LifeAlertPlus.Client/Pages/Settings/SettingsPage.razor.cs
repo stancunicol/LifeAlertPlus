@@ -228,6 +228,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
         private bool _webPushSupported;
         private bool _webPushSubscribed;
         private string _webPushPermission = "default";
+        private string? _webPushError;
 
         private async Task LoadWebPushStateAsync()
         {
@@ -247,15 +248,21 @@ namespace LifeAlertPlus.Client.Pages.Settings
 
         private async Task SubscribeWebPushAsync()
         {
+            _webPushError = null;
             try
             {
                 var apiBase = (Config["ApiBaseUrl"] ?? Navigation.BaseUri).TrimEnd('/');
                 var token   = await JSRuntime.InvokeAsync<string?>("sessionStorage.getItem", "authToken") ?? "";
                 _webPushSubscribed = await JSRuntime.InvokeAsync<bool>("webPushSubscribe", apiBase, token);
                 _webPushPermission = await JSRuntime.InvokeAsync<string>("webPushGetPermission");
-                StateHasChanged();
+                if (!_webPushSubscribed && _webPushPermission != "denied")
+                    _webPushError = "Abonarea a eșuat. Verificați consola browser-ului (F12) pentru detalii.";
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _webPushError = ex.Message;
+            }
+            StateHasChanged();
         }
 
         private async Task UnsubscribeWebPushAsync()
