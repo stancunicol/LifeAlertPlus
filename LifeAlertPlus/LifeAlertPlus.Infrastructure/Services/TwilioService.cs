@@ -6,6 +6,7 @@ using Twilio.Rest.Api.V2010.Account;
 
 namespace LifeAlertPlus.Infrastructure.Services
 {
+    // Implementare ITwilioService — trimite SMS-uri de alertă prin API-ul Twilio
     public class TwilioService : ITwilioService
     {
         private readonly string _accountSid;
@@ -13,6 +14,7 @@ namespace LifeAlertPlus.Infrastructure.Services
         private readonly string _fromNumber;
         private readonly ILogger<TwilioService> _logger;
 
+        // Flag care indică dacă există credențiale valide — evită crash la pornire dacă SMS e dezactivat (ex: în Development)
         private readonly bool _isConfigured;
 
         public TwilioService(IConfiguration configuration, ILogger<TwilioService> logger)
@@ -27,11 +29,12 @@ namespace LifeAlertPlus.Infrastructure.Services
                          && !string.IsNullOrWhiteSpace(_fromNumber);
 
             if (_isConfigured)
-                TwilioClient.Init(_accountSid, _authToken);
+                TwilioClient.Init(_accountSid, _authToken); // Inițializare client static Twilio (o singură dată, la pornirea aplicației)
             else
                 _logger.LogError("Twilio is not configured. Set Twilio:AccountSid, Twilio:AuthToken, Twilio:FromNumber to enable SMS notifications.");
         }
 
+        // Trimite SMS prin Twilio — numărul "to" trebuie în format E.164 (ex: +40712345678)
         public async Task SendSmsAsync(string to, string message)
         {
             if (!_isConfigured)

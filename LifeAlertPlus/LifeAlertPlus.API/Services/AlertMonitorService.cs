@@ -6,53 +6,65 @@ using LifeAlertPlus.Shared.DTOs.Responses.Monitoring;
 
 namespace LifeAlertPlus.API.Services
 {
+    // Serviciul central de monitorizare a alertelor vitale în timp real
+    // Primește fiecare măsurătoare, evaluează severitatea, detectează tendințe și
+    // declanșează notificări (push, email, SMS) când situația persistă la nivel alert/critic
     public class AlertMonitorService : IAlertMonitorService
     {
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IServiceScopeFactory _scopeFactory; // Singleton nu poate injecta Scoped direct
         private readonly ILogger<AlertMonitorService> _logger;
-        private readonly bool _sendCriticalSmsImmediately;
-        private readonly bool _sendAlertSmsImmediately;
+        private readonly bool _sendCriticalSmsImmediately; // Flag de test: trimite SMS critic fără să aștepte 2 min
+        private readonly bool _sendAlertSmsImmediately; // Flag de test: trimite SMS alertă fără pragul de persistență
+        // Starea curentă de alertă per persoană monitorizată (absent = Normal)
         private readonly ConcurrentDictionary<Guid, AlertState> _alertStates = new();
 
         // Cooldown: don't send another notification for the same monitored person within 10 minutes
+        // Ultimul moment când a fost trimisă o notificare per persoană (previne spam-ul de notificări)
         private readonly ConcurrentDictionary<Guid, DateTime> _lastNotificationSent = new();
 
+        // O alertă trebuie să persist cel puțin 1 minut înainte de a trimite notificare (evităm fals-alarme)
         private static readonly TimeSpan PersistenceThreshold = TimeSpan.FromMinutes(1);
+        // Alertele critice se retrimite la fiecare 2 minute cât timp persistă situația
         private static readonly TimeSpan CriticalSmsThreshold = TimeSpan.FromMinutes(2);
+        // Alertele non-critice nu se retrimite în 10 minute (un singur SMS/email per episod)
         private static readonly TimeSpan NotificationCooldown = TimeSpan.FromMinutes(10);
 
-        private readonly IPushNotificationService _pushNotificationService;
-        private readonly ActivityProfileService _activityProfileService;
-        private readonly ConditionRuleEngine _conditionRuleEngine;
-        private readonly NearestHospitalService _nearestHospitalService;
-        private readonly DeviceTestLogService _deviceTestLogService;
+        private readonly IPushNotificationService _pushNotificationService; // Notificări push (SignalR + Web Push)
+        private readonly ActivityProfileService _activityProfileService; // Detecție anomalii comportamentale
+        private readonly ConditionRuleEngine _conditionRuleEngine; // Ajustare severitate în funcție de boli
+        private readonly NearestHospitalService _nearestHospitalService; // Găsire spital din apropiere
+        private readonly DeviceTestLogService _deviceTestLogService; // Jurnal de teste dispozitive
 
         // Per-person threshold cache: patient-specific HR, temperature and SpO2 limits
+        // Cache-ul pragurilor personalizate per pacient (ex: pulsul "normal" al lui Ion e 55-90)
         private readonly ConcurrentDictionary<Guid, (DateTime CachedAt, int? MaxHr, int? MinHr, double? MaxTemp, double? MinTemp, int? MinSpO2, int? MaxSpO2)> _thresholdCache = new();
-        private static readonly TimeSpan ThresholdCacheDuration = TimeSpan.FromHours(4);
+        private static readonly TimeSpan ThresholdCacheDuration = TimeSpan.FromHours(4); // Pragurile se recitesc din DB la 4 ore
 
         // Per-person metric buffer for last 120 seconds (2 minutes)
+        // Buffer circular cu ultimele 2 minute de date vitale (pentru detecție de tendințe)
         private static readonly TimeSpan BufferWindow = TimeSpan.FromSeconds(120);
-        private const int MaxBufferSize = 100;
+        private const int MaxBufferSize = 100; // Max 100 puncte per metric (protecție memorie)
         private readonly ConcurrentDictionary<Guid, MetricBuffer> _metricBuffers = new();
 
         // Throttle for the orphan-feedback recovery sweep (handles the case where
         // _alertStates was lost — e.g. backend restart mid-alert — so notifications
         // sent in a previous process never got their FeedbackRequestedAt set).
+        // Sweep periodic pentru notificările "orfane" (trimise înainte de un restart)
         private readonly ConcurrentDictionary<Guid, DateTime> _lastFeedbackSweep = new();
-        private static readonly TimeSpan FeedbackSweepThrottle = TimeSpan.FromMinutes(5);
-        private static readonly TimeSpan FeedbackSweepLookback = TimeSpan.FromHours(6);
+        private static readonly TimeSpan FeedbackSweepThrottle = TimeSpan.FromMinutes(5); // Max o verificare la 5 min per pacient
+        private static readonly TimeSpan FeedbackSweepLookback = TimeSpan.FromHours(6); // Căutăm notificări din ultimele 6 ore
 
         // Per-monitored short-window buffer of recent vital readings.
         // Concurrent ProcessMeasurementAsync calls for the same patient (e.g. simulation
         // overlapping with real ESP ingest, or a burst of ESP packets) would otherwise
         // race on the internal Queue<T> arrays. All access goes through the Sync object.
+        // Buffer de citiri recente per pacient — queue-urile sunt protejate cu lock
         private class MetricBuffer
         {
-            public readonly object Sync = new();
-            public Queue<(DateTime Timestamp, double Value)> Pulse = new();
-            public Queue<(DateTime Timestamp, double Value)> Temp = new();
-            public Queue<(DateTime Timestamp, double Value)> SpO2 = new();
+            public readonly object Sync = new(); // Lock pentru acces thread-safe la cozi
+            public Queue<(DateTime Timestamp, double Value)> Pulse = new(); // Istoric puls (ultimele 2 min)
+            public Queue<(DateTime Timestamp, double Value)> Temp = new(); // Istoric temperatură
+            public Queue<(DateTime Timestamp, double Value)> SpO2 = new(); // Istoric saturație oxigen
         }
 
         public AlertMonitorService(IServiceScopeFactory scopeFactory, ILogger<AlertMonitorService> logger, IConfiguration configuration, IPushNotificationService pushNotificationService, ActivityProfileService activityProfileService, ConditionRuleEngine conditionRuleEngine, NearestHospitalService nearestHospitalService, DeviceTestLogService deviceTestLogService)
@@ -73,18 +85,22 @@ namespace LifeAlertPlus.API.Services
                 _logger.LogWarning("AlertMonitor is configured to send alert SMS immediately for testing.");
         }
 
+        // Invalidează cache-ul pragurilor când medicul modifică limitele personalizate ale pacientului
         public void InvalidateThresholdCache(Guid monitoredId) => _thresholdCache.TryRemove(monitoredId, out _);
 
         // Cached "is the monitored person archived?" check — archived persons are skipped
         // by all alert/measurement flows. State changes rarely so a short cache is fine.
+        // Cache-ul stării de arhivare a persoanei (evităm interogări DB la fiecare măsurătoare)
         private readonly ConcurrentDictionary<Guid, (DateTime CachedAt, bool IsArchived)> _archivedCache = new();
-        private static readonly TimeSpan ArchivedCacheDuration = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan ArchivedCacheDuration = TimeSpan.FromMinutes(5); // Recitim din DB la 5 min
 
+        // Invalidează cache-ul când o persoană este arhivată sau reactivată
         public void InvalidateArchivedCache(Guid monitoredId) => _archivedCache.TryRemove(monitoredId, out _);
 
         // Battery low notification: fire at most once per 6 hours per device serial.
+        // Notificăm baterie descărcată max o dată la 6 ore per dispozitiv (nu la fiecare pachet)
         private static readonly TimeSpan BatteryNotifCooldown = TimeSpan.FromHours(6);
-        private static readonly double BatteryLowThreshold = 20.0;
+        private static readonly double BatteryLowThreshold = 20.0; // Sub 20% = alertă baterie
         private readonly ConcurrentDictionary<string, DateTime> _lastBatteryNotif = new(StringComparer.OrdinalIgnoreCase);
 
         public async Task CheckBatteryAsync(Guid monitoredId, string serial, double battery)
@@ -120,21 +136,27 @@ namespace LifeAlertPlus.API.Services
         }
 
         // Per-serial ingest rate limiter: max 4 requests per 60 s window.
-        private const int IngestMaxPerWindow = 4;
+        // Limitor de rată pentru ingestul de date ESP (previne flooding-ul bazei de date)
+        private const int IngestMaxPerWindow = 4; // Max 4 pachete per 60 secunde per dispozitiv
         private static readonly TimeSpan IngestWindow = TimeSpan.FromSeconds(60);
         private readonly ConcurrentDictionary<string, (int Count, DateTime WindowStart)> _ingestRates = new(StringComparer.OrdinalIgnoreCase);
 
+        // Verifică dacă un serial are voie să trimită date (implementare "fixed window" rate limiting)
         public bool IsIngestAllowed(string serial)
         {
             var now = DateTime.UtcNow;
+            // Inițializăm contorul dacă e primul pachet de la acest serial
             var entry = _ingestRates.GetOrAdd(serial, _ => (0, now));
+            // Fereastra de timp a expirat — resetăm contorul și permitem cererea
             if ((now - entry.WindowStart) >= IngestWindow)
             {
-                _ingestRates[serial] = (1, now);
+                _ingestRates[serial] = (1, now); // Noua fereastră cu primul pachet
                 return true;
             }
+            // Contorul a depășit limita — respingem cererea
             if (entry.Count >= IngestMaxPerWindow)
                 return false;
+            // Incrementăm contorul și permitem cererea
             _ingestRates[serial] = (entry.Count + 1, entry.WindowStart);
             return true;
         }
@@ -189,16 +211,18 @@ namespace LifeAlertPlus.API.Services
             }
         }
 
+        // Adaugă o nouă citire în buffer-ul circular al pacientului (thread-safe)
         private void UpdateMetricBuffer(Guid id, DateTime now, double pulse, double temp, double spo2)
         {
-            var buf = _metricBuffers.GetOrAdd(id, _ => new MetricBuffer());
-            lock (buf.Sync)
+            var buf = _metricBuffers.GetOrAdd(id, _ => new MetricBuffer()); // Creăm buffer dacă nu există
+            lock (buf.Sync) // Lock pentru acces exclusiv — mai multe thread-uri pot apela simultan
             {
+                // Helper local: adaugă în coadă și elimină înregistrările mai vechi de BufferWindow
                 static void EnqueueAndTrim(Queue<(DateTime Timestamp, double Value)> q, DateTime now, double v)
                 {
-                    q.Enqueue((now, v));
-                    while (q.Count > 0 && (now - q.Peek().Timestamp) > BufferWindow) q.Dequeue();
-                    while (q.Count > MaxBufferSize) q.Dequeue();
+                    q.Enqueue((now, v)); // Adăugăm noua citire la sfârșit
+                    while (q.Count > 0 && (now - q.Peek().Timestamp) > BufferWindow) q.Dequeue(); // Eliminăm cele vechi de > 2 min
+                    while (q.Count > MaxBufferSize) q.Dequeue(); // Limităm la MaxBufferSize puncte (protecție memorie)
                 }
                 EnqueueAndTrim(buf.Pulse, now, pulse);
                 EnqueueAndTrim(buf.Temp, now, temp);
@@ -208,19 +232,23 @@ namespace LifeAlertPlus.API.Services
 
         // Returns immutable arrays so the rest of ProcessMeasurementAsync can read
         // without holding the buffer lock.
+        // Copiază buffer-ul în array-uri imutabile sub lock — permite citirea fără a ține lock-ul
         private static ((DateTime Timestamp, double Value)[] Pulse, (DateTime Timestamp, double Value)[] Temp, (DateTime Timestamp, double Value)[] SpO2) SnapshotBuffer(MetricBuffer buf)
         {
-            lock (buf.Sync)
+            lock (buf.Sync) // Lock scurt: doar copierea (ToArray), nu procesarea
             {
                 return (buf.Pulse.ToArray(), buf.Temp.ToArray(), buf.SpO2.ToArray());
             }
         }
 
+        // Calculează media și panta (rata de schimbare) dintr-un array de citiri temporale
+        // Panta pozitivă = valorile cresc în timp; negativă = scad
         private static (double avg, double slope) ComputeStatsFromArray((DateTime Timestamp, double Value)[] arr)
         {
-            if (arr.Length < 2) return (arr.Length == 1 ? arr[0].Value : 0, 0);
-            double avg = arr.Average(x => x.Value);
-            double dt = (arr[^1].Timestamp - arr[0].Timestamp).TotalSeconds;
+            if (arr.Length < 2) return (arr.Length == 1 ? arr[0].Value : 0, 0); // Prea puține date pentru tendință
+            double avg = arr.Average(x => x.Value); // Media aritmetică a tuturor valorilor
+            double dt = (arr[^1].Timestamp - arr[0].Timestamp).TotalSeconds; // Intervalul total în secunde
+            // Panta = (ultima valoare - prima valoare) / interval — unitate: unitate/secundă
             double slope = dt > 0 ? (arr[^1].Value - arr[0].Value) / dt : 0;
             return (avg, slope);
         }
@@ -262,8 +290,11 @@ namespace LifeAlertPlus.API.Services
             });
         }
 
+        // Metodă principală: procesează o nouă măsurătoare și decide dacă declanșează notificări
+        // Apelată de ESPController și MeasurementController după fiecare pachet primit
         public async Task ProcessMeasurementAsync(Guid monitoredId, double pulse, double temperature, double spo2, bool isFall, string activity = "", string coordinates = "")
         {
+            // Nu procesăm date pentru persoane arhivate (oprite din monitorizare)
             if (await IsArchivedAsync(monitoredId))
             {
                 _logger.LogDebug("ProcessMeasurement skipped — monitored {MonitoredId} is archived", monitoredId);
@@ -271,24 +302,28 @@ namespace LifeAlertPlus.API.Services
             }
 
             var now = DateTime.UtcNow;
-            UpdateMetricBuffer(monitoredId, now, pulse, temperature, spo2);
+            UpdateMetricBuffer(monitoredId, now, pulse, temperature, spo2); // Adăugăm în buffer de tendință
 
+            // Verificăm anomalii comportamentale în background (nu blocăm fluxul principal de alerte)
             if (!string.IsNullOrWhiteSpace(activity))
                 FireAndForget(() => CheckBehavioralAnomalyAsync(monitoredId, activity, pulse, now),
                               "CheckBehavioralAnomalyAsync", monitoredId);
 
+            // Calculăm statisticile pe buffer-ul ultimelor 2 minute
             var buf = _metricBuffers.GetOrAdd(monitoredId, _ => new MetricBuffer());
-            var (pulseArr, tempArr, spo2Arr) = SnapshotBuffer(buf);
-            var (pulseAvg, pulseSlope) = ComputeStatsFromArray(pulseArr);
-            var (tempAvg, tempSlope) = ComputeStatsFromArray(tempArr);
-            var (spo2Avg, spo2Slope) = ComputeStatsFromArray(spo2Arr);
+            var (pulseArr, tempArr, spo2Arr) = SnapshotBuffer(buf); // Snapshot thread-safe
+            var (pulseAvg, pulseSlope) = ComputeStatsFromArray(pulseArr); // Media și tendința pulsului
+            var (tempAvg, tempSlope) = ComputeStatsFromArray(tempArr); // Media și tendința temperaturii
+            var (spo2Avg, spo2Slope) = ComputeStatsFromArray(spo2Arr); // Media și tendința SpO2
 
+            // Obținem pragurile personalizate ale pacientului (din cache sau DB)
             var (maxHr, minHr, maxTemp, minTemp, minSpO2, maxSpO2) = await GetPatientThresholdsAsync(monitoredId);
-            int effectiveMinSpO2 = minSpO2 ?? 95;
+            int effectiveMinSpO2 = minSpO2 ?? 95; // Pragul de SpO2 (implicit 95%)
 
-            bool pulseRising  = pulseSlope > 0.05 && pulseAvg > 100;
-            bool tempRising   = tempSlope  > 0.01 && tempAvg  > 37.5;
-            bool spo2Dropping = spo2Slope  < -0.02 && spo2Avg < effectiveMinSpO2;
+            // Detectăm tendințe îngrijorătoare: puls/temperatură în creștere rapidă sau SpO2 în scădere
+            bool pulseRising  = pulseSlope > 0.05 && pulseAvg > 100; // >0.05 bpm/s creștere și deja >100 bpm
+            bool tempRising   = tempSlope  > 0.01 && tempAvg  > 37.5; // >0.01°C/s creștere și deja febril
+            bool spo2Dropping = spo2Slope  < -0.02 && spo2Avg < effectiveMinSpO2; // SpO2 în scădere sub prag
 
             var severity = EvaluateSeverity(pulse, temperature, spo2, isFall, maxHr, minHr, maxTemp, minTemp, minSpO2);
             if (pulseRising || tempRising || spo2Dropping)
@@ -737,6 +772,8 @@ namespace LifeAlertPlus.API.Services
             }
         }
 
+        // Evaluează severitatea situației bazată pe semnele vitale și pragurile pacientului
+        // Returnează: Normal, Alert (îngrijorător) sau Critical (urgență medicală)
         private static AlertSeverity EvaluateSeverity(
             double pulse, double temperature, double spo2, bool isFall,
             int? maxHr = null, int? minHr = null, double? maxTemp = null, double? minTemp = null,
@@ -744,10 +781,12 @@ namespace LifeAlertPlus.API.Services
         {
             // Alert boundary = patient's normal upper/lower bound.
             // Critical boundary = clearly beyond normal (same buffers as SelectedMonitored UI).
-            int alertMaxHr = maxHr ?? 100;
-            int alertMinHr = minHr ?? 60;
-            int critMaxHr  = maxHr.HasValue ? maxHr.Value + 20 : 150;
-            int critMinHr  = minHr.HasValue ? minHr.Value - 10 : 40;
+            // Pragul de alertă = limita normală a pacientului (configurată de medic)
+            // Pragul critic = depășire clară a normalului (limita + buffer de siguranță)
+            int alertMaxHr = maxHr ?? 100; // Implicit: >100 bpm = alertă
+            int alertMinHr = minHr ?? 60;  // Implicit: <60 bpm = alertă
+            int critMaxHr  = maxHr.HasValue ? maxHr.Value + 20 : 150; // Cu 20 bpm peste limita personalizată = critic
+            int critMinHr  = minHr.HasValue ? minHr.Value - 10 : 40;  // Cu 10 bpm sub limita personalizată = critic
 
             double alertMaxT = maxTemp ?? 37.5;
             double alertMinT = minTemp ?? 36.0;
@@ -877,24 +916,26 @@ namespace LifeAlertPlus.API.Services
             return (0, 0);
         }
 
+        // Starea curentă de alertă a unui pacient (trăiește în _alertStates atâta timp cât e în alertă)
         private class AlertState
         {
             // Sync root for serializing concurrent same-patient mutations.
             // ConcurrentDictionary protects the dict, not the value object.
+            // Lock pentru mutații concurente — dicționarul protejează intrările, nu valorile din ele
             public readonly object Sync = new();
-            public DateTime FirstDetected { get; set; }
-            public DateTime LastDetected { get; set; }
-            public AlertSeverity Severity { get; set; }
-            public int ConsecutiveCount { get; set; }
-            public double LastPulse { get; set; }
-            public double LastTemperature { get; set; }
-            public double LastSpO2 { get; set; }
-            public bool IsFall { get; set; }
-            public int? MinSpO2 { get; set; }
-            public List<string> ConditionRecommendations { get; set; } = new();
-            public bool ImmediateAction { get; set; }
-            public string LastCoordinates { get; set; } = string.Empty;
-            public HospitalRouteResult? NearestHospital { get; set; }
+            public DateTime FirstDetected { get; set; } // Momentul primei detecții a episodului curent
+            public DateTime LastDetected { get; set; }  // Ultima citire care a confirmat alerta
+            public AlertSeverity Severity { get; set; } // Severitatea maximă a episodului
+            public int ConsecutiveCount { get; set; }   // Numărul de citiri consecutive în stare de alertă
+            public double LastPulse { get; set; }        // Ultimul puls înregistrat (pentru mesajul de notificare)
+            public double LastTemperature { get; set; }  // Ultima temperatură
+            public double LastSpO2 { get; set; }         // Ultima saturație de oxigen
+            public bool IsFall { get; set; }             // A detectat dispozitivul o cădere?
+            public int? MinSpO2 { get; set; }            // Pragul SpO2 al pacientului (pentru mesaj)
+            public List<string> ConditionRecommendations { get; set; } = new(); // Recomandări din ConditionRuleEngine
+            public bool ImmediateAction { get; set; }   // Acțiune imediată (bypass cooldown-uri)
+            public string LastCoordinates { get; set; } = string.Empty; // Ultimele coordonate GPS
+            public HospitalRouteResult? NearestHospital { get; set; } // Spitalul cel mai apropiat (pre-fetch)
         }
 
         private async Task CheckBehavioralAnomalyAsync(Guid monitoredId, string activity, double pulse, DateTime now)

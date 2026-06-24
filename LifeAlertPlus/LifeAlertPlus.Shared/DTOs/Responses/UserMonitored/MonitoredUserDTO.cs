@@ -3,6 +3,10 @@ using System.Collections.Generic;
 
 namespace LifeAlertPlus.Shared.DTOs.Responses.UserMonitored
 {
+    // Server: returnat de UserMonitoredController (GET, vizualizare Admin) — un utilizator (îngrijitor)
+    // împreună cu lista pacienților pe care îi monitorizează (MonitoredPeople), reconstruind relația
+    // many-to-many User↔Monitored într-o formă convenabilă pentru afișare ierarhică.
+    // Client: consumat de AdminPage.razor.cs și MonitoredUsersPage.razor.cs (panourile de administrare).
     public class MonitoredUserDTO
     {
         public Guid UserId { get; set; }

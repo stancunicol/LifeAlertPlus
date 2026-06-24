@@ -5,6 +5,8 @@ using LifeAlertPlus.Shared.DTOs.Responses.Wifi;
 
 namespace LifeAlertPlus.Client.Services
 {
+    // Client HTTP pentru endpoint-urile /api/wifi — gestionează rețelele WiFi configurate
+    // pentru dispozitivele monitorizate (listare, adăugare, ștergere)
     public class WifiApiClient
     {
         private readonly HttpClient _httpClient;
@@ -14,6 +16,8 @@ namespace LifeAlertPlus.Client.Services
             _httpClient = httpClient;
         }
 
+        // Listează rețelele WiFi configurate pentru un dispozitiv monitorizat; la eroare
+        // (rețea, deserializare) returnează listă vidă în loc să propage excepția către UI
         public async Task<List<WifiNetworkResponseDTO>> GetByMonitoredAsync(Guid monitoredId)
         {
             try
@@ -27,6 +31,9 @@ namespace LifeAlertPlus.Client.Services
             }
         }
 
+        // Adaugă o rețea WiFi nouă pentru dispozitivul monitorizat. SSID-ul și parola sunt trimise
+        // ca text simplu către backend (parola nu este criptată în niciun punct al fluxului).
+        // Returnează un tuplu cu succes/cod de eroare (cheie de traducere) / rețeaua creată
         public async Task<(bool Success, string? ErrorKey, WifiNetworkResponseDTO? Network)> AddAsync(Guid monitoredId, string ssid, string password)
         {
             var request = new WifiNetworkRequestDTO
@@ -53,6 +60,7 @@ namespace LifeAlertPlus.Client.Services
             }
         }
 
+        // Șterge o rețea WiFi după id; returnează true doar dacă răspunsul HTTP indică succes
         public async Task<bool> DeleteAsync(Guid id)
         {
             var response = await _httpClient.DeleteAsync($"api/wifi/{id}");

@@ -3,6 +3,8 @@ using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Components.HeaderAdmin
 {
+    // Code-behind pentru antetul (header) zonei de administrare — meniu de profil, meniu mobil,
+    // afișarea numelui/pozei adminului și butonul de logout
     public partial class HeaderAdminComponent : ComponentBase, IDisposable
     {
         [Inject]
@@ -35,6 +37,7 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
         private bool ShowMobileMenu { get; set; } = false;
         private string Version { get; set; } = string.Empty;
 
+        // Preferă numele primit ca parametru; dacă nu există, cade pe numele din starea globală a utilizatorului
         private string DisplayedName =>
             !string.IsNullOrWhiteSpace(UserName) ? UserName
             : !string.IsNullOrWhiteSpace(UserStateService.DisplayName) ? UserStateService.DisplayName
@@ -43,6 +46,7 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
         protected override Task OnInitializedAsync()
         {
             Version = AppVersion.Version;
+            // Se abonează la schimbările pozei de profil (ex: după upload) pentru a actualiza header-ul live
             if (ProfilePictureService != null)
             {
                 ProfilePictureService.OnChange += HandleProfilePictureChanged;
@@ -55,6 +59,7 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
 
         protected override void OnParametersSet()
         {
+            // Sincronizează numele primit prin parametru în starea globală, ca alte componente să-l poată folosi
             if (!string.IsNullOrWhiteSpace(UserName))
                 UserStateService.SetDisplayName(UserName);
         }
@@ -77,12 +82,14 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
             UserStateService.OnChange -= HandleUserNameChanged;
         }
 
+        // Determină dacă o cale de navigare corespunde paginii curente, pentru a evidenția link-ul activ din meniu
         private bool IsActive(string path)
         {
             var currentPath = new Uri(Navigation.Uri).AbsolutePath;
             return currentPath.Equals(path, StringComparison.OrdinalIgnoreCase);
         }
 
+        // Construiește inițialele afișate în avatar (ex: "John Doe" -> "JD"), cu fallback la "GU" (Guest User)
         private string GetUserInitials()
         {
             var name = DisplayedName;
@@ -119,6 +126,7 @@ namespace LifeAlertPlus.Client.Components.HeaderAdmin
             ShowMobileMenu = false;
         }
 
+        // La delogare: folosește handler-ul custom dat de părinte, dacă există; altfel navighează direct la /login
         private async Task OnLogout()
         {
             ShowProfileMenu = false;

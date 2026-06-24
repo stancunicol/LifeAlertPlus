@@ -4,9 +4,10 @@ using LifeAlertPlus.Shared.DTOs.Requests.User;
 
 namespace LifeAlertPlus.Tests.Unit.Application;
 
+// Teste pentru AuthenticationService — hashing BCrypt, validare complexitate parolă, validare schimbare email/parolă
 public class AuthenticationServiceTests
 {
-    private readonly AuthenticationService _sut = new();
+    private readonly AuthenticationService _sut = new(); // SUT = System Under Test
 
     // ── HashPassword ─────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ public class AuthenticationServiceTests
     {
         var h1 = _sut.HashPassword("Test@1234");
         var h2 = _sut.HashPassword("Test@1234");
-        h1.Should().NotBe(h2); // BCrypt salts each hash
+        h1.Should().NotBe(h2); // BCrypt generează un salt diferit la fiecare hash, deci rezultatul diferă chiar pentru aceeași parolă
     }
 
     // ── VerifyPassword(string, string) ───────────────────────────────────────
@@ -71,7 +72,7 @@ public class AuthenticationServiceTests
     [Fact]
     public async Task VerifyPassword_String_FailsForAllLowercase()
     {
-        // No digits, no special chars, all lowercase → the All(char.IsLower) condition is true
+        // Fără cifre, fără caractere speciale, doar litere mici → condiția All(char.IsLower) e adevărată, deci validarea trebuie să respingă
         var result = await _sut.VerifyPassword("alllower");
         result.Success.Should().BeFalse();
     }
@@ -117,6 +118,7 @@ public class AuthenticationServiceTests
         result.Message.Should().Contain("match");
     }
 
+    // Parola nouă identică cu cea curentă e respinsă explicit — previne o "schimbare" care nu schimbă nimic
     [Fact]
     public async Task ValidateChangePassword_FailsWhenNewSameAsCurrent()
     {

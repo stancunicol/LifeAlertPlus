@@ -15,11 +15,14 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.API.Controllers;
 
+// Teste pentru MonitoredController — în special logica de "ultimul proprietar" la ștergere
+// (dacă mai mulți utilizatori urmăresc un pacient, ștergerea unuia doar elimină legătura;
+// dacă e ultimul, persoana e soft-delete-uită; Admin face mereu soft-delete, indiferent de nr. proprietari)
 public class MonitoredControllerTests
 {
     private readonly Mock<IMonitoredService>     _monitoredSvc     = new();
     private readonly Mock<IUserMonitoredService> _userMonitoredSvc = new();
-    private readonly MonitoredController         _sut;
+    private readonly MonitoredController         _sut; // SUT = System Under Test
 
     private static readonly Guid UserId  = Guid.NewGuid();
     private static readonly Guid AdminId = Guid.NewGuid();
@@ -58,6 +61,7 @@ public class MonitoredControllerTests
         };
     }
 
+    // Extrage flag-ul "wasLastOwner" din răspunsul anonim al controller-ului (serializăm/deserializăm ca să citim o proprietate dinamică)
     private static bool GetWasLastOwner(IActionResult result)
     {
         var value = ((OkObjectResult)result).Value!;
@@ -124,6 +128,7 @@ public class MonitoredControllerTests
         result.Should().BeOfType<ForbidResult>();
     }
 
+    // Singurul proprietar → ștergere reală a pacientului (soft-delete), nu doar eliminarea legăturii
     [Fact]
     public async Task RemoveMonitoredPerson_SoftDeletes_WhenUserIsLastOwner()
     {
@@ -143,6 +148,7 @@ public class MonitoredControllerTests
         _userMonitoredSvc.Verify(s => s.RemoveUserMonitoredLinkAsync(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
     }
 
+    // Mai mulți proprietari → ștergem doar legătura user↔pacient; pacientul rămâne intact pentru ceilalți îngrijitori
     [Fact]
     public async Task RemoveMonitoredPerson_RemovesLink_WhenMultipleOwnersExist()
     {
@@ -161,6 +167,8 @@ public class MonitoredControllerTests
         _monitoredSvc.Verify(s => s.SoftDeleteMonitoredPersonAsync(It.IsAny<Guid>()), Times.Never);
     }
 
+    // Adminul are mereu drept de ștergere completă, indiferent câți utilizatori urmăresc pacientul —
+    // de aceea nici nu se mai apelează CountUsersForMonitoredAsync (verificare omisă intenționat pentru Admin)
     [Fact]
     public async Task RemoveMonitoredPerson_AdminAlwaysSoftDeletes_RegardlessOfOwnerCount()
     {

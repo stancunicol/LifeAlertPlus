@@ -3,5 +3,10 @@
     "idf.espIdfPathWin": "e:\\ESP\\v5.5.1\\esp-idf",
     "idf.toolsPathWin": "e:\\Expressif",
     "idf.pythonInstallPath": "e:\\Expressif\\tools\\idf-python\\3.11.2\\python.exe",
-    "appService.defaultWebAppToDeploy": "None"
+    "appService.defaultWebAppToDeploy": "None",
+    // Tratăm appsettings ca JSONC (JSON with Comments) pentru a permite comentarii //
+    // ASP.NET Core le parsează corect la runtime (JsonCommentHandling.Skip)
+    "files.associations": {
+        "appsettings*.json": "jsonc"
+    }
 }

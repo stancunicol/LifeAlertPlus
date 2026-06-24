@@ -5,6 +5,8 @@ using LifeAlertPlus.Shared.DTOs.Responses.User;
 
 namespace LifeAlertPlus.Client.Services
 {
+    // Client HTTP pentru endpoint-urile /api/authentication — login, înregistrare, schimbare
+    // email/parolă și logout (curățarea token-ului JWT din sessionStorage)
     public class AuthApiClient
     {
         private readonly HttpClient _httpClient;
@@ -16,6 +18,7 @@ namespace LifeAlertPlus.Client.Services
             _jsRuntime = jsRuntime;
         }
 
+        // Autentifică utilizatorul; returnează null dacă răspunsul HTTP nu indică succes
         public async Task<UserLoginResponseDTO?> LoginAsync(UserLoginRequestDTO request)
         {
             var response = await _httpClient.PostAsJsonAsync("api/authentication/login", request);
@@ -28,6 +31,7 @@ namespace LifeAlertPlus.Client.Services
             return null;
         }
 
+        // Înregistrează un cont nou; returnează null dacă răspunsul HTTP nu indică succes
         public async Task<UserRegisterResponseDTO?> RegisterAsync(UserRegisterRequestDTO request)
         {
             var response = await _httpClient.PostAsJsonAsync("api/authentication/register", request);
@@ -40,6 +44,9 @@ namespace LifeAlertPlus.Client.Services
             return null;
         }
 
+        // Schimbă adresa de email; la eroare (ex: 409 Conflict pentru email deja folosit)
+        // încearcă să extragă mesajul de eroare din body pentru a-l afișa utilizatorului,
+        // altfel returnează un mesaj generic de eșec
         public async Task<UserUpdateEmailResponseDTO?> UpdateEmailAsync(UserChangeEmailRequestDTO request)
         {
             var response = await _httpClient.PatchAsJsonAsync("api/authentication/change-email", request);
@@ -57,6 +64,7 @@ namespace LifeAlertPlus.Client.Services
             return new UserUpdateEmailResponseDTO { Success = false, Message = "Failed to change email." };
         }
 
+        // Schimbă parola contului
         public async Task<bool> UpdatePasswordAsync(UserChangePasswordRequestDTO request)
         {
             var response = await _httpClient.PostAsJsonAsync("api/authentication/change-password", request);
@@ -64,6 +72,8 @@ namespace LifeAlertPlus.Client.Services
             return response.IsSuccessStatusCode;
         }
 
+        // Deconectează utilizatorul local — șterge token-ul JWT și URL-ul pozei de profil
+        // din sessionStorage (nu există apel către backend pentru logout)
         public async Task LogoutAsync()
         {
             await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");

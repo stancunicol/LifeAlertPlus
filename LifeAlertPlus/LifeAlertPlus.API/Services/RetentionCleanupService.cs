@@ -3,13 +3,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LifeAlertPlus.API.Services
 {
-    // Hard-deletes patient data older than the per-Monitored retention window.
-    // Default retention when Monitored.DataRetentionDays is null: 365 days.
+    // Serviciu de curățare a datelor vechi din DB, rulat zilnic la 03:00 UTC.
+    // Gestionează trei tipuri de ștergere permanentă (hard-delete):
+    //   1. Măsurători/notificări mai vechi de DataRetentionDays (implicit 365 zile) per persoană activă
+    //   2. Persoane arhivate al căror ArchiveRetentionDays a expirat (cascade șterge tot)
+    //   3. Persoane/conturi în soft-delete mai vechi de 7 zile (perioadă de grație)
     public class RetentionCleanupService
     {
-        public const int DefaultRetentionDays = 365;
+        public const int DefaultRetentionDays = 365; // Zile de retenție implicite (dacă persoana nu are configurat)
+        public const int GracePeriodDays      = 7;   // Zile de grație după soft-delete înainte de ștergere definitivă
 
-        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IServiceScopeFactory _scopeFactory; // Singleton → scope nou pentru DB
         private readonly ILogger<RetentionCleanupService> _logger;
 
         public RetentionCleanupService(
@@ -17,9 +21,10 @@ namespace LifeAlertPlus.API.Services
             ILogger<RetentionCleanupService> logger)
         {
             _scopeFactory = scopeFactory;
-            _logger = logger;
+            _logger       = logger;
         }
 
+        // Execută curățarea completă și returnează numărul total de înregistrări șterse
         public async Task<int> RunAsync(CancellationToken ct = default)
         {
             int totalDeleted = 0;
@@ -28,7 +33,8 @@ namespace LifeAlertPlus.API.Services
                 using var scope = _scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
 
-                // Active persons: apply DataRetentionDays (measurements only).
+                // ── PASUL 1: Persoane active — ștergem datele vechi (nu persoana!) ───────
+                // Aplicăm DataRetentionDays per persoană (stocate individual pentru flexibilitate)
                 var monitoreds = await db.Monitoreds
                     .Where(m => m.DeletedAt == null && !m.IsArchived)
                     .Select(m => new { m.Id, m.DataRetentionDays })
@@ -40,13 +46,14 @@ namespace LifeAlertPlus.API.Services
                 {
                     if (ct.IsCancellationRequested) break;
 
-                    var retention = monitored.DataRetentionDays ?? DefaultRetentionDays;
-                    if (retention <= 0) continue;
-                    var cutoff = now.AddDays(-retention);
+                    var retention = monitored.DataRetentionDays ?? DefaultRetentionDays; // 365 zile implicit
+                    if (retention <= 0) continue; // 0 = retenție infinită (nu ștergem)
+                    var cutoff = now.AddDays(-retention); // Data de dinaintea căreia ștergem
 
+                    // Ștergem în loturi direct în DB (fără a încărca în memorie) — eficient pentru milioane de rânduri
                     int deletedM = await db.Measurements
                         .Where(m => m.IdMonitored == monitored.Id && m.CreatedAt < cutoff)
-                        .ExecuteDeleteAsync(ct);
+                        .ExecuteDeleteAsync(ct); // EF Core 7+ bulk delete
 
                     int deletedN = await db.Notifications
                         .Where(n => n.IdMonitored == monitored.Id && n.CreatedAt < cutoff)
@@ -63,26 +70,26 @@ namespace LifeAlertPlus.API.Services
                     int subtotal = deletedM + deletedN + deletedD + deletedW;
                     totalDeleted += subtotal;
 
-                    if (subtotal > 0)
+                    if (subtotal > 0) // Logăm doar dacă s-a șters ceva
                         _logger.LogInformation(
                             "[Retention] Monitored {Id}: retention={Days}d, deleted measurements={M}, notifications={N}, dailyHistories={D}, weeklyHistories={W}",
                             monitored.Id, retention, deletedM, deletedN, deletedD, deletedW);
                 }
 
-                // Archived persons: apply ArchiveRetentionDays measured from ArchivedAt.
-                // When the archive window expires the entire monitored record is hard-deleted,
-                // which cascades to measurements, notifications and history via EF Core Cascade.
+                // ── PASUL 2: Persoane arhivate cu ArchiveRetentionDays expirat ────────────
+                // La arhivare, pacientul rămâne în DB cu datele istorice.
+                // Când ArchiveRetentionDays expiră, ștergem complet persoana (cascade → toate datele)
                 var archivedExpired = await db.Monitoreds
                     .Where(m => m.IsArchived
-                             && m.DeletedAt == null
-                             && m.ArchiveRetentionDays != null
+                             && m.DeletedAt == null                    // Nu e deja în soft-delete
+                             && m.ArchiveRetentionDays != null          // Are perioadă de retenție configurată
                              && m.ArchivedAt != null
-                             && m.ArchivedAt.Value.AddDays((double)m.ArchiveRetentionDays) < now)
+                             && m.ArchivedAt.Value.AddDays((double)m.ArchiveRetentionDays) < now) // A expirat
                     .ToListAsync(ct);
 
                 if (archivedExpired.Any())
                 {
-                    db.Monitoreds.RemoveRange(archivedExpired);
+                    db.Monitoreds.RemoveRange(archivedExpired); // EF Core Cascade șterge toate datele asociate
                     await db.SaveChangesAsync(ct);
                     totalDeleted += archivedExpired.Count;
                     _logger.LogInformation(
@@ -90,10 +97,12 @@ namespace LifeAlertPlus.API.Services
                         archivedExpired.Count);
                 }
 
-                // Grace-period hard delete: Users și Monitoreds cu soft-delete > 7 zile
-                // și neactivate de admin sunt șterse fizic definitiv.
-                var graceCutoff = now.AddDays(-7);
+                // ── PASUL 3: Perioada de grație — soft-delete > 7 zile ───────────────────
+                // Persoanele/conturile marcate ca șterse (DeletedAt != null) mai vechi de 7 zile
+                // sunt șterse definitiv (adminul a avut 7 zile să reactiveze dacă a fost o eroare)
+                var graceCutoff = now.AddDays(-GracePeriodDays);
 
+                // Persoane monitorizate în soft-delete > 7 zile
                 var expiredMonitoreds = await db.Monitoreds
                     .Where(m => m.DeletedAt != null && m.DeletedAt < graceCutoff)
                     .ToListAsync(ct);
@@ -108,6 +117,7 @@ namespace LifeAlertPlus.API.Services
                         expiredMonitoreds.Count);
                 }
 
+                // Conturi de utilizatori în soft-delete > 7 zile
                 var expiredUsers = await db.Users
                     .Where(u => u.DeletedAt != null && u.DeletedAt < graceCutoff)
                     .ToListAsync(ct);
@@ -126,9 +136,7 @@ namespace LifeAlertPlus.API.Services
             {
                 _logger.LogError(ex, "Retention cleanup job failed");
             }
-            return totalDeleted;
+            return totalDeleted; // Numărul total de înregistrări șterse în această rulare
         }
-
-        public const int GracePeriodDays = 7;
     }
 }

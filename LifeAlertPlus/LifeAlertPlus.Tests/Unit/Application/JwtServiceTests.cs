@@ -6,9 +6,10 @@ using Microsoft.Extensions.Configuration;
 
 namespace LifeAlertPlus.Tests.Unit.Application;
 
+// Teste pentru JwtService — generarea token-urilor JWT (HS256) folosite la autentificarea utilizatorilor
 public class JwtServiceTests
 {
-    private readonly JwtService _sut;
+    private readonly JwtService _sut; // SUT = System Under Test
 
     public JwtServiceTests()
     {
@@ -29,10 +30,11 @@ public class JwtServiceTests
         var user  = TestDataFactory.CreateUser();
         var token = _sut.GenerateToken(user, "User");
 
-        // A JWT always has exactly two dots
+        // Un JWT valid are mereu exact 3 segmente separate prin punct: header.payload.semnătură
         token.Split('.').Should().HaveCount(3);
     }
 
+    // Verifică toate claim-urile esențiale folosite de frontend/autorizare (sub, email, nume, rol)
     [Fact]
     public void GenerateToken_ContainsExpectedClaims()
     {
@@ -50,6 +52,7 @@ public class JwtServiceTests
         claimMap["role"].Should().Be("Admin");
     }
 
+    // Dacă Jwt:ExpiresInMinutes nu e configurat, JwtService trebuie să folosească fallback-ul de 60 minute (nu să crape)
     [Fact]
     public void GenerateToken_UsesDefaultExpiry_WhenConfigMissing()
     {
@@ -59,7 +62,7 @@ public class JwtServiceTests
                 ["Jwt:Key"]      = "super-secret-key-at-least-32-chars!!",
                 ["Jwt:Issuer"]   = "LifeAlertPlus",
                 ["Jwt:Audience"] = "Client"
-                // ExpiresInMinutes intentionally omitted → should default to 60
+                // ExpiresInMinutes omis intenționat → ar trebui să se folosească implicit 60
             })
             .Build();
 
@@ -73,6 +76,7 @@ public class JwtServiceTests
         parsed.ValidTo.Should().BeCloseTo(DateTime.UtcNow.AddMinutes(60), precision: TimeSpan.FromSeconds(30));
     }
 
+    // Fără Jwt:Key, serviciul nu poate semna token-ul (HS256) — trebuie să arunce explicit, nu să producă un JWT nesemnat
     [Fact]
     public void GenerateToken_ThrowsWhenJwtKeyMissing()
     {
@@ -91,6 +95,7 @@ public class JwtServiceTests
         act.Should().Throw<InvalidOperationException>().WithMessage("*Jwt:Key*");
     }
 
+    // Userii vechi/seed-uiți fără Provider setat trebuie tratați ca "Local" (autentificare email+parolă), nu null în claim
     [Fact]
     public void GenerateToken_ProviderClaimDefaultsToLocal_WhenUserProviderIsNull()
     {

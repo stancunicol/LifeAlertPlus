@@ -3,6 +3,8 @@ using LifeAlertPlus.Shared.DTOs.Responses.ESP;
 
 namespace LifeAlertPlus.Client.Services
 {
+	// Client HTTP pentru endpoint-urile /api/esp/simulate și /api/simulations — controlează simularea
+	// de date ESP (pornire/oprire continuă, payload unic, reseed/seed date pentru grafice)
 	public class SimulationService
 	{
 		private readonly HttpClient _httpClient;
@@ -19,7 +21,7 @@ namespace LifeAlertPlus.Client.Services
 			_httpClient = httpClient;
 		}
 
-		/// <summary>
+		// Șterge toate datele simulate generate pentru un dispozitiv (după numărul de serie)
 		public async Task<bool> ClearSimulatedDataAsync(string serial)
 		{
 			try
@@ -30,8 +32,7 @@ namespace LifeAlertPlus.Client.Services
 			catch { return false; }
 		}
 
-		/// Send a single simulated payload manually (for "Generate once" feature)
-		/// </summary>
+		// Trimite manual un singur payload simulat (funcția "Generate once" din UI)
 		public async Task<bool> SendSimulationAsync(ESPDataResponseDTO payload)
 		{
 			try
@@ -45,9 +46,7 @@ namespace LifeAlertPlus.Client.Services
 			}
 		}
 
-		/// <summary>
-		/// Start continuous simulation for a monitored person
-		/// </summary>
+		// Pornește simularea continuă (server-side) pentru o persoană monitorizată
 		public async Task<bool> StartSimulationAsync(Guid personId)
 		{
 			try
@@ -61,9 +60,7 @@ namespace LifeAlertPlus.Client.Services
 			}
 		}
 
-		/// <summary>
-		/// Start continuous simulations for all monitored persons
-		/// </summary>
+		// Pornește simularea continuă pentru toate persoanele monitorizate
 		public async Task<bool> StartAllSimulationsAsync()
 		{
 			try
@@ -77,9 +74,7 @@ namespace LifeAlertPlus.Client.Services
 			}
 		}
 
-		/// <summary>
-		/// Stop continuous simulation for a monitored person
-		/// </summary>
+		// Oprește simularea continuă pentru o persoană monitorizată
 		public async Task<bool> StopSimulationAsync(Guid personId)
 		{
 			try
@@ -93,9 +88,7 @@ namespace LifeAlertPlus.Client.Services
 			}
 		}
 
-		/// <summary>
-		/// Stop all running simulations
-		/// </summary>
+		// Oprește toate simulările active de pe server
 		public async Task<bool> StopAllSimulationsAsync()
 		{
 			try
@@ -109,9 +102,8 @@ namespace LifeAlertPlus.Client.Services
 			}
 		}
 
-		/// <summary>
-		/// Force-reseed today — removes zero-SpO2 seed rows then regenerates with correct values
-		/// </summary>
+		// Forțează regenerarea datelor de azi — elimină rândurile seed cu SpO2 zero apoi
+		// le regenerează cu valori corecte
 		public async Task<bool> ReseedTodayAsync(Guid personId)
 		{
 			try
@@ -122,9 +114,8 @@ namespace LifeAlertPlus.Client.Services
 			catch { return false; }
 		}
 
-		/// <summary>
-		/// Seed today's chart data (one measurement per 30 min from midnight to now)
-		/// </summary>
+		// Generează date inițiale (seed) pentru graficul zilei curente — o măsurătoare la fiecare
+		// 30 de minute, de la miezul nopții până acum
 		public async Task<bool> SeedTodayAsync(Guid personId)
 		{
 			try
@@ -135,9 +126,7 @@ namespace LifeAlertPlus.Client.Services
 			catch { return false; }
 		}
 
-		/// <summary>
-		/// Get list of currently running simulation person IDs
-		/// </summary>
+		// Obține lista id-urilor persoanelor pentru care simularea rulează curent pe server
 		public async Task<IEnumerable<Guid>> GetRunningSimulationsAsync()
 		{
 			try

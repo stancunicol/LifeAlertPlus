@@ -5,6 +5,9 @@ using Microsoft.Extensions.Configuration;
 
 namespace LifeAlertPlus.Application.Services
 {
+    // Serviciu de trimitere emailuri prin SMTP (Gmail implicit)
+    // Fiecare metodă publică corespunde unui eveniment din aplicație (înregistrare, alertă, raport etc.)
+    // HTML-ul emailurilor este generat inline cu string interpolation (fără engine de template extern)
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _configuration;
@@ -14,28 +17,32 @@ namespace LifeAlertPlus.Application.Services
             _configuration = configuration;
         }
 
+        // Creează un client SMTP configurat din appsettings (host, port, credențiale Gmail)
+        // Creat per-cerere (using) pentru a elibera conexiunea după trimitere
         private SmtpClient CreateSmtpClient()
         {
-            var host = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
-            var port = int.Parse(_configuration["Email:SmtpPort"] ?? "587");
+            var host     = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
+            var port     = int.Parse(_configuration["Email:SmtpPort"] ?? "587");
             var username = _configuration["Email:Username"] ?? string.Empty;
             var password = _configuration["Email:Password"] ?? string.Empty;
 
             return new SmtpClient(host, port)
             {
                 Credentials = new NetworkCredential(username, password),
-                EnableSsl = true
+                EnableSsl   = true // STARTTLS pe portul 587
             };
         }
 
+        // Returnează adresa expeditorului (FromEmail + FromName din configurare)
         private MailAddress GetSenderAddress()
         {
-            var username = _configuration["Email:Username"] ?? string.Empty;
-            var fromEmail = _configuration["Email:FromEmail"] ?? username;
-            var fromName = _configuration["Email:FromName"] ?? "LifeAlert+";
+            var username  = _configuration["Email:Username"] ?? string.Empty;
+            var fromEmail = _configuration["Email:FromEmail"] ?? username; // Fallback la username dacă FromEmail e gol
+            var fromName  = _configuration["Email:FromName"] ?? "LifeAlert+";
             return new MailAddress(fromEmail, fromName);
         }
 
+        // Email de bun venit cu link de confirmare email (trimis la înregistrare, valabil 24 ore)
         public async Task SendRegistrationSuccessEmailAsync(string recipientEmail, string recipientName, string verificationUrl)
         {
             using var smtpClient = CreateSmtpClient();
@@ -53,6 +60,7 @@ namespace LifeAlertPlus.Application.Services
             await smtpClient.SendMailAsync(mailMessage);
         }
 
+        // Email cu link de resetare parolă (valabil 1 oră, token invalidat după folosire)
         public async Task SendPasswordResetEmailAsync(string recipientEmail, string recipientName, string resetUrl)
         {
             using var smtpClient = CreateSmtpClient();
@@ -70,6 +78,7 @@ namespace LifeAlertPlus.Application.Services
             await smtpClient.SendMailAsync(mailMessage);
         }
 
+        // Email de confirmare trimis la NOUA adresă (utilizatorul trebuie să confirme că o controlează)
         public async Task SendEmailChangeVerificationAsync(string recipientEmail, string recipientName, string verificationUrl, string oldEmail)
         {
             using var smtpClient = CreateSmtpClient();
@@ -87,6 +96,7 @@ namespace LifeAlertPlus.Application.Services
             await smtpClient.SendMailAsync(mailMessage);
         }
 
+        // Notificare de securitate trimisă la VECHEA adresă cu link de anulare (în caz că altcineva a inițiat schimbarea)
         public async Task SendEmailChangeNotificationAsync(string oldEmail, string recipientName, string newEmail, string cancelUrl)
         {
             using var smtpClient = CreateSmtpClient();
@@ -104,6 +114,7 @@ namespace LifeAlertPlus.Application.Services
             await smtpClient.SendMailAsync(mailMessage);
         }
 
+        // Trimite raportul PDF ca atașament medicului (exportat din UI de îngrijitor)
         public async Task SendReportEmailAsync(string doctorEmail, string patientName, byte[] pdfAttachment)
         {
             using var smtpClient = CreateSmtpClient();
@@ -125,6 +136,7 @@ namespace LifeAlertPlus.Application.Services
             await smtpClient.SendMailAsync(mailMessage);
         }
 
+        // Generează body-ul emailului pentru raportul PDF (simplu — PDF-ul e în atașament)
         private string GenerateReportEmailBody(string patientName)
         {
             return $@"
@@ -160,6 +172,7 @@ namespace LifeAlertPlus.Application.Services
                 </html>";
         }
 
+        // Generează body-ul HTML pentru emailul de confirmare înregistrare (în română)
         private string GenerateRegistrationEmailBody(string recipientName, string verificationUrl)
         {
             return $@"
@@ -205,6 +218,7 @@ namespace LifeAlertPlus.Application.Services
             ";
         }
 
+        // Generează body-ul HTML pentru emailul de resetare parolă (în engleză)
         private string GeneratePasswordResetEmailBody(string recipientName, string resetUrl)
         {
             return $@"
@@ -305,6 +319,7 @@ namespace LifeAlertPlus.Application.Services
             ";
         }
 
+        // Generează body-ul HTML pentru confirmarea schimbării emailului (trimis la noua adresă)
         private string GenerateEmailChangeVerificationBody(string recipientName, string verificationUrl, string oldEmail, string newEmail)
         {
             return $@"
@@ -357,6 +372,7 @@ namespace LifeAlertPlus.Application.Services
             ";
         }
 
+        // Generează body-ul HTML al notificării de securitate (trimis la vechea adresă, buton "Anulează" roșu)
         private string GenerateEmailChangeNotificationBody(string recipientName, string oldEmail, string newEmail, string cancelUrl)
         {
             return $@"
@@ -415,6 +431,8 @@ namespace LifeAlertPlus.Application.Services
             ";
         }
 
+        // Email de alertă medicală în timp real (Critical/Alert) — trimis când o alertă persistă >2 minute
+        // Culoarea header-ului și textele se adaptează după severity și lang (ro/en)
         public async Task SendAlertNotificationEmailAsync(string recipientEmail, string recipientName, string patientName, string severity, string details, string lang = "ro")
         {
             using var client = CreateSmtpClient();
@@ -435,6 +453,7 @@ namespace LifeAlertPlus.Application.Services
             await client.SendMailAsync(mail);
         }
 
+        // Raportul zilnic HTML pre-generat de DailyReportService (body-ul vine gata, aici doar îl trimitem)
         public async Task SendDailyReportEmailAsync(string recipientEmail, string recipientName, string reportHtmlBody, DateTime reportDate, string lang = "ro")
         {
             using var client = CreateSmtpClient();
@@ -457,6 +476,8 @@ namespace LifeAlertPlus.Application.Services
             await client.SendMailAsync(mail);
         }
 
+        // Generează body-ul HTML al emailului de alertă medicală
+        // Culori adaptive: CRITICAL → roșu (#e53935), ALERT → portocaliu (#FF8F00)
         private string GenerateAlertEmailBody(string recipientName, string patientName, string severity, string details, bool isEn)
         {
             var severityColor = severity == "CRITICAL" ? "#e53935" : "#FF8F00";
@@ -515,6 +536,7 @@ namespace LifeAlertPlus.Application.Services
             ";
         }
 
+        // Invitație trimisă medicului cu link de acces la datele pacientului (token SHA-256, valabil 24 ore)
         public async Task SendDoctorInvitationEmailAsync(string doctorEmail, string patientName, string invitationLink)
         {
             using var smtpClient = CreateSmtpClient();
@@ -529,6 +551,7 @@ namespace LifeAlertPlus.Application.Services
             await smtpClient.SendMailAsync(mailMessage);
         }
 
+        // Generează body-ul HTML al invitației pentru medic (în română)
         private string GenerateDoctorInvitationEmailBody(string patientName, string invitationLink)
         {
             return $@"
@@ -568,6 +591,7 @@ namespace LifeAlertPlus.Application.Services
                 </html>";
         }
 
+        // Notificare pentru îngrijitor când medicul adaugă o notiță (preview 200 caractere din notiță)
         public async Task SendDoctorNoteNotificationEmailAsync(string recipientEmail, string recipientName, string patientName, string doctorEmail, string notePreview, string lang = "ro")
         {
             using var smtpClient = CreateSmtpClient();
@@ -587,6 +611,7 @@ namespace LifeAlertPlus.Application.Services
             await smtpClient.SendMailAsync(mailMessage);
         }
 
+        // Generează body-ul HTML al notificării de notiță medicală (albastru, bilingual ro/en)
         private string GenerateDoctorNoteNotificationEmailBody(string recipientName, string patientName, string doctorEmail, string notePreview, bool isEn)
         {
             var headerTitle = isEn ? "📝 Medical Note" : "📝 Notiță medicală";

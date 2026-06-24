@@ -6,6 +6,8 @@ using LifeAlertPlus.Shared.DTOs.Requests.Measurement;
 
 namespace LifeAlertPlus.Client.Pages.Simulation
 {
+	// Code-behind pentru pagina de Simulare — permite generarea/trimiterea de date ESP simulate
+	// (puls, SpO2, temperatură, GPS) pentru persoanele monitorizate, manual sau automat (polling continuu)
 	public partial class SimulationPage
 	{
 		[Inject]
@@ -34,6 +36,8 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		protected string SearchQuery { get; set; } = string.Empty;
 		protected string StatusFilter { get; set; } = "all";
 
+		// Lista filtrată de persoane afișată în UI — combină filtrul de status (running/idle/selected)
+		// cu căutarea text pe nume, serial, utilizator sau email
 		protected IEnumerable<SimPerson> FilteredPersons => Persons.Where(p =>
 		{
 			if (StatusFilter == "running" && !p.IsRunning) return false;
@@ -81,6 +85,9 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 				p.IsSelected = false;
 		}
 
+		// La inițializare: încarcă datele utilizatorului curent din token, încarcă lista de
+		// persoane monitorizate disponibile pentru simulare, apoi reactivează simulările
+		// automate care erau deja pornite (ex. după un refresh de pagină)
 		protected override async Task OnInitializedAsync()
 		{
 			await LoadUserFromTokenAsync();
@@ -88,6 +95,8 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			await RestoreRunningSimulationsAsync();
 		}
 
+		// Reconstruiește lista de persoane monitorizate eligibile pentru simulare:
+		// trebuie să aibă un serial de device valid, să nu fie arhivate și să nu fie duplicate
 		private async Task LoadAsync()
 		{
 			IsLoading = true;
@@ -140,6 +149,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			return LoadAsync();
 		}
 
+		// Trimite o singură măsurătoare simulată pentru o persoană (manual, la apăsarea butonului)
 		protected async Task SendSimulationAsync(SimPerson person)
 		{
 			if (person.IsRunning || person.IsSending)
@@ -160,6 +170,8 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			}
 		}
 
+		// Trimite câte o măsurătoare simulată pentru toate persoanele bifate (selectate),
+		// secvențial, pentru a nu suprasolicita API-ul
 		protected async Task SendAllAsync()
 		{
 			var candidates = SelectedPersons.Where(p => !p.IsRunning && !p.IsSending).ToList();
@@ -182,12 +194,16 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			}
 		}
 
+		// Generează un payload ESP fals pentru serialul dat și îl trimite prin SimulationService,
+		// apoi salvează măsurătoarea rezultată în backend prin MeasurementApiClient
 		private async Task SendForPersonAsync(SimPerson person)
 		{
 			try
 			{
 				var payload = LifeAlertPlus.Shared.Helpers.ESPDataGenerator.GeneratePayload(person.Serial);
 				var sendTask = SimulationService.SendSimulationAsync(payload);
+				// Limitează timpul de așteptare la 3 secunde — dacă serverul nu răspunde la timp,
+				// se consideră oricum succes pentru a nu bloca interfața
 				var completed = await Task.WhenAny(sendTask, Task.Delay(TimeSpan.FromSeconds(3)));
 				var ok = completed == sendTask
 					? await sendTask
@@ -227,6 +243,8 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		}
 	}
 
+	// Pornește simularea automată (server-side) pentru o persoană — backend-ul va genera și
+	// trimite periodic măsurători simulate până la oprire
 	protected async Task StartAutoAsync(SimPerson person)
 	{
 		if (person.IsRunning)
@@ -252,6 +270,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		StateHasChanged();
 	}
 
+	// Șterge și regenerează datele simulate de azi pentru o persoană, incluzând SpO2
 	protected async Task ReseedTodayAsync(SimPerson person)
 	{
 		if (person.IsRunning || person.IsSending) return;
@@ -266,6 +285,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		finally { person.IsSending = false; StateHasChanged(); }
 	}
 
+	// Generează un set inițial de date simulate pentru ziua curentă, pentru o persoană
 	protected async Task SeedTodayAsync(SimPerson person)
 	{
 		if (person.IsRunning || person.IsSending) return;
@@ -280,6 +300,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		finally { person.IsSending = false; StateHasChanged(); }
 	}
 
+	// Generează date simulate pentru ziua curentă pentru toate persoanele selectate, pe rând
 	protected async Task SeedAllTodayAsync()
 	{
 		var candidates = SelectedPersons.Where(p => !p.IsRunning && !p.IsSending).ToList();
@@ -295,6 +316,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		}
 	}
 
+	// Șterge toate datele simulate generate anterior pentru serialul respectiv
 	protected async Task ClearDataAsync(SimPerson person)
 	{
 		if (person.IsRunning || person.IsSending) return;
@@ -308,6 +330,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		finally { person.IsSending = false; StateHasChanged(); }
 	}
 
+	// Oprește simularea automată server-side pentru o persoană
 	protected async Task StopAutoAsync(SimPerson person)
 		{
 			if (!person.IsRunning)
@@ -327,6 +350,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			StateHasChanged();
 		}
 
+		// Pornește simularea automată pentru toate persoanele selectate care nu rulează deja
 		protected async Task StartAllAutoAsync()
 		{
 			var targets = SelectedPersons.Where(p => !p.IsRunning).ToList();
@@ -340,6 +364,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			StateHasChanged();
 		}
 
+		// Oprește simularea automată pentru toate persoanele selectate care rulează
 		protected async Task StopAllAutoAsync()
 		{
 			var running = SelectedPersons.Where(p => p.IsRunning).ToList();
@@ -353,12 +378,15 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			StateHasChanged();
 		}
 
+		// Reprezintă rezultatul ultimei operații de simulare (succes/avertisment) afișat în UI
 		protected record SimStatus(bool Success, string Message)
 		{
 			public static SimStatus Ok(string msg) => new(true, msg);
 			public static SimStatus Warn(string msg) => new(false, msg);
 		}
 
+		// Model de UI pentru o persoană monitorizată afișată în pagina de simulare,
+		// inclusiv starea curentă a simulării (rulează/se trimite/selectată)
 		protected class SimPerson
 		{
 			public Guid PersonId { get; init; }
@@ -372,6 +400,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			public bool IsSelected { get; set; }
 		}
 
+		// Extrage numele și poza de profil ale utilizatorului curent din claim-urile token-ului JWT
 		private async Task LoadUserFromTokenAsync()
 		{
 			var claims = await TokenParser.GetClaimsAsync();
@@ -382,6 +411,7 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 			ProfilePictureUrl = claims.ProfilePictureUrl ?? string.Empty;
 		}
 
+		// Calculează inițialele afișate în avatar pe baza numelui (ex: "John Doe" -> "JD")
 		protected string GetInitials(string name)
 		{
 			var cleaned = name?.Trim();
@@ -399,6 +429,9 @@ namespace LifeAlertPlus.Client.Pages.Simulation
 		{
 		}
 
+		// La (re)încărcarea paginii, interoghează serverul pentru simulările deja active
+		// și marchează persoanele corespunzătoare ca "IsRunning", astfel încât starea din UI
+		// să rămână sincronizată cu simulările pornite anterior (chiar și după refresh)
 		private async Task RestoreRunningSimulationsAsync()
 		{
 			try

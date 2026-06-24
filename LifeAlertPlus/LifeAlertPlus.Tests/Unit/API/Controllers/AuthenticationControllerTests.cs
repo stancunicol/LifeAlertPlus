@@ -14,6 +14,8 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.API.Controllers;
 
+// Teste pentru AuthenticationController — Login, Register, ForgotPassword, ResetPassword
+// Atenție specială la testele care verifică prevenirea enumerării email-urilor (vezi ForgotPassword)
 public class AuthenticationControllerTests
 {
     private readonly Mock<IUserService>           _userSvc   = new();
@@ -21,7 +23,7 @@ public class AuthenticationControllerTests
     private readonly Mock<IJwtService>            _jwtSvc    = new();
     private readonly Mock<IEmailService>          _emailSvc  = new();
     private readonly Mock<IRoleService>           _roleSvc   = new();
-    private readonly AuthenticationController     _sut;
+    private readonly AuthenticationController     _sut; // SUT = System Under Test
 
     public AuthenticationControllerTests()
     {
@@ -135,8 +137,8 @@ public class AuthenticationControllerTests
         var newUser = TestDataFactory.CreateUser(email: "new@test.com");
         newUser.EmailConfirmationToken = "email-token";
 
-        // First call checks for existing user (null = not taken),
-        // second call fetches the just-created user to send the confirmation email.
+        // Primul apel verifică dacă există deja un utilizator (null = emailul e liber),
+        // al doilea apel preia utilizatorul tocmai creat pentru a-i trimite emailul de confirmare.
         _userSvc.SetupSequence(s => s.GetUserByEmailAsync("new@test.com"))
                 .ReturnsAsync((User?)null)
                 .ReturnsAsync(newUser);
@@ -169,7 +171,8 @@ public class AuthenticationControllerTests
     [Fact]
     public async Task ForgotPassword_Returns200_WhenUserNotFound()
     {
-        // Returns generic Ok to prevent email enumeration (security fix)
+        // Returnează 200 generic indiferent de rezultat, ca să nu se poată deduce dacă un email există în sistem
+        // (altfel un atacator ar putea enumera adresele înregistrate testând endpoint-ul în bulk)
         _userSvc.Setup(s => s.GetUserByEmailAsync("ghost@test.com")).ReturnsAsync((User?)null);
 
         var result = await _sut.ForgotPassword(new UserForgotPasswordRequestDTO { Email = "ghost@test.com" });
@@ -180,7 +183,7 @@ public class AuthenticationControllerTests
     [Fact]
     public async Task ForgotPassword_Returns200_WhenGoogleUser()
     {
-        // Returns generic Ok to prevent email enumeration (security fix)
+        // Tot 200 generic — un cont Google nu are parolă locală de resetat, dar nu trebuie să dezvăluim asta apelantului
         var user = TestDataFactory.CreateUser(email: "google@test.com");
         user.Provider = "Google";
         _userSvc.Setup(s => s.GetUserByEmailAsync("google@test.com")).ReturnsAsync(user);

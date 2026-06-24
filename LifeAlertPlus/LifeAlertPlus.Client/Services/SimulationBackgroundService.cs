@@ -8,8 +8,13 @@ namespace LifeAlertPlus.Client.Services
 	/// </summary>
 	public class SimulationBackgroundService
 	{
+		// Buclele de simulare active, indexate după personId — fiecare persoană simulată
+		// are propriul CancellationTokenSource și Task de fundal independent
 		private readonly ConcurrentDictionary<Guid, (CancellationTokenSource Cts, Task RunningTask)> _runs = new();
 
+		// Pornește o buclă de fundal pentru personId: generează periodic un payload simulat (ESP),
+		// îl trimite prin sendAsync și notifică rezultatul prin onResult; dacă există deja o buclă
+		// pentru această persoană, o anulează și o înlocuiește cu cea nouă
 		public Task StartAsync(
 			Guid personId,
 			Func<ESPDataResponseDTO> payloadFactory,
@@ -63,6 +68,8 @@ namespace LifeAlertPlus.Client.Services
 			return runningTask;
 		}
 
+		// Oprește bucla de simulare pentru o persoană: anulează tokenul, așteaptă (max 5s)
+		// terminarea task-ului și eliberează resursele CancellationTokenSource
 		public async Task StopAsync(Guid personId)
 		{
 			if (_runs.TryRemove(personId, out var entry))
@@ -87,6 +94,8 @@ namespace LifeAlertPlus.Client.Services
 			}
 		}
 
+		// Oprește toate buclele de simulare active (ex: la logout sau navigare away de pe pagina
+		// de simulare) — anulează toate token-urile în paralel, așteaptă cel mult 5s, apoi le elimină
 		public async Task StopAllAsync()
 		{
 			var entries = _runs.ToArray();

@@ -8,6 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LifeAlertPlus.API.Controllers
 {
+    // Controller pentru notițele medicale ale doctorilor.
+    // Notițele sunt scrise de medici invitați pentru pacienți specifici.
+    // RESTRICȚIE: Numai medicii INVITAȚI (cu invitație acceptată) pot adăuga notițe.
+    //             Îngrijitorii și adminii pot CITI notițele, dar nu pot adăuga.
+    // Ruta: /api/monitored/{monitoredId}/notes — notițele sunt legate de persoana monitorizată
     [ApiController]
     [Authorize]
     [Route("api/monitored/{monitoredId:guid}/notes")]
@@ -18,33 +23,40 @@ namespace LifeAlertPlus.API.Controllers
         IEmailService emailService,
         ILogger<DoctorNoteController> logger) : BaseApiController
     {
-        // Any user who can view the monitored person (owner or invited doctor) can read notes.
+        // Verifică dreptul de CITIRE: îngrijitor, admin sau medic invitat cu invitație acceptată
         private async Task<bool> HasViewAccessAsync(Guid monitoredId)
         {
             var callerId = GetCallerId();
             if (callerId == null) return false;
             if (IsAdminRole()) return true;
+            // Verificăm dacă utilizatorul este îngrijitor al pacientului
             var owned = await userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
             if (owned.Any(m => m.Id == monitoredId)) return true;
-            // Also allow doctors who accepted an invitation for this patient.
+            // Verificăm dacă este medic cu invitație acceptată pentru acest pacient
             return await db.Invitations.AnyAsync(i =>
                 i.PatientId == monitoredId &&
                 i.IsAccepted &&
                 string.Equals(i.DoctorEmail, User.FindFirst(System.Security.Claims.ClaimTypes.Email)!.Value, StringComparison.OrdinalIgnoreCase));
         }
 
+        // GET /api/monitored/{monitoredId}/notes — Lista notițelor medicale pentru pacient
+        // Accesibil de îngrijitori, admini și medici invitați cu acces acceptat
         [HttpGet]
         public async Task<IActionResult> GetNotes(Guid monitoredId)
         {
             if (!await HasViewAccessAsync(monitoredId)) return Forbid();
             var notes = await db.DoctorNotes
                 .Where(n => n.IdMonitored == monitoredId)
-                .OrderByDescending(n => n.CreatedAt)
+                .OrderByDescending(n => n.CreatedAt) // Cele mai recente primele
                 .Select(n => new { n.Id, n.DoctorEmail, n.DoctorName, n.Content, n.CreatedAt, n.UpdatedAt })
                 .ToListAsync();
             return Ok(notes);
         }
 
+        // POST /api/monitored/{monitoredId}/notes — Salvează o notiță medicală (upsert)
+        // RESTRICȚIE: Numai medicii cu invitație ACCEPTATĂ pot adăuga notițe (nu îngrijitorii/adminii)
+        // UPSERT: Dacă medicul a mai lăsat o notiță, o înlocuiește (un medic = o notiță per pacient)
+        // Notifică toți îngrijitorii că a fost adăugată o notiță nouă
         [HttpPost]
         public async Task<IActionResult> SaveNote(Guid monitoredId, [FromBody] DoctorNoteRequest request)
         {
@@ -54,14 +66,14 @@ namespace LifeAlertPlus.API.Controllers
             var callerId = GetCallerId();
             if (callerId == null) return Unauthorized();
 
-            // Only invited doctors can leave notes — not owners or admins.
+            // Adminii NU pot adăuga notițe medicale (conflict de rol)
             if (IsAdminRole())
                 return Forbid();
 
-            // Check if the caller is an invited doctor (not the owner)
+            // Verificăm că utilizatorul curent este un medic cu invitație acceptată pentru acest pacient
             var isInvitedDoctor = await db.Invitations.AnyAsync(i =>
                 i.PatientId == monitoredId &&
-                i.IsAccepted &&
+                i.IsAccepted && // Invitația trebuie să fi fost acceptată
                 string.Equals(i.DoctorEmail, User.FindFirst(System.Security.Claims.ClaimTypes.Email)!.Value, StringComparison.OrdinalIgnoreCase));
 
             if (!isInvitedDoctor) return Forbid("Only invited doctors can add medical notes.");
@@ -69,34 +81,36 @@ namespace LifeAlertPlus.API.Controllers
             var doctorUser = await db.Users.FindAsync(callerId.Value);
             if (doctorUser == null) return Unauthorized();
 
-            // Upsert: one note per doctor per patient.
+            // UPSERT: verificăm dacă medicul a mai lăsat o notiță pentru acest pacient
             var existing = await db.DoctorNotes
                 .FirstOrDefaultAsync(n => n.IdMonitored == monitoredId && n.IdDoctor == callerId.Value);
 
             if (existing != null)
             {
-                existing.Content = request.Content.Trim();
+                // Actualizăm notița existentă (înlocuire completă de conținut)
+                existing.Content   = request.Content.Trim();
                 existing.UpdatedAt = DateTime.UtcNow;
             }
             else
             {
+                // Creăm o notiță nouă pentru acest medic și pacient
                 db.DoctorNotes.Add(new DoctorNote
                 {
-                    Id = Guid.NewGuid(),
+                    Id          = Guid.NewGuid(),
                     IdMonitored = monitoredId,
-                    IdDoctor = callerId.Value,
+                    IdDoctor    = callerId.Value,   // ID-ul medicului (utilizator înregistrat)
                     DoctorEmail = doctorUser.Email,
-                    DoctorName = $"{doctorUser.FirstName} {doctorUser.LastName}".Trim(),
-                    Content = request.Content.Trim(),
-                    CreatedAt = DateTime.UtcNow
+                    DoctorName  = $"{doctorUser.FirstName} {doctorUser.LastName}".Trim(),
+                    Content     = request.Content.Trim(),
+                    CreatedAt   = DateTime.UtcNow
                 });
             }
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(); // Salvăm notița mai întâi
 
-            // Notification to all caregivers owning this patient.
-            var monitored = await db.Monitoreds.FindAsync(monitoredId);
-            var patientName = monitored != null ? $"{monitored.FirstName} {monitored.LastName}".Trim() : "patient";
-            var caregivers = await db.UserMonitoreds
+            // Notificăm toți îngrijitorii pacientului că a apărut o notiță nouă
+            var monitored   = await db.Monitoreds.FindAsync(monitoredId);
+            var patientName  = monitored != null ? $"{monitored.FirstName} {monitored.LastName}".Trim() : "patient";
+            var caregivers   = await db.UserMonitoreds
                 .Where(um => um.IdMonitored == monitoredId)
                 .Include(um => um.User)
                 .ToListAsync();
@@ -104,56 +118,54 @@ namespace LifeAlertPlus.API.Controllers
             foreach (var um in caregivers)
             {
                 var u = um.User;
+                // Sărim utilizatorii șterși și medicul însuși (nu se notifică pe sine)
                 if (u == null || u.DeletedAt.HasValue || u.Id == callerId.Value) continue;
                 var isEn = string.Equals(u.Language, "en", StringComparison.OrdinalIgnoreCase);
-                var msg = isEn
+                var msg  = isEn
                     ? $"Dr. {doctorUser.FirstName} {doctorUser.LastName} added/updated a note for {patientName}."
                     : $"Dr. {doctorUser.FirstName} {doctorUser.LastName} a adăugat/actualizat o notiță pentru {patientName}.";
 
-                // Save notification to database
+                // Adăugăm notificarea în DB (apare în inbox-ul îngrijitorului)
                 db.Notifications.Add(new Notification
                 {
-                    Id = Guid.NewGuid(),
-                    IdUser = u.Id,
-                    IdMonitored = monitoredId,
+                    Id               = Guid.NewGuid(),
+                    IdUser           = u.Id,
+                    IdMonitored      = monitoredId,
                     NotificationType = "Info",
-                    Message = msg,
-                    CreatedAt = DateTime.UtcNow
+                    Message          = msg,
+                    CreatedAt        = DateTime.UtcNow
                 });
 
-                // Send push notification if user has it enabled
+                // Trimitere push notification (dacă e activat)
                 if (u.NotifyByPush)
                     try { await pushNotificationService.SendPushNotificationAsync(u.Id, $"📝 {msg}", "Info"); }
                     catch (Exception ex) { logger.LogWarning(ex, "Doctor note push failed for user {UserId}", u.Id); }
 
-                // Send email notification if user has it enabled
+                // Trimitere email cu preview notiță (dacă e activat)
                 if (u.NotifyByEmail)
                 {
                     try
                     {
-                        var userName = $"{u.FirstName} {u.LastName}".Trim();
+                        var userName    = $"{u.FirstName} {u.LastName}".Trim();
+                        // Preview-ul emailului este limitat la 200 caractere
                         var notePreview = request.Content.Trim().Length > 200
                             ? request.Content.Trim().Substring(0, 197) + "..."
                             : request.Content.Trim();
                         await emailService.SendDoctorNoteNotificationEmailAsync(
-                            u.Email,
-                            userName,
-                            patientName,
-                            doctorUser.Email,
-                            notePreview,
-                            isEn ? "en" : "ro"
-                        );
+                            u.Email, userName, patientName, doctorUser.Email, notePreview,
+                            isEn ? "en" : "ro");
                     }
                     catch (Exception ex) { logger.LogWarning(ex, "Doctor note email failed for user {UserId}", u.Id); }
                 }
             }
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(); // Salvăm notificările
 
             logger.LogInformation("Doctor {DoctorId} saved note for monitored {MonitoredId}", callerId, monitoredId);
             return Ok(new { Message = "Note saved." });
         }
 
+        // DTO simplu pentru conținutul notițelor (record — imutabil)
         public record DoctorNoteRequest(string Content);
     }
 }

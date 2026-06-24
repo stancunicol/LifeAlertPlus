@@ -68,6 +68,8 @@
 @inject NavigationManager NavigationManager
 
 @code {
+    // NOTĂ: pagina aceasta nu are logică în ViewSelectedUser.razor.cs (acolo e doar helper-ul de traducere T) —
+    // toată logica (încărcare date, stare, navigare) e scrisă direct aici, în blocul @code al .razor
     [Parameter]
     public Guid UserId { get; set; }
 
@@ -78,12 +80,15 @@
     private string UserFullName = "";
     private string ProfilePictureUrl = "";
 
+    // Inițializare pagină (probabil accesată din panoul de Admin — vezi MonitoredUsersPage/listă utilizatori):
+    // încarcă mai întâi datele adminului curent (pentru header), apoi datele utilizatorului vizualizat (UserId din rută)
     protected override async Task OnInitializedAsync()
     {
         await LoadUserFromTokenAsync();
         await LoadDataAsync();
     }
 
+    // Extrage datele adminului/utilizatorului curent (cel logat) din claims-urile JWT, pentru afișare în header
     private async Task LoadUserFromTokenAsync()
     {
         var claims = await TokenParser.GetClaimsAsync();
@@ -92,6 +97,9 @@
         ProfilePictureUrl = claims.ProfilePictureUrl ?? string.Empty;
     }
 
+    // Încarcă profilul utilizatorului vizualizat (UserId din rută) și lista persoanelor monitorizate de el
+    // GET api/user/{UserId}            → UserController.GetUserById            → UserProfileDTO
+    // GET api/usermonitored/{UserId}/monitored → UserMonitoredController.GetMonitoredPeopleByUserId → listă Monitored (doar active, includeArchived=false implicit)
     private async Task LoadDataAsync()
     {
         IsLoading = true;
@@ -111,6 +119,7 @@
         }
     }
 
+    // Revine la lista de utilizatori (pagina de Admin)
     private void GoBack()
     {
         NavigationManager.NavigateTo("/users");

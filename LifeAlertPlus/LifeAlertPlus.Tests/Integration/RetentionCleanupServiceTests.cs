@@ -8,15 +8,20 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LifeAlertPlus.Tests.Integration;
 
+// Teste de integrare pentru RetentionCleanupService — rulează zilnic la 03:00 UTC (vezi RetentionCleanupBackgroundService)
+// și gestionează două politici diferite:
+//  1. Ștergerea măsurătorilor/notificărilor/istoricelor mai vechi decât DataRetentionDays per pacient (sau valoarea implicită)
+//  2. Ștergerea permanentă (hard-delete) a pacienților soft-delete-uiți după expirarea perioadei de grație (GracePeriodDays)
 public class RetentionCleanupServiceTests : IDisposable
 {
     private readonly ServiceProvider _provider;
-    private readonly RetentionCleanupService _sut;
+    private readonly RetentionCleanupService _sut; // SUT = System Under Test
     private readonly string _dbName = Guid.NewGuid().ToString();
 
     public RetentionCleanupServiceTests()
     {
-        // Build a DI container with the DbContext as scoped, so RunAsync's scope.CreateScope() works.
+        // Construim un container DI real cu DbContext înregistrat ca Scoped, ca scope.CreateScope() din RunAsync să funcționeze
+        // (serviciul de producție folosește IServiceScopeFactory, nu poate primi direct un DbContext în constructor)
         var services = new ServiceCollection();
         var pgUrl = Environment.GetEnvironmentVariable("TEST_POSTGRES_URL");
         if (!string.IsNullOrEmpty(pgUrl))
@@ -48,9 +53,11 @@ public class RetentionCleanupServiceTests : IDisposable
         _provider.Dispose();
     }
 
+    // Creează un scope DI nou de fiecare dată — simulează exact cum RetentionCleanupService obține propriul DbContext în producție
     private LifeAlertPlusDbContext NewScope() =>
         _provider.CreateScope().ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
 
+    // retentionDays = null simulează un pacient fără override → se aplică DefaultRetentionDays
     private async Task SeedMonitoredAsync(Guid id, int? retentionDays)
     {
         using var ctx = NewScope();
@@ -92,8 +99,8 @@ public class RetentionCleanupServiceTests : IDisposable
     private async Task SeedDailyHistoriesAsync(Guid monitoredId, params DateTime[] days)
     {
         using var ctx = NewScope();
-        // DailyHistory has both IdMonitored and a shadow MonitoredId FK — set via navigation
-        // so EF populates both consistently.
+        // DailyHistory are atât IdMonitored cât și un FK shadow MonitoredId — setăm prin proprietatea de navigare
+        // ca EF Core să populeze ambele consistent (altfel shadow FK-ul ar rămâne null și constrângerea ar pica)
         var monitored = await ctx.Monitoreds.FindAsync(monitoredId)
                         ?? throw new InvalidOperationException("Seed monitored first");
         foreach (var d in days)
@@ -128,6 +135,7 @@ public class RetentionCleanupServiceTests : IDisposable
         await ctx.SaveChangesAsync();
     }
 
+    // Pacientul are DataRetentionDays=30 (override explicit) — măsurătoarea de 60 zile e ștearsă, cea de 5 zile rămâne
     [Fact]
     public async Task RunAsync_DeletesMeasurementsOlderThanPerMonitoredRetention()
     {
@@ -159,6 +167,7 @@ public class RetentionCleanupServiceTests : IDisposable
         ctx.Measurements.Count(m => m.IdMonitored == id).Should().Be(2);
     }
 
+    // Fără override pe pacient (retentionDays: null), se aplică RetentionCleanupService.DefaultRetentionDays
     [Fact]
     public async Task RunAsync_UsesDefaultRetention_WhenMonitoredHasNoOverride()
     {
@@ -177,6 +186,7 @@ public class RetentionCleanupServiceTests : IDisposable
         rem[0].CreatedAt.Should().BeCloseTo(stillFresh, TimeSpan.FromSeconds(1));
     }
 
+    // Politica de retenție se aplică uniform pe toate tipurile de date istorice ale pacientului, nu doar pe măsurători
     [Fact]
     public async Task RunAsync_DeletesNotificationsAndHistories()
     {
@@ -215,6 +225,8 @@ public class RetentionCleanupServiceTests : IDisposable
         ctx.Measurements.Count(m => m.IdMonitored == idB).Should().Be(0);
     }
 
+    // retentionDays=0 (sau negativ) e tratat ca "retenție dezactivată" — pacientul e exclus complet de la ștergere,
+    // indiferent cât de vechi sunt datele (folosit pentru cazuri speciale unde datele trebuie păstrate la nesfârșit)
     [Fact]
     public async Task RunAsync_SkipsMonitored_WhenRetentionIsZeroOrNegative()
     {
@@ -229,6 +241,8 @@ public class RetentionCleanupServiceTests : IDisposable
         ctx.Measurements.Count(m => m.IdMonitored == id).Should().Be(1);
     }
 
+    // Pacienții soft-delete-uiți (DeletedAt setat) sunt excluși din ștergerea de retenție normală —
+    // ei sunt gestionați separat de logica de hard-delete după perioada de grație (vezi testele de mai jos)
     [Fact]
     public async Task RunAsync_IgnoresSoftDeletedMonitoreds()
     {
@@ -250,8 +264,9 @@ public class RetentionCleanupServiceTests : IDisposable
         ctx2.Measurements.Count(m => m.IdMonitored == id).Should().Be(1);
     }
 
-    // ── Grace-period hard-delete (7 days) ────────────────────────────────────
+    // ── Hard-delete după perioada de grație (7 zile) ────────────────────────────────────
 
+    // După expirarea GracePeriodDays de la soft-delete, pacientul e șters definitiv (hard-delete) din DB
     [Fact]
     public async Task RunAsync_HardDeletesMonitoredPerson_AfterGracePeriodExpires()
     {
@@ -270,6 +285,7 @@ public class RetentionCleanupServiceTests : IDisposable
         verify.Monitoreds.Any(m => m.Id == id).Should().BeFalse();
     }
 
+    // Cât timp perioada de grație nu a expirat, pacientul rămâne în DB (utilizatorul mai poate anula ștergerea / Admin poate reactiva)
     [Fact]
     public async Task RunAsync_DoesNotHardDelete_WhenGracePeriodNotYetExpired()
     {
@@ -277,7 +293,7 @@ public class RetentionCleanupServiceTests : IDisposable
         using (var ctx = NewScope())
         {
             var m = TestDataFactory.CreateMonitored(id);
-            m.DeletedAt = DateTime.UtcNow.AddDays(-3); // within 7-day window
+            m.DeletedAt = DateTime.UtcNow.AddDays(-3); // în interiorul ferestrei de 7 zile
             ctx.Monitoreds.Add(m);
             await ctx.SaveChangesAsync();
         }

@@ -8,6 +8,8 @@ using System.Globalization;
 
 namespace LifeAlertPlus.Client.Pages.Profile
 {
+    // Code-behind pentru pagina de Profil — afișează și permite editarea datelor utilizatorului
+    // curent (date personale, parolă, email), gestionează ștergerea contului, web push și export GDPR
     public partial class ProfilePage : ComponentBase
     {
         [Inject]
@@ -73,6 +75,9 @@ namespace LifeAlertPlus.Client.Pages.Profile
             ShowPasswordChangeSuccess = false;
         }
 
+        // Inițializează pagina: încarcă utilizatorul din token, verifică existența contului în
+        // baza de date (delogare automată dacă nu mai există), sincronizează poza de profil în
+        // sessionStorage și încarcă datele despre persoanele monitorizate
         protected override async Task OnInitializedAsync()
         {
             await LoadCurrentUserAsync();
@@ -111,6 +116,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             await LoadMonitoredDataAsync();
         }
 
+        // Calculează numărul total de persoane monitorizate și numărul de alerte critice curente
+        // (puls/SpO2 în afara limitelor normale), interogând datele ESP live pentru fiecare persoană
         private async Task LoadMonitoredDataAsync()
         {
             try
@@ -151,6 +158,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             await LoadWebPushStateAsync();
         }
 
+        // Populează datele de bază ale utilizatorului din claim-urile token-ului JWT
+        // (folosit ca fallback rapid înainte ca răspunsul complet de la API să fie disponibil)
         private async Task LoadCurrentUserAsync()
         {
             var claims = await TokenParser.GetClaimsAsync();
@@ -165,6 +174,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             CurrentUser.ProfilePictureUrl = claims.ProfilePictureUrl;
         }
 
+        // Calculează inițialele afișate în avatar pe baza numelui complet
         private string GetUserInitials(string fullName)
         {
             if (string.IsNullOrWhiteSpace(fullName))
@@ -176,6 +186,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             return parts[0][0].ToString().ToUpper();
         }
 
+        // Comută formularul în modul editare, pre-populând câmpurile cu valorile curente
         private void EnableEditPersonal()
         {
             EditUser = new UserUpdateRequestDTO
@@ -187,6 +198,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             IsEditingPersonal = true;
         }
 
+        // Salvează modificările datelor personale (nume, prenume, telefon) prin API;
+        // câmpurile goale sunt ignorate (nume) sau setate la null (telefon, dacă a fost șters)
         private async Task SavePersonalInfo()
         {
             if (!string.IsNullOrWhiteSpace(EditUser.FirstName))
@@ -242,6 +255,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
         // Password strength for change-password modal
         private int NewPasswordStrength => ComputeStrength(PasswordChange.NewPassword ?? string.Empty);
 
+        // Calculează un scor de complexitate a parolei (0-4) pe baza lungimii și varietății
+        // de caractere (litere mari/mici, cifre, simboluri) — folosit pentru indicatorul vizual
         private static int ComputeStrength(string pw)
         {
             if (string.IsNullOrEmpty(pw)) return 0;
@@ -292,6 +307,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             _showConfirmPassword = false;
         }
 
+        // Validează și trimite cererea de schimbare a parolei; la succes reîncarcă pagina
+        // (forceLoad) pentru a actualiza data ultimei schimbări de parolă afișată în profil
         private async Task ChangePassword()
         {
             PasswordError = string.Empty;
@@ -357,6 +374,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             EmailError = string.Empty;
         }
 
+        // Validează și trimite cererea de schimbare a adresei de email; dacă API-ul cere
+        // delogare (RequiresLogout), se afișează modalul de succes care va delautentifica utilizatorul
         private async Task ChangeEmail()
         {
             EmailError = string.Empty;
@@ -426,6 +445,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             }
         }
 
+        // Închide modalul de succes pentru schimbarea email-ului și delogă utilizatorul,
+        // necesar pentru ca noul email să fie folosit la următoarea autentificare
         private async Task CloseEmailChangeSuccessModal()
         {
             ShowEmailChangeSuccess = false;
@@ -433,6 +454,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             Navigation.NavigateTo("/login");
         }
 
+        // Validează formatul unui email folosind System.Net.Mail.MailAddress ca parser de referință
         private bool IsValidEmail(string email)
         {
             try
@@ -446,6 +468,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             }
         }
 
+        // Șterge definitiv contul utilizatorului curent și îl delogă (apelat după confirmarea finală)
         private async Task DeleteAccount()
         {
             ShowDeleteInfoModal = false;
@@ -467,6 +490,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             ShowDeleteConfirmModalBool = false;
         }
 
+        // Trece din modalul de confirmare la modalul informativ — pas intermediar
+        // în fluxul de ștergere a contului (dublă confirmare)
         private void ConfirmDeleteAccount()
         {
             ShowDeleteConfirmModalBool = false;
@@ -478,6 +503,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private bool _webPushSubscribed;
         private string _webPushPermission = "default";
 
+        // Verifică prin interop JS dacă browserul suportă notificări push, ce permisiune
+        // are deja acordată și dacă există deja o subscripție activă a service worker-ului
         private async Task LoadWebPushStateAsync()
         {
             try
@@ -494,6 +521,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
             catch { }
         }
 
+        // Abonează utilizatorul la notificări push, trimițând token-ul de autentificare
+        // către funcția JS care înregistrează subscripția la server
         private async Task SubscribeWebPushAsync()
         {
             try
@@ -507,6 +536,7 @@ namespace LifeAlertPlus.Client.Pages.Profile
             catch { }
         }
 
+        // Dezabonează utilizatorul de la notificările push, atât local cât și pe server
         private async Task UnsubscribeWebPushAsync()
         {
             try
@@ -524,6 +554,8 @@ namespace LifeAlertPlus.Client.Pages.Profile
         private bool _gdprExporting;
         private string _gdprExportError = string.Empty;
 
+        // Descarcă exportul GDPR al datelor utilizatorului (conformitate cu dreptul la portabilitate
+        // a datelor) — cere fișierul de la API, îl codifică Base64 și declanșează descărcarea în browser
         private async Task DownloadGdprExport()
         {
             if (CurrentUser == null) return;

@@ -5,10 +5,11 @@ using LifeAlertPlus.Tests.Helpers;
 
 namespace LifeAlertPlus.Tests.Integration;
 
+// Teste de integrare pentru WifiNetworkRepository — rulează pe o bază de date reală (SQLite în memorie sau PostgreSQL, vezi TestDataFactory)
 public class WifiNetworkRepositoryTests : IDisposable
 {
     private readonly LifeAlertPlus.Infrastructure.Context.LifeAlertPlusDbContext _ctx;
-    private readonly WifiNetworkRepository _sut;
+    private readonly WifiNetworkRepository _sut; // SUT = System Under Test
     private readonly Monitored _monitored;
 
     public WifiNetworkRepositoryTests()
@@ -16,7 +17,7 @@ public class WifiNetworkRepositoryTests : IDisposable
         _ctx = TestDataFactory.CreateInMemoryDbContext();
         _sut = new WifiNetworkRepository(_ctx);
         _monitored = TestDataFactory.CreateMonitored();
-        _ctx.Monitoreds.Add(_monitored);
+        _ctx.Monitoreds.Add(_monitored); // O rețea WiFi necesită o persoană monitorizată existentă (FK)
         _ctx.SaveChanges();
     }
 
@@ -42,6 +43,7 @@ public class WifiNetworkRepositoryTests : IDisposable
         found!.Ssid.Should().Be("home");
     }
 
+    // Verifică sortarea după CreatedAt, nu după ordinea de inserare în DB (inserăm "second" primul, dar e mai vechi)
     [Fact]
     public async Task GetByMonitoredIdAsync_ReturnsInsertionOrder()
     {
@@ -59,6 +61,7 @@ public class WifiNetworkRepositoryTests : IDisposable
         list[1].Ssid.Should().Be("second");
     }
 
+    // Rețelele altui pacient nu trebuie să apară în rezultat — izolare per pacient
     [Fact]
     public async Task GetByMonitoredIdAsync_FiltersByMonitored()
     {
@@ -74,6 +77,7 @@ public class WifiNetworkRepositoryTests : IDisposable
         mine.Should().ContainSingle().Which.Ssid.Should().Be("mine");
     }
 
+    // GetByDeviceSerialAsync face JOIN prin Monitored.DeviceSerialNumber, nu o coloană directă pe WifiNetwork
     [Fact]
     public async Task GetByDeviceSerialAsync_JoinsThroughMonitored()
     {

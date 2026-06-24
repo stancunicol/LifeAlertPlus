@@ -7,10 +7,11 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.Application;
 
+// Teste pentru WifiNetworkService — validările de business (SSID/parolă, duplicate, limita de 3 rețele per dispozitiv)
 public class WifiNetworkServiceTests
 {
     private readonly Mock<IWifiNetworkRepository> _repo = new();
-    private readonly WifiNetworkService _sut;
+    private readonly WifiNetworkService _sut; // SUT = System Under Test
     private readonly Guid _monitoredId = Guid.NewGuid();
 
     public WifiNetworkServiceTests()
@@ -37,6 +38,7 @@ public class WifiNetworkServiceTests
         error.Should().Be("ssidRequired");
     }
 
+    // 33 caractere — peste limita standardului WiFi 802.11 pentru SSID (max 32)
     [Fact]
     public async Task AddAsync_Fails_WhenSsidTooLong()
     {
@@ -46,6 +48,7 @@ public class WifiNetworkServiceTests
         error.Should().Be("ssidTooLong");
     }
 
+    // 65 caractere — peste limita WPA2 pentru parolă (max 64)
     [Fact]
     public async Task AddAsync_Fails_WhenPasswordTooLong()
     {
@@ -80,6 +83,7 @@ public class WifiNetworkServiceTests
         error.Should().Be("limitReached");
     }
 
+    // Capturăm entitatea trimisă la repository (Callback) ca să verificăm exact ce s-a construit intern, nu doar valoarea de retur
     [Fact]
     public async Task AddAsync_Succeeds_AndPersistsNetwork()
     {
@@ -103,6 +107,7 @@ public class WifiNetworkServiceTests
         _repo.Verify(r => r.AddAsync(It.IsAny<WifiNetwork>()), Times.Once);
     }
 
+    // Spațiile din jurul SSID-ului trebuie eliminate înainte de salvare (utilizatorul poate tasta accidental spații)
     [Fact]
     public async Task AddAsync_TrimsSsid()
     {

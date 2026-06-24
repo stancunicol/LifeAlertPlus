@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 
 namespace LifeAlertPlus.Client.Pages.Consent
 {
+    // Code-behind pentru pagina de Consimțământ GDPR — afișată la primul login dacă utilizatorul
+    // nu a acceptat încă procesarea datelor; altfel utilizatorul nu poate continua spre dashboard
     public partial class ConsentPage : ComponentBase
     {
         [Inject] private NavigationManager Navigation { get; set; } = default!;
@@ -21,7 +23,7 @@ namespace LifeAlertPlus.Client.Pages.Consent
 
         protected override async Task OnInitializedAsync()
         {
-            // Parse returnUrl from query string.
+            // Extrage parametrul returnUrl din query string, ca să știe unde să redirecționeze după acceptare
             var uri = new Uri(Navigation.Uri);
             foreach (var part in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
             {
@@ -29,17 +31,19 @@ namespace LifeAlertPlus.Client.Pages.Consent
                 if (kv.Length == 2 && kv[0].Equals("returnUrl", StringComparison.OrdinalIgnoreCase))
                 {
                     var url = Uri.UnescapeDataString(kv[1]);
+                    // Acceptă doar URL-uri relative locale (previne open-redirect către "//evil.com")
                     if (url.StartsWith('/') && !url.StartsWith("//"))
                         ReturnUrl = url;
                 }
             }
 
-            // If user already consented (e.g. navigated here directly), skip.
+            // Dacă utilizatorul a acceptat deja consimțământul (ex: a navigat direct pe pagină), trece direct
             var claims = await TokenParser.GetClaimsAsync();
             if (claims != null && !claims.NeedsConsent)
                 Navigation.NavigateTo(ReturnUrl);
         }
 
+        // Trimite acceptul de consimțământ la server și continuă navigarea către pagina inițial cerută
         private async Task AcceptConsent()
         {
             if (!ConsentChecked) return;
@@ -61,10 +65,9 @@ namespace LifeAlertPlus.Client.Pages.Consent
                     return;
                 }
 
-                // Re-issue token so needsConsent disappears from subsequent calls.
-                // Simplest: re-login via the existing session (token is still valid).
-                // The server returns a new JWT only when we call a token-issuing endpoint.
-                // For now navigate directly — the claim disappears on next token renewal.
+                // Token-ul JWT curent încă are claim-ul NeedsConsent=true — server-ul emite un token
+                // nou doar la următoarea autentificare/reînnoire. Pentru simplitate navigăm direct;
+                // claim-ul vechi va dispărea automat la următoarea reînnoire a token-ului.
                 Navigation.NavigateTo(ReturnUrl);
             }
             catch
@@ -77,6 +80,7 @@ namespace LifeAlertPlus.Client.Pages.Consent
             }
         }
 
+        // Utilizatorul refuză consimțământul — nu poate folosi aplicația fără el, deci este delogat
         private async Task DeclineAndLogout()
         {
             await AuthApiClient.LogoutAsync();

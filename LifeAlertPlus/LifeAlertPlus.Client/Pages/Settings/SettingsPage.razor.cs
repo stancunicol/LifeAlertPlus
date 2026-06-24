@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace LifeAlertPlus.Client.Pages.Settings
 {
+    // Code-behind pentru pagina de Setări — praguri de alertă, preferințe de notificare, limbă și abonare Web Push
     public partial class SettingsPage : ComponentBase
     {
         [Inject]
@@ -57,6 +58,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
 
         private string T(string key) => Lang.T(key);
 
+        // Trimite setările curente (praguri, notificări, limbă) către API și afișează temporar o confirmare de salvare
         private async Task SaveSettings()
         {
             // Sync language to LanguageService before saving
@@ -90,15 +92,18 @@ namespace LifeAlertPlus.Client.Pages.Settings
             ShowSaveConfirmation = true;
             StateHasChanged();
 
+            // Mesajul de confirmare rămâne vizibil 3 secunde, apoi se ascunde automat
             await Task.Delay(3000);
             ShowSaveConfirmation = false;
             StateHasChanged();
         }
 
+        // Inițializează pagina: determină versiunea aplicației, verifică autentificarea și încarcă setările utilizatorului din API
         protected override async Task OnInitializedAsync()
         {
             try
             {
+                // Versiunea reală e citită dintr-un fișier static VERSION publicat la build; fallback pe constanta din assembly
                 var url = Navigation.BaseUri + "VERSION";
                 var v = await Http.GetStringAsync(url);
                 Version = (v ?? string.Empty).Trim();
@@ -134,6 +139,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
                 return;
             }
 
+            // Populează setările locale doar cu valorile primite de la API (păstrând valorile implicite dacă lipsesc)
             if (!string.IsNullOrEmpty(userFromApi.FirstDayOfTheWeek))
                 Settings.FirstDayOfWeek = userFromApi.FirstDayOfTheWeek;
             if (!string.IsNullOrEmpty(userFromApi.Language))
@@ -169,6 +175,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             await LoadWebPushStateAsync();
         }
 
+        // Readuce doar pragurile de alertă (HR, temperatură, SpO2) la valorile implicite recomandate
         private void ResetThresholds()
         {
             Settings.HeartRateMin = 60;
@@ -179,6 +186,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             Settings.SpO2Max = 100;
         }
 
+        // Resetează toate setările (praguri, notificări, frecvență, limbă) la valorile implicite din formular
         private void ResetAllSettings()
         {
             Settings = new AppSettings
@@ -199,6 +207,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             };
         }
 
+        // Model local (view-model) pentru setările afișate în formular, oglindind câmpurile din UserUpdateRequestDTO
         private class AppSettings
         {
             public string FirstDayOfWeek { get; set; } = string.Empty;
@@ -230,6 +239,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
         private string _webPushPermission = "default";
         private string? _webPushError;
 
+        // Verifică prin interop JS dacă browserul suportă Web Push, ce permisiune are utilizatorul și dacă există deja o abonare activă
         private async Task LoadWebPushStateAsync()
         {
             try
@@ -246,6 +256,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             await InvokeAsync(StateHasChanged);
         }
 
+        // Solicită abonarea la notificări push prin Service Worker, trimițând tokenul de autentificare pentru asociere cu contul
         private async Task SubscribeWebPushAsync()
         {
             _webPushError = null;
@@ -265,6 +276,7 @@ namespace LifeAlertPlus.Client.Pages.Settings
             StateHasChanged();
         }
 
+        // Dezabonează browserul curent de la notificările push și actualizează starea locală
         private async Task UnsubscribeWebPushAsync()
         {
             try

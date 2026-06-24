@@ -1,3 +1,6 @@
+@* Componenta rădăcină a aplicației — definește Router-ul Blazor și gardul de autentificare/autorizare pe rute.
+   Fiecare navigare trece prin HandleNavigationAsync (Router) și OnLocationChanged (browser back/forward),
+   care verifică tokenul JWT și restricționează rutele de Admin/User în funcție de rol. *@
 @using LifeAlertPlus.Client.Services
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -21,24 +24,25 @@
 </Router>
 
 @code {
+    // Rute accesibile fără token JWT (necesită grijă: orice rută nouă de tip public trebuie adăugată aici explicit)
     private static readonly string[] AllowAnonymousRoutes =
     {
         string.Empty,
         "login",
         "register",
         "reset-password",
-        "invite/accept", // backward-compatible
+        "invite/accept", // păstrată pentru compatibilitate cu link-uri vechi
         "invite/patient",
-        // OAuth callback lands here AFTER Google but BEFORE the JWT is in sessionStorage.
-        // Without this entry, the router's auth guard sees "no token" and force-loads /login,
-        // which cancels the in-flight exchange-token fetch and burns the one-time code.
+        // Callback-ul OAuth ajunge aici DUPĂ Google, dar ÎNAINTE ca JWT-ul să fie scris în sessionStorage.
+        // Fără această intrare, garda de autentificare a router-ului ar vedea "fără token" și ar forța /login,
+        // anulând fetch-ul de schimb-de-cod-pentru-token în desfășurare (codul OAuth e single-use).
         "auth/callback",
-        // GDPR consent page for first-time Google users: token is already in sessionStorage
-        // but the route guard must not redirect to login before the user can consent.
+        // Pagina de consimțământ GDPR pentru utilizatorii Google noi: tokenul e deja în sessionStorage,
+        // dar garda de rută nu trebuie să redirecționeze la login înainte ca utilizatorul să confirme consimțământul.
         "consent"
     };
 
-    // Routes that should clear any stale auth data when opened intentionally.
+    // Rute care, la navigare intenționată, trebuie să curețe orice date de autentificare vechi rămase
     private static readonly string[] ClearAuthRoutes =
     {
         string.Empty,
@@ -47,6 +51,7 @@
         "reset-password"
     };
 
+    // Rute restricționate exclusiv rolului Admin
     private static readonly string[] AdminRoutes =
     {
         "admin-dashboard",
@@ -58,6 +63,8 @@
         "admin-errors"
     };
 
+    // Rute restricționate exclusiv rolului User (un Admin care le accesează e redirecționat la admin-dashboard,
+    // cu excepția vizualizării read-only a paginilor "monitored"/"selected-monitored")
     private static readonly string[] UserRoutes =
     {
         "dashboard",
@@ -71,13 +78,15 @@
         "support"
     };
 
-    private bool _mapsLoaded;
+    private bool _mapsLoaded; // Asigură că cheia Google Maps API e cerută o singură dată per sesiune
 
     protected override void OnInitialized()
     {
-        Navigation.LocationChanged += OnLocationChanged;
+        Navigation.LocationChanged += OnLocationChanged; // Re-validăm autentificarea/rolul la fiecare schimbare de URL (inclusiv back/forward)
     }
 
+    // La primul render, stabilim limba aplicației: din localStorage (JS) dacă există,
+    // altfel din preferința salvată în DB pentru utilizatorul autentificat
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -90,7 +99,7 @@
             }
             else
             {
-                // localStorage is empty — load language preference from DB
+                // localStorage e gol — încărcăm preferința de limbă din DB
                 var claims = await TokenParser.GetClaimsAsync();
                 if (claims != null && claims.UserId != Guid.Empty)
                 {
@@ -106,9 +115,10 @@
         }
     }
 
+    // Interceptează navigarea ÎNAINTE ca Router-ul să afișeze componenta țintă — punctul principal al gardei de securitate
     private async Task HandleNavigationAsync(NavigationContext context)
     {
-        // Allow Google OAuth redirect that carries the token in the fragment to reach the client so it can persist it.
+        // Permitem redirect-ul Google OAuth care duce tokenul în fragmentul URL-ului (#token=...), ca clientul să-l poată persista.
         if (context.Path.Contains("#token=", StringComparison.OrdinalIgnoreCase))
         {
             return;
@@ -119,14 +129,14 @@
         {
             if (ClearAuthRoutes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)))
             {
-                // Navigating intentionally to login/register/reset-password should clear any stale auth data
-                // so the next login is forced to create a new session.
+                // Navigarea intenționată către login/register/reset-password trebuie să curețe orice date
+                // de autentificare vechi, ca următorul login să forțeze crearea unei sesiuni noi.
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
                 await JSRuntime.InvokeVoidAsync("sessionStorage.removeItem", "profilePictureUrl");
                 ProfilePictureService.SetUrl(null);
             }
 
-            // Allow anonymous route without forcing auth.
+            // Rută publică — nu forțăm autentificarea.
             return;
         }
 
@@ -137,10 +147,10 @@
             return;
         }
 
-        // Seed profile picture service so shared components update without a full reload
+        // Inițializăm serviciul de poză de profil, ca componentele partajate (header) să se actualizeze fără reload complet
         ProfilePictureService.SetUrl(claims.ProfilePictureUrl);
 
-        // Fetch Maps API key via authenticated HttpClient, then hand key to JS (no auth in JS fetch).
+        // Cerem cheia Google Maps API printr-un HttpClient autenticat, apoi o transmitem la JS (fetch-ul JS nu are autentificare).
         if (!_mapsLoaded)
         {
             _mapsLoaded = true;
@@ -156,11 +166,13 @@
         EnforceRoleAccess(path, claims);
     }
 
+    // Declanșat la navigare browser (back/forward) — Router-ul Blazor nu reapelează HandleNavigationAsync în acest caz
     private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         await EnforceAuthAsync(e.Location);
     }
 
+    // Aceeași logică de gardă ca HandleNavigationAsync, dar pentru navigarea prin istoricul browserului
     private async Task EnforceAuthAsync(string uri)
     {
         if (uri.Contains("#token=", StringComparison.OrdinalIgnoreCase))
@@ -189,8 +201,8 @@
         if (string.IsNullOrWhiteSpace(rawPath))
             return string.Empty;
 
-        // Strip query string and fragments so allow-anonymous matching works for URLs like
-        // /invite/patient?token=... which would otherwise not equal "invite/patient".
+        // Eliminăm query string și fragment, ca verificarea rutelor publice să funcționeze pentru URL-uri de tip
+        // /invite/patient?token=... care altfel nu ar fi egale cu "invite/patient".
         var pathOnly = rawPath;
         var q = pathOnly.IndexOf('?');
         if (q >= 0) pathOnly = pathOnly.Substring(0, q);
@@ -200,6 +212,7 @@
         return pathOnly.Trim('/');
     }
 
+    // Redirecționează utilizatorul dacă rolul lui nu corespunde rutei cerute (Admin → admin-dashboard, User → dashboard)
     private void EnforceRoleAccess(string path, TokenClaims claims)
     {
         var normalized = path.Trim('/');
@@ -207,12 +220,12 @@
 
         if (isAdmin && MatchesRoute(normalized, UserRoutes))
         {
-            // Allow admins to view monitored pages (read-only) — they should not be forcibly redirected
-            // to the admin dashboard when opening a monitored person's view.
+            // Permitem adminilor să vadă paginile de pacienți monitorizați (read-only) — nu trebuie
+            // redirecționați forțat la dashboard-ul de admin când deschid vizualizarea unui pacient.
             if (normalized.StartsWith("monitored", StringComparison.OrdinalIgnoreCase)
                 || normalized.StartsWith("selected-monitored", StringComparison.OrdinalIgnoreCase))
             {
-                // allow access to these user routes for admins
+                // permitem accesul adminilor la aceste rute de tip User
             }
             else
             {
@@ -234,8 +247,8 @@
 
     private bool MatchesRoute(string path, string[] routes)
     {
-        // Exact route match or nested path ("route/..."), avoids partial collisions like
-        // "monitored" matching "monitored-users".
+        // Match exact sau cale imbricată ("ruta/..."), evită coliziuni parțiale precum
+        // "monitored" care s-ar potrivi din greșeală cu "monitored-users".
         return routes.Any(r => path.Equals(r, StringComparison.OrdinalIgnoreCase)
             || path.StartsWith(r + "/", StringComparison.OrdinalIgnoreCase));
     }

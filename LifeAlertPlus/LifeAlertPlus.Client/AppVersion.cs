@@ -4,6 +4,8 @@ using System.Linq;
 
 namespace LifeAlertPlus.Client;
 
+// Determină versiunea aplicației afișată în UI, încercând mai multe surse în ordine de prioritate
+// (resursă embedded, fișier pe disc, atribut de assembly), cu fallback la "unknown"
 public static class AppVersion
 {
     public static string Version
@@ -51,6 +53,7 @@ public static class AppVersion
                 catch { }
 
                 // Final fallback: assembly informational version or unknown
+                // (citește atributul standard de versiune setat la build, dacă există)
                 return asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
             }
             catch

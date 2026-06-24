@@ -9,8 +9,12 @@ using LifeAlertPlus.Shared.DTOs.Responses.DoctorNote;
 
 namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 {
+    // Code-behind pentru pagina de vizualizare a unei persoane monitorizate selectate:
+    // afișează semne vitale curente, grafice istorice (zilnic/săptămânal), alerte recente,
+    // hartă GPS, notițe medic și feedback pentru alarme false. Se actualizează periodic prin polling.
     public partial class ViewSelectedMonitored : ComponentBase, IAsyncDisposable
     {
+        // ID-ul persoanei monitorizate, primit din ruta paginii
         [Parameter]
         public Guid PersonId { get; set; }
 
@@ -41,8 +45,10 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         [Inject]
         private NotificationService NotificationSvc { get; set; } = default!;
 
+        // Helper de traducere (folosește mereu varianta engleză a textului din chei)
         private string T(string key) => Lang.TEnglish(key);
 
+        // Referințe la elementele SVG ale graficelor (HR, temperatură) și la harta GPS, folosite din JS interop
         private ElementReference _hrSvgRef;
         private ElementReference _tempSvgRef;
         private ElementReference _mapRef;
@@ -54,12 +60,15 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         private bool IsLoading { get; set; } = true;
         private string? LoadError { get; set; }
 
+        // Istoricul brut de date (pentru calcul de puncte/grafice) pentru fiecare semn vital
         private List<ChartDataPoint> HeartRateHistory { get; set; } = new();
         private List<ChartDataPoint> TemperatureHistory { get; set; } = new();
         private List<ChartDataPoint> SpO2History { get; set; } = new();
+        // Coordonate (X, Y) deja calculate pentru desenarea liniilor/zonelor din SVG
         private List<(double X, double Y)> HeartRatePoints { get; set; } = new();
         private List<(double X, double Y)> TemperaturePoints { get; set; } = new();
         private List<(double X, double Y)> SpO2Points { get; set; } = new();
+        // Date pentru tooltip-urile interactive afișate la hover pe grafice (init prin JS interop)
         private List<TooltipPoint> HrTooltipData { get; set; } = new();
         private List<TooltipPoint> TempTooltipData { get; set; } = new();
         private List<TooltipPoint> SpO2TooltipData { get; set; } = new();
@@ -68,6 +77,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
         private ChartViewMode CurrentChartView { get; set; } = ChartViewMode.Daily;
+        // Timer pentru reîmprospătarea periodică a datelor (polling), pornit în OnInitializedAsync
         private System.Threading.Timer? _refreshTimer;
         private bool _disposed = false;
 
@@ -92,6 +102,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
         private bool _isCurrentDataFresh;
         private bool _isLastKnownGps;
 
+        // Consideră datele ESP "proaspete" dacă au fost primite în ultimele (frecvență + 15s);
+        // toleranța de 15s evită fals-negative cauzate de mici întârzieri de rețea
         private static bool IsEspDataFresh(
             LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO? esp, int updateFrequencySeconds)
         {
@@ -106,6 +118,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             Weekly
         }
 
+        // Încarcă datele curente ale persoanei monitorizate: profil, citiri live de la ESP
+        // (dacă sunt proaspete) sau ultima măsurătoare salvată, și calculează statusul vital
         private async Task LoadPersonDataAsync()
         {
             IsLoading = true;
@@ -122,7 +136,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                     return;
                 }
 
-                // Get ESP data and check freshness
+                // Citim ultimele date din cache-ul live al serverului (nu din DB); freshness-ul
+                // se calculează pe baza intervalului configurat per persoană + 15s toleranță
                 var espData = await MonitoredApiClient.GetEspDataAsync(monitored.DeviceSerialNumber);
                 _isCurrentDataFresh = IsEspDataFresh(espData, monitored.UpdateFrequency ?? _userUpdateFrequency);
 
@@ -141,7 +156,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                     temperature = espData.Temperature ?? 0;
                     gps = espData.Neo6m ?? "No data";
 
-                    // Determine status using per-person ranges (fallback to user defaults)
+                    // Calculează statusul vital folosind pragurile configurate per-persoană;
+                    // dacă persoana nu are praguri proprii, se folosesc cele globale ale utilizatorului
                     int effectiveMinHr = monitored.MinHeartRate ?? _userMinHr;
                     int effectiveMaxHr = monitored.MaxHeartRate ?? _userMaxHr;
                     double effectiveMinTemp = monitored.MinTemperature ?? _userMinTemp;
@@ -157,11 +173,13 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                     status = "Offline";
                 }
 
-                // Get last measurement time
+                // Citim cea mai recentă măsurătoare salvată din DB (pagina 1, 1 înregistrare)
+                // pentru a determina ora ultimei actualizări și, dacă ESP-ul e offline, coordonatele GPS de rezervă
                 var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(monitored.Id, 1, 1);
                 var lastMeasurement = measurements?.FirstOrDefault();
 
-                // When live data is stale, use the last stored GPS coordinates as fallback
+                // Dacă ESP-ul e offline, ultima coordonată GPS din DB e mai bună decât „No data"
+                // — se marchează cu _isLastKnownGps=true ca UI-ul să afișeze „Last known location"
                 _isLastKnownGps = false;
                 if (!_isCurrentDataFresh && !string.IsNullOrWhiteSpace(lastMeasurement?.Coordinates))
                 {
@@ -201,6 +219,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Calculează vârsta în ani din data nașterii, ținând cont dacă ziua de naștere
+        // din anul curent a trecut deja sau nu
         private int GetAge(DateTime? birthdate)
         {
             if (!birthdate.HasValue)
@@ -218,10 +238,14 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return age;
         }
 
+        // Încarcă măsurătorile și pregătește datele pentru toate cele 3 grafice (HR, temperatură, SpO2):
+        // agregare zilnică (fiecare măsurătoare) sau săptămânală (medie pe zi), apoi calculează
+        // coordonatele de desenare și datele pentru tooltip-uri
         private async Task LoadChartDataAsync()
         {
             try
             {
+                // Vederea săptămânală are nevoie de mai multe măsurători istorice pentru a face media pe zi
                 int fetchSize = CurrentChartView == ChartViewMode.Weekly ? 10000 : 1000;
                 var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, fetchSize);
                 if (measurements == null || !measurements.Any())
@@ -257,6 +281,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Pregătește datele pentru vederea zilnică: fiecare măsurătoare din ziua curentă
+        // devine un punct pe grafic (fără agregare), poziționat pe axa X după ora exactă
         private void LoadDailyChartData(List<MeasurementResponseDTO> measurements)
         {
             var today = DateTime.Now.Date;
@@ -294,10 +320,13 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }).ToList();
         }
 
+        // Pregătește datele pentru vederea săptămânală: măsurătorile se grupează pe zi
+        // (săptămâna curentă, începând cu prima zi configurată de utilizator) și se calculează media zilnică
         private void LoadWeeklyChartData(List<MeasurementResponseDTO> measurements)
         {
             var today = DateTime.Now.Date;
 
+            // Determină începutul săptămânii curente relativ la prima zi a săptămânii preferată de utilizator
             int diff = ((int)today.DayOfWeek - (int)_firstDayOfWeek + 7) % 7;
             var weekStart = today.AddDays(-diff);
             var days = Enumerable.Range(0, 7).Select(i => weekStart.AddDays(i)).ToList();
@@ -306,6 +335,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 .Where(m => m.CreatedAt.ToLocalTime().Date >= days[0] && m.CreatedAt.ToLocalTime().Date <= days[6])
                 .ToList();
 
+            // Media zilnică pentru fiecare semn vital (SpO2 exclude valorile 0/lipsă)
             var hrByDay   = filtered.GroupBy(m => m.CreatedAt.ToLocalTime().Date).ToDictionary(g => g.Key, g => g.Average(m => (double)m.Pulse));
             var tempByDay = filtered.GroupBy(m => m.CreatedAt.ToLocalTime().Date).ToDictionary(g => g.Key, g => g.Average(m => m.Temperature));
             var spo2ByDay = filtered.Where(m => m.SpO2 > 0).GroupBy(m => m.CreatedAt.ToLocalTime().Date).ToDictionary(g => g.Key, g => g.Average(m => m.SpO2));
@@ -332,6 +362,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }).ToList();
         }
 
+        // Schimbă modul de vizualizare a graficelor (zilnic/săptămânal): golește datele vechi,
+        // reîncarcă din API și reinițializează tooltip-urile JS pentru noul set de date
         private async Task SwitchChartView(ChartViewMode mode)
         {
             CurrentChartView = mode;
@@ -352,11 +384,14 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             await InitTooltipsAsync();
         }
 
+        // Variantă fără interval fix — calculează minim/maxim direct din date
         private List<(double X, double Y)> ComputePoints(List<ChartDataPoint> data)
         {
             return ComputePointsWithRange(data, 0, 0);
         }
 
+        // Transformă valorile brute ale unui semn vital în coordonate (X, Y) pentru desenare SVG,
+        // mapând valorile pe un interval [fixedMin, fixedMax] (sau auto-calculat dacă ambele sunt 0)
         private List<(double X, double Y)> ComputePointsWithRange(
             List<ChartDataPoint> data, double fixedMin, double fixedMax)
         {
@@ -371,6 +406,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             double minVal, maxVal;
             if (fixedMin == 0 && fixedMax == 0)
             {
+                // Interval automat: min/max din date, cu o marjă de 20% pentru lizibilitate
                 var vals = data.Where(d => d.HasData).Select(d => d.ActualValue).ToList();
                 if (!vals.Any()) return new();
                 minVal = vals.Min();
@@ -409,6 +445,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return SpreadCloseXs(pts, minX, maxX, spacing);
         }
 
+        // Generează etichetele axei X pentru graficul curent: ore fixe (la 4h) pentru vederea zilnică,
+        // respectiv zilele săptămânii pentru vederea săptămânală
         private List<(string Label, double X)> GetXAxisLabels()
         {
             const double paddingLeft = 110;
@@ -436,8 +474,11 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Formatează un număr pentru atributele path SVG, indiferent de cultura sistemului
         private static string F(double v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
 
+        // Construiește path-ul SVG pentru zona umplută de sub linia graficului (din linia netezită
+        // până la o linie de bază orizontală), folosit pentru efectul vizual de "area chart"
         private string GenerateAreaPath(List<(double X, double Y)> pts, double baseline = 160)
         {
             if (pts == null || pts.Count == 0) return "";
@@ -455,6 +496,9 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return $"{linePath} L {F(pts[pts.Count - 1].X)} {F(baseline)} L {F(pts[0].X)} {F(baseline)} Z";
         }
 
+        // Construiește un path SVG cu curbe Bezier netezite (variantă a algoritmului Fritsch-Carlson
+        // de interpolare monotonă) prin punctele date, pentru o linie de grafic curbată natural
+        // fără oscilații/undershoot între puncte
         private string GenerateSmoothPath(List<(double X, double Y)> pts)
         {
             if (pts == null || pts.Count == 0) return "";
@@ -467,6 +511,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             if (n == 2)
                 return $"M {F(pts[0].X)} {F(pts[0].Y)} L {F(pts[1].X)} {F(pts[1].Y)}";
 
+            // Calculează pantele dintre puncte consecutive, necesare pentru tangentele curbei
             var dx = new double[n - 1];
             var dy = new double[n - 1];
             var slopes = new double[n - 1];
@@ -477,6 +522,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 slopes[i] = dx[i] < 1e-10 ? 0 : dy[i] / dx[i];
             }
 
+            // Tangenta în fiecare punct = media pantelor adiacente; dacă pantele își schimbă
+            // semnul (vârf/vale locală), tangenta se anulează pentru a evita "bombarea" curbei
             var m = new double[n];
             m[0] = slopes[0];
             m[n - 1] = slopes[n - 2];
@@ -488,6 +535,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                     m[i] = (slopes[i - 1] + slopes[i]) / 2.0;
             }
 
+            // Limitează tangentele (regula Fritsch-Carlson) ca panta segmentului să rămână monotonă —
+            // previne oscilații/bucle ale curbei Bezier între două puncte de date
             for (int i = 0; i < n - 1; i++)
             {
                 if (Math.Abs(slopes[i]) < 1e-10)
@@ -526,6 +575,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return path.ToString();
         }
 
+        // Resetează datele graficelor HR/temperatură când nu există măsurători (afișează grafic gol)
         private void LoadEmptyChartData()
         {
             HeartRateHistory = new List<ChartDataPoint>();
@@ -536,6 +586,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             TempTooltipData = new List<TooltipPoint>();
         }
 
+        // Redistribuie pe orizontală punctele aflate prea apropiate pe axa X (sub "spacing" pixeli)
+        // pentru ca cercurile/marker-ele desenate pe grafic să nu se suprapună vizual
         private static List<(double X, double Y)> SpreadCloseXs(List<(double X, double Y)> pts, double minX, double maxX, double spacing = 6.0)
         {
             if (pts == null || pts.Count <= 1) return pts;
@@ -544,6 +596,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             int i = 0;
             while (i < result.Count)
             {
+                // Identifică un grup de puncte consecutive aflate la distanță <= spacing
                 int j = i + 1;
                 while (j < result.Count && (result[j].X - result[j - 1].X) <= spacing)
                     j++;
@@ -583,6 +636,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return result;
         }
 
+        // Construiește lista de alerte recente (cele mai noi 5) pe baza ultimelor 10 măsurători,
+        // verificând praguri de puls, temperatură și detecția de cădere (IsFall)
         private async Task LoadRecentAlertsAsync()
         {
             try
@@ -644,6 +699,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Încarcă ultimele 4 măsurători pentru afișarea în lista de "măsurători recente"
         private async Task LoadRecentMeasurementsAsync()
         {
             try
@@ -669,6 +725,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Formatează o dată/oră relativ la "acum": doar ora dacă e azi, zi+lună+oră dacă e anul curent,
+        // altfel data completă; respectă cultura limbii curente (română sau invariantă)
         private string GetTimeAgo(DateTime dateTime)
         {
             var local = dateTime.Kind == DateTimeKind.Utc ? dateTime.ToLocalTime() : dateTime;
@@ -683,6 +741,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return local.ToString("dd MMM yyyy HH:mm", culture);
         }
 
+        // Extrage inițialele numelui pentru avatar: "Ion Popescu" → "IP";
+        // dacă e un singur cuvânt, folosește primele 2 caractere ("Admin" → "AD")
         private string GetInitials(string name)
         {
             var parts = name.Split(' ');
@@ -691,6 +751,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
         }
 
+        // Traduce statusul intern ("ok", "warning", "critical", "offline") într-un text afișabil în UI
         private string GetStatusText(string status)
         {
             return status.ToLower() switch
@@ -703,6 +764,9 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             };
         }
 
+        // Inițializare pagină: încarcă profilul utilizatorului curent (pentru preferințe precum
+        // pragurile vitale și prima zi a săptămânii), apoi datele persoanei monitorizate, graficele,
+        // măsurătorile și alertele recente; la final pornește timer-ul de auto-refresh
         protected override async Task OnInitializedAsync()
         {
             var claims = await TokenParserService.GetClaimsAsync();
@@ -734,11 +798,15 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
             await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentMeasurementsAsync());
             await LoadRecentAlertsAsync();
+            // Notificările de feedback pentru alarme false se încarcă în fundal, fără să blocheze randarea
             _ = LoadPendingFeedbackAsync();
 
+            // Timer de polling: reîmprospătează datele la intervalul de actualizare configurat (al utilizatorului)
             _refreshTimer = new System.Threading.Timer(_ => _ = RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
         }
 
+        // Apelat periodic de _refreshTimer (pe alt thread) — reîncarcă toate datele live
+        // și reinițializează harta/tooltip-urile; folosește InvokeAsync pentru a reveni pe thread-ul UI
         private async Task RefreshDataAsync()
         {
             if (_disposed) return;
@@ -749,7 +817,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 {
                     await Task.WhenAll(LoadPersonDataAsync(), LoadChartDataAsync(), LoadRecentMeasurementsAsync());
                     await LoadRecentAlertsAsync();
-                    // Reset map so it re-initializes with fresh GPS coordinates
+                    // Resetăm flag-ul hărții ca la fiecare refresh să fie reinițializată cu coordonatele GPS noi
                     _mapInitialized = false;
                     StateHasChanged();
                     await InitTooltipsAsync();
@@ -761,6 +829,10 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Apelat de Blazor după fiecare randare. Inițializăm tooltip-urile la primul render sau
+        // dacă nu au putut fi inițializate anterior (datele nu erau încă disponibile).
+        // Harta se încearcă la FIECARE render (idempotent) deoarece datele persoanei sunt
+        // încărcate asincron și pot apărea după primul render.
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             if (firstRender || !_tooltipsInitialized)
@@ -773,6 +845,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             await InitMapAsync();
         }
 
+        // Inițializează harta Google Maps (prin JS interop) cu coordonatele GPS curente ale persoanei.
+        // Idempotent — odată inițializată cu succes nu se mai reinițializează până la reset explicit
         private async Task InitMapAsync()
         {
             if (_mapInitialized) return;
@@ -794,6 +868,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Extrage latitudine/longitudine din string-ul GPS brut primit de la dispozitiv. Acceptă mai multe
+        // formate: propoziții NMEA standard ($GPRMC, $GPGLL) sau perechi simple "lat,lon" / "lat lon"
         private bool TryParseGpsToLatLon(string gps, out double lat, out double lon)
         {
             lat = 0; lon = 0;
@@ -801,6 +877,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
             var lines = gps.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+            // Propoziție NMEA $GPRMC: câmpurile 3-6 conțin lat, direcție N/S, lon, direcție E/W
             var gprmc = lines.FirstOrDefault(l => l.StartsWith("$GPRMC", StringComparison.OrdinalIgnoreCase));
             if (!string.IsNullOrWhiteSpace(gprmc))
             {
@@ -812,6 +889,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 }
             }
 
+            // Fallback: propoziție NMEA $GPGLL (format alternativ, câmpurile 1-4)
             var gpgll = lines.FirstOrDefault(l => l.StartsWith("$GPGLL", StringComparison.OrdinalIgnoreCase));
             if (!string.IsNullOrWhiteSpace(gpgll))
             {
@@ -823,6 +901,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 }
             }
 
+            // Fallback final: prima linie ca pereche simplă "lat,lon" sau "lat lon" (fără format NMEA)
             var first = lines[0].Trim();
             if (first.Contains(','))
             {
@@ -838,6 +917,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return false;
         }
 
+        // Convertește coordonate în formatul NMEA (grade+minute concatenate, ex: "4807.038")
+        // în grade decimale standard (ex: 48.1173), aplicând semnul după direcția N/S/E/W
         private bool TryParseNmeaLatLon(string latStr, string? latDir, string lonStr, string? lonDir, out double lat, out double lon)
         {
             lat = 0; lon = 0;
@@ -848,6 +929,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
                 latStr = latStr.Trim();
                 lonStr = lonStr.Trim();
 
+                // În format NMEA ultimele 2 cifre înainte de punctul decimal sunt minutele, restul gradele
                 int latDp = latStr.IndexOf('.') >= 0 ? latStr.IndexOf('.') : latStr.Length;
                 int latDegLen = Math.Max(0, latDp - 2);
                 var latDegPart = latStr.Substring(0, latDegLen);
@@ -876,10 +958,13 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Inițializează (prin JS interop) tooltip-urile interactive de pe graficele HR și temperatură,
+        // trimițând punctele de date calculate anterior către scriptul JS chartTooltip
         private async Task InitTooltipsAsync()
         {
             try
             {
+                // În vederea săptămânală valorile sunt medii zilnice, deci tooltip-ul afișează prefixul "Media: "
                 var prefix = CurrentChartView == ChartViewMode.Weekly ? "Media: " : "";
                 int hrDecimals = CurrentChartView == ChartViewMode.Weekly ? 1 : 0;
 
@@ -902,6 +987,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Curăță resursele componentei: oprește timer-ul de polling și dezinstanțiază tooltip-urile JS
+        // pentru a evita scurgeri de memorie/callback-uri către o componentă deja distrusă
         public async ValueTask DisposeAsync()
         {
             _disposed = true;
@@ -914,6 +1001,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             catch { }
         }
 
+        // Clasă CSS de status pentru un semn vital cu interval [min, max] (ex: puls)
         private string GetVitalStatus(int value, int min, int max)
         {
             if (value < min || value > max)
@@ -946,6 +1034,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return "Normal";
         }
 
+        // SpO2 are praguri medicale fixe (nu configurabile per-utilizator): sub 90% e critic
         private string GetSpO2Status(int spO2)
         {
             if (spO2 < 90)
@@ -978,6 +1067,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return "Signal available";
         }
 
+        // Convertește preferința textuală a utilizatorului (ex: "monday") în enum DayOfWeek,
+        // cu Monday ca valoare implicită pentru valori necunoscute/lipsă
         private static DayOfWeek ParseFirstDayOfWeek(string? value)
         {
             return (value?.ToLowerInvariant()) switch
@@ -993,6 +1084,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             };
         }
 
+        // Model de prezentare pentru pagină — îmbină date din profilul persoanei monitorizate
+        // cu citirile vitale curente (live sau ultima măsurătoare cunoscută) și statusul calculat
         public class PersonDetail
         {
             public Guid Id { get; set; }
@@ -1013,6 +1106,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             public int UpdateFrequency { get; set; } = 30;
         }
 
+        // Un punct de date pentru grafic: Day/XFraction determină poziția pe axa X
+        // (XFraction = -1 înseamnă poziționare uniformă pe index, folosită la vederea săptămânală)
         public class ChartDataPoint
         {
             public string Day { get; set; } = string.Empty;
@@ -1022,8 +1117,11 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             public double XFraction { get; set; } = -1;
         }
 
+        // Punct pentru tooltip: (X, Y) poziția marker-ului, (HitX, HitWidth) zona de hover asociată
         public record TooltipPoint(double X, double Y, double Value, string Label, double HitX, double HitWidth);
 
+        // Similar cu ComputePointsWithRange, dar produce și zona de hover (HitX/HitWidth) pentru fiecare
+        // punct — porțiunea din axa X mai apropiată de acel punct decât de vecinii săi
         private List<TooltipPoint> ComputeTooltipData(
             List<ChartDataPoint> data, double fixedMin, double fixedMax)
         {
@@ -1076,6 +1174,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             return result;
         }
 
+        // Returnează emoji-ul corespunzător severității alertei, afișat lângă titlul alertei în listă
         private string GetAlertIcon(string severity)
         {
             return severity.ToLower() switch
@@ -1087,6 +1186,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             };
         }
 
+        // Navighează înapoi la lista de persoane monitorizate (butonul "Back" din UI)
         private void GoBack()
         {
             NavigationManager.NavigateTo("/monitored-users");
@@ -1108,6 +1208,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             public string Time { get; set; } = string.Empty;
         }
 
+        // Încarcă notițele medicale salvate pentru persoana monitorizată (vizibile co-îngrijitorilor/medicului)
         private async Task LoadDoctorNotesAsync(Guid monitoredId)
         {
             _doctorNotesLoading = true;
@@ -1135,6 +1236,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
 
         private void CloseDoctorNotesModal() => _showDoctorNotesModal = false;
 
+        // Salvează o notiță nouă pentru persoana monitorizată și reîncarcă lista la succes
         private async Task SaveDoctorNoteAsync()
         {
             if (string.IsNullOrWhiteSpace(_doctorNoteContent)) return;
@@ -1158,6 +1260,8 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             }
         }
 
+        // Verifică dacă există o cerere de feedback în așteptare (utilizatorul trebuie să confirme
+        // dacă o alertă anterioară a fost reală sau o alarmă falsă) pentru această persoană monitorizată
         private async Task LoadPendingFeedbackAsync()
         {
             try
@@ -1168,6 +1272,7 @@ namespace LifeAlertPlus.Client.Pages.ViewSelectedMonitored
             catch { _pendingFeedback = null; }
         }
 
+        // Trimite răspunsul utilizatorului (alarmă reală sau falsă) pentru feedback-ul în așteptare
         private async Task SubmitFeedbackAsync(bool wasReal)
         {
             if (_pendingFeedback == null || _feedbackSubmitting) return;

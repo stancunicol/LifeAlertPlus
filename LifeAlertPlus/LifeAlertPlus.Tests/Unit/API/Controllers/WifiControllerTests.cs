@@ -11,15 +11,18 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.API.Controllers;
 
+// Teste pentru WifiController — verifică autorizarea (un utilizator poate gestiona doar rețelele propriilor pacienți)
+// și că parola nu se scurge necontrolat în răspunsurile API
 public class WifiControllerTests
 {
     private readonly Mock<IWifiNetworkService> _wifiSvc = new();
     private readonly Mock<IUserMonitoredService> _userMonitoredSvc = new();
     private readonly Guid _callerId = Guid.NewGuid();
-    private readonly WifiController _sut;
+    private readonly WifiController _sut; // SUT = System Under Test
 
     public WifiControllerTests()
     {
+        // Simulăm un utilizator autentificat, cu ID-ul în claim-ul NameIdentifier (cum ar veni dintr-un JWT real)
         _sut = new WifiController(_wifiSvc.Object, _userMonitoredSvc.Object)
         {
             ControllerContext = new ControllerContext
@@ -33,6 +36,7 @@ public class WifiControllerTests
         };
     }
 
+    // Simulează că utilizatorul curent are dreptul de a gestiona rețelele acestui pacient
     private void GrantOwnership(Guid monitoredId)
     {
         _userMonitoredSvc
@@ -69,7 +73,7 @@ public class WifiControllerTests
         var list = ok.Value as List<WifiNetworkResponseDTO>;
         list.Should().NotBeNull();
         list!.Should().ContainSingle().Which.Ssid.Should().Be("home");
-        // Password must NOT leak to web client
+        // Parola NU trebuie să se scurgă către clientul web (WifiNetworkResponseDTO nu are câmp Password)
         list[0].Should().NotBeNull();
     }
 

@@ -1,5 +1,11 @@
 namespace LifeAlertPlus.Shared.DTOs.Requests.AI
 {
+    // Cerere de predicție AI pe baza valorilor vitale curente ale unui pacient.
+    // Server: primit de AIController.Predict (POST /api/ai/predict), care îl reîmpachetează
+    // și îl trimite către microserviciul Python (ai-service/main.py, endpoint /predict).
+    // Client: construit și trimis de SelectedMonitored.razor.cs (RunAIPredictionAsync) prin
+    // AIPredictionService.GetPredictionAsync — pacientul/îngrijitorul poate cere o reevaluare
+    // AI manuală a stării curente, separat de evaluarea automată făcută la fiecare măsurătoare.
     public class AIPredictionRequestDTO
     {
         public double Pulse { get; set; }

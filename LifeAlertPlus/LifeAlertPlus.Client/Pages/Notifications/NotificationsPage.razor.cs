@@ -4,6 +4,8 @@ using LifeAlertPlus.Shared.DTOs.Responses.Notification;
 
 namespace LifeAlertPlus.Client.Pages.Notifications;
 
+// Code-behind pentru pagina de Notificări — listează notificările paginat, cu filtrare pe tip/necitite,
+// marcare ca citit și actualizare în timp real la primirea unei notificări push
 public partial class NotificationsPage : ComponentBase, IAsyncDisposable
 {
     [Inject] private TokenParserService TokenParserService { get; set; } = default!;
@@ -14,6 +16,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
 
     private string T(string key) => Lang.T(key);
 
+    // Dacă e setat, pagina arată notificările pentru o singură persoană monitorizată (nu pentru tot contul)
     [Parameter] public Guid PersonId { get; set; }
 
     private string UserFullName = "";
@@ -33,12 +36,14 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
 
     protected override async Task OnInitializedAsync()
     {
+        // Citește mai întâi datele de bază din claims-urile token-ului (rapid, fără apel API)
         var claims = await TokenParserService.GetClaimsAsync();
         if (claims != null)
         {
             UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
             ProfilePictureUrl = claims.ProfilePictureUrl;
 
+            // Apoi suprascrie cu datele proaspete din API, dacă sunt disponibile (claims-urile pot fi vechi/incomplete)
             var userProfile = await UserApiClient.GetUserByIdAsync(claims.UserId);
             if (userProfile != null)
             {
@@ -50,11 +55,13 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         }
         else
         {
+            // Fallback dacă utilizatorul nu e autentificat sau token-ul nu poate fi decodat
             UserFullName = "User";
         }
 
         await LoadPageAsync();
 
+        // Se abonează o singură dată la notificările push, pentru a reîmprospăta lista în timp real
         if (!_subscribed)
         {
             PushService.OnNotificationReceived += OnPushNotificationReceived;
@@ -62,6 +69,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Cere de la API pagina curentă de notificări, aplicând filtrele active (tip, necitite, persoană)
     private async Task LoadPageAsync()
     {
         _loading = true;
@@ -73,6 +81,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
             _unreadOnly,
             PersonId != Guid.Empty ? PersonId : null);
 
+        // Reține numele persoanei monitorizate din prima notificare primită, pentru titlul paginii
         if (string.IsNullOrEmpty(_patientName) && PersonId != Guid.Empty)
             _patientName = _paged?.Items.FirstOrDefault()?.MonitoredName ?? "";
 
@@ -80,6 +89,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         StateHasChanged();
     }
 
+    // Comută pe filtrul de tip (All/Critical/Alert) și resetează paginarea
     private async Task SetFilter(string filter)
     {
         if (_activeFilter == filter && !_unreadOnly) return;
@@ -89,6 +99,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         await LoadPageAsync();
     }
 
+    // Comută filtrul "doar necitite" (exclusiv cu filtrul de tip) și resetează paginarea
     private async Task SetUnreadFilter()
     {
         _unreadOnly = !_unreadOnly;
@@ -104,6 +115,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         await LoadPageAsync();
     }
 
+    // Marchează o notificare ca citită — actualizează imediat starea locală (fără reload complet) pentru UI rapid
     private async Task MarkAsReadAsync(Guid id)
     {
         await NotificationService.MarkAsReadAsync(id);
@@ -119,6 +131,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         StateHasChanged();
     }
 
+    // Marchează toate notificările utilizatorului ca citite — arată spinner pe buton cât durează operația
     private async Task MarkAllAsReadAsync()
     {
         _markingAll = true;
@@ -131,6 +144,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         StateHasChanged();
     }
 
+    // Handler apelat de serviciul de push când vine o notificare nouă — revine la prima pagină și reîncarcă lista
     private async void OnPushNotificationReceived(string message, string severity)
     {
         _page = 1;
@@ -138,6 +152,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+    // Generează numerele de pagină de afișat în paginare, comprimând paginile îndepărtate cu un separator (-1)
     private IEnumerable<int> GetPageNumbers()
     {
         if (_paged == null) yield break;
@@ -153,6 +168,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Returnează iconița emoji corespunzătoare tipului de notificare (afișată în lista de notificări)
     private static string GetTypeIcon(string type) => type switch
     {
         "Critical" => "🚨",
@@ -160,6 +176,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         _          => "🔔"
     };
 
+    // Returnează clasa CSS corespunzătoare tipului de notificare (critical/alert/info) pentru stilizare vizuală
     private static string GetTypeClass(string type) => type switch
     {
         "Critical" => "critical",
@@ -167,6 +184,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         _          => "info"
     };
 
+    // Formatează data relativ la momentul curent ("acum", "5 min", "2h", ziua săptămânii sau data completă)
     private string FormatDate(DateTime utc)
     {
         var local = utc.ToLocalTime();
@@ -179,6 +197,7 @@ public partial class NotificationsPage : ComponentBase, IAsyncDisposable
         return local.ToString("dd MMM, HH:mm");
     }
 
+    // Dezabonează handler-ul de push la distrugerea paginii, ca să nu rămână referințe vechi active
     public async ValueTask DisposeAsync()
     {
         if (_subscribed)

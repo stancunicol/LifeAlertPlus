@@ -11,10 +11,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LifeAlertPlus.Tests.Integration;
 
+// Teste de integrare pentru fluxul de feedback al notificărilor: utilizatorul confirmă dacă o alertă
+// a fost reală (WasReal=true) sau falsă alarmă (WasReal=false) — folosit pentru a calibra/ajusta sistemul de alertare
 public class NotificationFeedbackTests : IDisposable
 {
     private readonly LifeAlertPlusDbContext _ctx;
-    private readonly NotificationController _sut;
+    private readonly NotificationController _sut; // SUT = System Under Test
     private readonly Guid _userId = Guid.NewGuid();
     private readonly Guid _monitoredId = Guid.NewGuid();
 
@@ -44,6 +46,8 @@ public class NotificationFeedbackTests : IDisposable
 
     public void Dispose() => _ctx.Dispose();
 
+    // Construiește o notificare de test. feedbackRequested simulează FeedbackRequestedAt setat (alertă în așteptarea confirmării),
+    // wasReal simulează un feedback deja oferit, deleted simulează soft-delete (notificare ascunsă din listele active)
     private Notification AddNotification(
         bool feedbackRequested = false,
         bool? wasReal = null,
@@ -88,7 +92,7 @@ public class NotificationFeedbackTests : IDisposable
     {
         AddNotification(feedbackRequested: false);
         var pending = AddNotification(feedbackRequested: true);
-        AddNotification(feedbackRequested: true, wasReal: true);  // already answered
+        AddNotification(feedbackRequested: true, wasReal: true);  // deja răspuns — nu trebuie să mai apară ca "pending"
 
         var result = await _sut.GetPendingFeedback();
         var list = ((OkObjectResult)result).Value as List<PendingFeedbackDTO>;
@@ -137,6 +141,7 @@ public class NotificationFeedbackTests : IDisposable
 
     // ── SubmitFeedback ───────────────────────────────────────────────────────
 
+    // Nu poți răspunde la o notificare care nu a fost marcată explicit ca cerând feedback (FeedbackRequestedAt null)
     [Fact]
     public async Task SubmitFeedback_Returns404_WhenNotificationNotMarkedPending()
     {
@@ -147,6 +152,7 @@ public class NotificationFeedbackTests : IDisposable
         result.Should().BeOfType<NotFoundResult>();
     }
 
+    // Securitate: un utilizator nu poate trimite feedback pe notificarea altcuiva (returnăm 404, nu 403, ca să nu confirmăm existența)
     [Fact]
     public async Task SubmitFeedback_Returns404_WhenBelongsToOtherUser()
     {

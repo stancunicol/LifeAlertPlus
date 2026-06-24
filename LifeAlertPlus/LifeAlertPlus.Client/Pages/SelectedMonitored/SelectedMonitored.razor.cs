@@ -15,8 +15,13 @@ using LifeAlertPlus.Shared.DTOs.Responses.DoctorNote;
 
 namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 {
+    // Code-behind pentru pagina principală de detaliu/editare a unei persoane monitorizate.
+    // Cea mai complexă pagină din Client: afișează măsurători live (HR/Temp/SpO2), grafice
+    // istorice (zilnic/săptămânal), praguri vitale, predicții AI, rețele WiFi ale device-ului ESP,
+    // notițe medic, export/raport email, arhivare și ștergere a persoanei monitorizate.
     public partial class SelectedMonitored : ComponentBase, IAsyncDisposable
     {
+        // Id-ul persoanei monitorizate, primit ca parametru de rută/query.
         [Parameter]
         public Guid PersonId { get; set; }
 
@@ -56,6 +61,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         [Inject]
         private WifiApiClient WifiApiClient { get; set; } = default!;
 
+        // Scurtătură pentru traducerea textelor din UI prin LanguageService.
         private string T(string key) => Lang.T(key);
 
         private ElementReference _hrSvgRef;
@@ -69,47 +75,64 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _scrollSyncInitialized;
 
         private DayOfWeek _firstDayOfWeek = DayOfWeek.Monday;
+        // Datele complete ale persoanei monitorizate (informații personale, praguri, device etc.)
         private PersonDetail? Person { get; set; }
         private bool IsLoading { get; set; } = true;
+        // Ultimele date primite de la device-ul ESP (telemetrie live: poziție, status conexiune etc.)
         private LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO? _espData;
         private string? LoadError { get; set; }
 
+        // Istoricul brut al măsurătorilor (puncte cu valoare + timestamp) pentru fiecare grafic.
         private List<ChartDataPoint> HeartRateHistory { get; set; } = new();
         private List<ChartDataPoint> TemperatureHistory { get; set; } = new();
         private List<ChartDataPoint> SpO2History { get; set; } = new();
+        // Coordonatele (X, Y) deja proiectate pe viewBox-ul SVG, recalculate la zoom/schimbare interval.
         private List<(double X, double Y)> HeartRatePoints { get; set; } = new();
         private List<(double X, double Y)> TemperaturePoints { get; set; } = new();
         private List<(double X, double Y)> SpO2Points { get; set; } = new();
+        // Date pentru tooltip-urile interactive afișate la hover pe puncte din grafic.
         private List<TooltipPoint> HrTooltipData { get; set; } = new();
         private List<TooltipPoint> TempTooltipData { get; set; } = new();
         private List<TooltipPoint> SpO2TooltipData { get; set; } = new();
         private List<Alert> RecentAlerts { get; set; } = new();
         private List<Measurement> RecentMeasurements { get; set; } = new();
+        // Predicție AI (ex. risc de eveniment medical) pentru persoana monitorizată.
         private AIPredictionResponseDTO? AIPrediction { get; set; }
         private bool AIPredictionLoading { get; set; }
         private bool _showProbabilities = false;
+        // Predicții de tendință (trend) pe baza istoricului de monitorizare.
         private LifeAlertPlus.Shared.DTOs.Responses.Monitoring.TrendPredictionResponseDTO? TrendPredictions { get; set; }
         private bool TrendPredictionsLoading { get; set; }
         private ActivityProfileResponseDTO? ActivityProfile { get; set; }
         private bool ActivityProfileLoading { get; set; }
         private string UserFullName = "";
         private string ProfilePictureUrl = "";
+        // Mod de vizualizare curent al graficelor: zilnic sau săptămânal.
         private ChartViewMode CurrentChartView { get; set; } = ChartViewMode.Daily;
         private int _weekOffset = 0; // 0 = current week, -1 = previous week, etc.
         private string _chartWeekLabel = "";
         private bool _hasPrevWeekData = false;
         private int _dayOffset = 0; // 0 = today, -1 = yesterday, etc.
+        // Seturi folosite pentru a marca în UI (ex. calendar/navigare) zilele/săptămânile care au date.
         private HashSet<DateTime> _daysWithData = new();
         private HashSet<DateTime> _weeksWithData = new(); // week-start dates
         private string _chartDayLabel = "";
         private bool _hasPrevDayData = false;
+        // Timer pentru reîmprospătarea periodică (polling) a datelor live ale paginii.
         private System.Threading.Timer? _refreshTimer;
         private bool _disposed = false;
 
         // ── False-alarm feedback ──────────────────────────────────────────────
+        // Feedback în așteptare: utilizatorul este întrebat dacă o alertă anterioară a fost reală
+        // sau o falsă alarmă, pentru a ajuta la calibrarea/încrederea în sistemul de alertare.
         private LifeAlertPlus.Shared.DTOs.Responses.Notification.PendingFeedbackDTO? _pendingFeedback;
         private bool _feedbackSubmitting;
 
+        // Verifică dacă există un feedback de confirmare în așteptare pentru această persoană monitorizată.
+        // Flux: NotificationSvc.GetPendingFeedbackAsync()
+        //   → HTTP GET api/notification/pending-feedback
+        //   → NotificationController → DB (notificări fără feedback)
+        //   → filtrare locală pe PersonId → _pendingFeedback
         private async Task LoadPendingFeedbackAsync()
         {
             try
@@ -121,6 +144,10 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             await InvokeAsync(StateHasChanged);
         }
 
+        // Trimite răspunsul utilizatorului (alertă reală sau falsă alarmă) către server.
+        // Flux: NotificationSvc.SubmitFeedbackAsync(id, wasReal)
+        //   → HTTP PATCH api/notification/{id}/feedback { WasReal: true/false }
+        //   → NotificationController → DB (câmpul WasReal actualizat pe notificare)
         private async Task SubmitFeedbackAsync(bool wasReal)
         {
             if (_pendingFeedback == null || _feedbackSubmitting) return;
@@ -133,6 +160,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             finally { _feedbackSubmitting = false; StateHasChanged(); }
         }
 
+        // Ascunde bannerul de feedback fără a trimite un răspuns la server.
         private void DismissFeedback()
         {
             _pendingFeedback = null;
@@ -157,7 +185,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private const double ChartPaddingRight = 15;
         private const double ChartCssScale = ChartCssHeight / ChartViewBoxHeight; // 1.375 — preserved aspect
 
+        // Lățimea viewBox-ului SVG crește proporțional cu nivelul de zoom curent.
         private double ChartViewBoxWidth => ChartViewBoxBaseWidth * _chartZoom;
+        // Lățimea CSS efectivă a graficului, calculată astfel încât proporțiile vizuale să rămână constante.
         private double ChartCssWidth => ChartViewBoxWidth * ChartCssScale;
 
         private string ChartViewBoxAttr =>
@@ -177,6 +207,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private string ChartZoomLabel => $"{(int)Math.Round(_chartZoom * 100)}%";
 
+        // Crește nivelul de zoom al graficelor (cu pas fix), limitat la ChartMaxZoom.
         private async Task ZoomChartIn()
         {
             if (_chartZoom >= ChartMaxZoom) return;
@@ -186,6 +217,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             await InitTooltipsAsync();
         }
 
+        // Reduce nivelul de zoom al graficelor, limitat la ChartMinZoom (nu se poate micșora sub 100%).
         private async Task ZoomChartOut()
         {
             if (_chartZoom <= ChartMinZoom) return;
@@ -195,6 +227,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             await InitTooltipsAsync();
         }
 
+        // Resetează zoom-ul graficelor la valoarea implicită (100%).
         private async Task ResetChartZoom()
         {
             _chartZoom = 1.0;
@@ -216,6 +249,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             _tooltipsInitialized = false;
         }
 
+        // Handler apelat când serviciul de push notifications primește un mesaj live —
+        // declanșează o reîmprospătare a datelor paginii (măsurători/alerte noi).
         private void OnPushNotificationReceived(string message, string severity)
         {
             if (_disposed)
@@ -227,6 +262,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             });
         }
 
+        // Handler apelat când a fost adăugată o măsurătoare nouă pentru persoana monitorizată curentă —
+        // ignoră evenimentul dacă vine pentru altă persoană (monitoredId diferit).
         private void OnMeasurementAdded(Guid monitoredId)
         {
             if (_disposed || monitoredId != PersonId)
@@ -239,6 +276,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         }
 
         // User global vital range fallbacks
+        // Valori implicite (fallback) ale pragurilor vitale ale utilizatorului — folosite când
+        // persoana monitorizată nu are praguri personalizate setate la nivel de profil/afecțiune.
         private int _userMinHr = 60;
         private int _userMaxHr = 100;
         private double _userMinTemp = 36.0;
@@ -248,6 +287,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _isCurrentDataFresh;
         private bool _isLastKnownGps;
 
+        // Determină dacă datele ESP curente sunt "proaspete" (recente), comparând timestamp-ul
+        // ultimei transmisii cu frecvența de actualizare configurată + o marjă de toleranță de 15s.
         private bool IsEspDataFresh(Shared.DTOs.Responses.ESP.ESPDataResponseDTO? esp, int updateFrequencySeconds)
         {
             if (esp == null || !esp.IsAvailable) return false;
@@ -256,6 +297,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         }
 
         // Edit modal state
+        // Stare pentru modalul de editare a datelor persoanei monitorizate (date personale,
+        // praguri vitale, device, retenție date) — câmpurile editabile sunt populate din Person.
         private bool _showEditModal;
         // control whether edit button is shown (can be toggled via query param)
         private bool _showEditButton = true;
@@ -278,6 +321,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private int? _editArchiveRetentionDays;
 
         // Condition threshold preview (client-side mirror of ConditionThresholdAdjuster)
+        // Praguri vitale "previzualizate" pe client — oglindă a logicii server-side din
+        // ConditionThresholdAdjuster, folosită pentru a arăta utilizatorului în timp real cum
+        // afecțiunile selectate ajustează intervalele normale de HR/Temp/SpO2, fără un apel API.
         private int _previewMinHr = 60;
         private int _previewMaxHr = 100;
         private double _previewMinTemp = 36.0;
@@ -310,6 +356,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _inviteSuccess;
 
         // WiFi modal state (multiple networks for the ESP device)
+        // Stare pentru modalul de configurare a rețelelor WiFi memorate de device-ul ESP
+        // (dispozitivul poate avea mai multe rețele salvate, limitate la MaxWifiNetworks).
         private bool _showWifiModal;
         private bool _isWifiLoading;
         private bool _isAddingWifi;
@@ -329,10 +377,13 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _isDoctorUser = false; // True if accessing via /doctor/patient route
 
         // Delete modal state
+        // Stare pentru modalul de confirmare a ștergerii (soft-delete/arhivare) persoanei monitorizate.
         private bool _showDeleteModal;
         private bool _isDeleting;
         private string? _deleteError;
 
+        // Referință statică la instanța curentă a paginii — folosită probabil pentru a permite
+        // altor componente/servicii (ex. callback-uri JS interop) să acceseze pagina activă.
         private static SelectedMonitored? _instance;
 
         private enum ChartViewMode
@@ -341,6 +392,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             Weekly
         }
 
+        // Încarcă datele complete ale persoanei monitorizate de la API și pregătește starea inițială a paginii.
         private async Task LoadPersonDataAsync()
         {
             IsLoading = true;
@@ -348,6 +400,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
             try
             {
+                // Pas 1: detaliile persoanei monitorizate (date personale, device, praguri configurate).
                 var monitored = await MonitoredApiClient.GetMonitoredPersonByIdAsync(PersonId);
                 if (monitored == null)
                 {
@@ -358,8 +411,11 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 }
 
                 // Get ESP data (stored as field so the device diagnostics card can access it)
+                // Pas 2: ultima telemetrie live a device-ului ESP asociat acestei persoane.
                 var espData = await MonitoredApiClient.GetEspDataAsync(monitored.DeviceSerialNumber);
                 _espData = espData;
+                // Verifică dacă datele ESP sunt suficient de recente (în limita frecvenței de update + marjă),
+                // altfel persoana e considerată "Offline" și nu se afișează valori live înșelătoare.
                 _isCurrentDataFresh = IsEspDataFresh(espData, monitored.UpdateFrequency ?? _userUpdateFrequency);
 
                 int heartRate = 0;
@@ -370,6 +426,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
                 if (_isCurrentDataFresh)
                 {
+                    // Date live valide — extrage valorile vitale curente și calculează statusul
+                    // (OK/Warning/Critical) pe baza pragurilor persoanei și a afecțiunilor cunoscute.
                     heartRate = espData!.Bpm ?? 0;
                     spO2 = espData.Spo2 ?? 0;
                     temperature = espData.Temperature ?? 0;
@@ -387,10 +445,13 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 }
                 else
                 {
+                    // Fără date live recente — nu putem evalua starea vitală curentă, deci statusul e "Offline".
                     status = "Offline";
                 }
 
                 // Get last measurement time
+                // Ultima măsurătoare salvată este folosită doar pentru afișarea momentului ultimei actualizări
+                // și, dacă datele live sunt expirate, ca sursă de fallback pentru poziția GPS.
                 var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(monitored.Id, 1, 1);
                 var lastMeasurement = measurements?.FirstOrDefault();
                 string lastUpdate = lastMeasurement != null
@@ -435,6 +496,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 };
 
                 // Skip live/predictive features for archived or soft-deleted persons.
+                // Persoanele arhivate sau șterse (soft-delete) nu mai au monitorizare activă, deci
+                // predicțiile AI/trend/profil de activitate nu se mai încarcă (ar fi date irelevante/eronate).
                 if (!monitored.IsArchived && monitored.DeletedAt == null)
                 {
                     if (_isCurrentDataFresh && espData != null)
@@ -444,6 +507,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     _ = LoadTrendPredictionsAsync(PersonId);
                     _ = LoadActivityProfileAsync(PersonId);
                 }
+                // Afecțiunile și notițele medicului se încarcă indiferent de starea activă/arhivată,
+                // fiind informații istorice relevante oricând.
                 _ = LoadConditionsAsync(PersonId);
                 _ = LoadDoctorNotesAsync(PersonId);
 
@@ -456,6 +521,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
+        // Calculează vârsta în ani împliniți pe baza datei nașterii (ajustează dacă ziua de naștere
+        // din anul curent nu a trecut încă).
         private int GetAge(DateTime? birthdate)
         {
             if (!birthdate.HasValue)
@@ -473,6 +540,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             return age;
         }
 
+        // Construiește cererea de predicție AI din ultimele date senzoriale live (puls, temperatură,
+        // SpO2, accelerometru, giroscop) și declanșează predicția.
         private async Task LoadAIPredictionAsync(LifeAlertPlus.Shared.DTOs.Responses.ESP.ESPDataResponseDTO espData)
         {
             var request = new AIPredictionRequestDTO
@@ -491,6 +560,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             await RunAIPredictionAsync(request);
         }
 
+        // Variantă de fallback: rulează predicția AI folosind ultima măsurătoare salvată în bază
+        // (utilă când nu există date live ESP disponibile).
         private async Task LoadAIPredictionFromLastMeasurementAsync()
         {
             try
@@ -511,6 +582,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             catch { }
         }
 
+        // Apelează serviciul AI de predicție și actualizează starea UI (loading/rezultat/eroare).
         private async Task RunAIPredictionAsync(AIPredictionRequestDTO request)
         {
             try
@@ -530,6 +602,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
+        // Încarcă predicțiile de tendință (evoluție probabilă a valorilor vitale) pe baza istoricului
+        // de monitorizare al persoanei, de la endpoint-ul de monitoring.
         private async Task LoadTrendPredictionsAsync(Guid monitoredId)
         {
             try
@@ -554,6 +628,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
+        // Încarcă profilul de activitate al persoanei (pattern-uri de mișcare/odihnă derivate din date).
         private async Task LoadActivityProfileAsync(Guid monitoredId)
         {
             try
@@ -578,6 +653,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         }
 
         // ── Conditions ────────────────────────────────────────────
+        // Secțiune dedicată afecțiunilor medicale (comorbidități) asociate persoanei monitorizate.
+        // Afecțiunile influențează pragurile vitale efective (vezi ComputeStatus/CalculateConditionThresholds).
 
         private List<string> _conditions = new();
         private List<string> _editConditions = new();
@@ -585,8 +662,10 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         private bool _showConditionsModal;
         private bool _isSavingConditions;
 
+        // Definește o grupare vizuală de afecțiuni (categorie, iconiță, culoare) pentru UI.
         private record ConditionGroupDef(string CategoryKey, string Icon, string ColorClass, List<string> Keys);
 
+        // Gruparea afecțiunilor disponibile pe categorii medicale, pentru afișare organizată în modalul de editare.
         private static readonly List<ConditionGroupDef> ConditionGroups = new()
         {
             new("conditions.cardio",       "❤️",  "cardio",      new() { "hypertension", "arrhythmia", "heart_failure", "mi_risk" }),
@@ -595,6 +674,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             new("conditions.metabolic",    "🔬",  "metabolic",   new() { "diabetes" }),
         };
 
+        // Încarcă afecțiunile medicale salvate ale persoanei și recalculează statusul vital
+        // (deoarece pragurile efective depind de afecțiunile cunoscute).
         private async Task LoadConditionsAsync(Guid monitoredId)
         {
             _conditionsLoading = true;
@@ -625,6 +706,11 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
+        // Calculează statusul vital al persoanei: "Critical", "Warning" sau "OK".
+        // Logica este oglinda client-side a aceleiași evaluări făcută pe server: pragurile de bază
+        // (min/max HR, Temp, SpO2) sunt mai întâi relaxate ("lărgite") pe baza afecțiunilor cunoscute
+        // ale pacientului (ex. un cardiac poate avea un puls maxim normal mai mare), iar apoi se
+        // verifică abaterile față de pragurile EFECTIVE (ajustate), nu față de cele brute.
         private string ComputeStatus(
             int hr, int spo2, double temp, bool isFall,
             int minHr, int maxHr, double minTemp, double maxTemp, int minSpo2,
@@ -634,6 +720,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             double effMinTemp = minTemp, effMaxTemp = maxTemp;
             int effMinSpo2 = minSpo2;
 
+            // Pentru fiecare afecțiune cunoscută, extinde (niciodată nu restrânge) intervalul normal —
+            // se păstrează cel mai permisiv prag dintre toate afecțiunile combinate.
             foreach (var cond in conditions ?? Enumerable.Empty<string>())
             {
                 if (_conditionProfiles.TryGetValue(cond, out var p))
@@ -646,12 +734,18 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 }
             }
 
+            // Prag "Critical": cădere detectată de senzor, SAU abateri severe (HR cu o marjă suplimentară
+            // de 10 bpm sub minim, SpO2 sub 90% — prag medical general de hipoxemie severă —, ori
+            // temperatură cu ±0.5°C peste limitele efective). Aceste marje suplimentare reduc
+            // falsele alarme critice pentru valori ușor peste prag.
             if (isFall ||
                 (hr   > 0 && (hr   > effMaxHr            || hr   < effMinHr   - 10)) ||
                 (spo2 > 0 &&  spo2 < 90)                                              ||
                 (temp > 0 && (temp > effMaxTemp + 0.5     || temp < effMinTemp - 0.5)))
                 return "Critical";
 
+            // Prag "Warning": valori care se apropie de limită (HR la 10 bpm sub maxim, sau sub minim;
+            // SpO2/Temp ușor în afara intervalului efectiv) — semnal de atenționare fără a fi încă critic.
             if ((hr   > 0 && (hr   > effMaxHr - 10        || hr   < effMinHr))       ||
                 (spo2 > 0 &&  spo2 < effMinSpo2)                                      ||
                 (temp > 0 && (temp > effMaxTemp            || temp < effMinTemp)))
@@ -660,6 +754,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             return "OK";
         }
 
+        // Deschide modalul de editare a afecțiunilor, pornind de la lista curentă salvată,
+        // și recalculează imediat previzualizarea pragurilor vitale ajustate.
         private void OpenConditionsModal()
         {
             _editConditions = new List<string>(_conditions);
@@ -669,6 +765,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private void CloseConditionsModal() => _showConditionsModal = false;
 
+        // Adaugă/elimină o afecțiune din lista editată și recalculează imediat previzualizarea pragurilor.
         private void ToggleCondition(string key, bool isChecked)
         {
             if (isChecked && !_editConditions.Contains(key))
@@ -679,6 +776,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
         }
 
         // Client-side mirror of ConditionThresholdAdjuster.Calculate
+        // Praguri vitale specifice fiecărei afecțiuni — trebuie să rămână sincronizate cu logica
+        // echivalentă de pe server (ConditionThresholdAdjuster), altfel previzualizarea din UI
+        // ar putea diferi de pragurile efectiv aplicate la evaluarea alertelor.
         private static readonly Dictionary<string, (int MinHr, int MaxHr, double MinTemp, double MaxTemp, int MinSpO2, int MaxSpO2)> _conditionProfiles = new()
         {
             ["heart_failure"] = (55, 110, 36.0, 37.5, 92, 100),
@@ -692,6 +792,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             ["epilepsy"]      = (60, 120, 36.0, 37.5, 95, 100),
         };
 
+        // Recalculează pragurile vitale "previzualizate" (afișate în modalul de afecțiuni) pe baza
+        // afecțiunilor selectate momentan în editor — pornind de la pragurile implicite și extinzându-le
+        // cu cel mai permisiv prag dintre toate afecțiunile bifate (aceeași regulă ca în ComputeStatus).
         private void CalculateConditionThresholds()
         {
             int minHr = 60; int maxHr = 100;
@@ -716,6 +819,15 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             _previewMaxSpO2 = maxSpO2;
         }
 
+        // Salvează lista de afecțiuni editată pe server; serverul recalculează și el pragurile vitale
+        // ajustate (sursa de adevăr), iar aceste praguri sunt sincronizate înapoi în formularul de editare.
+        // La final, datele persoanei și predicția AI sunt reîncărcate pentru a reflecta noile praguri.
+        // Flux: HTTP PUT api/monitoredcondition/{PersonId} ["hypertension", "copd", ...]
+        //   → MonitoredConditionController.Replace()
+        //   → IMonitoredConditionRepository.ReplaceAllAsync() → DB (replace-all)
+        //   → ConditionThresholdAdjuster.Calculate() → praguri noi salvate pe Monitored
+        //   → ConditionRuleEngine.InvalidateCache() + AlertMonitorService.InvalidateThresholdCache()
+        //   → returnează ConditionThresholdResponseDTO cu noile praguri Min/Max per metric
         private async Task SaveConditionsAsync()
         {
             _isSavingConditions = true;
@@ -748,6 +860,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     await LoadPersonDataAsync();
 
                     // Re-run AI with updated thresholds: live ESP first, last measurement as fallback
+                    // Predicția AI trebuie reluată pentru că pragurile noi pot schimba interpretarea riscului.
                     try
                     {
                         var espData = await MonitoredApiClient.GetEspDataAsync(Person?.DeviceSerial ?? "");
@@ -767,6 +880,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
+        // Încarcă notițele medicului asociate persoanei monitorizate (istoric observații clinice).
         private async Task LoadDoctorNotesAsync(Guid monitoredId)
         {
             _doctorNotesLoading = true;
@@ -794,6 +908,13 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
 
         private void CloseDoctorNotesModal() => _showDoctorNotesModal = false;
 
+        // Trimite o notiță nouă a medicului către server și reîncarcă lista actualizată.
+        // Flux: HTTP POST api/monitored/{PersonId}/notes { Content: "..." }
+        //   → DoctorNoteController.SaveNote()
+        //   → verifică că utilizatorul e medic cu invitație acceptată (nu îngrijitor/admin)
+        //   → UPSERT în DoctorNotes (un medic = o notiță per pacient)
+        //   → notifică toți îngrijitorii prin push + email
+        //   → la succes: LoadDoctorNotesAsync() → reîncarcă lista
         private async Task SaveDoctorNoteAsync()
         {
             if (string.IsNullOrWhiteSpace(_doctorNoteContent)) return;
@@ -817,6 +938,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
+        // DTO local pentru pragurile vitale ajustate automat, returnate de server după salvarea afecțiunilor.
         private sealed class ConditionThresholdResponseDTO
         {
             public int? MinHeartRate   { get; set; }
@@ -827,6 +949,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             public int? MaxSpO2        { get; set; }
         }
 
+        // Mapează eticheta unui interval orar de activitate la o clasă CSS pentru colorarea în UI.
         private static string GetActivitySlotClass(string label) => label switch
         {
             "Somn" => "slot-sleep",
@@ -836,6 +959,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             _ => "slot-nodata"
         };
 
+        // Construiește textul tooltip pentru un interval orar din profilul de activitate
+        // (puls mediu, rată de mișcare, probabilitate de somn); necesită minim 10 puncte de date.
         private string GetSlotTooltip(HourlyProfileDTO? slot, int hour)
         {
             if (slot == null || slot.DataPoints < 10)
@@ -843,15 +968,21 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             return $"{hour:00}:00 | {slot.Label} | {T("selected.slotAvgPulse")}: {slot.AveragePulse:F0} bpm | {T("selected.slotMovement")}: {slot.MovementRate:P0} | {T("selected.activitySleep")}: {slot.SleepProbability:P0}";
         }
 
+        // Variante filtrate ale istoricului, excluzând punctele fără date reale (pentru afișări care
+        // nu trebuie să interpoleze/conecteze vizual segmentele lipsă).
         private List<ChartDataPoint> HeartRateHistoryFiltered =>
             HeartRateHistory.Where(d => d.HasData).ToList();
         private List<ChartDataPoint> TemperatureHistoryFiltered =>
             TemperatureHistory.Where(d => d.HasData).ToList();
 
+        // Încarcă măsurătorile din API și populează datele graficelor (zilnic sau săptămânal),
+        // apoi recalculează proiecțiile de puncte SVG și tooltip-urile.
         private async Task LoadChartDataAsync()
         {
             try
             {
+                // Fereastra săptămânală are nevoie de mult mai multe măsurători brute (agregate pe zi),
+                // de aceea se cere un fetch size mult mai mare decât pentru vizualizarea zilnică.
                 int fetchSize = CurrentChartView == ChartViewMode.Weekly ? 10000 : 1000;
                 var measurements = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, fetchSize);
                 if (measurements == null || !measurements.Any())
@@ -887,6 +1018,9 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
+        // Pregătește datele graficului pentru vizualizarea pe o singură zi (ziua curentă + _dayOffset).
+        // Fiecare măsurătoare individuală devine un punct pe grafic (nu se agregă), poziționat pe axa X
+        // proporțional cu ora din zi (XFraction), permițând zoom și tooltip per-măsurătoare.
         private void LoadDailyChartData(List<MeasurementResponseDTO> measurements)
         {
             var targetDay = DateTime.Now.Date.AddDays(_dayOffset);
@@ -915,6 +1049,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             // One point per measurement — the wide, zoomable chart gives them enough room
             // to be readable as distinct dots, and each one is hover-tooltip addressable.
             // Sensor-failure readings (= 0) are excluded per metric.
+            // (citirile cu valoare 0 indică, de regulă, o eroare/deconectare a senzorului, nu o valoare reală)
             HeartRateHistory = todayMs
                 .Where(m => m.Pulse > 0)
                 .Select(m =>
@@ -964,6 +1099,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 .ToList();
         }
 
+        // Eșantionează uniform o listă, alegând `count` elemente distribuite egal de-a lungul ei
+        // (folosit probabil pentru a reduce densitatea punctelor afișate pe grafic).
         private static List<T> SampleEvenly<T>(List<T> source, int count)
         {
             var result = new List<T>(count);
@@ -973,6 +1110,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             return result;
         }
 
+        // Aplică o medie mobilă (sliding window) pentru a netezi o serie de valori, reducând zgomotul
+        // vizual din grafic fără a modifica datele brute originale.
         private static List<double> SmoothValues(List<double> values, int window)
         {
             var result = new List<double>(values.Count);
@@ -988,6 +1127,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             return result;
         }
 
+        // Pregătește datele graficului pentru vizualizarea săptămânală: agregă măsurătorile pe zi
+        // (medie zilnică) pentru cele 7 zile ale săptămânii selectate (curentă + _weekOffset).
         private void LoadWeeklyChartData(List<MeasurementResponseDTO> measurements)
         {
             var today = DateTime.Now.Date;
@@ -1047,6 +1188,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }).ToList();
         }
 
+        // Comută între vizualizarea zilnică și săptămânală a graficelor, resetând offset-urile
+        // de navigare și forțând o reîncărcare completă a datelor.
         private async Task SwitchChartView(ChartViewMode mode)
         {
             CurrentChartView = mode;
@@ -1069,6 +1212,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             await InitTooltipsAsync();
         }
 
+        // Navighează la săptămâna precedentă (doar dacă există date confirmate pentru ea).
         private async Task GoToPreviousWeek()
         {
             if (!_hasPrevWeekData) return;
@@ -1076,6 +1220,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             await ReloadChartAsync();
         }
 
+        // Navighează la săptămâna următoare; blocat dacă suntem deja în săptămâna curentă (offset 0).
         private async Task GoToNextWeek()
         {
             if (_weekOffset >= 0) return;
@@ -1083,6 +1228,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             await ReloadChartAsync();
         }
 
+        // Navighează la cea mai recentă zi anterioară care are date înregistrate (sare peste zilele goale).
         private async Task GoToPreviousDay()
         {
             if (!_hasPrevDayData) return;
@@ -1100,6 +1246,7 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
+        // Navighează la cea mai apropiată zi următoare cu date (fără a trece de ziua curentă).
         private async Task GoToNextDay()
         {
             if (_dayOffset >= 0) return;
@@ -1118,6 +1265,8 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             }
         }
 
+        // Golește temporar datele graficelor (pentru un mic efect de tranziție vizuală), apoi
+        // reîncarcă datele pentru noul interval/offset selectat și reinițializează tooltip-urile.
         private async Task ReloadChartAsync()
         {
             HeartRateHistory = new List<ChartDataPoint>();
@@ -1137,11 +1286,15 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
             await InitTooltipsAsync();
         }
 
+        // Variantă care folosește auto-scalare (min/max calculate din date) în loc de un interval fix.
         private List<(double X, double Y)> ComputePoints(List<ChartDataPoint> data)
         {
             return ComputePointsWithRange(data, 0, 0);
         }
 
+        // Proiectează punctele de date pe coordonate SVG (X, Y) în interiorul viewBox-ului graficului.
+        // Dacă fixedMin/fixedMax sunt 0/0, scala verticală se calculează automat din valorile reale
+        // (cu o marjă de 20%); altfel se folosește intervalul fix dat (ex. limitele fiziologice normale).
         private List<(double X, double Y)> ComputePointsWithRange(
             List<ChartDataPoint> data, double fixedMin, double fixedMax)
         {
@@ -1188,12 +1341,15 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                 .ToList();
 
             // Spread points that are very close on X so circles don't overlap
+            // (separă vizual punctele apropiate pe orizontală, ca cercurile de pe grafic să nu se suprapună)
             var minX = paddingLeft;
             var maxX = paddingLeft + usableWidth;
             double spacing = CurrentChartView == ChartViewMode.Daily ? 12.0 : 8.0;
             return SpreadCloseXs(pts, minX, maxX, spacing);
         }
 
+        // Generează etichetele axei X: ore fixe (la fiecare 4h) pentru vizualizarea zilnică,
+        // respectiv numele zilelor săptămânii pentru vizualizarea săptămânală.
         private List<(string Label, double X)> GetXAxisLabels()
         {
             const double paddingLeft = 90;
@@ -1220,8 +1376,10 @@ namespace LifeAlertPlus.Client.Pages.SelectedMonitored
                     .ToList();
             }
         }
+// Formatează un număr cu 2 zecimale, cultură invariantă, pentru construirea atributelor SVG "d"/"points".
 private static string F(double v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
 
+        // Generează atributul SVG "path" pentru zona umplută de sub curba graficului (aria de sub linie).
         private string GenerateAreaPath(List<(double X, double Y)> pts, double baseline = 160)
         {
             if (pts == null || pts.Count == 0) return "";
@@ -1320,6 +1478,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return path.ToString();
         }
 
+        // Resetează toate seriile de date și punctele graficelor la liste vide (ex. când nu există
+        // măsurători pentru intervalul selectat).
         private void LoadEmptyChartData()
         {
             HeartRateHistory   = new List<ChartDataPoint>();
@@ -1334,6 +1494,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         }
 
         // Spread close X positions so plotted circles don't visually overlap
+        // Grupează punctele ale căror poziții X sunt mai apropiate decât `spacing` și le redistribuie
+        // simetric în jurul centrului grupului, respectând limitele minX/maxX ale zonei de desenare.
         private static List<(double X, double Y)> SpreadCloseXs(List<(double X, double Y)> pts, double minX, double maxX, double spacing = 6.0)
         {
             if (pts == null) return new();
@@ -1386,6 +1548,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return result;
         }
 
+        // Derivă lista de "alerte recente" direct din ultimele măsurători (HR în afara intervalului,
+        // temperatură peste maxim, cădere detectată) — este o reconstrucție client-side a evenimentelor
+        // de alertă, nu provine dintr-un endpoint dedicat de alerte.
         private async Task LoadRecentAlertsAsync()
         {
             try
@@ -1403,6 +1568,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 int alertMaxHr  = Person?.MaxHeartRate  ?? 100;
                 double alertMaxTemp = Person?.MaxTemperature ?? 37.5;
 
+                // Se analizează doar cele mai recente 10 măsurători (din cele 50 încărcate) pentru performanță.
                 foreach (var m in measurements.Take(10))
                 {
                     if (m.Pulse > alertMaxHr || m.Pulse < alertMinHr)
@@ -1439,6 +1605,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     }
                 }
 
+                // Se afișează doar primele 5 alerte derivate, cele mai relevante/recente.
                 RecentAlerts = alerts.Take(5).ToList();
             }
             catch
@@ -1447,6 +1614,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Încarcă cele mai recente 4 măsurători pentru afișarea în lista de "activitate recentă".
         private async Task LoadRecentMeasurementsAsync()
         {
             try
@@ -1472,6 +1640,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Formatează un timestamp relativ la data curentă, ajustând nivelul de detaliu (doar ora dacă
+        // e azi, zi+lună+oră dacă e în acest an, altfel data completă), respectând limba selectată.
         private string GetTimeAgo(DateTime dateTime)
         {
             var local = dateTime.Kind == DateTimeKind.Utc ? dateTime.ToLocalTime() : dateTime;
@@ -1486,6 +1656,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return local.ToString("dd MMM yyyy HH:mm", culture);
         }
 
+        // Extrage inițialele (prenume + nume) dintr-un nume complet, pentru afișarea unui avatar text.
         private string GetInitials(string name)
         {
             var parts = name.Split(' ');
@@ -1494,6 +1665,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
         }
 
+        // Mapează codul de status intern ("critical"/"warning"/"ok"/"offline") la un text descriptiv pentru UI.
         private string GetStatusText(string status)
         {
             return status.ToLower() switch
@@ -1506,6 +1678,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             };
         }
 
+        // Convertește preferința utilizatorului pentru prima zi a săptămânii (text) în enum DayOfWeek;
+        // implicit luni, dacă valoarea e necunoscută/lipsă.
         private static DayOfWeek ParseFirstDayOfWeek(string? value)
         {
             return (value?.ToLowerInvariant()) switch
@@ -1521,6 +1695,10 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             };
         }
 
+        // Inițializarea componentei: determină contextul de acces (medic vs. proprietar/îngrijitor),
+        // încarcă preferințele utilizatorului (praguri implicite, prima zi a săptămânii), încarcă
+        // datele inițiale ale paginii (persoană, grafice, măsurători, alerte), se abonează la
+        // evenimentele live (push notifications, măsurători noi) și pornește timer-ul de auto-refresh.
         protected override async Task OnInitializedAsync()
         {
             _instance = this;
@@ -1576,9 +1754,14 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             _ = LoadPendingFeedbackAsync();
 
             // Start auto-refresh timer (uses user-configured update frequency)
+            // Timer-ul de polling rulează la intervalul de actualizare configurat de utilizator,
+            // ținând pagina sincronizată cu noile date de la device fără a necesita reîncărcare manuală.
             _refreshTimer = new System.Threading.Timer(_ => _ = RefreshDataAsync(), null, TimeSpan.FromSeconds(_userUpdateFrequency), TimeSpan.FromSeconds(_userUpdateFrequency));
         }
 
+        // Reîmprospătează toate datele live ale paginii (persoană, grafice, măsurători, alerte, hartă,
+        // predicții, notițe). Este punctul central apelat atât de timer-ul periodic, cât și de
+        // evenimentele push/măsurători noi — de aceea are protecție împotriva execuțiilor concurente.
         private async Task RefreshDataAsync()
         {
             if (_disposed) return;
@@ -1586,8 +1769,12 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             // Drop overlapping refreshes: a single cascade already issues ~8 GETs.
             // Without this guard, push notifications + timer + measurement events
             // can stack and produce multiplied request bursts.
+            // Garda Interlocked.Exchange asigură că doar un singur refresh rulează la un moment dat —
+            // dacă unul e deja în curs, cel nou este abandonat (return) în loc să se suprapună.
             if (System.Threading.Interlocked.Exchange(ref _refreshInFlight, 1) == 1)
                 return;
+            // Throttling suplimentar: dacă ultimul refresh a avut loc foarte recent (sub 5s),
+            // se renunță la acest refresh pentru a evita rafale de cereri API.
             if (DateTime.UtcNow - _lastRefreshUtc < MinRefreshInterval)
             {
                 System.Threading.Interlocked.Exchange(ref _refreshInFlight, 0);
@@ -1620,6 +1807,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Hook-uri JS interop după fiecare render: inițializează tooltip-urile graficelor, harta GPS
+        // (idempotent — sigur de apelat repetat) și sincronizarea de scroll dintre grafice HR/Temp.
         protected override async Task OnAfterRenderAsync(bool firstRender)
         {
             if (firstRender || !_tooltipsInitialized)
@@ -1647,6 +1836,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Inițializează harta Google Maps cu poziția GPS curentă a persoanei monitorizate
+        // (no-op dacă harta e deja inițializată sau dacă nu există coordonate GPS valide).
         private async Task InitMapAsync()
         {
             if (_mapInitialized) return;
@@ -1669,6 +1860,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Încearcă să extragă coordonate (latitudine, longitudine) din textul GPS brut primit de la
+        // device, suportând mai multe formate: propoziții NMEA ($GPRMC, $GPGLL), "lat,lon" simplu
+        // sau separat prin spațiu. Returnează false dacă niciun format nu poate fi parsat.
         private bool TryParseGpsToLatLon(string gps, out double lat, out double lon)
         {
             lat = 0; lon = 0;
@@ -1715,6 +1909,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return false;
         }
 
+        // Convertește componentele de latitudine/longitudine din formatul NMEA (grade + minute zecimale,
+        // plus direcție N/S/E/W) în grade decimale standard (ex. pentru afișare pe Google Maps).
         private bool TryParseNmeaLatLon(string latStr, string? latDir, string lonStr, string? lonDir, out double lat, out double lon)
         {
             lat = 0; lon = 0;
@@ -1754,6 +1950,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         }
 
 
+        // Inițializează (via JS interop) tooltip-urile interactive ale celor 3 grafice (HR/Temp/SpO2),
+        // trimițând punctele de date și formatul de afișare (zecimale, unitate, prefix "Media:" pentru
+        // vizualizarea săptămânală care arată valori agregate, nu citiri individuale).
         private async Task InitTooltipsAsync()
         {
             try
@@ -1788,6 +1987,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Curățenie la distrugerea componentei: marchează pagina ca "disposed" (pentru a ignora
+        // evenimente live întârziate), dezabonează handler-ele de evenimente, oprește timer-ul de
+        // auto-refresh și elimină resursele JS interop alocate (tooltip-uri, sincronizare scroll).
         public async ValueTask DisposeAsync()
         {
             _disposed = true;
@@ -1809,6 +2011,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             catch { }
         }
 
+        // Determină statusul vizual (normal/warning) al unei valori vitale generice (ex. HR) față de
+        // intervalul [min, max] configurat; praguri invalide (<=0) sunt tratate ca "fără prag setat".
         private string GetVitalStatus(int value, int min, int max)
         {
             if (min <= 0 || max <= 0) return "normal";
@@ -1817,6 +2021,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return "normal";
         }
 
+        // Variantă textuală (tradusă) a GetVitalStatus, distingând explicit "sub normal" de "peste normal".
         private string GetVitalStatusText(int value, int min, int max)
         {
             if (min <= 0 || max <= 0) return T("vital.normal");
@@ -1827,6 +2032,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return T("vital.normal");
         }
 
+        // Echivalentul GetVitalStatus pentru temperatură (valori double).
         private string GetTempStatus(double temp, double min, double max)
         {
             if (min <= 0 || max <= 0) return "normal";
@@ -1845,6 +2051,10 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return T("vital.normal");
         }
 
+        // SpO2 are 3 niveluri (nu doar normal/warning): sub minSpO2 e "warning", iar sub un prag critic
+        // (minSpO2 - 5, dar niciodată sub 70% — limită fiziologică de siguranță) devine "critical".
+        // Acest comportament diferă intenționat de GetVitalStatus/GetTempStatus (care au doar 2 nivele),
+        // pentru că saturația scăzută a oxigenului este un indicator de urgență medicală mai sensibil.
         private string GetSpO2Status(int spO2, int minSpO2 = 95)
         {
             int critSpO2 = Math.Max(70, minSpO2 - 5);
@@ -1853,6 +2063,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return "normal";
         }
 
+        // Variantă textuală (tradusă) a GetSpO2Status.
         private string GetSpO2StatusText(int spO2, int minSpO2 = 95)
         {
             int critSpO2 = Math.Max(70, minSpO2 - 5);
@@ -1861,6 +2072,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return T("vital.normal");
         }
 
+        // Indică dacă există semnal GPS valid sau nu (folosit pentru stilizare/iconițe în UI).
         private string GetGPSStatus(string gps)
         {
             if (gps == "No data" || string.IsNullOrEmpty(gps))
@@ -1876,6 +2088,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
         }
 
         // Simple query-string parser to avoid extra package dependencies
+        // Parser minimal pentru query string (ex. ?showEdit=false), implementat manual pentru a evita
+        // o dependență de pachet suplimentară doar pentru această nevoie simplă.
         private static System.Collections.Generic.Dictionary<string, string> ParseQueryString(string query)
         {
             var dict = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
@@ -1899,6 +2113,12 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return dict;
         }
 
+        // Construiește textul informativ despre expirarea retenției de date pentru această persoană.
+        // Are două ramuri distincte: persoană arhivată (se calculează data la care arhiva va fi
+        // definitiv eliminată, pe baza ArchivedAt + ArchiveRetentionDays) versus persoană activă
+        // (se calculează când datele curente vor expira și vor fi șterse automat, conform politicii
+        // de retenție — valoarea implicită de 365 zile trebuie să rămână sincronizată cu
+        // RetentionCleanupService.DefaultRetentionDays de pe server).
         private string? GetRetentionExpiryText()
         {
             if (Person == null) return null;
@@ -1919,6 +2139,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Mapează severitatea unei alerte la o iconiță emoji pentru afișare rapidă în UI.
         private string GetAlertIcon(string severity)
         {
             return severity.ToLower() switch
@@ -1930,6 +2151,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             };
         }
 
+        // Mapează nivelul de risc returnat de predicția AI la o iconiță emoji.
         private string GetAIRiskIcon(string riskLevel)
         {
             return riskLevel?.ToUpper() switch
@@ -1941,6 +2163,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             };
         }
 
+        // Traduce nivelul de risc AI într-un text descriptiv pentru utilizator.
         private string GetAIRiskText(string riskLevel)
         {
             return riskLevel?.ToUpper() switch
@@ -1952,6 +2175,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             };
         }
 
+        // Iconiță pentru metrica de tendință afișată (temperatură/puls/SpO2).
         private static string GetTrendMetricIcon(string metric) => metric switch
         {
             "temperature" => "🌡️",
@@ -1960,6 +2184,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             _ => "📊"
         };
 
+        // Formatează rata de variație a unei metrici (unități/minut) cu semn explicit (+/-) și
+        // unitatea corespunzătoare metricii.
         private static string FormatTrendRate(string metric, double ratePerMinute) => metric switch
         {
             "temperature" => $"{(ratePerMinute >= 0 ? "+" : "")}{ratePerMinute:F2} °C/min",
@@ -1968,6 +2194,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             _ => $"{ratePerMinute:F2}/min"
         };
 
+        // Formatează un număr de secunde rămase până la atingerea unui prag de alertă, în
+        // minute+secunde (dacă >= 60s) sau doar secunde.
         private static string FormatSecondsToThreshold(int seconds, string minLabel, string secLabel)
         {
             if (seconds >= 60)
@@ -1975,6 +2203,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return $"~{seconds} {secLabel}";
         }
 
+        // Obține eticheta tradusă a unei predicții de tendință; dacă cheia de traducere nu există
+        // în resursele de limbă (T returnează aceeași cheie), revine la eticheta brută din DTO.
         private string GetTrendLabel(LifeAlertPlus.Shared.DTOs.Responses.Monitoring.TrendPredictionItemDTO pred)
         {
             var key = $"trend.{pred.Metric}.{pred.Direction}.{pred.Severity}";
@@ -1982,6 +2212,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return translated == key ? pred.Label : translated;
         }
 
+        // Similar cu GetTrendLabel, dar pentru descrierea pragului care a declanșat predicția de tendință.
         private string GetTrendThreshold(LifeAlertPlus.Shared.DTOs.Responses.Monitoring.TrendPredictionItemDTO pred)
         {
             var key = $"trend.threshold.{pred.Metric}.{pred.Direction}";
@@ -1989,11 +2220,20 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return translated == key ? (pred.ThresholdDescription ?? string.Empty) : translated;
         }
 
+        // Navighează înapoi la lista de persoane monitorizate.
         private void GoBack()
         {
             NavigationManager.NavigateTo("/monitored");
         }
 
+        // Pregătește și deschide modalul de export PDF: determină intervalul de date disponibil
+        // (cea mai veche și cea mai recentă măsurătoare) pentru a oferi valori implicite sensibile
+        // în selectorul de interval de export.
+        // Flux: MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 10000)
+        //   → HTTP GET api/measurement/monitored/{PersonId}?pageNumber=1&pageSize=10000
+        //   → MeasurementController.GetByMonitoredId()
+        //   → IMeasurementService → IMeasurementRepository → DB
+        //   → min/max date extrase local din lista returnată, fără un al doilea apel API
         private async Task ExportPdfAsync()
         {
             if (Person == null) return;
@@ -2030,6 +2270,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             _showExportModal = false;
         }
 
+        // Apelabil din JavaScript (ex. dintr-un buton injectat în PDF/raport sau dintr-un link extern) —
+        // deschide modalul de trimitere a raportului pe email, operând pe instanța statică curentă.
         [JSInvokable]
         public static Task OpenEmailModal()
         {
@@ -2049,6 +2291,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             _emailStatusMessage = null;
         }
 
+        // Deschide modalul de invitare a unui medic (acces la datele acestei persoane monitorizate).
         private void OpenInviteModal()
         {
             _inviteDoctorEmail = string.Empty;
@@ -2063,6 +2306,13 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             _inviteStatusMessage = null;
         }
 
+        // Trimite o invitație (link de acces) către emailul unui medic, validând minimal formatul
+        // adresei înainte de a apela API-ul.
+        // Flux: HTTP POST api/email/send-doctor-invitation { DoctorEmail, PatientId, PatientName }
+        //   → EmailController.SendDoctorInvitation()
+        //   → generare token securizat (SHA-256), stocat în Invitations tabel
+        //   → IEmailService.SendDoctorInvitationEmailAsync() → SMTP
+        //   → returnează InvitationResponseDTO cu link /invite/patient?token=...
         private async Task SendInvitationToDoctorAsync()
         {
             if (Person == null) return;
@@ -2113,6 +2363,12 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Deschide modalul WiFi și încarcă lista curentă de rețele salvate pe device-ul ESP.
+        // Flux: WifiApiClient.GetByMonitoredAsync(PersonId)
+        //   → HTTP GET api/wifi/monitored/{PersonId}
+        //   → WifiController.GetByMonitored()
+        //   → IWifiNetworkService → WifiNetworkRepository → DB
+        //   → returnează List<WifiNetworkResponseDTO> (fără parole)
         private async Task OpenWifiModalAsync()
         {
             _newWifiSsid = string.Empty;
@@ -2142,6 +2398,15 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             _newWifiPassword = string.Empty;
         }
 
+        // Adaugă o rețea WiFi nouă pentru device — blocat client-side dacă SSID-ul e vid sau dacă
+        // s-a atins deja numărul maxim de rețele permise (MaxWifiNetworks); validări suplimentare
+        // (SSID duplicat, lungime, limită) sunt verificate și pe server, ale cărui erori sunt mapate
+        // mai jos la mesaje traduse.
+        // Flux: WifiApiClient.AddAsync(PersonId, ssid, password)
+        //   → HTTP POST api/wifi { IdMonitored, Ssid, Password }
+        //   → WifiController.Add()
+        //   → IWifiNetworkService.AddAsync() → WifiNetworkRepository → DB
+        //   → returnează WifiNetworkResponseDTO (fără parolă) sau { Error: "ssidDuplicate"|"limitReached"|... }
         private async Task AddWifiNetworkAsync()
         {
             if (string.IsNullOrWhiteSpace(_newWifiSsid) || _wifiNetworks.Count >= MaxWifiNetworks)
@@ -2188,6 +2453,11 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Șterge o rețea WiFi salvată a device-ului, după id.
+        // Flux: WifiApiClient.DeleteAsync(id)
+        //   → HTTP DELETE api/wifi/{id}
+        //   → WifiController.Delete()
+        //   → IWifiNetworkService.DeleteAsync() → WifiNetworkRepository → DB
         private async Task DeleteWifiNetworkAsync(Guid id)
         {
             var ok = await WifiApiClient.DeleteAsync(id);
@@ -2200,6 +2470,12 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Trimite raportul PDF curent (deja generat în pagină, ca PDF client-side) pe emailul medicului.
+        // PDF-ul este extras ca Base64 direct din componenta JS de export, fără regenerare server-side.
+        // Flux: JSRuntime.InvokeAsync("pdfExport.getPdfBase64") → base64 string
+        //   → HTTP POST api/email/send-report { doctorEmail, patientName, pdfBase64 }
+        //   → EmailController.SendReport()
+        //   → IEmailService.SendReportEmailAsync(email, numePatient, pdfBytes) → SMTP
         private async Task SendEmailToDoctorAsync()
         {
             if (string.IsNullOrWhiteSpace(_doctorEmail) || Person == null) return;
@@ -2248,6 +2524,14 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Construiește structura de date completă pentru raportul PDF exportabil: statistici generale,
+        // detaliere săptămânală/zilnică, liste de alerte și evenimente critice, și datele brute —
+        // toate calculate client-side din măsurătorile filtrate pe intervalul de date selectat.
+        // Flux: MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, 1, 10000)
+        //   → HTTP GET api/measurement/monitored/{PersonId}?pageNumber=1&pageSize=10000
+        //   → date filtrate și agregate local (fără apel API suplimentar)
+        //   → JSRuntime.InvokeVoidAsync("pdfExport.generateMedicalReport", pdfData)
+        //      → generare PDF client-side în browser via jsPDF/html2pdf
         private async Task GenerateExportPdfAsync()
         {
             if (Person == null) return;
@@ -2276,6 +2560,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 }
 
                 // --- Summary stats over entire period ---
+                // Statistici agregate (medie, min, max, deviație standard) pentru întreaga perioadă exportată.
                 object? summary = null;
                 if (filtered.Count > 0)
                 {
@@ -2301,6 +2586,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 }
 
                 // --- Weekly breakdown ---
+                // Defalcare statistici pe săptămâni calendaristice (regula "FirstFourDayWeek", luni ca prima zi).
                 var weeklyBreakdown = filtered
                     .GroupBy(m =>
                     {
@@ -2339,6 +2625,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     .ToArray();
 
                 // --- Daily breakdown ---
+                // Defalcare statistici pe zi calendaristică.
                 var dailyBreakdown = filtered
                     .GroupBy(m => m.CreatedAt.ToLocalTime().Date)
                     .OrderBy(g => g.Key)
@@ -2366,6 +2653,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     .ToArray();
 
                 // --- Alerts (measurements outside normal thresholds) ---
+                // Măsurătorile din raport care ies din pragurile normale ale persoanei (HR/Temp în afara
+                // intervalului configurat, sau SpO2 sub 95% — prag fix folosit aici, distinct de pragul
+                // personalizat MinSpO2 al persoanei).
                 var alerts = filtered
                     .Where(m =>
                         (m.Pulse < Person.MinHeartRate || m.Pulse > Person.MaxHeartRate) ||
@@ -2391,6 +2681,11 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     .ToArray();
 
                 // --- Critical events (falls + extreme values) ---
+                // Evenimente considerate critice pentru raport: cădere detectată, sau abateri severe
+                // de la pragurile persoanei (HR cu marje suplimentare mari de -20/+30 bpm, temperatură
+                // cu ±1/1.5°C peste limite — hipotermie/hipertermie —, ori SpO2 sub 90%, prag medical
+                // general de hipoxemie severă). Marjele sunt distincte (mai largi) decât cele din
+                // ComputeStatus, fiind calibrate pentru raportare istorică, nu pentru alertare live.
                 var criticals = filtered
                     .Where(m =>
                         m.IsFall ||
@@ -2418,6 +2713,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     .ToArray();
 
                 // --- Raw data rows ---
+                // Toate măsurătorile brute din intervalul selectat, formatate pentru tabelul detaliat din raport.
                 var rawData = filtered
                     .Select(m => new
                     {
@@ -2432,6 +2728,11 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
 
                 // --- Automatic Interpretation (severity-aware) ---
                 // Each item: { text, plain, severity } where severity = "low" | "medium" | "high"
+                // Secțiune de "interpretare clinică automată" a raportului — calculează un scor de risc
+                // agregat (0-100) și o serie de observații textuale pe baza statisticilor perioadei,
+                // analizând separat HR, temperatură, SpO2 și evenimentele (alerte/cădere/critice).
+                // NU este un diagnostic medical — este un sumar euristic destinat să ajute medicul/
+                // îngrijitorul să identifice rapid zonele de îngrijorare din perioada raportată.
                 var interpretationItems = new List<object>();
                 int riskScore = 0;
                 string riskLevel = "LOW";
@@ -2453,6 +2754,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     var totalDays = filtered.Select(m => m.CreatedAt.ToLocalTime().Date).Distinct().Count();
 
                     // ── Data Confidence ──
+                    // Nivelul de încredere în concluziile raportului depinde de volumul de date
+                    // disponibil: HIGH necesită minim 30 măsurători pe minim 7 zile distincte,
+                    // MEDIUM minim 14 măsurători pe minim 3 zile, altfel LOW (date insuficiente).
                     if (filtered.Count >= 30 && totalDays >= 7)
                     { dataConfidence = "HIGH"; dataConfidenceNote = T("export.confidence.high").Replace("{0}", $"{filtered.Count}").Replace("{1}", $"{totalDays}"); }
                     else if (filtered.Count >= 14 && totalDays >= 3)
@@ -2461,6 +2765,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     { dataConfidence = "LOW"; dataConfidenceNote = T("export.confidence.low").Replace("{0}", $"{filtered.Count}").Replace("{1}", $"{totalDays}"); }
 
                     // ── Heart Rate ──
+                    // Evaluează HR mediu față de pragurile persoanei și detectează vârfuri/scăderi
+                    // izolate (max/min peste/sub praguri) chiar dacă media e normală — fiecare scenariu
+                    // contribuie diferit la riskScore (penalizare mai mare pentru abateri severe, >30bpm/-20bpm).
                     bool hrAvgOk = avgPulse >= Person.MinHeartRate && avgPulse <= Person.MaxHeartRate;
                     bool hrHasSpike = maxPulse > Person.MaxHeartRate;
                     bool hrHasDip = minPulse < Person.MinHeartRate;
@@ -2496,6 +2803,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                         riskBreakdown.Add(new { factor = T("export.risk.hrHigh"), points = 10 });
                     }
 
+                    // O variabilitate mare a pulsului (diferență peste 50 bpm între min și max în perioadă)
+                    // este semnalată separat, indiferent de mediile individuale fiind normale.
                     if (maxPulse - minPulse > 50)
                     {
                         interpretationItems.Add(new { text = T("export.interp.hrVariability").Replace("{0}", $"{minPulse:F0}").Replace("{1}", $"{maxPulse:F0}"), plain = T("export.plain.hrVariability"), severity = "medium" });
@@ -2504,6 +2813,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     }
 
                     // ── Temperature ──
+                    // Notă: aici se folosește un singur prag de febră (MaxTemperature), nu un prag separat
+                    // de hipotermie distinct ca în secțiunea HR — abaterea sub minim e tratată în ramura "else".
                     bool tempAvgOk = avgTemp >= Person.MinTemperature && avgTemp <= Person.MaxTemperature;
                     bool tempHasSpike = maxTemp > Person.MaxTemperature;
 
@@ -2533,6 +2844,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     }
 
                     // ── SpO2 ──
+                    // Pentru SpO2 se folosește pragul fix de 95% (nu pragul personalizat al persoanei) ca
+                    // referință de normalitate, iar sub 90% media e considerată "critică" (risc maxim: 20 puncte) —
+                    // reflectă convenția medicală generală de hipoxemie severă.
                     bool spo2AvgOk = avgSpo2 >= 95;
                     bool spo2HasDip = minSpo2 < 95;
 
@@ -2562,6 +2876,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     }
 
                     // ── Events ──
+                    // Numărul de alerte/evenimente critice/cădere detectate contribuie suplimentar la scor,
+                    // cu puncte plafonate per categorie (ex. alertele contribuie max 15 puncte în total,
+                    // indiferent câte sunt) pentru a evita ca un volum mare de alerte minore să domine scorul.
                     if (alerts.Length > 0)
                     {
                         var sev = alerts.Length > 10 ? "medium" : "low";
@@ -2589,10 +2906,15 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                         interpretationItems.Add(new { text = T("export.interp.noIncidents"), plain = T("export.plain.noIncidents"), severity = "low" });
 
                     // ── Risk Score (cap at 100) ──
+                    // Scorul agregat este plafonat la 100 și mapat în 3 niveluri de risc:
+                    // HIGH (>=60), MEDIUM (>=30), LOW (sub 30).
                     riskScore = Math.Min(riskScore, 100);
                     riskLevel = riskScore >= 60 ? "HIGH" : riskScore >= 30 ? "MEDIUM" : "LOW";
 
                     // ── Top Concerns (ranked by severity, max 3) ──
+                    // Selectează cele mai importante 3 motive de îngrijorare, în ordine de prioritate
+                    // fixă (cădere + alt eveniment sever > cădere singură > evenimente critice > febră >
+                    // tahicardie/bradicardie > SpO2 scăzut), pentru un sumar rapid, ușor de citit de medic.
                     int rank = 0;
                     if (fallCount > 0 && (hrHasSpike || tempHasSpike))
                     {
@@ -2623,6 +2945,10 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 }
 
                 // --- Conclusion (clinical synthesis) ---
+                // Sintetizează concluziile raportului într-o listă de paragrafe text: prezentare generală,
+                // detectare de episoade acute (cădere combinată cu HR/temperatură anormale), verdict global
+                // (stabil/monitorizare/risc ridicat pe baza riskLevel calculat mai sus), urmat de un rezumat
+                // al evenimentelor critice/alertelor/căderilor și valorile de vârf înregistrate.
                 var conclusionParts = new List<string>();
                 if (filtered.Count > 0)
                 {
@@ -2640,6 +2966,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                         .Replace("{1}", $"{totalDays}"));
 
                     // Detect acute episodes
+                    // Un "episod acut" este definit ca o cădere însoțită de o anomalie semnificativă de
+                    // HR sau temperatură — combinația indică un eveniment potențial grav, nu doar o
+                    // simplă cădere accidentală fără alte semne vitale alarmante.
                     bool hasFalls = fallCount > 0;
                     bool hasCriticalHR = maxPulse > Person.MaxHeartRate + 30;
                     bool hasFever = maxTemp > Person.MaxTemperature + 0.5;
@@ -2679,6 +3008,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                     conclusionParts.Add(T("export.conclusion.recommendation"));
                 }
 
+                // Asamblează obiectul anonim complet cu toate textele traduse și datele calculate,
+                // trimis către componenta JS de generare PDF (pdfExport.generateMedicalReport).
                 var pdfData = new
                 {
                     // Header
@@ -2759,6 +3090,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
             catch (Exception ex)
             {
+                // Eroare de generare — afișată direct utilizatorului via alert() din browser.
                 await JSRuntime.InvokeVoidAsync("alert", $"Export failed: {ex.Message}");
             }
             finally
@@ -2768,6 +3100,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Calculează deviația standard (eșantion, n-1) a unei serii de valori — folosită pentru
+        // rapoartele PDF, pentru a indica variabilitatea măsurătorilor în jurul mediei.
         private static double StdDev(List<double> values)
         {
             if (values.Count <= 1) return 0;
@@ -2776,6 +3110,13 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return Math.Sqrt(sumSq / (values.Count - 1));
         }
 
+        // Deschide modalul de editare, reîncărcând datele complete și actuale ale persoanei direct
+        // de la API (nu din cache-ul local Person), pentru a evita editarea unor date expirate.
+        // Flux: MonitoredApiClient.GetMonitoredPersonByIdAsync(PersonId)
+        //   → HTTP GET api/monitored/id/{PersonId}
+        //   → MonitoredController.GetMonitoredPersonById()
+        //   → IMonitoredService.GetMonitoredPersonByIdAsync() → DB
+        //   → populează câmpurile _edit* din datele proaspete
         private async void OpenEditModal()
         {
             _editError = null;
@@ -2808,9 +3149,17 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             _editError = null;
         }
 
+        // Validează și salvează modificările din formularul de editare (date personale, device,
+        // praguri vitale, frecvență de actualizare, retenție date/arhivă) către API.
+        // Flux: MonitoredApiClient.UpdateMonitoredPersonAsync(PersonId, dto)
+        //   → HTTP PUT api/monitored/update/{PersonId} { FirstName, LastName, DeviceSerialNumber, MinHR, MaxHR, ... }
+        //   → MonitoredController.UpdateMonitoredPerson()
+        //   → IMonitoredService.UpdateMonitoredPersonAsync() → IMonitoredRepository → DB
+        //   → la succes: reîncarcă datele persoanei via LoadPersonDataAsync()
         private async Task SaveEditAsync()
         {
             _editError = null;
+            // Validare minimă client-side înainte de a trimite cererea — câmpuri obligatorii.
             if (string.IsNullOrWhiteSpace(_editFirstName) || string.IsNullOrWhiteSpace(_editLastName))
             {
                 _editError = "First name and last name are required.";
@@ -2853,6 +3202,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 }
                 else
                 {
+                    // Eroarea cea mai probabilă pe acest endpoint este un serial de device duplicat
+                    // (unic per device în sistem), de aceea mesajul de eroare o menționează explicit.
                     _editError = "Failed to update. The device serial number may already be in use.";
                 }
             }
@@ -2866,6 +3217,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Deschide modalul de confirmare pentru ștergerea/arhivarea persoanei monitorizate.
         private void OpenDeleteModal()
         {
             _deleteError = null;
@@ -2878,6 +3230,16 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             _deleteError = null;
         }
 
+        // Execută operația de ștergere a persoanei monitorizate (server-side este, de regulă,
+        // un soft-delete — DeletedAt setat — nu o eliminare definitivă imediată; ștergerea fizică
+        // se face ulterior conform politicii de retenție de 7 zile din RetentionCleanupService).
+        // La succes, utilizatorul este redirecționat la lista de persoane monitorizate.
+        // Flux: MonitoredApiClient.RemoveMonitoredAsync(PersonId)
+        //   → HTTP DELETE api/monitored/{PersonId}/remove
+        //   → MonitoredController.RemoveMonitoredPerson()
+        //   → dacă ultimul proprietar: IMonitoredService.SoftDeleteMonitoredPersonAsync() → DB (DeletedAt setat)
+        //   → dacă există co-proprietari: IUserMonitoredService.RemoveUserMonitoredLinkAsync() → DB (doar legătura)
+        //   → returnează RemoveMonitoredResult { WasLastOwner, Message }
         private async Task ExecuteDeleteAsync()
         {
             _isDeleting = true;
@@ -2903,6 +3265,8 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             }
         }
 
+        // Model de date pentru afișarea în UI a persoanei monitorizate — combină datele de profil cu
+        // valorile vitale curente, statusul calculat și informațiile de stare (activă/arhivată/ștearsă).
         public class PersonDetail
         {
             public Guid Id { get; set; }
@@ -2928,11 +3292,16 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             public bool IsArchived { get; set; }
             public DateTime? ArchivedAt { get; set; }
             public DateTime? DeletedAt { get; set; }
+            // Persoana este considerată "doar-citire" în UI dacă a fost arhivată sau șters (soft-delete) —
+            // în acest caz pagina ar trebui să blocheze editări/acțiuni active (monitorizare live, praguri etc.).
             public bool IsReadOnly => IsArchived || DeletedAt.HasValue;
             public int? DataRetentionDays { get; set; }
             public int? ArchiveRetentionDays { get; set; }
         }
 
+        // Un singur punct de date pentru grafic — poate reprezenta fie o măsurătoare individuală
+        // (vizualizare zilnică, cu XFraction explicit pe baza orei), fie o medie zilnică/săptămânală
+        // (vizualizare săptămânală, poziționată pe index).
         public class ChartDataPoint
         {
             public string Day { get; set; } = string.Empty;
@@ -2942,8 +3311,12 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             public double XFraction { get; set; } = -1; // -1 = index-based; 0.0-1.0 = explicit
         }
 
+        // Punct pregătit pentru tooltip JS: coordonatele afișate (X, Y), valoarea/eticheta de arătat,
+        // și zona de "hit testing" (HitX, HitWidth) pe care trebuie să se declanșeze hover-ul.
         public record TooltipPoint(double X, double Y, double Value, string Label, double HitX, double HitWidth);
 
+        // Similar cu ComputePointsWithRange, dar produce TooltipPoint-uri (cu zone de hover calculate)
+        // în loc de simple coordonate (X, Y) — folosit pentru interacțiunea cu graficele (chartTooltip.js).
         private List<TooltipPoint> ComputeTooltipData(
             List<ChartDataPoint> data, double fixedMin, double fixedMax)
         {
@@ -2976,6 +3349,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
                 .ToList();
 
             // Adjust X positions to avoid overlapping tooltip targets / dots
+            // (aceeași logică de separare folosită la desenarea punctelor, aplicată aici pentru zonele de hover)
             var minX = paddingLeft;
             var maxX = paddingLeft + usableWidth;
             double spacing = CurrentChartView == ChartViewMode.Daily ? 12.0 : 8.0;
@@ -2988,6 +3362,9 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             {
                 var p = points[i];
                 var adj = adjustedXY[i];
+                // Zona de hover a unui punct se extinde pe la mijlocul distanței dintre el și vecini
+                // (sau până la marginea graficului pentru primul/ultimul punct), pentru ca tot spațiul
+                // orizontal al graficului să fie acoperit de o zonă de hit testing, nu doar cercul punctului.
                 double left = i == 0 ? paddingLeft : (adjustedXY[i - 1].X + adj.X) / 2.0;
                 double right = i == points.Count - 1 ? paddingLeft + usableWidth : (adj.X + adjustedXY[i + 1].X) / 2.0;
                 result.Add(new TooltipPoint(adj.X, adj.Y, p.Value, p.Day, left, right - left));
@@ -2996,6 +3373,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             return result;
         }
 
+        // Model simplu pentru o alertă afișată în lista "alerte recente" a paginii.
         public class Alert
         {
             public string Severity { get; set; } = string.Empty;
@@ -3004,6 +3382,7 @@ private static string F(double v) => v.ToString("F2", System.Globalization.Cultu
             public string Time { get; set; } = string.Empty;
         }
 
+        // Model simplu pentru o măsurătoare afișată în lista "activitate recentă" a paginii.
         public class Measurement
         {
             public string Icon { get; set; } = string.Empty;

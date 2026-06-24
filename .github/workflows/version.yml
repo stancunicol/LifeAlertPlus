@@ -1,3 +1,6 @@
+# Incrementează automat numărul de versiune (semver: major.minor.patch) la fiecare push pe main,
+# pe baza convenției mesajului de commit (Conventional Commits: "feat:", "fix:", "BREAKING CHANGE"/"!:").
+# Rezultatul e scris în fișierul VERSION din rădăcina repo-ului și creează automat un tag git (ex: v1.4.2).
 name: Auto Version Bump
 
 on:
@@ -5,7 +8,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: write   # Necesar ca workflow-ul să poată face commit + push + tag înapoi în repo (implicit GITHUB_TOKEN are doar read)
 
 jobs:
   version:
@@ -14,8 +17,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # Istoric complet (nu shallow clone) — necesar ca git log/tag să funcționeze corect
 
+      # Extrage mesajul ultimului commit (cel care a declanșat acest push) și îl pune pe o singură linie
+      # (înlocuiește newline-urile cu spații), ca să poată fi salvat ca output de step valid pentru GITHUB_OUTPUT
       - name: Get commit message
         id: msg
         run: |
@@ -24,6 +29,11 @@ jobs:
           echo "message=$msg" >> $GITHUB_OUTPUT
 
 
+      # Decide tipul de incrementare pe baza prefixului/conținutului mesajului de commit:
+      #   "breaking change" sau "!:" (ex: "feat!:")  → major (X.0.0) — schimbare incompatibilă
+      #   "feat: ..."                                 → minor (x.Y.0) — funcționalitate nouă
+      #   "fix: ..."                                  → patch (x.y.Z) — corecție de bug
+      #   orice alt mesaj                              → nicio incrementare (exit 0, fără eroare)
       - name: Determine bump type
         id: bump
         run: |
@@ -40,6 +50,8 @@ jobs:
             exit 0
           fi
 
+      # Citește versiunea curentă din fișierul VERSION (creat de o rulare anterioară a acestui workflow);
+      # dacă fișierul nu există încă (prima rulare), se pornește de la 1.0.0
       - name: Read current version
         id: current
         run: |
@@ -50,6 +62,7 @@ jobs:
           fi
           echo "version=$v" >> $GITHUB_OUTPUT
 
+      # Aplică regula de incrementare semver: la major se resetează minor+patch, la minor se resetează doar patch
       - name: Bump version
         id: new
         run: |
@@ -63,11 +76,15 @@ jobs:
 
           echo "version=$major.$minor.$patch" >> $GITHUB_OUTPUT
 
+      # Suprascrie fișierul VERSION cu noul număr și îl pregătește pentru commit
       - name: Write files
         run: |
           echo "${{ steps.new.outputs.version }}" > VERSION
           git add VERSION
 
+      # Comite schimbarea ca bot-ul GitHub Actions (nu ca un utilizator real), creează un tag git (ex: v1.4.2)
+      # și împinge ambele înapoi în repo. "|| exit 0" la commit evită eroarea dacă nu sunt schimbări de comis
+      # (caz rar: VERSION-ul calculat e identic cu cel deja existent).
       - name: Commit & tag
         run: |
           git config user.name "github-actions[bot]"

@@ -7,10 +7,11 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.Application;
 
+// Teste unitare pentru MeasurementService — repository-ul e mockuit (Moq), testăm doar maparea Entity→DTO și delegarea
 public class MeasurementServiceTests
 {
     private readonly Mock<IMeasurementRepository> _repo = new();
-    private readonly MeasurementService           _sut;
+    private readonly MeasurementService           _sut; // SUT = System Under Test
 
     public MeasurementServiceTests()
     {
@@ -36,7 +37,7 @@ public class MeasurementServiceTests
     public async Task GetMeasurementsByMonitoredId_ReturnsEmpty_WhenRepoReturnsNull()
     {
         var monitoredId = Guid.NewGuid();
-        // Simulate a repository returning an empty collection (equivalent to the null-guard path)
+        // Simulăm repository-ul returnând o colecție vidă (echivalent cu drumul de protecție pentru null)
         _repo.Setup(r => r.GetMeasurementsByMonitoredIdAsync(monitoredId, 1, 10))
              .ReturnsAsync(Enumerable.Empty<Measurement>());
 

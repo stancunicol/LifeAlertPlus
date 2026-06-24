@@ -5,6 +5,8 @@ using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Pages.ResetPassword
 {
+    // Code-behind pentru pagina de resetare a parolei — validează token-ul primit prin email,
+    // afișează indicatorul de putere a parolei și trimite noua parolă către API
     public partial class ResetPasswordPage : ComponentBase
     {
         [Inject]
@@ -27,9 +29,10 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
         private void ToggleShowPassword() => _showPassword = !_showPassword;
         private void ToggleShowConfirmPassword() => _showConfirmPassword = !_showConfirmPassword;
 
-        // Password strength (0=empty, 1=weak, 2=fair, 3=good, 4=strong)
+        // Puterea parolei (0=goală, 1=slabă, 2=acceptabilă, 3=bună, 4=puternică)
         private int PasswordStrength => ComputeStrength(Password);
 
+        // Calculează un scor 0-4 pe baza lungimii și a diversității caracterelor (majuscule, cifre, simboluri)
         private static int ComputeStrength(string pw)
         {
             if (string.IsNullOrEmpty(pw)) return 0;
@@ -65,6 +68,7 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
 
         protected override async Task OnInitializedAsync()
         {
+            // Token-ul de resetare vine din link-ul trimis pe email, ca query string (?token=...)
             var uri = new Uri(Navigation.Uri);
             var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
             ResetToken = query["token"] ?? string.Empty;
@@ -74,6 +78,7 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
                 ErrorMessage = T("reset.error.invalidLink");
             }
 
+            // Încearcă să citească versiunea aplicației dintr-un fișier static (VERSION), cu fallback la versiunea compilată
             try
             {
                 var url = Navigation.BaseUri + "VERSION";
@@ -91,6 +96,7 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
             }
         }
 
+        // Validează parola și confirmarea, apoi trimite cererea de resetare la API folosind token-ul din link
         private async Task OnResetPassword()
         {
             ErrorMessage = string.Empty;
@@ -123,14 +129,16 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
                 if (response.IsSuccessStatusCode)
                 {
                     SuccessMessage = T("reset.error.success");
+                    // Mică pauză ca utilizatorul să vadă mesajul de succes înainte de redirecționare
                     await Task.Delay(2000);
                     Navigation.NavigateTo("/login");
                 }
                 else
                 {
+                    // Distinge eroarea de token expirat de alte erori, pentru un mesaj mai clar utilizatorului
                     var error = await response.Content.ReadAsStringAsync();
-                    ErrorMessage = error.Contains("expired") 
-                        ? T("reset.error.expired") 
+                    ErrorMessage = error.Contains("expired")
+                        ? T("reset.error.expired")
                         : T("reset.error.failed");
                 }
             }
@@ -140,6 +148,7 @@ namespace LifeAlertPlus.Client.Pages.ResetPassword
             }
         }
 
+        // Validează regulile de complexitate ale parolei (lungime, majuscule, minuscule, cifră, caracter special)
         private (bool IsValid, string ErrorMessage) ValidatePassword(string password)
         {
             if (string.IsNullOrWhiteSpace(password))

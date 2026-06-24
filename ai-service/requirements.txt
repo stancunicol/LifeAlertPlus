@@ -1,7 +1,8 @@
-fastapi==0.115.6
-uvicorn==0.34.0
-scikit-learn==1.6.1
-joblib==1.4.2
-numpy==2.2.2
-pandas==2.2.3
-pydantic==2.10.5
+# Dependențe Python pentru microserviciul AI (clasificare stare de sănătate prin Random Forest)
+fastapi==0.115.6        # Framework web pentru endpoint-urile REST (/predict etc.)
+uvicorn==0.34.0         # Server ASGI care rulează aplicația FastAPI
+scikit-learn==1.6.1     # Biblioteca ML — RandomForestClassifier, StandardScaler, LabelEncoder
+joblib==1.4.2           # Încărcarea artefactului .joblib (model + scaler + label encoder, salvate împreună într-un singur fișier)
+numpy==2.2.2            # Operații numerice pe array-uri (folosit intern de scikit-learn/pandas)
+pandas==2.2.3           # DataFrame-uri pentru pregătirea feature-urilor trimise modelului
+pydantic==2.10.5        # Validarea automată a payload-urilor JSON primite de FastAPI (scheme request/response)

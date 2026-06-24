@@ -1,33 +1,40 @@
+# Pipeline CI/CD pentru frontend-ul Blazor WASM (LifeAlertPlus.Client) — rulează testele și publică
+# automat pe Azure Web App de fiecare dată când se face push pe main, fără intervenție manuală.
 name: Deploy Client to Azure
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]       # Doar push-urile pe ramura principală declanșează deploy automat
     paths:
-      - 'LifeAlertPlus/**'
-  workflow_dispatch:
+      - 'LifeAlertPlus/**'   # Rulează doar dacă s-a modificat ceva în folderul soluției .NET (evită rulări inutile pentru schimbări în README, docs etc.)
+  workflow_dispatch:         # Permite rularea manuală a workflow-ului din interfața GitHub Actions (ex: redeploy fără un commit nou)
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest   # Runner-ul gratuit oferit de GitHub; suficient pentru build .NET, nu necesită Windows
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4   # Clonează codul din repo în runner-ul CI
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '8.0.x'   # Trebuie să corespundă cu target framework-ul proiectelor (net8.0)
 
       - name: Restore solution
-        run: dotnet restore LifeAlertPlus/LifeAlertPlus.sln
+        run: dotnet restore LifeAlertPlus/LifeAlertPlus.sln   # Descarcă toate pachetele NuGet pentru întreaga soluție (toate proiectele)
 
+      # Testele rulează ÎNAINTE de publish — dacă pică un test, deploy-ul se oprește automat (job-ul eșuează)
+      # și nu se ajunge să se publice o versiune stricată în producție.
       - name: Run tests
         run: dotnet test LifeAlertPlus/LifeAlertPlus.Tests/LifeAlertPlus.Tests.csproj --no-restore --configuration Release --logger "trx;LogFileName=test-results.trx"
 
+      # Compilează și publică doar proiectul Client (Blazor WASM) — rezultatul (HTML/JS/WASM static) ajunge în ./publish
       - name: Publish client
         run: dotnet publish LifeAlertPlus/LifeAlertPlus.Client/LifeAlertPlus.Client.csproj --no-restore -c Release -o publish
 
+      # Încarcă fișierele publicate pe Azure Web App configurat pentru Client.
+      # Publish-profile-ul (XML cu credențiale de deploy) e stocat ca secret în GitHub, nu în cod.
       - name: Deploy to Azure Web App (Client)
         uses: azure/webapps-deploy@v2
         with:

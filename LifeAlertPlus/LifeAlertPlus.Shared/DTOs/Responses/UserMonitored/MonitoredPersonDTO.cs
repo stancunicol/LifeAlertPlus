@@ -2,6 +2,10 @@ using System;
 
 namespace LifeAlertPlus.Shared.DTOs.Responses.UserMonitored
 {
+    // Versiune "rezumat" a unui pacient, imbricată în MonitoredUserDTO.MonitoredPeople — folosită
+    // de UserMonitoredController (GET /api/usermonitored, vizualizare Admin) pentru a arăta lista
+    // de pacienți ai fiecărui utilizator fără a încărca toate detaliile (praguri vitale, afecțiuni etc.).
+    // Client: consumat de AdminPage.razor.cs și MonitoredUsersPage.razor.cs.
     public class MonitoredPersonDTO
     {
         public Guid Id { get; set; }

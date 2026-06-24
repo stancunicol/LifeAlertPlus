@@ -1,11 +1,18 @@
+# Redeploy-ează microserviciul Python AI (Random Forest) pe Azure Container Instances, DUPĂ ce
+# docker-publish.yml a publicat o imagine nouă "ai-latest" pe Docker Hub. Containerul ACI primește
+# un IP/DNS public NOU la fiecare redeploy (containerul vechi e șters, nu actualizat in-place), deci
+# la final workflow-ul actualizează automat și setarea Urls__AiServiceUrl din backend-ul .NET (API),
+# ca acesta să știe noua adresă a microserviciului AI fără intervenție manuală.
 name: Deploy AI Service to Azure Container Instances
 
 on:
+  # Se declanșează automat când workflow-ul de build Docker s-a terminat cu succes pe main —
+  # garantează că redeploy-ul AI rulează mereu DUPĂ ce imaginea nouă e deja pe Docker Hub (altfel ar trage imaginea veche)
   workflow_run:
     workflows: ["Build and Push Docker Images"]
     types: [completed]
     branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:   # Permite redeploy manual (ex: containerul a crăpat și trebuie repornit fără un commit nou)
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -13,12 +20,15 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Rulează fie la declanșare manuală, fie doar dacă workflow-ul anterior (build Docker) s-a încheiat cu succes —
+    # previne deploy-ul unei imagini care nu s-a construit corect
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
-      id-token: write
+      id-token: write   # Necesar pentru autentificare OIDC (fără secrete de parolă) la Azure
       contents: read
 
     steps:
+      # Autentificare Azure prin OIDC federat (client-id/tenant-id/subscription-id), fără client secret expirabil
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -26,6 +36,9 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6641CA3C8C84418B96932A6DC45DB23A }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9285ADF2D81E4588B58C973974B6ABF1 }}
 
+      # Azure Container Instances nu suportă "update image in-place" simplu prin CLI — cea mai sigură
+      # metodă e ștergerea containerului vechi și recrearea lui. "|| true" + 2>/dev/null ignoră eroarea
+      # dacă containerul nu exista deja (prima rulare a workflow-ului).
       - name: Delete existing AI container (if any)
         run: |
           az container delete \
@@ -33,6 +46,9 @@ jobs:
             --name lifealertplus-ai \
             --yes 2>/dev/null || true
 
+      # Recreează containerul din imaginea "ai-latest" tocmai publicată. Notă: la fiecare recreare,
+      # Azure poate aloca un FQDN/IP nou (de aceea pasul următor actualizează URL-ul în backend).
+      # Regiunea germanywestcentral e aceeași folosită și de celelalte resurse Azure ale aplicației.
       - name: Deploy AI container to Azure Container Instances
         run: |
           az container create \
@@ -51,6 +67,10 @@ jobs:
             --os-type Linux \
             --restart-policy Always
 
+      # Citește noul FQDN (Fully Qualified Domain Name) generat de Azure pentru container, construiește
+      # URL-ul complet al microserviciului AI și îl scrie ca app setting (variabilă de mediu) în Azure Web App
+      # al API-ului .NET — backend-ul citește Urls:AiServiceUrl din appsettings/environment ca să apeleze AI-ul.
+      # Astfel, integrarea API ↔ AI rămâne funcțională automat după fiecare redeploy, fără pași manuali.
       - name: Update API App Service with AI URL
         run: |
           FQDN=$(az container show \

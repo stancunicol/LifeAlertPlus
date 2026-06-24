@@ -1,11 +1,16 @@
+// Tooltip interactiv pentru graficele SVG desenate manual (linie verticală + punct + etichetă),
+// folosit de paginile cu grafice (SelectedMonitored, ViewSelectedMonitored, InviteAcceptPage).
+// Construiește elementele SVG ale tooltip-ului o singură dată (init) și le actualizează pe mousemove,
+// evitând recrearea DOM-ului la fiecare mișcare a cursorului (performanță).
 window.chartTooltip = {
-    _instances: {},
+    _instances: {}, // id grafic -> { element, grup SVG tooltip, handlere de eveniment } — permite mai multe grafice independente pe aceeași pagină
 
+    // Atașează tooltip-ul pe elementul SVG dat. dataPoints = array de {x, y, value, label} în coordonate viewBox.
     init: function (svgEl, id, dataPoints, color, unit, decimals, prefix) {
         if (!svgEl || !dataPoints || !dataPoints.length) return;
         prefix = prefix || '';
 
-        // Clean up any existing tooltip on this element
+        // Curățăm orice tooltip anterior pe acest element (re-render Blazor poate apela init din nou)
         if (this._instances[id]) this.dispose(id);
 
         var ns = 'http://www.w3.org/2000/svg';
@@ -53,21 +58,23 @@ window.chartTooltip = {
         g.appendChild(dot);
         svgEl.appendChild(g);
 
+        // Handler principal: la mișcarea cursorului, găsește punctul de date cel mai apropiat și actualizează tooltip-ul
         function onMove(e) {
             var rect = svgEl.getBoundingClientRect();
-            // Read viewBox at hover time so the math stays correct after a zoom
-            // change (viewBox X grows with the zoom factor).
+            // Citim viewBox-ul la fiecare hover (nu o singură dată la init), ca matematica să rămână corectă
+            // după o schimbare de zoom (lățimea viewBox-ului crește odată cu factorul de zoom).
             var vb = svgEl.viewBox && svgEl.viewBox.baseVal;
             var vbWidth = (vb && vb.width) || 800;
             var rightEdge = vbWidth - 15;
-            var scaleX = vbWidth / rect.width;
+            var scaleX = vbWidth / rect.width; // Conversie din pixeli CSS în coordonate viewBox SVG
             var svgX = (e.clientX - rect.left) * scaleX;
 
             if (svgX < 90 || svgX > rightEdge) {
-                g.style.display = 'none';
+                g.style.display = 'none'; // Cursorul e în afara zonei de desen a graficului (axa Y/margini) — ascundem tooltip-ul
                 return;
             }
 
+            // Căutare liniară a punctului cel mai apropiat pe axa X (seturile de date sunt mici — sub 200 puncte, nu necesită binary search)
             var nearest = null;
             var minDist = Infinity;
             for (var i = 0; i < dataPoints.length; i++) {
@@ -94,6 +101,7 @@ window.chartTooltip = {
             timeLabel.textContent = nearest.label;
             timeLabel.setAttribute('x', nearest.x);
 
+            // Dacă punctul e în partea de jos a graficului, afișăm eticheta deasupra lui (și invers) — evită ca tooltip-ul să iasă din SVG
             var above = nearest.y > 55;
             if (above) {
                 label.setAttribute('y', nearest.y - 20);
@@ -103,7 +111,7 @@ window.chartTooltip = {
                 timeLabel.setAttribute('y', nearest.y + 36);
             }
 
-            // Measure text to size the background
+            // Măsurăm textul randat ca să dimensionăm fundalul (bg) exact cât eticheta, nu o lățime fixă arbitrară
             var lBox = label.getBBox();
             var tBox = timeLabel.getBBox();
             var maxW = Math.max(lBox.width, tBox.width) + 14;
@@ -127,6 +135,8 @@ window.chartTooltip = {
         this._instances[id] = { el: svgEl, g: g, onMove: onMove, onLeave: onLeave };
     },
 
+    // Elimină ascultătorii de evenimente și elementele SVG ale tooltip-ului — apelat la dispose componentă Blazor
+    // sau înainte de re-inițializare, ca să nu rămână handlere "fantomă" atașate la elemente vechi
     dispose: function (id) {
         var inst = this._instances[id];
         if (!inst) return;

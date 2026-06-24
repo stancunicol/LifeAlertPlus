@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 namespace LifeAlertPlus.Client.Services
 {
+    // Client SignalR pentru hub-ul de notificări push în timp real — se conectează la /notificationhub
+    // și expune evenimentul OnNotificationReceived consumat de componentele UI (toast-uri, alerte)
     public class PushNotificationClientService : IAsyncDisposable
     {
         private NavigationManager Navigation { get; set; } = null!;
@@ -16,6 +18,7 @@ namespace LifeAlertPlus.Client.Services
         private readonly string _notificationHubUrl;
         private readonly IJSRuntime _jsRuntime;
 
+        // Construiește URL-ul hub-ului SignalR din configurația ApiBaseUrl (cu fallback la localhost)
         public PushNotificationClientService(IConfiguration config, IJSRuntime jsRuntime)
         {
             var apiBaseUrl = config["ApiBaseUrl"] ?? config["Urls:ApiBaseUrl"] ?? "http://localhost:5176";
@@ -24,6 +27,10 @@ namespace LifeAlertPlus.Client.Services
             _jsRuntime = jsRuntime;
         }
 
+        // Pornește conexiunea SignalR (idempotent — nu reconectează dacă există deja o conexiune),
+        // atașează token-ul JWT din sessionStorage la fiecare negociere de conexiune,
+        // activează reconectarea automată și înrolează utilizatorul în grupul propriu (după userId)
+        // ca să primească doar notificările destinate lui
         public async Task StartAsync(Guid userId)
         {
             if (_hubConnection != null)
@@ -41,6 +48,7 @@ namespace LifeAlertPlus.Client.Services
                 .WithAutomaticReconnect()
                 .Build();
 
+            // Handler invocat de server la fiecare notificare push — propagă mesajul + severitatea către UI
             _hubConnection.On<string, string>("ReceiveNotification", (message, severity) =>
             {
                 OnNotificationReceived?.Invoke(message, severity);
@@ -50,6 +58,7 @@ namespace LifeAlertPlus.Client.Services
             await _hubConnection.InvokeAsync("AddToGroup", userId.ToString());
         }
 
+        // Eliberează conexiunea SignalR la dispose-ul componentei/serviciului (ex: logout, navigare away)
         public async ValueTask DisposeAsync()
         {
             if (_hubConnection != null)

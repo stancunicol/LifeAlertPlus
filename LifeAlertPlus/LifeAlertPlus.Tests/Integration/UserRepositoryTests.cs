@@ -5,11 +5,11 @@ using LifeAlertPlus.Tests.Helpers;
 
 namespace LifeAlertPlus.Tests.Integration;
 
-// Each test class gets its own in-memory database to keep tests isolated.
+// Fiecare clasă de test primește propria bază de date în memorie, ca testele să fie izolate între ele.
 public class UserRepositoryTests : IDisposable
 {
     private readonly LifeAlertPlus.Infrastructure.Context.LifeAlertPlusDbContext _ctx;
-    private readonly UserRepository _sut;
+    private readonly UserRepository _sut; // SUT = System Under Test
 
     public UserRepositoryTests()
     {
@@ -18,6 +18,7 @@ public class UserRepositoryTests : IDisposable
         SeedRole();
     }
 
+    // Rolul "User" trebuie să existe în DB înainte de a crea utilizatori (constrângere FK pe RoleId)
     private void SeedRole()
     {
         _ctx.Roles.Add(TestDataFactory.CreateUserRole());
@@ -173,6 +174,8 @@ public class UserRepositoryTests : IDisposable
 
     // ── DeleteUserAsync ──────────────────────────────────────────────────────
 
+    // Cazul simplu: utilizator fără pacienți monitorizați asociați — ștergerea cascadă din DeleteUserAsync
+    // (vezi UserRepository) nu are nimic de curățat dincolo de entitatea User
     [Fact]
     public async Task DeleteUserAsync_RemovesUser()
     {

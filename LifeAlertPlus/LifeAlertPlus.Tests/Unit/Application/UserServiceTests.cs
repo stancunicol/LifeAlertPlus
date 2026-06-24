@@ -9,12 +9,13 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.Application;
 
+// Teste pentru UserService — generare token-uri, înregistrare, schimbare parolă/email, OAuth Google
 public class UserServiceTests
 {
     private readonly Mock<IUserRepository>        _userRepo  = new();
     private readonly Mock<IAuthenticationService> _authSvc   = new();
     private readonly Mock<IRoleRepository>        _roleRepo  = new();
-    private readonly UserService                  _sut;
+    private readonly UserService                  _sut; // SUT = System Under Test
 
     public UserServiceTests()
     {
@@ -66,7 +67,7 @@ public class UserServiceTests
     {
         var user = TestDataFactory.CreateUser();
         user.EmailConfirmationToken   = "some-token";
-        user.EmailConfirmationExpires = DateTime.UtcNow.AddHours(-1); // expired
+        user.EmailConfirmationExpires = DateTime.UtcNow.AddHours(-1); // expirat (în trecut)
 
         _userRepo.Setup(r => r.GetUserByEmailConfirmationTokenAsync("some-token"))
                  .ReturnsAsync(user);
@@ -246,6 +247,7 @@ public class UserServiceTests
         result.IsEmailConfirmed.Should().BeTrue();
     }
 
+    // Login Google repetat cu același cont existent — nu se creează un al doilea cont, se actualizează profilul existent
     [Fact]
     public async Task FindOrCreateGoogleUserAsync_ReturnsExistingUser_WhenAlreadyExists()
     {

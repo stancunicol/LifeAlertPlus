@@ -6,15 +6,24 @@ using System.Text.Json.Serialization;
 
 namespace LifeAlertPlus.API.Services
 {
+    // Serviciu pentru găsirea celui mai apropiat spital de urgență față de coordonatele GPS ale pacientului.
+    // Strategia în două niveluri:
+    //   1. Interogare live Overpass API (OpenStreetMap) — caută spitale în raza de 50 km
+    //   2. Fallback static cu 20 spitale județene majore din România (dacă Overpass nu răspunde)
+    // Rezultatele sunt cașate 2 ore per locație (rotunjită la 2 zecimale → ~1km grid)
+    // pentru a reduce apelurile externe la Overpass API.
+    // Distanța se calculează prin formula Haversine cu factor de detour 1.3 (drumurile nu sunt în linie dreaptă).
     public class NearestHospitalService
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<NearestHospitalService> _logger;
 
+        // Cache thread-safe: cheie = "lat,lon" (2 zecimale), valoare = (momentul cașării, rezultat)
         private readonly ConcurrentDictionary<string, (DateTime CachedAt, HospitalRouteResult? Result)> _cache = new();
-        private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(2);
+        private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(2); // Rezultatele se refolosesc 2 ore
 
-        // Static fallback: major Romanian emergency hospitals used when Overpass API is unavailable.
+        // Lista statică de fallback cu spitalele județene de urgență principale din România
+        // Folosite când Overpass API nu este accesibil sau returnează eroare
         private static readonly (string Name, double Lat, double Lon)[] StaticHospitals =
         [
             ("Spitalul Clinic de Urgență Floreasca",          44.4676, 26.0834),
@@ -42,23 +51,26 @@ namespace LifeAlertPlus.API.Services
         public NearestHospitalService(IHttpClientFactory httpClientFactory, ILogger<NearestHospitalService> logger)
         {
             _httpClientFactory = httpClientFactory;
-            _logger = logger;
+            _logger            = logger;
         }
 
+        // Supraîncărcată fără CancellationToken (apeluri din cod asincron simplu)
         public Task<HospitalRouteResult?> FindNearestAsync(double patLat, double patLon)
             => FindNearestAsync(patLat, patLon, CancellationToken.None);
 
+        // Găsește cel mai apropiat spital față de coordonatele GPS ale pacientului
         public async Task<HospitalRouteResult?> FindNearestAsync(double patLat, double patLon, CancellationToken cancellationToken)
         {
+            // Cheia de cache: coordonate rotunjite la 2 zecimale (~1km precizie)
             var cacheKey = $"{patLat:F2},{patLon:F2}";
             if (_cache.TryGetValue(cacheKey, out var cached) && DateTime.UtcNow - cached.CachedAt < CacheTtl)
-                return cached.Result;
+                return cached.Result; // Returnăm din cache
 
-            // Try live Overpass API; fall back to static list on any failure.
+            // Interogăm Overpass API → dacă eșuează, folosim lista statică
             var result = await TryOverpassAsync(patLat, patLon, cancellationToken)
                          ?? FindNearestStatic(patLat, patLon);
 
-            _cache[cacheKey] = (DateTime.UtcNow, result);
+            _cache[cacheKey] = (DateTime.UtcNow, result); // Salvăm în cache
 
             if (result != null)
                 _logger.LogInformation("Nearest hospital: {Name} — {Km} km, ~{Min} min",
@@ -67,16 +79,19 @@ namespace LifeAlertPlus.API.Services
             return result;
         }
 
+        // Caută spitale prin Overpass API (OpenStreetMap) în raza de 50 km
         private async Task<HospitalRouteResult?> TryOverpassAsync(double patLat, double patLon, CancellationToken cancellationToken)
         {
             try
             {
+                // Folosim InvariantCulture pentru a genera "44.4676" nu "44,4676" (separator zecimal)
                 var latStr = patLat.ToString(CultureInfo.InvariantCulture);
                 var lonStr = patLon.ToString(CultureInfo.InvariantCulture);
+                // Query Overpass QL: caută noduri și drumuri cu tag amenity=hospital în raza de 50 km
                 var query = $"[out:json][timeout:15];" +
                             $"(node[\"amenity\"=\"hospital\"](around:50000,{latStr},{lonStr});" +
                             $"way[\"amenity\"=\"hospital\"](around:50000,{latStr},{lonStr}););" +
-                            $"out center;";
+                            $"out center;"; // "out center" returnează centrul geometric al clădirii
 
                 using var http = _httpClientFactory.CreateClient("Overpass");
                 var response = await http.PostAsync(
@@ -92,31 +107,33 @@ namespace LifeAlertPlus.API.Services
 
                 var data = await response.Content.ReadFromJsonAsync<OverpassResponse>(cancellationToken: cancellationToken);
                 if (data?.Elements == null || data.Elements.Length == 0)
-                    return null;
+                    return null; // Niciun spital în raza de 50 km
 
-                double tf = GetTrafficFactor();
+                double tf = GetTrafficFactor(); // Factorul de trafic bazat pe ora curentă
                 HospitalRouteResult? best = null;
                 double bestKm = double.MaxValue;
 
                 foreach (var el in data.Elements)
                 {
+                    // Nodurile au lat/lon direct; drumurile (way) au doar "center"
                     double hLat = el.Lat ?? el.Center?.Lat ?? 0;
                     double hLon = el.Lon ?? el.Center?.Lon ?? 0;
-                    if (hLat == 0 && hLon == 0) continue;
+                    if (hLat == 0 && hLon == 0) continue; // Date incomplete
 
-                    string name = el.Tags?.Name ?? el.Tags?.NameRo ?? "Spital";
-                    double km = HaversineKm(patLat, patLon, hLat, hLon);
+                    string name = el.Tags?.Name ?? el.Tags?.NameRo ?? "Spital"; // Preferăm "name:ro"
+                    double km = HaversineKm(patLat, patLon, hLat, hLon); // Distanța în km
 
                     if (km < bestKm)
                     {
                         bestKm = km;
+                        // Timp estimat: km / 60 kmh * 60 min * factor trafic
                         int minutes = (int)Math.Ceiling(km / 60.0 * 60.0 * tf);
                         best = new HospitalRouteResult
                         {
                             HospitalName     = name,
                             Latitude         = hLat,
                             Longitude        = hLon,
-                            EstimatedMinutes = Math.Max(1, minutes),
+                            EstimatedMinutes = Math.Max(1, minutes), // Minimum 1 minut
                             DistanceKm       = Math.Round(km, 1)
                         };
                     }
@@ -126,11 +143,13 @@ namespace LifeAlertPlus.API.Services
             }
             catch (Exception ex)
             {
+                // Overpass nu răspunde sau timeout → trecem la fallback static
                 _logger.LogWarning(ex, "Overpass API lookup failed for ({Lat},{Lon}), using static fallback", patLat, patLon);
                 return null;
             }
         }
 
+        // Caută cel mai apropiat spital din lista statică (fallback când Overpass eșuează)
         private HospitalRouteResult? FindNearestStatic(double patLat, double patLon)
         {
             double tf = GetTrafficFactor();
@@ -158,44 +177,49 @@ namespace LifeAlertPlus.API.Services
             return best;
         }
 
+        // Factorul de trafic bazat pe ora locală (UTC+2 pentru România)
+        // Ore de vârf (7-9, 16-19): x1.4 (mai lent); noapte (22-5): x0.8 (mai rapid); altfel: x1.0
         private static double GetTrafficFactor()
         {
-            int hour = (DateTime.UtcNow.Hour + 2) % 24;
-            if (hour is >= 7 and <= 9 or >= 16 and <= 19) return 1.4;
-            if (hour is <= 5 or >= 22) return 0.8;
-            return 1.0;
+            int hour = (DateTime.UtcNow.Hour + 2) % 24; // Convertim UTC → ora locală RO (UTC+2)
+            if (hour is >= 7 and <= 9 or >= 16 and <= 19) return 1.4; // Ore de vârf
+            if (hour is <= 5 or >= 22) return 0.8;                   // Noapte
+            return 1.0;                                               // Ore normale
         }
 
+        // Formula Haversine: calculează distanța în km pe suprafața sferică a Pământului
+        // Multiplică cu 1.3 ca factor de detour (drumurile reale sunt cu ~30% mai lungi decât linia dreaptă)
         private static double HaversineKm(double lat1, double lon1, double lat2, double lon2)
         {
-            const double R = 6371.0;
+            const double R = 6371.0; // Raza Pământului în km
             double dLat = (lat2 - lat1) * Math.PI / 180.0;
             double dLon = (lon2 - lon1) * Math.PI / 180.0;
             double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
                      + Math.Cos(lat1 * Math.PI / 180.0) * Math.Cos(lat2 * Math.PI / 180.0)
                      * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
-            return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a)) * 1.3;
+            return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a)) * 1.3; // x1.3 factor detour
         }
 
+        // Modelele de răspuns Overpass API (deserializate din JSON)
         private sealed class OverpassResponse
         {
             [JsonPropertyName("elements")]
-            public OverpassElement[]? Elements { get; set; }
+            public OverpassElement[]? Elements { get; set; } // Lista elementelor (spitale găsite)
         }
 
         private sealed class OverpassElement
         {
             [JsonPropertyName("lat")]
-            public double? Lat { get; set; }
+            public double? Lat { get; set; } // Latitudine (pentru noduri OSM)
 
             [JsonPropertyName("lon")]
-            public double? Lon { get; set; }
+            public double? Lon { get; set; } // Longitudine (pentru noduri OSM)
 
             [JsonPropertyName("center")]
-            public OverpassCenter? Center { get; set; }
+            public OverpassCenter? Center { get; set; } // Centrul geometric (pentru drumuri/clădiri OSM)
 
             [JsonPropertyName("tags")]
-            public OverpassTags? Tags { get; set; }
+            public OverpassTags? Tags { get; set; } // Metadata: nume etc.
         }
 
         private sealed class OverpassCenter
@@ -210,19 +234,20 @@ namespace LifeAlertPlus.API.Services
         private sealed class OverpassTags
         {
             [JsonPropertyName("name")]
-            public string? Name { get; set; }
+            public string? Name { get; set; } // Numele spitalului (orice limbă)
 
             [JsonPropertyName("name:ro")]
-            public string? NameRo { get; set; }
+            public string? NameRo { get; set; } // Numele în română (prioritizat dacă există)
         }
     }
 
+    // Rezultatul căutării: spitalul cel mai apropiat cu distanța și timpul estimat de deplasare
     public class HospitalRouteResult
     {
-        public string HospitalName { get; set; } = string.Empty;
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-        public int EstimatedMinutes { get; set; }
-        public double DistanceKm { get; set; }
+        public string HospitalName { get; set; } = string.Empty; // Numele spitalului
+        public double Latitude { get; set; }                     // Coordonata GPS (latitudine)
+        public double Longitude { get; set; }                    // Coordonata GPS (longitudine)
+        public int EstimatedMinutes { get; set; }                // Timp estimat de deplasare cu mașina (minute)
+        public double DistanceKm { get; set; }                   // Distanța în km (cu detour 1.3x)
     }
 }

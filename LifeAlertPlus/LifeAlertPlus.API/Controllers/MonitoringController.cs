@@ -5,16 +5,18 @@ using LifeAlertPlus.Application.IServices;
 
 namespace LifeAlertPlus.API.Controllers
 {
+    // Controller pentru funcționalitățile de monitorizare în timp real:
+    // predicții de tendințe vitale și testarea notificărilor.
     [ApiController]
-    [Authorize]
+    [Authorize] // Necesită autentificare
     [Route("api/[controller]")]
     public class MonitoringController : BaseApiController
     {
-        private readonly AlertMonitorService _alertMonitorService;
-        private readonly IUserMonitoredService _userMonitoredService;
-        private readonly IUserService _userService;
-        private readonly IEmailService _emailService;
-        private readonly ITwilioService _twilioService;
+        private readonly AlertMonitorService _alertMonitorService;  // Logica de alertă și predicții
+        private readonly IUserMonitoredService _userMonitoredService; // Verificare acces
+        private readonly IUserService _userService;                  // Date utilizator (email, telefon)
+        private readonly IEmailService _emailService;                // Trimitere email de test
+        private readonly ITwilioService _twilioService;              // Trimitere SMS de test
 
         public MonitoringController(
             AlertMonitorService alertMonitorService,
@@ -30,6 +32,9 @@ namespace LifeAlertPlus.API.Controllers
             _twilioService = twilioService;
         }
 
+        // GET /api/monitoring/{monitoredId}/predictions — Returnează predicțiile de tendințe vitale
+        // Predicțiile sunt calculate din buffer-ul de 2 minute din AlertMonitorService
+        // (panta tendințelor de puls, temperatură, SpO2 și dacă sunt în creștere/scădere îngrijorătoare)
         [HttpGet("{monitoredId:guid}/predictions")]
         public async Task<IActionResult> GetTrendPredictions(Guid monitoredId)
         {
@@ -37,6 +42,7 @@ namespace LifeAlertPlus.API.Controllers
             if (callerId == null)
                 return Unauthorized();
 
+            // Verificăm că utilizatorul are dreptul să vadă predicțiile pentru această persoană
             if (!IsAdminRole())
             {
                 var owned = await _userMonitoredService.GetMonitoredPeopleByUserIdAsync(callerId.Value);
@@ -44,14 +50,14 @@ namespace LifeAlertPlus.API.Controllers
                     return Forbid();
             }
 
+            // GetTrendPredictions returnează datele din buffer-ul de date al ultimelor 2 minute
             var result = _alertMonitorService.GetTrendPredictions(monitoredId);
             return Ok(result);
         }
 
-        /// <summary>
-        /// Sends a test email and/or SMS to the authenticated user immediately,
-        /// bypassing all alert timing logic. Useful for verifying SMTP / Twilio config.
-        /// </summary>
+        // POST /api/monitoring/test-notify — Trimite imediat un email și/sau SMS de test
+        // Ocolește logica de cooldown/timing — folosit pentru a verifica configurarea SMTP și Twilio
+        // Util când utilizatorul configurează prima dată notificările și vrea să confirme că funcționează
         [HttpPost("test-notify")]
         public async Task<IActionResult> TestNotify()
         {
@@ -63,20 +69,21 @@ namespace LifeAlertPlus.API.Controllers
             if (user == null)
                 return Unauthorized();
 
-            var results = new Dictionary<string, object>();
+            var results = new Dictionary<string, object>(); // Colectăm rezultatele ambelor canale
 
-            // Email
+            // ── Test Email ──────────────────────────────────────────────────────────────
             if (user.NotifyByEmail)
             {
                 try
                 {
+                    // Trimitem email de test cu același template ca alertele reale (Alert level)
                     await _emailService.SendAlertNotificationEmailAsync(
                         user.Email,
                         $"{user.FirstName} {user.LastName}".Trim(),
-                        "Test Patient",
-                        "ALERT",
+                        "Test Patient",  // Pacient fictiv pentru test
+                        "ALERT",         // Severitate Alert (nu Critical) pentru test
                         "Acesta este un mesaj de test trimis din LifeAlertPlus pentru a verifica configurația email.",
-                        user.Language ?? "ro");
+                        user.Language ?? "ro"); // Respectăm preferința de limbă a utilizatorului
                     results["email"] = new { success = true, to = user.Email };
                 }
                 catch (Exception ex)
@@ -89,11 +96,12 @@ namespace LifeAlertPlus.API.Controllers
                 results["email"] = new { success = false, error = "NotifyByEmail is disabled for this user." };
             }
 
-            // SMS
+            // ── Test SMS (Twilio) ──────────────────────────────────────────────────────
             if (user.NotifyBySms)
             {
                 if (string.IsNullOrWhiteSpace(user.PhoneNumber))
                 {
+                    // SMS activat dar numărul de telefon nu e configurat în profil
                     results["sms"] = new { success = false, error = "No phone number configured for this user." };
                 }
                 else
@@ -114,7 +122,7 @@ namespace LifeAlertPlus.API.Controllers
                 results["sms"] = new { success = false, error = "NotifyBySms is disabled for this user. Enable it in Settings." };
             }
 
-            return Ok(results);
+            return Ok(results); // { email: {...}, sms: {...} }
         }
     }
 }

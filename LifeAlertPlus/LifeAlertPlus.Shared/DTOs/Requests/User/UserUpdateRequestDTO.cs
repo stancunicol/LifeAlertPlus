@@ -1,5 +1,9 @@
 namespace LifeAlertPlus.Shared.DTOs.Requests.User
 {
+    // Server: primit de UserController.UpdateUser (PUT /api/user/{id}) — toate câmpurile sunt nullable,
+    // null = nu se modifică valoarea curentă (update parțial, nu un PUT complet care suprascrie totul).
+    // Client: folosit în 2 contexte distincte — ProfilePage.razor.cs (date personale + praguri vitale proprii)
+    // și SettingsPage.razor.cs (preferințe: limbă, temă, notificări), ambele prin UserApiClient.UpdateUserAsync.
     public class UserUpdateRequestDTO
     {
         public string? FirstName { get; set; }

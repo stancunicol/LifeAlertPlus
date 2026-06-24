@@ -2,6 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace LifeAlertPlus.Shared.DTOs.Requests.Monitored
 {
+    // Datele de bază ale unei persoane monitorizate noi — câmp imbricat în MonitorAddRequestDTO (creare prin UI)
+    // și folosit direct de MonitoredService.AddMonitoredPersonAsync (Application). Atributele [Required]
+    // sunt validate automat de ASP.NET Core model binding înainte ca request-ul să ajungă în controller.
     public class MonitorCreateRequestDTO
     {
         [Required]

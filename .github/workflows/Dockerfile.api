@@ -1,6 +1,12 @@
+# Build multi-stage pentru imaginea Docker a API-ului .NET — stage-ul "build" conține tot SDK-ul (greu, ~800MB+),
+# stage-ul final "aspnet" conține doar runtime-ul (mult mai ușor), ca imaginea publicată să fie cât mai mică.
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+# Copiem mai întâi DOAR fișierele .csproj (nu și codul sursă) — Docker cache-uiește acest layer separat,
+# astfel încât "dotnet restore" (pasul lent, descarcă NuGet) se reface doar dacă se schimbă dependențele,
+# nu la fiecare modificare de cod. Trebuie copiate .csproj-urile tuturor proiectelor referențiate de API
+# (Application, Infrastructure, Shared, Domain), altfel restore-ul ar eșua cu referințe lipsă.
 COPY LifeAlertPlus/LifeAlertPlus.API/LifeAlertPlus.API.csproj LifeAlertPlus/LifeAlertPlus.API/
 COPY LifeAlertPlus/LifeAlertPlus.Application/LifeAlertPlus.Application.csproj LifeAlertPlus/LifeAlertPlus.Application/
 COPY LifeAlertPlus/LifeAlertPlus.Infrastructure/LifeAlertPlus.Infrastructure.csproj LifeAlertPlus/LifeAlertPlus.Infrastructure/
@@ -9,13 +15,15 @@ COPY LifeAlertPlus/LifeAlertPlus.Domain/LifeAlertPlus.Domain.csproj LifeAlertPlu
 
 RUN dotnet restore LifeAlertPlus/LifeAlertPlus.API/LifeAlertPlus.API.csproj
 
+# Abia acum copiem tot codul sursă (acest layer se invalidează la orice modificare de cod, dar restore-ul de mai sus rămâne cache-uit)
 COPY LifeAlertPlus/ LifeAlertPlus/
 WORKDIR /src/LifeAlertPlus/LifeAlertPlus.API
 RUN dotnet publish -c Release -o /app/publish
 
+# Stage-ul final: imagine de runtime ASP.NET (fără SDK/compilator) — conține doar DLL-urile publicate
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
-ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_URLS=http://+:8080   # Kestrel ascultă pe portul 8080 în interiorul containerului (nu 80/443 — evită nevoia de privilegii root)
 EXPOSE 8080
-COPY --from=build /app/publish .
+COPY --from=build /app/publish .    # Copiem doar rezultatul publish-ului din stage-ul "build", nu și SDK-ul/codul sursă
 ENTRYPOINT ["dotnet", "LifeAlertPlus.API.dll"]

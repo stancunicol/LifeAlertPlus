@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components;
 
 namespace LifeAlertPlus.Client.Services
 {
+    // Date extrase din claim-urile token-ului JWT, folosite de UI pentru a popula starea utilizatorului
+    // autentificat (nume, email, poză profil, rol, provider OAuth, dacă necesită consimțământ GDPR)
     public record TokenClaims(
         Guid UserId,
         string Email,
@@ -16,6 +18,8 @@ namespace LifeAlertPlus.Client.Services
         bool NeedsConsent = false
     );
 
+    // Citește token-ul JWT (din sessionStorage sau din fragmentul URL-ului, pentru flux OAuth redirect)
+    // și extrage claim-urile relevante pentru sesiunea de autentificare curentă
     public class TokenParserService
     {
         private static readonly JwtSecurityTokenHandler _tokenHandler = new();
@@ -28,6 +32,10 @@ namespace LifeAlertPlus.Client.Services
             _navigation = navigation;
         }
 
+        // Extrage TokenClaims din token-ul JWT curent: întâi încearcă sessionStorage, apoi (dacă
+        // lipsește) caută token-ul în fragmentul URL-ului (caz tipic la redirect OAuth), îl persistă
+        // în sessionStorage și curăță URL-ul. Verifică expirarea token-ului (ValidTo) și, dacă a expirat,
+        // șterge datele de sesiune și returnează null. Returnează null și la orice eroare de parsare.
         public async Task<TokenClaims?> GetClaimsAsync()
         {
             try
@@ -59,6 +67,7 @@ namespace LifeAlertPlus.Client.Services
 
                 var jsonToken = _tokenHandler.ReadJwtToken(token);
 
+                // Token expirat -> invalidează sesiunea locală (curăță sessionStorage) și forțează re-login
                 if (jsonToken.ValidTo != DateTime.MinValue && jsonToken.ValidTo < DateTime.UtcNow)
                 {
                     await _jsRuntime.InvokeVoidAsync("sessionStorage.removeItem", "authToken");
@@ -129,6 +138,9 @@ namespace LifeAlertPlus.Client.Services
             }
         }
 
+        // Parsează manual un șir de tip query string (sau fragment URL) și extrage valoarea
+        // asociată unei chei date, fără a depinde de System.Web; folosit pentru a recupera
+        // token-ul JWT trimis ca fragment (#token=...) la redirect-ul OAuth
         private static string? TryGetQueryParameter(string query, string key)
         {
             if (string.IsNullOrWhiteSpace(query))

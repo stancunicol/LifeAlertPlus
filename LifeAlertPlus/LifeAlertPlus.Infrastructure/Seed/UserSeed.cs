@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LifeAlertPlus.Infrastructure.Seed
 {
+    // Populează baza de date la pornirea aplicației: roluri, cont Admin, cont demo + 6 pacienți cu date de test (7 zile măsurători + profil activitate)
+    // Idempotent: rulează în siguranță la fiecare pornire, fără să dubleze datele existente
     public static class UserSeed
     {
         public static async Task SeedAsync(IServiceProvider services)
@@ -12,9 +14,9 @@ namespace LifeAlertPlus.Infrastructure.Seed
             using var scope = services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<LifeAlertPlusDbContext>();
 
-            // If this project contains migrations, apply them.
-            // If there are no migrations (e.g. first-time local dev), create the database instead
-            // to avoid the "pending model changes" exception when migrations are not present.
+            // Dacă proiectul are migrări EF, le aplicăm.
+            // Dacă nu există migrări (ex: primă rulare locală), creăm direct schema bazei de date
+            // ca să evităm excepția "pending model changes" când nu există migrări.
             var allMigrations = context.Database.GetMigrations();
             if (allMigrations != null && allMigrations.Any())
             {
@@ -29,6 +31,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 await context.Database.EnsureCreatedAsync();
             }
 
+            // Dacă DB e goală (primă rulare), curățăm folderul de poze de profil rămase dintr-o resetare anterioară
             var hasUsers = await context.Users.AnyAsync();
             if (!hasUsers)
             {
@@ -42,6 +45,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 }
             }
 
+            // Seed roluri de bază (Admin, User) — necesare înainte de a crea utilizatori
             var roles = new List<Role>
             {
                 new() { Id = Guid.NewGuid(), Name = "Admin", CreatedAt = DateTime.UtcNow },
@@ -60,6 +64,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
             var adminEmail = "admin@lifealertplusiot.com";
             var userEmail = "demo@lifealertplusiot.com";
 
+            // Cont Admin implicit — parola hash BCrypt, email pre-confirmat (nu necesită verificare)
             if (!await context.Users.AnyAsync(u => u.Email == adminEmail))
             {
                 var adminRoleId = (await context.Roles.FirstAsync(r => r.Name == "Admin")).Id;
@@ -88,6 +93,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 context.Users.Add(admin);
             }
 
+            // Cont demo (User) — folosit pentru testare manuală/prezentare, cu SMS activat (NotifyBySms)
             if (!await context.Users.AnyAsync(u => u.Email == userEmail))
             {
                 var userRoleId = (await context.Roles.FirstAsync(r => r.Name == "User")).Id;
@@ -120,7 +126,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
 
             await context.SaveChangesAsync();
 
-            // ── Seed monitored people for the regular user, idempotently per serial ──
+            // ── Seed pacienți monitorizați pentru contul demo, idempotent (verificare după serie) ──
             var seededUser = await context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
             if (seededUser != null)
             {
@@ -132,17 +138,18 @@ namespace LifeAlertPlus.Infrastructure.Seed
         }
 
         // ────────────────────────────────────────────────────────────────────────
-        //  Monitored seed configuration
+        //  Configurația pacienților de test (seed)
         // ────────────────────────────────────────────────────────────────────────
 
+        // Profiluri de stil de viață — determină tiparul valorilor vitale generate (puls, mișcare, somn)
         private enum LifestylePreset
         {
-            Stable,        // regular routine, mid-range vitals
-            Hypertensive,  // elevated baseline HR, occasional spikes
-            Sedentary,     // low movement, long afternoon nap
-            Active,        // early-morning walker, higher daytime HR
-            Frail,         // very low activity, fragile vitals
-            Archived       // moved to permanent care; data frozen 30 days ago
+            Stable,        // rutină obișnuită, valori vitale medii
+            Hypertensive,  // puls de bază ridicat, vârfuri ocazionale
+            Sedentary,     // mișcare redusă, somn lung după-amiaza
+            Active,        // plimbare matinală, puls ridicat ziua
+            Frail,         // activitate foarte redusă, valori vitale fragile
+            Archived       // mutat în îngrijire permanentă; date înghețate la momentul arhivării (acum 30 de zile)
         }
 
         private sealed record SeedMonitoredConfig(
@@ -161,9 +168,10 @@ namespace LifeAlertPlus.Infrastructure.Seed
             bool IsArchived,
             int? ArchivedDaysAgo);
 
+        // Cei 6 pacienți de test, fiecare cu profil de stil de viață diferit
         private static List<SeedMonitoredConfig> BuildMonitoredConfigs() => new()
         {
-            // Existing seed (kept so older DBs preserve their data identity).
+            // Seed original (păstrat ca să nu se schimbe identitatea datelor în DB-urile mai vechi).
             new(
                 FirstName: "Maria",
                 LastName:  "Popescu",
@@ -176,7 +184,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 RandomSeed: 42,
                 IsArchived: false, ArchivedDaysAgo: null),
 
-            // Pensioner with mild hypertension — elevated resting HR, one spike.
+            // Pensionar cu hipertensiune ușoară — puls de repaus ridicat, un vârf.
             new(
                 FirstName: "Ion",
                 LastName:  "Marinescu",
@@ -189,7 +197,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 RandomSeed: 17,
                 IsArchived: false, ArchivedDaysAgo: null),
 
-            // Widow living alone — sedentary, long afternoon naps, occasional low SpO2.
+            // Văduvă care locuiește singură — sedentară, somn lung după-amiaza, SpO2 ocazional scăzut.
             new(
                 FirstName: "Elena",
                 LastName:  "Vasilescu",
@@ -202,7 +210,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 RandomSeed: 91,
                 IsArchived: false, ArchivedDaysAgo: null),
 
-            // Just-retired engineer — morning walks, higher daytime activity.
+            // Inginer recent pensionat — plimbări matinale, activitate ridicată ziua.
             new(
                 FirstName: "Gheorghe",
                 LastName:  "Iliescu",
@@ -215,7 +223,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 RandomSeed: 33,
                 IsArchived: false, ArchivedDaysAgo: null),
 
-            // Very elderly, recent fall — low activity baseline, one fall event.
+            // Foarte vârstnică, cădere recentă — activitate de bază redusă, un eveniment de cădere.
             new(
                 FirstName: "Ana",
                 LastName:  "Dumitrescu",
@@ -228,7 +236,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                 RandomSeed: 58,
                 IsArchived: false, ArchivedDaysAgo: null),
 
-            // Moved to a permanent care home — archived 30 days ago, data preserved.
+            // Mutat într-un cămin de îngrijire permanentă — arhivat acum 30 zile, date păstrate.
             new(
                 FirstName: "Constantin",
                 LastName:  "Rădulescu",
@@ -244,11 +252,11 @@ namespace LifeAlertPlus.Infrastructure.Seed
 
         private static async Task SeedMonitoredPersonAsync(LifeAlertPlusDbContext context, Guid userId, SeedMonitoredConfig cfg)
         {
-            // Idempotent: skip if a monitored with this serial already exists.
+            // Idempotent: omitem dacă există deja un pacient cu această serie de dispozitiv.
             var existing = await context.Monitoreds.FirstOrDefaultAsync(m => m.DeviceSerialNumber == cfg.Serial);
             if (existing != null)
             {
-                // Make sure the link to the user still exists (covers manual deletions).
+                // Ne asigurăm că legătura cu utilizatorul încă există (acoperă ștergeri manuale).
                 var linkExists = await context.UserMonitoreds
                     .AnyAsync(um => um.IdUser == userId && um.IdMonitored == existing.Id);
                 if (!linkExists)
@@ -285,8 +293,8 @@ namespace LifeAlertPlus.Infrastructure.Seed
             context.UserMonitoreds.Add(new UserMonitored { IdUser = userId, IdMonitored = monitored.Id });
             await context.SaveChangesAsync();
 
-            // Measurements: archived people get their data frozen as of their archive date;
-            // active people get rolling 7 days ending now.
+            // Măsurători: pacienții arhivați au datele înghețate la data arhivării;
+            // pacienții activi au o fereastră continuă de 7 zile, până la momentul actual.
             var measurementEndDate = cfg.IsArchived && cfg.ArchivedDaysAgo.HasValue
                 ? now.AddDays(-cfg.ArchivedDaysAgo.Value)
                 : now;
@@ -302,13 +310,13 @@ namespace LifeAlertPlus.Infrastructure.Seed
         }
 
         // ────────────────────────────────────────────────────────────────────────
-        //  Measurement generation — 7 days × 6 readings per day, per-preset baseline
+        //  Generare măsurători — 7 zile × 6 citiri/zi, valori de bază specifice fiecărui profil
         // ────────────────────────────────────────────────────────────────────────
 
         private static List<Measurement> BuildMeasurementsFor(Guid monitoredId, LifestylePreset preset, DateTime endDate, Random rnd)
         {
-            // Per-preset baselines: (HR low, HR high, temp range, spo2 baseline, anomaly tuples)
-            // anomalies: (day from end, reading index, kind) — kind: hr-spike, fever, low-spo2, fall
+            // Valori de bază per profil: (puls minim, puls maxim, temperatură bază, SpO2 bază, anomalii)
+            // anomalii: (zi față de final, indexul citirii, tip) — tip: hr-spike (vârf puls), fever (febră), low-spo2 (SpO2 scăzut), fall (cădere)
             var (hrLow, hrHigh, tempBase, spo2Base, anomalies) = preset switch
             {
                 LifestylePreset.Stable => (65.0, 95.0, 36.5, 97.5, new[]
@@ -377,7 +385,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
                     var isFall = false;
                     var activity = "Normal";
 
-                    // Apply anomaly injections.
+                    // Injectăm anomalia configurată pentru această zi/citire, dacă există
                     var match = anomalies.FirstOrDefault(a => a.Item1 == day && a.Item2 == r);
                     if (match.Item3 != null)
                     {
@@ -419,12 +427,12 @@ namespace LifeAlertPlus.Infrastructure.Seed
         }
 
         // ────────────────────────────────────────────────────────────────────────
-        //  Hourly activity profile generation per preset
+        //  Generare profil de activitate orar, per profil de stil de viață
         // ────────────────────────────────────────────────────────────────────────
 
         private static List<ActivityProfile> BuildActivityProfileFor(Guid monitoredId, LifestylePreset preset, DateTime now)
         {
-            // Each preset returns a 24-element array of (AveragePulse, MovementRate, SleepProbability).
+            // Fiecare profil returnează un array de 24 elemente (PulsMediu, RatăMișcare, ProbabilitateSomn)
             var hourly = preset switch
             {
                 LifestylePreset.Stable       => StableProfile(),
@@ -454,7 +462,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
             return list;
         }
 
-        // 24-hour patterns. Each tuple = (AveragePulse, MovementRate, SleepProbability).
+        // Tipare pe 24 ore. Fiecare tuplu = (PulsMediu, RatăMișcare, ProbabilitateSomn).
         private static (double, double, double)[] StableProfile() => new (double, double, double)[]
         {
             (58, 0.05, 0.92), (57, 0.04, 0.94), (57, 0.04, 0.95), (58, 0.05, 0.94),  // 00-03
@@ -470,7 +478,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
             (61, 0.07, 0.78), (59, 0.06, 0.88)                                        // 22-23 (falling asleep)
         };
 
-        // Higher resting HR throughout; less restful night.
+        // Puls de repaus mai ridicat tot timpul; noapte mai puțin odihnitoare.
         private static (double, double, double)[] HypertensiveProfile() => new (double, double, double)[]
         {
             (68, 0.08, 0.82), (67, 0.07, 0.85), (66, 0.06, 0.86), (67, 0.07, 0.85),
@@ -486,7 +494,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
             (71, 0.10, 0.70), (69, 0.08, 0.78)
         };
 
-        // Low daytime activity, long siesta, light early sleep.
+        // Activitate redusă ziua, siestă lungă, somn ușor seara timpuriu.
         private static (double, double, double)[] SedentaryProfile() => new (double, double, double)[]
         {
             (56, 0.04, 0.94), (55, 0.03, 0.95), (55, 0.03, 0.95), (56, 0.04, 0.94),
@@ -502,7 +510,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
             (57, 0.04, 0.82), (56, 0.04, 0.92)
         };
 
-        // Higher movement, early morning walk, more cardio activity.
+        // Mișcare mai multă, plimbare matinală timpurie, mai multă activitate cardio.
         private static (double, double, double)[] ActiveProfile() => new (double, double, double)[]
         {
             (54, 0.04, 0.94), (53, 0.03, 0.95), (53, 0.03, 0.95), (54, 0.04, 0.93),
@@ -518,7 +526,7 @@ namespace LifeAlertPlus.Infrastructure.Seed
             (58, 0.08, 0.72), (56, 0.05, 0.86)
         };
 
-        // Frail: very low activity, frequent rest periods, lower vitals overall.
+        // Fragil: activitate foarte redusă, perioade frecvente de repaus, valori vitale generale mai joase.
         private static (double, double, double)[] FrailProfile() => new (double, double, double)[]
         {
             (54, 0.03, 0.95), (53, 0.03, 0.96), (53, 0.02, 0.96), (54, 0.03, 0.95),

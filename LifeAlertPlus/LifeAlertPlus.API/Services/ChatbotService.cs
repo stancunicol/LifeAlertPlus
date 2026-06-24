@@ -5,24 +5,32 @@ using LifeAlertPlus.Shared.DTOs.Responses.Chat;
 
 namespace LifeAlertPlus.API.Services
 {
+    // Serviciu care trimite mesajele utilizatorului la API-ul Claude (Anthropic) și returnează răspunsul.
+    // Folosește modelul Claude Haiku (cel mai rapid și economic) pentru răspunsuri medicale concise.
+    // Chatbot-ul este limitat la 4 domenii: funcții aplicație, praguri vitale, condiții medicale,
+    // interpretare alerte — orice altceva este declinat politicos.
     public class ChatbotService
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<ChatbotService> _logger;
-        private readonly string _apiKey;
+        private readonly string _apiKey; // API key Anthropic din appsettings: Anthropic:ApiKey
 
         public ChatbotService(IHttpClientFactory httpClientFactory, ILogger<ChatbotService> logger, IConfiguration configuration)
         {
             _httpClientFactory = httpClientFactory;
-            _logger = logger;
-            _apiKey = configuration["Anthropic:ApiKey"] ?? string.Empty;
+            _logger            = logger;
+            _apiKey            = configuration["Anthropic:ApiKey"] ?? string.Empty;
         }
 
+        // Construiește prompt-ul de sistem în limba solicitată (ro/en)
+        // Prompt-ul definește personalitatea chatbot-ului și restricțiile de subiect
         private static string BuildSystemPrompt(string lang)
         {
-            bool isEn = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase);
-            string language = isEn ? "English" : "Romanian";
+            bool isEn      = string.Equals(lang, "en", StringComparison.OrdinalIgnoreCase);
+            string language = isEn ? "English" : "Romanian"; // Instrucțiunea de limbă în prompt
 
+            // Prompt-ul de sistem este fix (nu se schimbă per conversație)
+            // Restricțiile clare previn "jailbreak"-ul: chatbot-ul refuză subiecte în afara domeniului
             return $"""
                 You are the LifeAlertPlus assistant, a specialized healthcare AI for a patient monitoring application.
 
@@ -80,6 +88,7 @@ namespace LifeAlertPlus.API.Services
                 """;
         }
 
+        // Trimite cererea de chat la API-ul Anthropic și returnează răspunsul modelului
         public async Task<ChatResponse> GetResponseAsync(ChatRequest request)
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
@@ -90,14 +99,15 @@ namespace LifeAlertPlus.API.Services
 
             try
             {
-                var client = _httpClientFactory.CreateClient("Anthropic");
+                var client = _httpClientFactory.CreateClient("Anthropic"); // Client HTTP preconfigurat cu BaseUrl Anthropic
 
+                // Construim corpul cererii pentru API-ul Anthropic Messages
                 var body = new
                 {
-                    model = "claude-haiku-4-5-20251001",
-                    max_tokens = 1024,
-                    system = BuildSystemPrompt(request.Lang),
-                    messages = request.Messages
+                    model      = "claude-haiku-4-5-20251001", // Haiku: cel mai rapid și economic model Claude
+                    max_tokens = 1024,                         // Limita de token-uri (evităm răspunsuri excesiv de lungi)
+                    system     = BuildSystemPrompt(request.Lang), // Instrucțiunile sistemului (personalitate + restricții)
+                    messages   = request.Messages              // Istoricul conversației (role: "user"/"assistant")
                         .Select(m => new { role = m.Role, content = m.Content })
                         .ToList()
                 };
@@ -106,11 +116,12 @@ namespace LifeAlertPlus.API.Services
                 {
                     Content = JsonContent.Create(body)
                 };
-                httpRequest.Headers.Add("x-api-key", _apiKey);
-                httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+                // Header-ele de autentificare Anthropic
+                httpRequest.Headers.Add("x-api-key", _apiKey);          // Cheia API
+                httpRequest.Headers.Add("anthropic-version", "2023-06-01"); // Versiunea API-ului Anthropic
 
                 var response = await client.SendAsync(httpRequest);
-                var json = await response.Content.ReadAsStringAsync();
+                var json     = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -118,13 +129,14 @@ namespace LifeAlertPlus.API.Services
                     return new ChatResponse { Success = false, Reply = "Service temporarily unavailable." };
                 }
 
+                // Parsăm răspunsul: content[0].text conține textul generat de model
                 using var doc = JsonDocument.Parse(json);
                 var text = doc.RootElement
-                    .GetProperty("content")[0]
+                    .GetProperty("content")[0] // Primul bloc de conținut (Haiku returnează text simplu)
                     .GetProperty("text")
                     .GetString() ?? string.Empty;
 
-                return new ChatResponse { Reply = text };
+                return new ChatResponse { Reply = text }; // Success=true implicit
             }
             catch (Exception ex)
             {

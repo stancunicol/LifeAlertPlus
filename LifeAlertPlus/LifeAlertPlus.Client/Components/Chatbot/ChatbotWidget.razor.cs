@@ -8,6 +8,8 @@ using System.Text.RegularExpressions;
 
 namespace LifeAlertPlus.Client.Components.Chatbot
 {
+    // Code-behind pentru widget-ul de chatbot flotant — gestionează istoricul conversației,
+    // trimiterea mesajelor către API și vizibilitatea pe pagini (ascuns pe login/register/verify)
     public partial class ChatbotWidget : ComponentBase, IDisposable
     {
         [Inject] private LanguageService Lang { get; set; } = null!;
@@ -15,9 +17,11 @@ namespace LifeAlertPlus.Client.Components.Chatbot
         [Inject] private NavigationManager Nav { get; set; } = null!;
         [Inject] private IJSRuntime JS { get; set; } = null!;
 
+        // Reprezentare locală (doar pentru afișare) a unui mesaj din chat
         private record ChatEntry(string Role, string Text);
 
         private readonly List<ChatEntry> _messages = new();
+        // Istoricul mesajelor trimis efectiv către API, pentru a păstra contextul conversației
         private readonly List<ChatMessageDTO> _apiMessages = new();
         private string _input = "";
         private bool _isOpen;
@@ -27,6 +31,7 @@ namespace LifeAlertPlus.Client.Components.Chatbot
 
         protected override void OnInitialized()
         {
+            // Se abonează la schimbarea limbii (re-randare texte) și la navigare (arată/ascunde widget-ul)
             Lang.OnLanguageChanged += OnLangChanged;
             Nav.LocationChanged += OnLocationChanged;
             UpdateVisibility(Nav.Uri);
@@ -38,6 +43,7 @@ namespace LifeAlertPlus.Client.Components.Chatbot
             _ = InvokeAsync(StateHasChanged);
         }
 
+        // Widget-ul nu trebuie afișat pe paginile de autentificare (login/register/verify)
         private void UpdateVisibility(string url)
         {
             var lower = url.ToLowerInvariant();
@@ -48,6 +54,7 @@ namespace LifeAlertPlus.Client.Components.Chatbot
 
         private void OnLangChanged() => _ = InvokeAsync(StateHasChanged);
 
+        // Deschide/închide fereastra de chat; la prima deschidere afișează mesajul de bun-venit
         private async Task Toggle()
         {
             _isOpen = !_isOpen;
@@ -66,6 +73,7 @@ namespace LifeAlertPlus.Client.Components.Chatbot
             await Task.CompletedTask;
         }
 
+        // Trimite mesajul utilizatorului către serviciul de chat și adaugă răspunsul (sau eroarea) în conversație
         private async Task SendMessage()
         {
             var text = _input.Trim();
@@ -79,6 +87,7 @@ namespace LifeAlertPlus.Client.Components.Chatbot
             StateHasChanged();
             await ScrollToBottom();
 
+            // Trimite întregul istoric (_apiMessages) ca să se păstreze contextul conversației
             var reply = await ChatService.SendAsync(_apiMessages, Lang.CurrentLanguage);
             _isLoading = false;
 
@@ -96,12 +105,14 @@ namespace LifeAlertPlus.Client.Components.Chatbot
             await ScrollToBottom();
         }
 
+        // Enter trimite mesajul; Shift+Enter permite linie nouă în câmpul de input
         private async Task OnKeyDown(KeyboardEventArgs e)
         {
             if (e.Key == "Enter" && !e.ShiftKey)
                 await SendMessage();
         }
 
+        // Mică întârziere ca să dea timp DOM-ului să se actualizeze înainte de a derula la ultimul mesaj
         private async Task ScrollToBottom()
         {
             await Task.Delay(60);
@@ -109,6 +120,7 @@ namespace LifeAlertPlus.Client.Components.Chatbot
             catch { }
         }
 
+        // Codifică HTML-ul (anti-XSS) și apoi aplică formatare minimală: linii noi, **bold**, `code`
         private static string FormatMessage(string text)
         {
             var html = WebUtility.HtmlEncode(text);

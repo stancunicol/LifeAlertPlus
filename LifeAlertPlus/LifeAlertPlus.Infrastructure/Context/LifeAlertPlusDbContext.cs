@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LifeAlertPlus.Infrastructure.Context
 {
+    // DbContext-ul principal EF Core — mapează toate entitățile Domain pe tabelele din PostgreSQL
+    // și configurează relațiile (FK), indecșii și comportamentul de ștergere (cascade/restrict)
     public class LifeAlertPlusDbContext : DbContext
     {
         public LifeAlertPlusDbContext(DbContextOptions<LifeAlertPlusDbContext> options) : base(options)
@@ -30,9 +32,10 @@ namespace LifeAlertPlus.Infrastructure.Context
         {
             base.OnModelCreating(modelBuilder);
 
+            // Chei primare explicite (majoritatea entităților folosesc Guid ca PK)
             modelBuilder.Entity<User>().HasKey(u => u.Id);
-            modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique();
-            modelBuilder.Entity<User>().HasIndex(u => u.PhoneNumber);
+            modelBuilder.Entity<User>().HasIndex(u => u.Email).IsUnique(); // Email unic — folosit la autentificare
+            modelBuilder.Entity<User>().HasIndex(u => u.PhoneNumber);     // Index pentru căutare rapidă după telefon
             modelBuilder.Entity<Monitored>().HasKey(m => m.Id);
             modelBuilder.Entity<Measurement>().HasKey(m => m.Id);
             modelBuilder.Entity<Notification>().HasKey(n => n.Id);
@@ -40,6 +43,9 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<WeeklyHistory>().HasKey(w => w.Id);
             modelBuilder.Entity<Role>().HasKey(r => r.Id);
 
+            // UserMonitored: tabelă de legătură many-to-many (cheie compusă User+Monitored)
+            // Restrict (nu Cascade) — ștergerea unui User/Monitored nu trebuie să șteargă automat legătura;
+            // logica de business (UserRepository.DeleteUserAsync) gestionează explicit ordinea ștergerilor
             modelBuilder.Entity<UserMonitored>().HasKey(um => new { um.IdUser, um.IdMonitored });
             modelBuilder.Entity<UserMonitored>()
                 .HasOne(um => um.User)
@@ -53,6 +59,7 @@ namespace LifeAlertPlus.Infrastructure.Context
                 .HasForeignKey(um => um.IdMonitored)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Measurement: Cascade — ștergerea unui pacient șterge automat toate măsurătorile lui
             modelBuilder.Entity<Measurement>()
                 .HasOne(m => m.Monitored)
                 .WithMany()
@@ -60,10 +67,10 @@ namespace LifeAlertPlus.Infrastructure.Context
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Measurement>()
-                .HasIndex(m => m.IdMonitored);
+                .HasIndex(m => m.IdMonitored); // Index pentru filtrarea măsurătorilor per pacient
 
             modelBuilder.Entity<Measurement>()
-                .HasIndex(m => m.CreatedAt);
+                .HasIndex(m => m.CreatedAt); // Index pentru sortare/filtrare cronologică (paginare, retenție)
 
             modelBuilder.Entity<Notification>()
                 .HasIndex(n => n.IdMonitored);
@@ -72,20 +79,20 @@ namespace LifeAlertPlus.Infrastructure.Context
                 .HasOne(n => n.Monitored)
                 .WithMany(m => m.Notifications)
                 .HasForeignKey(n => n.IdMonitored)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Cascade); // Ștergerea pacientului șterge și notificările lui
 
             modelBuilder.Entity<Notification>()
                 .HasOne(n => n.User)
                 .WithMany()
                 .HasForeignKey(n => n.IdUser)
-                .IsRequired(false)
+                .IsRequired(false) // Notificarea poate exista fără un User asociat (ex: notificări de sistem)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Notification>()
                 .HasIndex(n => n.IdUser);
 
             modelBuilder.Entity<Notification>()
-                .HasIndex(n => new { n.IdUser, n.IsRead });
+                .HasIndex(n => new { n.IdUser, n.IsRead }); // Index compus — listarea notificărilor necitite per utilizator
 
             modelBuilder.Entity<DailyHistory>()
                 .HasIndex(d => d.IdMonitored);
@@ -93,10 +100,12 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<WeeklyHistory>()
                 .HasIndex(w => w.IdMonitored);
 
+            // Invitation: token unic (hash SHA-256) + index compus pentru căutarea invitațiilor existente per medic/pacient
             modelBuilder.Entity<Invitation>().HasKey(i => i.Id);
             modelBuilder.Entity<Invitation>().HasIndex(i => i.Token).IsUnique();
             modelBuilder.Entity<Invitation>().HasIndex(i => new { i.DoctorEmail, i.PatientId });
 
+            // ActivityProfile: cheie compusă (Pacient, OraZilei) — o singură înregistrare per oră per pacient
             modelBuilder.Entity<ActivityProfile>().HasKey(ap => new { ap.IdMonitored, ap.HourOfDay });
             modelBuilder.Entity<ActivityProfile>()
                 .HasOne(ap => ap.Monitored)
@@ -106,6 +115,7 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<ActivityProfile>()
                 .HasIndex(ap => ap.IdMonitored);
 
+            // MonitoredCondition: index unic (Pacient, ConditionKey) — previne afecțiuni duplicate pentru același pacient
             modelBuilder.Entity<MonitoredCondition>().HasKey(c => c.Id);
             modelBuilder.Entity<MonitoredCondition>()
                 .HasOne(c => c.Monitored)
@@ -118,6 +128,7 @@ namespace LifeAlertPlus.Infrastructure.Context
                 .HasIndex(c => new { c.IdMonitored, c.ConditionKey })
                 .IsUnique();
 
+            // WifiNetwork: rețelele salvate pentru ESP32 — NOTĂ: parola e stocată ca text simplu (fără criptare)
             modelBuilder.Entity<WifiNetwork>().HasKey(w => w.Id);
             modelBuilder.Entity<WifiNetwork>()
                 .HasOne(w => w.Monitored)
@@ -127,14 +138,17 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<WifiNetwork>()
                 .HasIndex(w => w.IdMonitored);
 
+            // AuditLog: index pe Timestamp pentru interogări cronologice (Admin — istoric acțiuni)
             modelBuilder.Entity<AuditLog>().HasKey(a => a.Id);
             modelBuilder.Entity<AuditLog>()
                 .HasIndex(a => a.Timestamp);
 
+            // SystemError: index pe Timestamp pentru interogări cronologice (Admin — depanare erori)
             modelBuilder.Entity<SystemError>().HasKey(e => e.Id);
             modelBuilder.Entity<SystemError>()
                 .HasIndex(e => e.Timestamp);
 
+            // DoctorNote: notițele lăsate de medic pentru un pacient, șterse în cascadă cu pacientul
             modelBuilder.Entity<DoctorNote>().HasKey(n => n.Id);
             modelBuilder.Entity<DoctorNote>()
                 .HasOne(n => n.Monitored)
@@ -144,6 +158,8 @@ namespace LifeAlertPlus.Infrastructure.Context
             modelBuilder.Entity<DoctorNote>()
                 .HasIndex(n => n.IdMonitored);
 
+            // PushSubscription: abonamentele Web Push (VAPID) ale browserelor utilizatorilor
+            // Endpoint unic — un browser nu poate avea două abonamente identice
             modelBuilder.Entity<PushSubscription>().HasKey(p => p.Id);
             modelBuilder.Entity<PushSubscription>()
                 .HasOne(p => p.User)

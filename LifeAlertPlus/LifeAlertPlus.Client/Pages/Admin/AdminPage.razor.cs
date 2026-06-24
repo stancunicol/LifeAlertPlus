@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace LifeAlertPlus.Client.Pages.Admin;
 
+// Code-behind pentru dashboard-ul de Administrare — statistici globale, status dispozitive/persoane monitorizate, notificări și jurnal de audit
 public partial class AdminPage : ComponentBase
 {
 	[Inject]
@@ -73,6 +74,7 @@ public partial class AdminPage : ComponentBase
 	// Per-person status map
 	protected Dictionary<Guid, PersonStatus> PersonStatuses { get; set; } = new();
 
+	// Aplatizează utilizatorii și persoanele lor monitorizate într-un singur rând per persoană, combinând statusul calculat (online/alertă) din PersonStatuses
 	protected IEnumerable<MonitoredRow> MonitoredRows => AdminUsers
 		.SelectMany(u => u.MonitoredPeople.Select(m => new MonitoredRow(
 			$"{m.FirstName} {m.LastName}".Trim(),
@@ -91,6 +93,7 @@ public partial class AdminPage : ComponentBase
 		await LoadDataAsync();
 	}
 
+	// Extrage datele administratorului din token; dacă tokenul e absent/invalid, redirecționează către login
 	private async Task LoadUserFromTokenAsync()
 	{
 		var claims = await TokenParser.GetClaimsAsync();
@@ -104,6 +107,8 @@ public partial class AdminPage : ComponentBase
 		ProfilePictureUrl = claims.ProfilePictureUrl ?? string.Empty;
 	}
 
+	// Încarcă toate datele dashboard-ului: utilizatori monitorizați, status ESP/măsurători per persoană (în paralel),
+	// statistici agregate, notificări recente, statusul dispozitivelor și jurnalul de audit
 	private async Task LoadDataAsync()
 	{
 		IsLoading = true;
@@ -255,6 +260,7 @@ public partial class AdminPage : ComponentBase
 		}
 	}
 
+	// Preia statusul dispozitivelor (baterie, semnal, uptime) de la endpoint-ul admin dedicat — folosit pentru tabelul paginat de dispozitive
 	private async Task LoadDeviceStatusesAsync()
 	{
 		try
@@ -265,6 +271,7 @@ public partial class AdminPage : ComponentBase
 		catch { DeviceStatuses = new List<DeviceStatusRow>(); }
 	}
 
+	// Preia ultimele 10 intrări din jurnalul de audit al acțiunilor administrative
 	private async Task LoadRecentAuditAsync()
 	{
 		try
@@ -275,6 +282,7 @@ public partial class AdminPage : ComponentBase
 		catch { RecentAudit = new List<AdminApiClient.AuditEntryDTO>(); }
 	}
 
+	// Formatează secundele de uptime ale unui dispozitiv în format lizibil (s / m+s / h+m)
 	protected static string FormatUptime(int? seconds)
 	{
 		if (!seconds.HasValue) return "-";
@@ -363,6 +371,7 @@ public partial class AdminPage : ComponentBase
 		public long? LastDataDate { get; set; }
 	}
 
+	// Reactivează o persoană monitorizată ștearsă logic, direct din tabelul de status al dispozitivelor
 	protected async Task ReactivateMonitoredAsync(Guid id)
 	{
 		var ok = await MonitoredApiClient.ReactivateMonitoredAsync(id);
@@ -372,6 +381,7 @@ public partial class AdminPage : ComponentBase
 	}
 
 
+	// Navigare în tabelul paginat de dispozitive — ignoră valorile de pagină în afara intervalului valid
 	protected void GoToDevicePage(int page)
 	{
 		if (page >= 1 && page <= DeviceTotalPages)
@@ -380,6 +390,7 @@ public partial class AdminPage : ComponentBase
 		}
 	}
 
+	// Schimbă numărul de rânduri pe pagină în tabelul de dispozitive și revine la prima pagină
 	protected void ChangeDevicePageSize(int newSize)
 	{
 		DevicePageSize = newSize;

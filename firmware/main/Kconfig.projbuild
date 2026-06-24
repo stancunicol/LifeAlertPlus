@@ -1,35 +1,39 @@
+# Definește opțiunile vizibile în `idf.py menuconfig` sub meniul "LifeAlertPlus Configuration".
+# Valorile setate aici (sau direct în sdkconfig) sunt expuse în main.cpp ca macrouri CONFIG_* (vezi
+# definițiile WIFI_SSID_DEFAULT, API_BASE_URL, API_DEVICE_SECRET de la începutul fișierului).
 menu "LifeAlertPlus Configuration"
 
     config LIFEALERT_API_BASE_URL
         string "Backend API base URL"
         default "http://localhost:5176/"
         help
-            Base URL of the LifeAlertPlus backend API. Include the trailing slash.
-            Set the production Azure URL here for deployed builds.
+            URL-ul de bază al API-ului backend LifeAlertPlus. Include slash-ul final.
+            Pentru build-urile de producție, pune aici URL-ul Azure (Web App), nu localhost.
 
     config LIFEALERT_API_DEVICE_SECRET
         string "ESP device shared secret (used to derive per-device X-Device-Key via HMAC-SHA256)"
         default ""
         help
-            Shared secret used to compute the per-device key: HMAC-SHA256(secret, serial).
-            Must match the Urls:EspDeviceSecret value in the API's appsettings.
-            Leave empty in committed defaults; set the real value in your
-            local sdkconfig (which is gitignored).
+            Secretul partajat folosit pentru a calcula cheia per-dispozitiv: HMAC-SHA256(secret, serial).
+            Trebuie să fie identic cu valoarea Urls:EspDeviceSecret din appsettings-ul API-ului —
+            altfel toate cererile dispozitivului vor fi respinse cu 401 (vezi ESPControllerTests.cs).
+            Lasă gol în valorile comise în git; setează valoarea reală doar în sdkconfig-ul
+            local (fișier ignorat de git, nu ajunge niciodată în repo).
 
     config LIFEALERT_DEFAULT_WIFI_SSID
         string "Fallback WiFi SSID"
         default ""
         help
-            WiFi network the device tries when no networks are stored in NVS
-            (first boot or after a reset). Leave empty to skip the fallback
-            entirely — in that case the device can only connect after the
-            user provisions a network from the web UI.
+            Rețeaua WiFi pe care dispozitivul o încearcă atunci când nu există nicio rețea
+            salvată în NVS (prima pornire sau după un reset). Lasă gol pentru a omite complet
+            acest fallback — în acest caz dispozitivul se poate conecta doar după ce utilizatorul
+            configurează o rețea din interfața web (modul provisioning / SoftAP).
 
     config LIFEALERT_DEFAULT_WIFI_PASS
         string "Fallback WiFi password"
         default ""
         help
-            Password for the fallback WiFi network above. Leave empty for
-            open networks or when no fallback SSID is configured.
+            Parola pentru rețeaua WiFi de rezervă de mai sus. Lasă gol pentru rețele deschise
+            (fără parolă) sau când nu e configurat niciun SSID de rezervă.
 
 endmenu

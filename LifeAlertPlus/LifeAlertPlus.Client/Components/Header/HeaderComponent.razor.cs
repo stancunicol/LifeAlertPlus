@@ -3,6 +3,8 @@ using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Components.Header
 {
+    // Code-behind pentru antetul (header) zonei publice/utilizator — meniu de profil, meniu mobil,
+    // contor de notificări necitite și afișarea numelui/pozei utilizatorului autentificat
     public partial class HeaderComponent : ComponentBase, IDisposable
     {
         [Inject]
@@ -38,8 +40,8 @@ namespace LifeAlertPlus.Client.Components.Header
         private int _unreadCount = 0;
         private string T(string key) => Lang.T(key);
 
-        // Shows the parameter name if non-empty, otherwise falls back to the cached value
-        // from a previous page load so the header never flickers to empty during navigation.
+        // Afișează numele primit ca parametru dacă nu e gol; altfel cade pe valoarea memorată
+        // dintr-o încărcare de pagină anterioară, ca header-ul să nu "clipească" la gol în timpul navigării.
         private string DisplayedName =>
             !string.IsNullOrWhiteSpace(UserName) ? UserName
             : !string.IsNullOrWhiteSpace(UserStateService.DisplayName) ? UserStateService.DisplayName
@@ -48,6 +50,7 @@ namespace LifeAlertPlus.Client.Components.Header
         protected override async Task OnInitializedAsync()
         {
             Version = AppVersion.Version;
+            // Se abonează la schimbările pozei de profil (ex: după upload) pentru a actualiza header-ul live
             if (ProfilePictureService != null)
             {
                 ProfilePictureService.OnChange += HandleProfilePictureChanged;
@@ -66,11 +69,13 @@ namespace LifeAlertPlus.Client.Components.Header
             await RefreshUnreadCountAsync();
         }
 
+        // La fiecare navigare reîmprospătează contorul de notificări necitite (ex: pot apărea notificări noi)
         private async void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
         {
             await RefreshUnreadCountAsync();
         }
 
+        // Cere de la API doar prima notificare (pageSize: 1) — scopul real este să citească UnreadCount din răspuns
         private async Task RefreshUnreadCountAsync()
         {
             try
@@ -84,7 +89,7 @@ namespace LifeAlertPlus.Client.Components.Header
 
         protected override void OnParametersSet()
         {
-            // Cache the name whenever the page passes a valid one.
+            // Memorează numele de fiecare dată când pagina-părinte transmite o valoare validă
             if (!string.IsNullOrWhiteSpace(UserName))
                 UserStateService.SetDisplayName(UserName);
         }
@@ -115,12 +120,14 @@ namespace LifeAlertPlus.Client.Components.Header
             NotificationService.OnUnreadCountChanged -= HandleUnreadCountChanged;
         }
 
+        // Determină dacă o cale de navigare corespunde paginii curente, pentru a evidenția link-ul activ din meniu
         private bool IsActive(string path)
         {
             var currentPath = new Uri(Navigation.Uri).AbsolutePath;
             return currentPath.Equals(path, StringComparison.OrdinalIgnoreCase);
         }
 
+        // Construiește inițialele afișate în avatar (ex: "John Doe" -> "JD"), cu fallback la "GU" (Guest User)
         private string GetUserInitials()
         {
             var name = DisplayedName;
@@ -157,6 +164,7 @@ namespace LifeAlertPlus.Client.Components.Header
             ShowMobileMenu = false;
         }
 
+        // La delogare: folosește handler-ul custom dat de părinte, dacă există; altfel navighează direct la /login
         private async Task OnLogout()
         {
             ShowProfileMenu = false;

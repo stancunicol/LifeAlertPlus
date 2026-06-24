@@ -7,6 +7,8 @@ using Microsoft.Extensions.Configuration;
 
 namespace LifeAlertPlus.Client.Layout
 {
+    // Code-behind pentru layout-ul principal al aplicației — pornește conexiunea de notificări push
+    // (SignalR/realtime) și abonarea la Web Push la încărcarea oricărei pagini autentificate
     public partial class MainLayout : LayoutComponentBase, IAsyncDisposable
     {
         [Inject] private PushNotificationClientService PushService { get; set; } = null!;
@@ -19,6 +21,7 @@ namespace LifeAlertPlus.Client.Layout
 
         protected override async Task OnInitializedAsync()
         {
+            // Pornește serviciul de notificări doar dacă există un utilizator autentificat valid
             var claims = await TokenParser.GetClaimsAsync();
             if (claims?.UserId != Guid.Empty)
             {
@@ -26,7 +29,7 @@ namespace LifeAlertPlus.Client.Layout
                 PushService.OnNotificationReceived += ShowNotification;
                 _connected = true;
 
-                // Subscribe to Web Push if browser supports it and permission not yet denied
+                // Se abonează la Web Push dacă browserul suportă funcția și permisiunea nu a fost refuzată
                 try
                 {
                     var supported  = await JSRuntime.InvokeAsync<bool>("webPushIsSupported");
@@ -38,15 +41,17 @@ namespace LifeAlertPlus.Client.Layout
                         await JSRuntime.InvokeAsync<bool>("webPushSubscribe", apiBase, token);
                     }
                 }
-                catch { /* Web Push is best-effort — never block app startup */ }
+                catch { /* Web Push e best-effort — nu trebuie să blocheze niciodată pornirea aplicației */ }
             }
         }
 
+        // Handler apelat când serviciul de push primește o notificare nouă — o afișează ca toast
         private void ShowNotification(string message, string severity)
         {
             ToastRef?.Show(message, severity);
         }
 
+        // Dezabonează handler-ul și eliberează conexiunea de push la distrugerea layout-ului
         public async ValueTask DisposeAsync()
         {
             if (_connected)

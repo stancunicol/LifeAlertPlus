@@ -5,6 +5,7 @@ using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Pages.Login
 {
+    // Code-behind pentru pagina de Login — autentificare email+parolă sau Google OAuth, resetare parolă și gestionare returnUrl
     public partial class LoginPage : ComponentBase
     {
         [Inject]
@@ -64,10 +65,11 @@ namespace LifeAlertPlus.Client.Pages.Login
             return Task.CompletedTask;
         }
 
+        // Trimite credențialele către API, salvează tokenul JWT în sessionStorage și navighează către returnUrl, dashboard admin sau dashboard normal
         private async Task OnLogin()
         {
             if (IsLoading) return;
-            
+
             IsLoading = true;
             ErrorMessage = string.Empty;
 
@@ -80,13 +82,14 @@ namespace LifeAlertPlus.Client.Pages.Login
                 };
 
                 var response = await AuthApiClient.LoginAsync(request);
-                
+
                 if(response != null)
                 {
                     if(response.Success)
                     {
                         await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
 
+                        // Prioritate 1: dacă există un returnUrl valid (sigur), navigăm acolo
                         var safeReturn = NormalizeSafeReturnUrl(_returnUrl);
                         if (!string.IsNullOrWhiteSpace(safeReturn))
                         {
@@ -94,12 +97,14 @@ namespace LifeAlertPlus.Client.Pages.Login
                             return;
                         }
 
+                        // Prioritate 2: administratorii merg pe dashboard-ul de admin
                         if(response.IsAdmin)
                         {
                             Navigation.NavigateTo("/admin-dashboard");
                             return;
                         }
-						
+
+                        // Implicit: utilizatorii obișnuiți ajung pe dashboard-ul standard
                         Navigation.NavigateTo("/dashboard");
                     }
 
@@ -119,6 +124,7 @@ namespace LifeAlertPlus.Client.Pages.Login
             }
         }
 
+        // Mapează mesajele de eroare brute ale API-ului la texte localizate, pentru a nu expune mesaje tehnice utilizatorului
         private string MapLoginError(string? apiMessage) => apiMessage switch
         {
             "No account found with this email address." => T("login.error.noAccount"),
@@ -148,6 +154,7 @@ namespace LifeAlertPlus.Client.Pages.Login
             ShowForgotPasswordModal = false;
         }
 
+        // Trimite cererea de resetare a parolei către API; parsează manual JSON-ul de răspuns deoarece formatul nu e un DTO tipizat
         private async Task OnSendResetEmail()
         {
             ForgotPasswordMessage = string.Empty;
@@ -192,6 +199,7 @@ namespace LifeAlertPlus.Client.Pages.Login
             }
         }
 
+        // Redirecționează către endpoint-ul API care inițiază fluxul OAuth Google, transmițând URL-ul de retur complet pentru callback
         private void LoginWithGoogle()
         {
             var apiBaseUrl = (Configuration["ApiBaseUrl"] ?? Navigation.BaseUri).TrimEnd('/');
@@ -206,6 +214,7 @@ namespace LifeAlertPlus.Client.Pages.Login
             Navigation.NavigateTo(googleAuthUrl, forceLoad: true);
         }
 
+        // Validează că returnUrl este o cale locală relativă, pentru a preveni atacuri de tip open-redirect
         private static string? NormalizeSafeReturnUrl(string? returnUrl)
         {
             if (string.IsNullOrWhiteSpace(returnUrl))
@@ -224,6 +233,7 @@ namespace LifeAlertPlus.Client.Pages.Login
             return returnUrl;
         }
 
+        // Extrage manual un parametru din query string-ul URL-ului curent (fără a depinde de un serviciu de navigare suplimentar)
         private string? GetQueryParam(string name)
         {
             try

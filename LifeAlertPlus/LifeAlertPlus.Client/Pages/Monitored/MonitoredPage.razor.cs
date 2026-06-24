@@ -7,6 +7,9 @@ using System.Globalization;
 
 namespace LifeAlertPlus.Client.Pages.Monitored;
 
+// Code-behind pentru pagina Monitored — listează toate persoanele monitorizate ale
+// utilizatorului curent (active și arhivate), afișează statusul lor de sănătate în timp real
+// (polling), și permite adăugare, arhivare, restaurare și ștergere de persoane
 public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 {
     [Inject]
@@ -67,6 +70,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private string _dataError = string.Empty;
     private CancellationTokenSource? _pollingCts;
     
+    // Lista de carduri afișată în UI — aplică succesiv filtrul de căutare după nume,
+    // filtrul de status (Critical/Warning/OK) și filtrul online/offline
     private IEnumerable<MonitoredCard> FilteredCards
     {
         get
@@ -107,6 +112,10 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private int OnlineCount => _monitoredCards.Count(c => IsDataCurrent(c));
     private int OfflineCount => _monitoredCards.Count(c => !IsDataCurrent(c));
 
+    // Inițializează pagina: se abonează la schimbarea limbii, încarcă utilizatorul din token,
+    // apoi încarcă în paralel lista persoanelor active și pe cea a persoanelor arhivate
+    // (paralel pentru ca numărul afișat pe tab-ul de arhivă să fie corect de la început),
+    // și pornește polling-ul pentru actualizarea datelor ESP
     protected override async Task OnInitializedAsync()
     {
         Lang.OnLanguageChanged += HandleLanguageChanged;
@@ -124,6 +133,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         StartPolling();
     }
 
+    // Extrage datele utilizatorului din claim-urile token-ului JWT, apoi le completează/suprascrie
+    // cu valorile din API (nume, poză de profil, frecvența de actualizare configurată)
     private async Task LoadUserFromTokenAsync()
     {
         var claims = await TokenParser.GetClaimsAsync();
@@ -153,6 +164,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Încarcă lista persoanelor monitorizate active (nearhivate) ale utilizatorului
+    // și reîmprospătează imediat datele ESP asociate
     private async Task LoadMonitoredPeopleAsync()
     {
         _isLoadingMonitored = true;
@@ -182,6 +195,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Încarcă lista persoanelor arhivate (date statice, fără polling pentru ele)
     private async Task LoadArchivedPeopleAsync()
     {
         _isLoadingArchive = true;
@@ -208,6 +222,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Comută între vizualizarea persoanelor active și cea a persoanelor arhivate;
+    // oprește polling-ul când se intră în arhivă (date statice) și îl repornește la revenire
     private async Task SwitchViewAsync(ViewMode mode)
     {
         if (CurrentView == mode) return;
@@ -227,6 +243,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
 
     // ── Archive / Restore / Delete actions ──────────────────────────────────
 
+    // Deschide modalul de confirmare pentru arhivarea persoanei selectate
     private void OpenArchiveConfirm(LifeAlertPlus.Domain.Entities.Monitored person)
     {
         _personPendingAction = person;
@@ -234,6 +251,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         _showArchiveConfirm = true;
     }
 
+    // Deschide modalul de confirmare pentru restaurarea unei persoane arhivate
     private void OpenRestoreConfirm(LifeAlertPlus.Domain.Entities.Monitored person)
     {
         _personPendingAction = person;
@@ -241,6 +259,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         _showRestoreConfirm = true;
     }
 
+    // Deschide modalul de confirmare pentru ștergerea definitivă (din arhivă)
     private void OpenDeleteConfirm(LifeAlertPlus.Domain.Entities.Monitored person)
     {
         _personPendingAction = person;
@@ -248,6 +267,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         _showDeleteConfirm = true;
     }
 
+    // Deschide modalul de confirmare pentru ștergerea "soft" (din lista activă, fără arhivare explicită)
     private void OpenSoftDeleteConfirm(LifeAlertPlus.Domain.Entities.Monitored person)
     {
         _personPendingAction = person;
@@ -255,6 +275,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         _showSoftDeleteConfirm = true;
     }
 
+    // Închide orice modal de acțiune deschis și resetează starea aferentă
     private void CloseActionModal()
     {
         _showArchiveConfirm = false;
@@ -265,6 +286,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         _actionError = string.Empty;
     }
 
+    // Confirmă arhivarea persoanei selectate prin API, apoi reîncarcă lista de persoane active
     private async Task ConfirmArchiveAsync()
     {
         if (_personPendingAction == null) return;
@@ -288,6 +310,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Confirmă restaurarea persoanei din arhivă prin API, apoi reîncarcă lista de arhivă
     private async Task ConfirmRestoreAsync()
     {
         if (_personPendingAction == null) return;
@@ -311,6 +334,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Confirmă ștergerea definitivă a persoanei (din arhivă) prin API, apoi reîncarcă lista de arhivă
     private async Task ConfirmDeleteAsync()
     {
         if (_personPendingAction == null) return;
@@ -334,6 +358,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Confirmă ștergerea "soft" a persoanei direct din lista activă, apoi reîncarcă lista activă
     private async Task ConfirmSoftDeleteAsync()
     {
         if (_personPendingAction == null) return;
@@ -357,15 +382,19 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Formatează data arhivării pentru afișare ("—" dacă nu există)
     private static string FormatArchivedDate(DateTime? archivedAt)
         => archivedAt.HasValue ? archivedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm") : "—";
 
+    // Pornește un task de fundal (fire-and-forget) care reîmprospătează periodic datele ESP
     private void StartPolling()
     {
         _pollingCts = new CancellationTokenSource();
         _ = PollLoopAsync(_pollingCts.Token);
     }
 
+    // Bucla de polling: reîmprospătează datele ESP, apoi așteaptă 30 secunde, repetând
+    // până la anularea token-ului (la dispose sau la comutarea pe vizualizarea de arhivă)
     private async Task PollLoopAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
@@ -394,6 +423,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Pentru fiecare persoană monitorizată activă, preia în paralel datele ESP curente
+    // și data ultimei măsurători salvate, construind cardurile afișate în UI
     private async Task RefreshEspDataAsync(CancellationToken token)
     {
         if (_monitoredPeople.Count == 0)
@@ -423,6 +454,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+    // Preia datele live de la senzorul ESP al unui device, identificat prin numărul de serie
     private async Task<ESPDataResponseDTO?> FetchEspAsync(string serial, CancellationToken token)
     {
         try { return await MonitoredApiClient.GetEspDataAsync(serial, token); }
@@ -430,6 +462,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         catch { return null; }
     }
 
+    // Obține data/ora ultimei măsurători salvate pentru o persoană
     private async Task<DateTime> FetchLastMeasurementTimeAsync(Guid personId)
     {
         try
@@ -440,6 +473,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         catch { return DateTime.MinValue; }
     }
 
+    // Calculează inițialele afișate în avatar pe baza numelui complet
     private string GetInitials(string name)
     {
         var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -451,6 +485,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
     }
 
+    // Mapează statusul textual la o clasă CSS folosită pentru colorarea badge-ului/cardului
     private string GetStatusClass(string status)
     {
         return status.ToLower() switch
@@ -463,6 +498,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         };
     }
 
+    // Mapează statusul textual la mesajul tradus afișat utilizatorului
     private string GetStatusText(string status)
     {
         return status.ToLower() switch
@@ -475,6 +511,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         };
     }
 
+    // Deschide modalul de adăugare a unei noi persoane monitorizate, cu un formular nou/resetat
     private void OpenAddPersonModal()
     {
         newPerson = new MonitorCreateRequestDTO
@@ -489,6 +526,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         ShowAddPersonModal = false;
     }
 
+    // Validează câmpurile obligatorii și trimite cererea de adăugare a unei noi persoane
+    // monitorizate; la succes reîncarcă lista și închide modalul
     private async Task HandleAddPerson()
     {
         ErrorMessage = string.Empty;
@@ -519,11 +558,13 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         ShowAddPersonModal = false;
     }
 
+    // Formatează o listă de valori întregi (ex: citiri brute) pentru afișare, separate prin virgulă
     private string FormatIntList(IEnumerable<int>? values)
     {
         return values == null ? "N/A" : string.Join(", ", values);
     }
 
+    // Formatează datele GPS brute (potențial multi-linie) pentru afișare, separate prin " / "
     private string FormatGps(string? values)
     {
         if (string.IsNullOrWhiteSpace(values))
@@ -538,14 +579,17 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return lines.Length == 0 ? "N/A" : string.Join(" / ", lines);
     }
 
+    // Formatează data ultimei măsurători salvate pentru un card, în ora locală
     private string FormatLastUpdate(MonitoredCard card)
     {
         if (card.LastUpdatedUtc == DateTime.MinValue)
             return "No data";
-        
+
         return card.LastUpdatedUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
     }
 
+    // Interpretează timestamp-ul brut trimis de firmware: dacă pare un Unix timestamp valid
+    // (> 1 miliard) îl convertește în dată/oră locală; altfel îl tratează ca timp relativ (secunde de la pornire)
     private string FormatEspTimestamp(long value)
     {
         if (value > 1_000_000_000)
@@ -563,6 +607,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return $"T+{value}s";
     }
 
+    // Extrage pulsul (BPM) din array-ul brut Max30100 returnat de senzor (poziția 0)
     private string GetPulse(ESPDataResponseDTO? data)
     {
         if (data?.Max30100 == null || data.Max30100.Count == 0)
@@ -574,6 +619,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return pulse > 0 ? pulse.ToString() : "N/A";
     }
 
+    // Extrage saturația de oxigen (SpO2) din array-ul brut Max30100 returnat de senzor (poziția 1)
     private string GetOxygen(ESPDataResponseDTO? data)
     {
         if (data?.Max30100 == null || data.Max30100.Count < 2)
@@ -585,6 +631,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return spo2 > 0 ? spo2.ToString() : "N/A";
     }
 
+    // Formatează temperatura corporală citită de senzor cu o zecimală
     private string GetTemperature(ESPDataResponseDTO? data)
     {
         if (data?.Temperature != null)
@@ -594,6 +641,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return "N/A";
     }
 
+    // Determină eticheta GPS (interior/exterior) pe baza formatului datelor brute primite
+    // de la senzor: poate fi string simplu "lat,lon" sau propoziție NMEA ($GPRMC/$GPGLL)
     private string FormatGpsStatus(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
@@ -626,15 +675,22 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
     private static bool IsFallEvent(MonitoredCard card)
         => card.LastData?.IsFall == true;
 
+    // Determină textul de risc de cădere afișat: "offline" dacă nu sunt date recente,
+    // altfel pe baza deciziei firmware-ului (IsFallEvent)
     private string FormatFallRisk(MonitoredCard card)
     {
         if (!IsDataCurrent(card)) return T("card.statusOffline");
         return IsFallEvent(card) ? T("card.fallPossible") : T("card.fallStable");
     }
 
+    // Determină frecvența de actualizare efectivă: cea configurată pe persoană, altfel
+    // valoarea implicită setată de utilizator
     private int GetEffectiveUpdateFrequency(LifeAlertPlus.Domain.Entities.Monitored person)
         => (person.UpdateFrequency ?? 0) > 0 ? person.UpdateFrequency!.Value : _userUpdateFrequency;
 
+    // Verifică dacă datele ESP ale unei persoane sunt "proaspete" (dispozitivul e online):
+    // diferența dintre acum și ultimul timestamp trimis de senzor trebuie să fie sub
+    // frecvența de actualizare efectivă + o marjă de 15 secunde
     private bool IsDataCurrent(MonitoredCard card)
     {
         var esp = card.LastData;
@@ -644,6 +700,9 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - esp.Date) <= threshold;
     }
 
+    // Calculează statusul de sănătate al unui card (Critical/Warning/OK/NoData) pe baza
+    // puls/SpO2/temperatură comparate cu pragurile personalizate ale persoanei (sau valori
+    // implicite), plus detectarea căderii care are prioritate maximă
     private string GetCardStatus(MonitoredCard card)
     {
         if (!IsDataCurrent(card))
@@ -674,11 +733,14 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return "OK";
     }
 
+    // Combină statusul cardului cu clasa CSS corespunzătoare, pentru afișare directă în UI
     private string GetCardStatusClass(MonitoredCard card)
     {
         return GetStatusClass(GetCardStatus(card));
     }
 
+    // Calculează vârsta unei persoane monitorizate din data nașterii, ținând cont
+    // dacă ziua de naștere din anul curent a trecut deja sau nu
     private int GetAge(LifeAlertPlus.Domain.Entities.Monitored person)
     {
         if (person.Birthdate == null)
@@ -696,11 +758,13 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return age;
     }
 
+    // Navighează către pagina de detalii a unei persoane monitorizate
     private void ViewDetails(Guid personId)
     {
         NavigationManager.NavigateTo($"/monitored/{personId}");
     }
 
+    // Deschide locația GPS a unei persoane în Google Maps, într-un tab nou
     protected async Task RequestLocation(Guid personId)
     {
         var card = _monitoredCards.FirstOrDefault(c => c.Person.Id == personId);
@@ -717,6 +781,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         await JSRuntime.InvokeVoidAsync("open", url, "_blank");
     }
 
+    // Încearcă să extragă latitudinea și longitudinea dintr-un string GPS brut ("lat,lon"),
+    // tolerant la separatorul decimal (virgulă/punct) folosind atât cultura invariantă cât și cea curentă
     private bool TryParseGpsToLatLon(string gps, out double lat, out double lon)
     {
         lat = 0; lon = 0;
@@ -733,6 +799,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         return true;
     }
 
+    // Funcționalitate de apel telefonic — neimplementată încă, afișează un alert temporar;
+    // numărul de telefon nu este stocat în entitatea Monitored (câmp lipsă în model)
     protected async Task CallPerson(Guid personId)
     {
         var card = _monitoredCards.FirstOrDefault(c => c.Person.Id == personId);
@@ -740,6 +808,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         await JSRuntime.InvokeVoidAsync("alert", $"Call requested for {name}. Phone number not available.");
     }
 
+    // Funcționalitate de trimitere SMS — neimplementată încă, afișează un alert temporar;
+    // același motiv ca CallPerson: numărul de telefon lipsește din modelul de date curent
     protected async Task TextPerson(Guid personId)
     {
         var card = _monitoredCards.FirstOrDefault(c => c.Person.Id == personId);
@@ -747,6 +817,7 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         await JSRuntime.InvokeVoidAsync("alert", $"Text requested for {name}. Phone number not available.");
     }
 
+    // La distrugerea componentei: dezabonează handler-ul de schimbare a limbii și oprește polling-ul
     public ValueTask DisposeAsync()
     {
         Lang.OnLanguageChanged -= HandleLanguageChanged;
@@ -764,6 +835,8 @@ public partial class MonitoredPage : ComponentBase, IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+    // Container intern care grupează o persoană monitorizată cu datele ei ESP curente
+    // și data ultimei măsurători — folosit pentru a evita interogări API repetate
     private sealed class MonitoredCard
     {
         public required LifeAlertPlus.Domain.Entities.Monitored Person { get; init; }

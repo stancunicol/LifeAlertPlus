@@ -3,9 +3,9 @@ using System.Globalization;
 
 namespace LifeAlertPlus.Shared.Helpers
 {
-    /// <summary>
-    /// Configuration constants for ESP data simulation
-    /// </summary>
+    // Praguri folosite pentru a genera date "plauzibil normale" în modul simulare (fără dispozitiv ESP32 real) —
+    // intervalele sunt alese explicit sub pragurile de alertă implicite, ca să nu declanșeze notificări false
+    // în timpul demonstrațiilor/testării UI.
     public static class SimulationConstants
     {
         // Pulse (BPM)
@@ -34,14 +34,15 @@ namespace LifeAlertPlus.Shared.Helpers
         public const string MockGPSData = "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A";
     }
 
-    /// <summary>
-    /// Generates simulated ESP device data
-    /// </summary>
+    // Generează payload-uri ESPDataResponseDTO false, fără un dispozitiv fizic — folosit de modul
+    // de simulare (SimulationManager.cs din API, SimulationPage.razor.cs din Client) pentru demonstrații
+    // și testare a fluxului de alertare fără hardware. Aceeași formă de date ca cea trimisă real de
+    // firmware (main.cpp → build_json), ca restul sistemului (AlertMonitorService, AI, UI) să nu poată
+    // distinge o măsurătoare simulată de una reală.
     public static class ESPDataGenerator
     {
-        /// <summary>
-        /// Generates alert-level data: high pulse, low SpO2, elevated temperature.
-        /// </summary>
+        // Generează date la nivel de alertă: puls ridicat, SpO2 scăzut, temperatură crescută —
+        // folosit pentru a testa vizual cum reacționează UI-ul/notificările la o stare de pericol
         public static ESPDataResponseDTO GenerateAlertPayload(string serial)
         {
             var rnd = Random.Shared;
@@ -84,6 +85,8 @@ namespace LifeAlertPlus.Shared.Helpers
             };
         }
 
+        // Generează date "normale" (în intervalele din SimulationConstants) — folosit pentru simularea
+        // de rutină, fără alerte, când utilizatorul doar vrea să vadă dashboard-ul populat cu date live
         public static ESPDataResponseDTO GeneratePayload(string serial)
         {
             var rnd = Random.Shared;

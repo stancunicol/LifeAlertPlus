@@ -5,6 +5,8 @@ using LifeAlertPlus.Shared.DTOs.Responses.User;
 
 namespace LifeAlertPlus.Client.Services
 {
+    // Client HTTP pentru endpoint-urile /api/user — CRUD utilizatori, activare/dezactivare/ștergere,
+    // export GDPR, upload poză de profil
     public class UserApiClient
     {
         private readonly HttpClient _httpClient;
@@ -13,6 +15,7 @@ namespace LifeAlertPlus.Client.Services
             _httpClient = httpClient;
         }
 
+        // Listează toți utilizatorii (probabil uz admin); returnează listă vidă la eroare
         public async Task<IReadOnlyList<UserListItemDTO>> GetAllUsersAsync()
         {
             try
@@ -26,6 +29,7 @@ namespace LifeAlertPlus.Client.Services
             }
         }
 
+        // Actualizează datele profilului unui utilizator
         public async Task<bool> UpdateUserAsync(Guid userId, UserUpdateRequestDTO request)
         {
             var response = await _httpClient.PutAsJsonAsync($"api/user/update/{userId}", request);
@@ -33,6 +37,7 @@ namespace LifeAlertPlus.Client.Services
             return response.IsSuccessStatusCode;
         }
 
+        // Dezactivează contul (soft — utilizatorul nu se mai poate autentifica, dar datele rămân)
         public async Task<bool> DeactivateUserAsync(Guid userId)
         {
             var response = await _httpClient.PatchAsync($"api/user/deactivate/{userId}", null);
@@ -40,6 +45,7 @@ namespace LifeAlertPlus.Client.Services
             return response.IsSuccessStatusCode;
         }
 
+        // Reactivează un cont dezactivat anterior
         public async Task<bool> ActivateUserAsync(Guid userId)
         {
             var response = await _httpClient.PatchAsync($"api/user/activate/{userId}", null);
@@ -47,12 +53,16 @@ namespace LifeAlertPlus.Client.Services
             return response.IsSuccessStatusCode;
         }
 
+        // Șterge definitiv contul unui utilizator
         public async Task<bool> DeleteUserAsync(Guid userId)
         {
             var response = await _httpClient.DeleteAsync($"api/user/delete/{userId}");
             return response.IsSuccessStatusCode;
         }
 
+        // Descarcă exportul GDPR (toate datele personale ale utilizatorului) ca fișier binar;
+        // numele fișierului e extras din header-ul Content-Disposition al răspunsului,
+        // cu fallback la un nume generat din data curentă
         public async Task<(byte[]? Data, string FileName)> GdprExportAsync(Guid userId)
         {
             var response = await _httpClient.GetAsync($"api/user/{userId}/gdpr-export");
@@ -64,6 +74,8 @@ namespace LifeAlertPlus.Client.Services
             return (data, fileName.Trim('"'));
         }
 
+        // Încarcă o poză de profil nouă ca multipart/form-data (content-type fixat la image/jpeg)
+        // și returnează URL-ul imaginii salvate, sau null la eroare
         public async Task<string?> UploadProfilePictureAsync(Guid userId, Stream imageStream, string fileName)
         {
             var content = new MultipartFormDataContent();
@@ -79,6 +91,7 @@ namespace LifeAlertPlus.Client.Services
             return result?.ImageUrl;
         }
 
+        // Obține profilul unui utilizator după id; returnează null la eroare sau dacă nu există
         public async Task<UserProfileDTO?> GetUserByIdAsync(Guid userId)
         {
             try
@@ -95,6 +108,7 @@ namespace LifeAlertPlus.Client.Services
             }
         }
 
+        // Obține profilul unui utilizator după adresa de email; returnează null la eroare sau dacă nu există
         public async Task<UserProfileDTO?> GetUserByEmailAsync(string email)
         {
             try
@@ -111,6 +125,7 @@ namespace LifeAlertPlus.Client.Services
             }
         }
 
+        // DTO local pentru deserializarea răspunsului de upload (conține doar URL-ul imaginii)
         public class UploadResult
         {
             public string? ImageUrl { get; set; }

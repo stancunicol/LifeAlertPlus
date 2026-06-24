@@ -1,5 +1,11 @@
 namespace LifeAlertPlus.Shared.DTOs.Responses.Monitoring
 {
+    // Server: returnat de MonitoringController.GetTrendPredictions (GET) → AlertMonitorService.GetTrendPredictions
+    // analizează buffer-ul intern cu ultimele ~2 minute de măsurători și estimează direcția de evoluție
+    // (crește/scade) a fiecărui semn vital, inclusiv în câte secunde ar atinge un prag de alertă
+    // (SecondsToThreshold) — predicție pe termen scurt, diferită de clasificarea AI (NORMAL/ALERT/CRITICAL).
+    // Client: consumat de SelectedMonitored.razor.cs (proprietatea TrendPredictions) pentru a afișa
+    // tendința semnelor vitale ("HR crește cu X bpm/min, va atinge pragul în Y secunde").
     public class TrendPredictionResponseDTO
     {
         public List<TrendPredictionItemDTO> Predictions { get; set; } = new();
@@ -8,6 +14,7 @@ namespace LifeAlertPlus.Shared.DTOs.Responses.Monitoring
         public double BufferDurationSeconds { get; set; }
     }
 
+    // O predicție de tendință pentru un singur semn vital (ex: "hr", direcție "increasing", severitate "warning")
     public class TrendPredictionItemDTO
     {
         public string Metric { get; set; } = string.Empty;

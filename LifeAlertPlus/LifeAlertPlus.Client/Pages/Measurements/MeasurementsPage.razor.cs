@@ -5,6 +5,7 @@ using LifeAlertPlus.Domain.Entities;
 
 namespace LifeAlertPlus.Client.Pages.Measurements
 {
+	// Code-behind pentru pagina de Măsurători a unei persoane monitorizate — listare paginată, filtrare după stare/tip și evaluarea pragurilor de alertă
 	public partial class MeasurementsPage
 	{
 		[Parameter]
@@ -28,7 +29,7 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 		protected int CurrentPage { get; set; } = 1;
 		private const int PageSize = 25;
 
-		// Vital ranges from monitored person
+		// Praguri vitale specifice persoanei monitorizate (valori implicite folosite dacă persoana nu are praguri setate)
 		private int _minHr = 60;
 		private int _maxHr = 100;
 		private double _minTemp = 36.0;
@@ -38,6 +39,7 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 		protected string StatusFilter { get; set; } = "all";
 		protected string TypeFilter { get; set; } = "all";
 
+		// Aplică filtrele curente (stare + tip de măsurătoare) peste lista completă încărcată din API
 		private IEnumerable<MeasurementResponseDTO> ApplyFilters() => AllMeasurements.Where(m =>
 		{
 			var status = GetStatus(m);
@@ -66,6 +68,7 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 		protected bool HasPrevious => CurrentPage > 1;
 		protected bool HasNext => CurrentPage < TotalPages;
 
+		// Construiește lista de numere de pagină afișate în paginator, cu elipse (-1) pentru paginile omise când sunt multe pagini
 		protected List<int> GetPageNumbers()
 		{
 			var pages = new List<int>();
@@ -108,18 +111,21 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 			return pages.Distinct().ToList();
 		}
 
+		// Schimbă filtrul de stare (all/normal/alert/critical) și resetează paginarea la prima pagină
 		protected void SetStatusFilter(string value)
 		{
 			StatusFilter = value;
 			CurrentPage = 1;
 		}
 
+		// Schimbă filtrul de tip parametru vital (all/hr/spo2/temp/fall) și resetează paginarea la prima pagină
 		protected void SetTypeFilter(string value)
 		{
 			TypeFilter = value;
 			CurrentPage = 1;
 		}
 
+		// Încarcă datele utilizatorului curent (din token), pragurile vitale ale persoanei monitorizate și toate măsurătorile
 		protected override async Task OnInitializedAsync()
 		{
 			var claims = await TokenParser.GetClaimsAsync();
@@ -130,6 +136,7 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 			await LoadAllAsync();
 		}
 
+		// Preia datele persoanei monitorizate (nume, praguri vitale personalizate) — erorile sunt ignorate, se păstrează valorile implicite
 		private async Task LoadPersonAsync()
 		{
 			try
@@ -147,6 +154,7 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 			catch { }
 		}
 
+		// Încarcă toate măsurătorile persoanei, paginând prin API în loturi de 200 până când nu mai sunt rezultate
 		protected async Task LoadAllAsync()
 		{
 			IsLoading = true;
@@ -163,6 +171,7 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 					var batch = await MeasurementApiClient.GetMeasurementsByMonitoredIdAsync(PersonId, page, 200);
 					var list = batch.ToList();
 					AllMeasurements.AddRange(list);
+					// Dacă lotul curent are mai puține elemente decât dimensiunea cerută, am ajuns la ultima pagină
 					hasMore = list.Count >= 200;
 					page++;
 				}
@@ -177,12 +186,14 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 			}
 		}
 
+		// Navighează la o pagină specifică din paginator, ignorând valorile invalide sau pagina curentă
 		protected void GoToPage(int page)
 		{
 			if (page < 1 || page > TotalPages || page == CurrentPage) return;
 			CurrentPage = page;
 		}
 
+		// Determină nivelul de severitate al unei măsurători comparând valorile cu pragurile vitale ale persoanei
 		protected string GetStatus(MeasurementResponseDTO m)
 		{
 			// Critical: fall, or extreme values
@@ -199,6 +210,7 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 			return "normal";
 		}
 
+		// Returnează eticheta tradusă corespunzătoare unui nivel de severitate (normal/alert/critical)
 		protected string GetStatusLabel(string status) => status switch
 		{
 			"normal" => T("meas.normal"),
@@ -207,6 +219,8 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 			_ => "-"
 		};
 
+		// Returnează clasa CSS pentru celula unui parametru vital (cell-normal/cell-alert/cell-critical),
+		// folosind aceleași praguri ca GetStatus dar per coloană (hr/temp/spo2) pentru colorarea individuală
 		protected string GetCellClass(MeasurementResponseDTO m, string type)
 		{
 			return type switch
@@ -221,10 +235,14 @@ namespace LifeAlertPlus.Client.Pages.Measurements
 			};
 		}
 
+		// Verifică dacă pulsul este în afara pragurilor normale — folosit de filtrul TypeFilter="hr"
 		private bool IsHrAbnormal(MeasurementResponseDTO m) => m.Pulse > _maxHr || m.Pulse < _minHr;
+		// Verifică dacă saturația de oxigen este sub pragul normal (< 95%) — folosit de filtrul TypeFilter="spo2"
 		private bool IsSpo2Abnormal(MeasurementResponseDTO m) => m.SpO2 > 0 && m.SpO2 < 95;
+		// Verifică dacă temperatura este în afara pragurilor normale — folosit de filtrul TypeFilter="temp"
 		private bool IsTempAbnormal(MeasurementResponseDTO m) => m.Temperature > _maxTemp || m.Temperature < _minTemp;
 
+		// Revine la pagina de detalii a persoanei monitorizate (SelectedMonitoredPage)
 		private void GoBack() => NavigationManager.NavigateTo($"/monitored/{PersonId}");
 	}
 }

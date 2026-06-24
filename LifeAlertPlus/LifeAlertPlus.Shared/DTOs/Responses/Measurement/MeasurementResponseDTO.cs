@@ -1,5 +1,9 @@
 namespace LifeAlertPlus.Shared.DTOs.Responses.Measurement
 {
+    // Server: returnat de MeasurementController (GetMeasurementsByMonitoredId, GetMeasurementById) și
+    // de InvitationsController.GetPatientMeasurementsByToken (acces medic prin token) — mapat din
+    // entitatea Measurement de MeasurementService, fără câmpurile interne ale entității.
+    // Client: folosit pentru istoricul de măsurători/grafice (paginile cu istoric și export PDF).
     public class MeasurementResponseDTO
     {
         public string Name { get; set; } = string.Empty;

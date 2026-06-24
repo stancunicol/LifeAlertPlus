@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 {
+	// Code-behind pentru pagina Admin de persoane monitorizate — agregă persoanele monitorizate de toți utilizatorii, status online/alertă și ștergere logică (soft delete) cu reactivare
 	public partial class MonitoredUsersPage : ComponentBase
 	{
 		[Inject]
@@ -65,6 +66,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 		protected int OfflineMonitoredCount => MonitoredRows.Count(r => !r.Online);
 		protected int AlertsCount { get; set; }
 
+		// Rânduri afișate: aplică căutarea text și filtrul de stare (online/offline/alerte), sortate alfabetic după nume
 		protected IEnumerable<MonitoredPersonRow> FilteredRows => MonitoredRows
 			.Where(r => MatchesSearch(r, SearchText))
 			.Where(r => MatchesFilter(r, StatusFilter))
@@ -76,6 +78,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			await LoadDataAsync();
 		}
 
+		// Extrage identitatea administratorului curent din token, pentru afișare în antetul paginii
 		private async Task LoadUserFromTokenAsync()
 		{
 			var claims = await TokenParser.GetClaimsAsync();
@@ -87,6 +90,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			_currentUserEmail = claims.Email;
 		}
 
+		// Încarcă toți utilizatorii cu persoanele lor monitorizate, construiește rândurile agregate și determină status online/alerte
 		protected async Task LoadDataAsync()
 		{
 			IsLoading = true;
@@ -111,6 +115,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			}
 		}
 
+		// Setează filtrul de stare activ (all/online/offline/alerts) — tabelul se refiltrează automat via FilteredRows
 		protected void SetFilter(string filter)
 		{
 			StatusFilter = filter;
@@ -129,6 +134,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpperInvariant();
 		}
 
+		// Grupează persoanele monitorizate pe Id (aceeași persoană poate fi monitorizată de mai mulți utilizatori) și construiește un rând agregat per persoană
 		private List<MonitoredPersonRow> BuildMonitoredRows(IEnumerable<MonitoredUserDTO> users)
 		{
 			var grouped = users
@@ -142,6 +148,7 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 				var sample = group.First();
 				var person = sample.Person;
 
+				// Deduplică monitorii după email, în caz că aceeași persoană apare de mai multe ori în date
 				var monitors = group
 					.Select(g => new MonitorInfo(FullName(g.User), g.User.Email))
 					.GroupBy(m => m.Email, StringComparer.OrdinalIgnoreCase)
@@ -212,11 +219,13 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			return online ? string.Empty : "row-offline";
 		}
 
+		// Navighează la pagina de detalii ESP+măsurători a persoanei monitorizate selectate (SelectedMonitoredPage)
 		protected void NavigateToSelected(Guid personId)
 		{
 			NavigationManager.NavigateTo($"/view-selected-monitored/{personId}");
 		}
 
+		// Handler de tastatură pentru accesibilitate: Enter sau Spațiu pe un rând activează navigarea
 		protected void OnRowKeyDown(KeyboardEventArgs e, Guid personId)
 		{
 			if (e.Key == "Enter" || e.Key == " ")
@@ -225,18 +234,21 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			}
 		}
 
+		// Deschide modalul de confirmare soft-delete pentru rândul selectat
 		protected void OpenDeleteConfirm(MonitoredPersonRow row)
 		{
 			_deleteTarget = row;
 			_showDeleteConfirm = true;
 		}
 
+		// Închide modalul de confirmare și resetează ținta de ștergere
 		protected void CloseDeleteConfirm()
 		{
 			_showDeleteConfirm = false;
 			_deleteTarget = null;
 		}
 
+		// Confirmă ștergerea logică a persoanei monitorizate selectate, apoi reîncarcă lista pentru a reflecta noua stare
 		protected async Task ConfirmSoftDeleteAsync()
 		{
 			if (_deleteTarget == null) return;
@@ -253,29 +265,34 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			}
 		}
 
+		// Anulează ștergerea logică a unei persoane monitorizate (în perioada de grație) și reîncarcă lista
 		protected async Task ReactivateAsync(Guid id)
 		{
 			await MonitoredApiClient.ReactivateMonitoredAsync(id);
 			await LoadDataAsync();
 		}
 
+		// Consideră dispozitivul "online" doar dacă a trimis date ESP în ultimele `thresholdSeconds` secunde
 		private static bool IsEspDataFresh(ESPDataResponseDTO esp, int thresholdSeconds)
 		{
 			if (esp.Date <= 0) return false;
 			return (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - esp.Date) <= thresholdSeconds;
 		}
 
+		// Calculează zilele rămase până la ștergerea definitivă (perioadă de grație de 7 zile după soft-delete)
 		protected static int DaysUntilDeletion(DateTime deletedAt)
 		{
 			var remaining = deletedAt.AddDays(7) - DateTime.UtcNow;
 			return Math.Max(0, (int)Math.Ceiling(remaining.TotalDays));
 		}
 
+		// Construiește numele complet al utilizatorului supraveghetor (pentru coloana "Monitorizat de")
 		protected string FullName(MonitoredUserDTO user)
 		{
 			return $"{user.FirstName} {user.LastName}".Trim();
 		}
 
+		// Formatează un DateTime nullable în ora locală (format yyyy-MM-dd HH:mm); returnează "-" dacă lipsește
 		protected string FormatDate(DateTime? value)
 		{
 			return value?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "-";
@@ -293,6 +310,8 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 			bool HasAlert,
 			DateTime? DeletedAt);
 
+		// Pentru fiecare persoană monitorizată, interoghează în paralel (limitat la 10 concurente) starea ESP și ultima măsurătoare,
+		// pentru a determina dacă e online și dacă are o alertă activă — evită blocarea UI la liste mari
 		private async Task PopulateOnlineAndAlertsAsync()
 		{
 			var semaphore = new SemaphoreSlim(10);
@@ -322,12 +341,14 @@ namespace LifeAlertPlus.Client.Pages.MonitoredUsers
 							last = measurements.FirstOrDefault();
 							if (last != null)
 							{
+								// Praguri fixe de alertă rapidă pentru lista de sinteză (independent de pragurile personalizate ale persoanei)
 								if (last.Pulse > 100 || last.Pulse < 50 || last.Temperature > 37.5 || last.IsFall)
 									hasAlert = true;
 							}
 						}
 						catch { /* ignore measurement errors */ }
 
+						// Actualizare protejată cu lock — rândurile sunt modificate concurent din mai multe task-uri paralele
 						lock (MonitoredRows)
 						{
 							var idx = MonitoredRows.FindIndex(r => r.PersonId == personId);

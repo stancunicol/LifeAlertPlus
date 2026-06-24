@@ -3,6 +3,7 @@ using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Pages.Register
 {
+    // Code-behind pentru pagina de Înregistrare — validare formular în doi pași (date cont + consimțământ GDPR) și apel API de registrare
     public partial class RegisterPage : ComponentBase
     {
         [Inject]
@@ -34,6 +35,7 @@ namespace LifeAlertPlus.Client.Pages.Register
         // 0=empty, 1=weak, 2=medium, 3=strong, 4=very strong
         private int PasswordStrength => ComputeStrength(Password);
 
+        // Calculează un scor euristic al puterii parolei pe baza lungimii și varietății caracterelor
         private static int ComputeStrength(string pw)
         {
             if (string.IsNullOrEmpty(pw)) return 0;
@@ -64,6 +66,7 @@ namespace LifeAlertPlus.Client.Pages.Register
             _ => string.Empty
         };
 
+        // Afișează versiunea aplicației în pagină (din assembly), fără apeluri asincrone reale
         protected override Task OnInitializedAsync()
         {
             Version = AppVersion.Version;
@@ -110,6 +113,7 @@ namespace LifeAlertPlus.Client.Pages.Register
             ShowConsentModal = true;
         }
 
+        // Validare email folosind System.Net.Mail.MailAddress, cu verificări suplimentare (punct în domeniu, nu termină în punct)
         private static bool IsValidEmail(string email)
         {
             if (string.IsNullOrWhiteSpace(email)) return false;
@@ -144,6 +148,7 @@ namespace LifeAlertPlus.Client.Pages.Register
 
             try
             {
+                // DataProcessingConsent = true întotdeauna aici — se ajunge în această metodă doar după bifarea consimțământului
                 var request = new Shared.DTOs.Requests.User.UserRegisterRequestDTO
                 {
                     FirstName = FirstName,
@@ -162,6 +167,7 @@ namespace LifeAlertPlus.Client.Pages.Register
                 }
                 else
                 {
+                    // Traduce mesajul de eroare al API-ului într-un text localizat, dacă există un mapaj cunoscut
                     ErrorMessage = MapApiError(response?.Message);
                 }
             }
@@ -171,18 +177,21 @@ namespace LifeAlertPlus.Client.Pages.Register
             }
         }
 
+        // Modal de succes confirmat — redirecționează utilizatorul către pagina de login
         private void CloseModal()
         {
             ShowModal = false;
             Navigation.NavigateTo("/login");
         }
 
+        // Permite trimiterea formularului cu tasta Enter
         private void HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
         {
             if (e.Key == "Enter")
                 OnRegister();
         }
 
+        // Mapează mesajele de eroare brute venite din API la chei de traducere localizate
         private string MapApiError(string? apiMessage) => apiMessage switch
         {
             "An account with this email address already exists." => T("register.error.emailInUse"),
@@ -190,6 +199,7 @@ namespace LifeAlertPlus.Client.Pages.Register
             _ => apiMessage ?? T("register.error.failed")
         };
 
+        // Validează parola pe rând de criterii (lungime, minuscule, majuscule, cifră, caracter special) — se oprește la primul eșec
         private (bool IsValid, string ErrorMessage) ValidatePassword(string password)
         {
             if (string.IsNullOrWhiteSpace(password))

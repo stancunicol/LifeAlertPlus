@@ -8,10 +8,11 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.Application;
 
+// Teste unitare pentru MonitoredService — repository mockuit, verificăm valorile implicite și delegarea corectă
 public class MonitoredServiceTests
 {
     private readonly Mock<IMonitoredRepository> _repo = new();
-    private readonly MonitoredService           _sut;
+    private readonly MonitoredService           _sut; // SUT = System Under Test
 
     public MonitoredServiceTests()
     {
@@ -20,6 +21,7 @@ public class MonitoredServiceTests
 
     // ── AddMonitoredPersonAsync ──────────────────────────────────────────────
 
+    // Verifică pragurile vitale implicite (HR 60-100, Temp 36-37.5) setate la crearea unui pacient nou
     [Fact]
     public async Task AddMonitoredPersonAsync_CreatesWithCorrectDefaults()
     {

@@ -4,12 +4,16 @@ using LifeAlertPlus.API.Services;
 
 namespace LifeAlertPlus.API.Controllers
 {
+    // Controller pentru controlul simulărilor ESP — permite admins să pornească/oprească
+    // generarea automată de date vitale fără dispozitiv fizic real.
+    // Util în development, demo și testare fără ESP32 conectat.
+    // Acces EXCLUSIV pentru administratori (Roles = "Admin").
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")] // Numai adminii pot controla simulările
     [Route("api/[controller]")]
     public class SimulationsController : ControllerBase
     {
-        private readonly SimulationManager _simulationManager;
+        private readonly SimulationManager _simulationManager; // Gestionează loop-urile de simulare per persoană
         private readonly ILogger<SimulationsController> _logger;
 
         public SimulationsController(SimulationManager simulationManager, ILogger<SimulationsController> logger)
@@ -18,25 +22,21 @@ namespace LifeAlertPlus.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Start simulation for a specific monitored person
-        /// </summary>
+        // POST /api/simulations/start/{personId} — Pornește simularea pentru o persoană monitorizată
+        // Loop-ul generează date vitale la fiecare 30 de secunde și le injectează prin ESPController
         [HttpPost("start/{personId}")]
         public async Task<IActionResult> Start(Guid personId)
         {
             if (personId == Guid.Empty)
-            {
                 return BadRequest(new { success = false, message = "Invalid person ID" });
-            }
 
             _logger.LogInformation("Received request to start simulation for person {PersonId}", personId);
             await _simulationManager.StartSimulationAsync(personId);
             return Ok(new { success = true, message = "Simulation started" });
         }
 
-        /// <summary>
-        /// Start simulations for all monitored persons
-        /// </summary>
+        // POST /api/simulations/startAll — Pornește simulările pentru TOATE persoanele monitorizate
+        // Util pentru demo sau popularea inițială a bazei de date cu date de test
         [HttpPost("startAll")]
         public async Task<IActionResult> StartAll()
         {
@@ -45,25 +45,20 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { success = true, message = "All simulations started" });
         }
 
-        /// <summary>
-        /// Stop simulation for a specific monitored person
-        /// </summary>
+        // POST /api/simulations/stop/{personId} — Oprește simularea pentru o persoană monitorizată
+        // Anulează CancellationToken-ul loop-ului și așteaptă terminarea graceful (max 5 sec)
         [HttpPost("stop/{personId}")]
         public async Task<IActionResult> Stop(Guid personId)
         {
             if (personId == Guid.Empty)
-            {
                 return BadRequest(new { success = false, message = "Invalid person ID" });
-            }
 
             _logger.LogInformation("Received request to stop simulation for person {PersonId}", personId);
             await _simulationManager.StopSimulationAsync(personId);
             return Ok(new { success = true, message = "Simulation stopped" });
         }
 
-        /// <summary>
-        /// Stop all running simulations
-        /// </summary>
+        // POST /api/simulations/stopAll — Oprește toate simulările active
         [HttpPost("stopAll")]
         public async Task<IActionResult> StopAll()
         {
@@ -72,9 +67,8 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { success = true, message = "All simulations stopped" });
         }
 
-        /// <summary>
-        /// Seed today's measurements (one per 30 min from midnight to now) for chart population
-        /// </summary>
+        // POST /api/simulations/seedToday/{personId} — Populează istoricul de azi (o citire la 30 min)
+        // Permite vizualizarea graficelor de azi fără a fi nevoie ca simularea să ruleze ore întregi
         [HttpPost("seedToday/{personId}")]
         public async Task<IActionResult> SeedToday(Guid personId)
         {
@@ -85,9 +79,9 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { success = true, message = "Today's seed data generated" });
         }
 
-        /// <summary>
-        /// Force reseed today — deletes existing zero-SpO2 measurements for today then reseeds
-        /// </summary>
+        // POST /api/simulations/reseedToday/{personId} — Forțează re-popularea de azi
+        // Șterge mai întâi măsurătorile de azi cu SpO2=0 (datele incomplete din seed anterior),
+        // apoi le regenerează complet cu toate câmpurile valide
         [HttpPost("reseedToday/{personId}")]
         public async Task<IActionResult> ReseedToday(Guid personId)
         {
@@ -98,13 +92,12 @@ namespace LifeAlertPlus.API.Controllers
             return Ok(new { success = true, message = "Today's data reseeded with SpO2" });
         }
 
-        /// <summary>
-        /// Get list of currently running simulation IDs
-        /// </summary>
+        // GET /api/simulations/running — Returnează lista ID-urilor persoanelor cu simulare activă
+        // Folosit de panoul de admin pentru a afișa starea curentă a simulărilor
         [HttpGet("running")]
         public IActionResult GetRunning()
         {
-            var ids = _simulationManager.GetRunningPersonIds();
+            var ids = _simulationManager.GetRunningPersonIds(); // ID-urile din ConcurrentDictionary
             _logger.LogDebug("Returning {Count} running simulation IDs", ids.Count());
             return Ok(ids);
         }

@@ -5,6 +5,9 @@ using System.Globalization;
 
 namespace LifeAlertPlus.Client.Pages.Dashboard;
 
+// Code-behind pentru Dashboard — afișează rezumatul stării vitale a tuturor persoanelor
+// monitorizate ale utilizatorului curent (statistici agregate + ultimele 3 carduri active)
+// și pornește un polling periodic pentru a ține datele la zi
 public partial class DashboardPage : ComponentBase, IAsyncDisposable
 {
     [Inject]
@@ -53,6 +56,10 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     private bool _showOnboarding = false;
     private const string OnboardingKey = "lifealert_onboarding_done";
 
+    // Inițializează pagina: validează autentificarea prin token, încarcă datele utilizatorului
+    // (din token, apoi le suprascrie cu cele din API dacă există), aplică limba și poza de profil,
+    // încarcă persoanele monitorizate + numărul de măsurători de azi, decide dacă arată onboarding-ul
+    // și pornește polling-ul automat de actualizare
     protected override async Task OnInitializedAsync()
     {
         // TokenParserService.GetClaimsAsync() already handles reading the token from the
@@ -116,12 +123,15 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         StartPolling();
     }
 
+    // Pornește un task de fundal (fire-and-forget) care reîmprospătează periodic datele
     private void StartPolling()
     {
         _pollingCts = new CancellationTokenSource();
         _ = PollLoopAsync(_pollingCts.Token);
     }
 
+    // Bucla de polling: la fiecare 30 secunde reîncarcă persoanele monitorizate și numărul
+    // de măsurători de azi, până când componenta este distrusă (token-ul e anulat)
     private async Task PollLoopAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
@@ -151,6 +161,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // La distrugerea componentei: dezabonează handler-ul de schimbare a limbii și oprește polling-ul
     public async ValueTask DisposeAsync()
     {
         Lang.OnLanguageChanged -= HandleLanguageChanged;
@@ -166,6 +177,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         await InvokeAsync(StateHasChanged);
     }
 
+    // Obține numărul total de măsurători înregistrate astăzi pentru utilizatorul curent
     private async Task LoadTodayMeasurementsCountAsync()
     {
         try
@@ -179,6 +191,11 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Încarcă toate persoanele monitorizate ale utilizatorului curent, preia în paralel
+    // datele ESP (senzori) și ultima măsurătoare pentru fiecare, calculează statisticile
+    // agregate (total/offline/stabile/alerte) pe baza setului complet, apoi construiește
+    // lista finală cu cele mai recente 3 persoane (cu cel puțin o măsurătoare salvată)
+    // pentru a fi afișate ca carduri pe dashboard
     private async Task LoadRecentMonitoredPeopleAsync()
     {
         try
@@ -295,6 +312,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         }
     }
 
+    // Determină eticheta GPS (interior/exterior) pe baza datelor brute primite de la senzor
     private string FormatGpsLabel(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return T("card.gpsIndoor");
@@ -305,6 +323,9 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         return T("card.gpsIndoor");
     }
 
+    // Verifică dacă datele ESP ale unei persoane sunt "proaspete" (dispozitivul e online):
+    // diferența dintre acum și ultimul timestamp trimis de senzor trebuie să fie sub
+    // frecvența de actualizare configurată (a persoanei sau, implicit, a utilizatorului) + o marjă de 15s
     private bool IsDataCurrent(MonitoredCardData card)
     {
         var esp = card.EspData;
@@ -322,12 +343,14 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
     private static int ResolveSpo2(Shared.DTOs.Responses.ESP.ESPDataResponseDTO? d)
         => d?.Spo2 ?? (d?.Max30100?.Count >= 2 ? d.Max30100[1] : 0);
 
+    // Preia datele live de la senzorul ESP al unui device, identificat prin numărul de serie
     private async Task<Shared.DTOs.Responses.ESP.ESPDataResponseDTO?> FetchEspDataAsync(string serial)
     {
         try { return await MonitoredApiClient.GetEspDataAsync(serial); }
         catch { return null; }
     }
 
+    // Obține data/ora ultimei măsurători salvate pentru o persoană (folosită pentru sortare și status online)
     private async Task<DateTime> FetchLastMeasurementTimeAsync(Guid personId)
     {
         try
@@ -338,6 +361,9 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         catch { return DateTime.MinValue; }
     }
 
+    // Calculează statusul de sănătate (OK/Warning/Critical/Offline) pe baza puls/SpO2/temperatură
+    // comparate cu pragurile personalizate ale persoanei (sau valori implicite dacă nu sunt setate),
+    // plus detectarea căderii (fall detection) care are prioritate maximă
     private string GetStatus(int heartRate, int spO2, double? temperature, bool isOnline,
         int? minHr = null, int? maxHr = null,
         double? minTemp = null, double? maxTemp = null,
@@ -371,6 +397,8 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         return "OK";
     }
 
+    // Formatează diferența de timp față de ultima actualizare într-un text prietenos
+    // ("acum", "X minute", "X ore", "X zile") folosind chei de traducere
     private string GetLastUpdateText(DateTime lastUpdate)
     {
         if (lastUpdate == DateTime.MinValue)
@@ -388,6 +416,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         return string.Format(T("card.updatedDays"), (int)timeAgo.TotalDays);
     }
 
+    // Calculează inițialele afișate în avatar pe baza numelui complet
     private string GetInitials(string name)
     {
         var parts = name.Split(' ');
@@ -396,6 +425,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
     }
 
+    // Mapează statusul textual la o clasă CSS folosită pentru colorarea cardului
     protected string GetCardClass(string status, bool online)
     {
         if (!online) return "offline";
@@ -407,6 +437,7 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         };
     }
 
+    // Mapează statusul textual la mesajul tradus afișat utilizatorului
     protected string GetStatusText(string status, bool online)
     {
         if (!online) return T("card.statusOffline");
@@ -418,6 +449,8 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         };
     }
 
+    // Calculează vârsta unei persoane monitorizate din data nașterii, ținând cont
+    // dacă ziua de naștere din anul curent a trecut deja sau nu
     private int GetAge(LifeAlertPlus.Domain.Entities.Monitored person)
     {
         if (person.Birthdate == null)
@@ -448,17 +481,20 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         string FallDetection,
         bool Online);
 
+    // Navighează către pagina de detalii a unei persoane monitorizate
     private void NavigateToMonitored(Guid personId)
     {
         Navigation.NavigateTo($"/monitored/{personId}");
     }
 
+    // Marchează onboarding-ul ca fiind văzut, salvând flag-ul în localStorage (persistă între sesiuni)
     private async Task DismissOnboarding()
     {
         _showOnboarding = false;
         await JSRuntime.InvokeVoidAsync("localStorage.setItem", OnboardingKey, "1");
     }
 
+    // Deschide locația GPS a unei persoane în Google Maps, într-un tab nou
     protected async Task RequestLocation(Guid personId)
     {
         var sample = MonitoredSamples.FirstOrDefault(m => m.Id == personId);
@@ -474,6 +510,8 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         await JSRuntime.InvokeVoidAsync("open", url, "_blank");
     }
 
+    // Încearcă să extragă latitudinea și longitudinea dintr-un string GPS brut ("lat,lon"),
+    // tolerant la separatorul decimal (virgulă/punct) folosind atât cultura invariantă cât și cea curentă
     private bool TryParseGpsToLatLon(string gps, out double lat, out double lon)
     {
         lat = 0; lon = 0;
@@ -504,6 +542,8 @@ public partial class DashboardPage : ComponentBase, IAsyncDisposable
         await JSRuntime.InvokeVoidAsync("alert", $"Text requested for {name}. Phone number not available.");
     }
 
+    // Container intern care grupează o persoană monitorizată cu datele ei ESP curente
+    // și data ultimei măsurători — folosit pentru a evita interogări API repetate
     private sealed class MonitoredCardData
     {
         public required Domain.Entities.Monitored Person { get; init; }

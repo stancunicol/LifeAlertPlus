@@ -15,6 +15,9 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.API.Controllers;
 
+// Teste pentru ESPController — endpoint-urile publice apelate de dispozitivele ESP32 (ingest date, panic, WiFi config, heartbeat)
+// Autentificarea NU e JWT, ci o cheie HMAC-SHA256 calculată din seria dispozitivului + un secret partajat (Urls:EspDeviceSecret),
+// trimisă în header-ul X-Device-Key. Asta permite ESP32-ului (care nu poate gestiona login/parolă) să se autentifice simplu.
 public class ESPControllerTests
 {
     private const string Secret = "test-secret";
@@ -48,6 +51,7 @@ public class ESPControllerTests
             _logSvc.Object);
     }
 
+    // Calculează cheia HMAC-SHA256 validă pentru un serial — reproduce exact algoritmul folosit de firmware-ul ESP32 și de ESPController
     private static string ValidKey(string serial = Serial)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(Secret));
@@ -89,6 +93,8 @@ public class ESPControllerTests
         result.Should().BeOfType<UnauthorizedObjectResult>();
     }
 
+    // O cheie HMAC validă, dar calculată pentru ALT serial, nu trebuie acceptată — previne ca un dispozitiv compromis
+    // să trimită date în numele altui dispozitiv (cheia e legată criptografic de serialul exact)
     [Fact]
     public async Task Ingest_Returns401_WhenKeyIsForDifferentSerial()
     {
@@ -97,6 +103,7 @@ public class ESPControllerTests
         result.Should().BeOfType<UnauthorizedObjectResult>();
     }
 
+    // Rate limiting per dispozitiv (IsIngestAllowed) — previne flood-ul de date de la un ESP32 defect/compromis
     [Fact]
     public async Task Ingest_Returns429_WhenRateLimited()
     {
@@ -106,6 +113,8 @@ public class ESPControllerTests
         result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(429);
     }
 
+    // Un dispozitiv neasociat încă cu niciun pacient trebuie să primească 200 (nu eroare) — ESP32-ul poate fi pornit
+    // înainte de a fi atribuit unui pacient în aplicație; pur și simplu nu salvăm nimic
     [Fact]
     public async Task Ingest_Returns200_WhenNoMonitoredLinked()
     {
@@ -119,6 +128,7 @@ public class ESPControllerTests
         _measurementSvc.Verify(m => m.AddMeasurementAsync(It.IsAny<Measurement>()), Times.Never);
     }
 
+    // Pacient arhivat (monitorizare oprită) — datele nu mai sunt salvate, dar ESP32-ul nu primește o eroare care l-ar face să reîncerce
     [Fact]
     public async Task Ingest_Returns200_WhenMonitoredArchived()
     {
@@ -151,6 +161,8 @@ public class ESPControllerTests
             Times.Once);
     }
 
+    // Format alternativ de payload: senzorul MAX30100 trimite [puls, SpO2] ca listă brută în loc de câmpuri separate Bpm/Spo2 —
+    // controller-ul trebuie să normalizeze ambele formate la aceeași entitate Measurement
     [Fact]
     public async Task Ingest_NormalizesBpmSpo2FromMax30100()
     {
@@ -170,7 +182,7 @@ public class ESPControllerTests
             Times.Once);
     }
 
-    // ── Panic ─────────────────────────────────────────────────────────────────
+    // ── Panic (buton de urgență fizic pe dispozitiv) ─────────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Panic_Returns400_WhenSerialMissing()
@@ -188,6 +200,8 @@ public class ESPControllerTests
         result.Should().BeOfType<UnauthorizedObjectResult>();
     }
 
+    // La Panic (diferit de Ingest), un dispozitiv neasociat e o eroare reală (404) — un buton de urgență apăsat
+    // pe un dispozitiv neconfigurat e o situație care trebuie semnalată, nu ignorată silențios
     [Fact]
     public async Task Panic_Returns404_WhenMonitoredNotFound()
     {
@@ -227,7 +241,7 @@ public class ESPControllerTests
         _alertSvc.Verify(a => a.TriggerPanicAlertAsync(monitored.Id, "44.0,26.0"), Times.Once);
     }
 
-    // ── WifiConfig ────────────────────────────────────────────────────────────
+    // ── WifiConfig (cerut de ESP32 la pornire — rețele salvate + frecvența de actualizare) ────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task WifiConfig_Returns400_WhenSerialMissing()
@@ -245,6 +259,7 @@ public class ESPControllerTests
         result.Should().BeOfType<UnauthorizedObjectResult>();
     }
 
+    // Fără pacient asociat, frecvența de actualizare implicită e 30 secunde (30000ms) — valoare de siguranță rezonabilă
     [Fact]
     public async Task WifiConfig_ReturnsDefault30s_WhenNoMonitored()
     {
@@ -293,7 +308,7 @@ public class ESPControllerTests
         json.Should().Contain("HomeNet");
     }
 
-    // ── Heartbeat ─────────────────────────────────────────────────────────────
+    // ── Heartbeat (semnal periodic "sunt online", include puterea semnalului WiFi RSSI) ─────────────────────────────────────────────────────────────
 
     [Fact]
     public void Heartbeat_Returns400_WhenSerialMissing()

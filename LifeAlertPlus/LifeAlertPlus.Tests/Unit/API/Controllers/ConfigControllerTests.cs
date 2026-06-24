@@ -5,8 +5,11 @@ using Microsoft.Extensions.Configuration;
 
 namespace LifeAlertPlus.Tests.Unit.API.Controllers;
 
+// Teste pentru ConfigController — endpoint-ul prin care frontend-ul Blazor cere cheia Google Maps API
+// (cheia nu e expusă direct în clientul WASM, trece prin backend ca să nu fie vizibilă în codul JS static)
 public class ConfigControllerTests
 {
+    // Construiește controller-ul cu o configurație în memorie (fără appsettings.json real) — mapsKey null simulează cheia neconfigurată
     private static ConfigController BuildSut(string? mapsKey)
     {
         var config = new ConfigurationBuilder()
@@ -29,6 +32,7 @@ public class ConfigControllerTests
         ok.Value.Should().BeEquivalentTo(new { apiKey = "test-api-key-123" });
     }
 
+    // Cheia lipsă, goală sau doar spații trebuie tratate identic — 404, ca frontend-ul să știe explicit că harta nu e disponibilă
     [Theory]
     [InlineData(null)]
     [InlineData("")]

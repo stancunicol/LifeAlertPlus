@@ -1,5 +1,10 @@
 namespace LifeAlertPlus.Shared.DTOs.Responses.Notification
 {
+    // Server: returnat de NotificationController (GET, paginat) — include atât pagina curentă de
+    // notificări cât și contoare agregate (CriticalCount/AlertCount/UnreadCount) folosite pentru
+    // badge-uri/indicatoare în UI, calculate pe TOATE notificările, nu doar pe pagina curentă.
+    // Client: consumat de NotificationsPage.razor.cs și de NotificationService.cs (polling periodic
+    // pentru badge-ul de notificări necitite din header).
     public class NotificationPagedResponseDTO
     {
         public List<NotificationItemDTO> Items { get; set; } = new();

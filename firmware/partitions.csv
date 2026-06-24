@@ -1,3 +1,9 @@
+# Tabela de partiții flash a ESP32-C3 — definește cum e împărțită memoria flash a chipului.
+# nvs (24KB)     : stochează credențialele WiFi, coada offline de măsurători/panic și
+#                  cheia de dispozitiv — tot ce trebuie să persiste peste o repornire (vezi main.cpp).
+# phy_init (4KB) : date de calibrare radio specifice chipului (RF PHY), scrise din fabrică.
+# factory (1.5MB): partiția cu firmware-ul efectiv (binarul compilat din main.cpp) — singura
+#                  partiție de aplicație (proiectul nu folosește OTA cu partiții duale).
 # Name,   Type, SubType, Offset,   Size,    Flags
 nvs,      data, nvs,     0x9000,   0x6000,
 phy_init, data, phy,     0xf000,   0x1000,

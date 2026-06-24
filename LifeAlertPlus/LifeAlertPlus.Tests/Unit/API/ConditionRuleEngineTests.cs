@@ -9,9 +9,13 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.API;
 
+// Teste pentru ConditionRuleEngine — motorul de reguli care escaladează severitatea unei alerte
+// (Normal/Alert/Critical) în funcție de afecțiunile diagnosticate ale pacientului (hipertensiune, aritmie,
+// insuficiență cardiacă, Parkinson, epilepsie, astm, BPOC, diabet). Fiecare boală are propriile praguri
+// HR/Temp/SpO2/cădere, suplimentare față de pragurile generale din ConditionThresholdAdjuster.
 public class ConditionRuleEngineTests
 {
-    // Builds an engine whose condition repository always returns the given keys.
+    // Construiește un engine al cărui repository de afecțiuni returnează mereu cheile date (mock, fără DB reală)
     private static ConditionRuleEngine BuildEngine(params string[] conditionKeys)
     {
         var conditionRepo = new Mock<IMonitoredConditionRepository>();
@@ -32,11 +36,12 @@ public class ConditionRuleEngineTests
         return new ConditionRuleEngine(scopeFactory.Object, TestDataFactory.CreateLogger<ConditionRuleEngine>());
     }
 
-    // Builds an engine with no conditions, meaning no escalation ever happens.
+    // Construiește un engine fără afecțiuni — niciodată nu se escaladează severitatea (caz de bază, pacient fără diagnostic)
     private static ConditionRuleEngine BuildEmptyEngine() => BuildEngine();
 
-    // ── No conditions ────────────────────────────────────────────────────────
+    // ── Fără afecțiuni ────────────────────────────────────────────────────────
 
+    // Fără afecțiuni diagnosticate, severitatea de bază (calculată anterior din praguri generale) nu se modifică
     [Fact]
     public async Task Evaluate_ReturnsBaseSeverity_WhenNoConditions()
     {
@@ -49,8 +54,9 @@ public class ConditionRuleEngineTests
         immediate.Should().BeFalse();
     }
 
-    // ── Hypertension ─────────────────────────────────────────────────────────
+    // ── Hipertensiune ─────────────────────────────────────────────────────────
 
+    // Puls > 135 bpm la un pacient hipertensiv → risc cardiovascular sever, escaladare directă la Critical
     [Fact]
     public async Task Hypertension_EscalatesToCritical_WhenPulseOver135()
     {
@@ -84,7 +90,7 @@ public class ConditionRuleEngineTests
         recs.Should().BeEmpty();
     }
 
-    // ── Arrhythmia ───────────────────────────────────────────────────────────
+    // ── Aritmie ───────────────────────────────────────────────────────────
 
     [Fact]
     public async Task Arrhythmia_EscalatesToCritical_WhenPulseOver140()
@@ -96,6 +102,7 @@ public class ConditionRuleEngineTests
         severity.Should().Be(AlertSeverity.Critical);
     }
 
+    // Pulsul anormal de scăzut e la fel de periculos ca cel ridicat pentru un pacient cu aritmie — ambele praguri escaladează la Critical
     [Fact]
     public async Task Arrhythmia_EscalatesToCritical_WhenPulseBelowThreshold()
     {
@@ -106,8 +113,9 @@ public class ConditionRuleEngineTests
         severity.Should().Be(AlertSeverity.Critical);
     }
 
-    // ── Heart failure ────────────────────────────────────────────────────────
+    // ── Insuficiență cardiacă ────────────────────────────────────────────────
 
+    // Combinația SpO2 scăzut + puls ridicat e tipică pentru decompensare cardiacă — escaladare la Critical
     [Fact]
     public async Task HeartFailure_EscalatesToCritical_WhenLowSpO2AndHighPulse()
     {
@@ -131,6 +139,8 @@ public class ConditionRuleEngineTests
 
     // ── Parkinson ────────────────────────────────────────────────────────────
 
+    // O cădere la un pacient cu Parkinson e mereu critică și necesită notificare imediată (immediate=true),
+    // nu doar escaladarea severității — risc ridicat de fractură/leziune la pacienții cu instabilitate posturală
     [Fact]
     public async Task Parkinson_EscalatesToCritical_WhenFallDetected()
     {
@@ -153,8 +163,9 @@ public class ConditionRuleEngineTests
         severity.Should().Be(AlertSeverity.Normal);
     }
 
-    // ── Epilepsy ─────────────────────────────────────────────────────────────
+    // ── Epilepsie ─────────────────────────────────────────────────────────────
 
+    // O cădere la un pacient epileptic poate indica o criză convulsivă în desfășurare → Critical + notificare imediată
     [Fact]
     public async Task Epilepsy_EscalatesToCritical_WhenFallDetected()
     {
@@ -167,8 +178,9 @@ public class ConditionRuleEngineTests
         recs.Should().ContainMatch("*Epilepsie*");
     }
 
-    // ── Asthma ───────────────────────────────────────────────────────────────
+    // ── Astm ───────────────────────────────────────────────────────────────
 
+    // Prag SpO2 mai permisiv decât BPOC (vezi mai jos) — astmul nu reduce cronic oxigenarea bazală la fel de mult
     [Fact]
     public async Task Asthma_EscalatesToCritical_WhenSpO2Below88()
     {
@@ -190,8 +202,10 @@ public class ConditionRuleEngineTests
         severity.Should().Be(AlertSeverity.Alert);
     }
 
-    // ── COPD ─────────────────────────────────────────────────────────────────
+    // ── BPOC ─────────────────────────────────────────────────────────────────
 
+    // Prag SpO2 mai jos decât la astm (86 vs 88) — pacienții BPOC au de obicei o saturație bazală cronic mai joasă,
+    // deci pragul de alarmă trebuie ajustat ca să nu genereze alerte false constante
     [Fact]
     public async Task Copd_EscalatesToCritical_WhenSpO2Below86()
     {
@@ -203,8 +217,9 @@ public class ConditionRuleEngineTests
         recs.Should().ContainMatch("*BPOC*");
     }
 
-    // ── Diabetes ─────────────────────────────────────────────────────────────
+    // ── Diabet ─────────────────────────────────────────────────────────────
 
+    // Puls ridicat + temperatură scăzută poate indica hipoglicemie (răspuns simpatic + extremități reci) — escaladare la Alert
     [Fact]
     public async Task Diabetes_EscalatesToAlert_WhenHighPulseAndLowTemp()
     {
@@ -216,8 +231,9 @@ public class ConditionRuleEngineTests
         recs.Should().ContainMatch("*Diabet*");
     }
 
-    // ── Cache invalidation ───────────────────────────────────────────────────
+    // ── Invalidare cache ───────────────────────────────────────────────────
 
+    // ConditionRuleEngine cache-uiește afecțiunile per pacient — invalidarea unui ID necunoscut nu trebuie să crape
     [Fact]
     public void InvalidateCache_DoesNotThrow_ForUnknownId()
     {
@@ -226,23 +242,26 @@ public class ConditionRuleEngineTests
         act.Should().NotThrow();
     }
 
-    // ── Multiple conditions ──────────────────────────────────────────────────
+    // ── Afecțiuni multiple ──────────────────────────────────────────────────
 
+    // Cu mai multe afecțiuni, severitatea finală e maximul rezultat din toate regulile aplicabile, nu doar prima
     [Fact]
     public async Task MultipleConditions_ReturnsHighestSeverity()
     {
-        // parkinson (critical on fall) + hypertension (alert on pulse 110)
+        // parkinson (critical la cădere) + hipertensiune (alert la puls 110)
         var engine = BuildEngine("parkinson", "hypertension");
         var (severity, recs, immediate) = await engine.EvaluateAsync(
             Guid.NewGuid(), 110, 37.0, 98, isFall: true, AlertSeverity.Normal);
 
         severity.Should().Be(AlertSeverity.Critical);
         immediate.Should().BeTrue();
-        recs.Should().HaveCountGreaterThan(1); // both conditions produce recommendations
+        recs.Should().HaveCountGreaterThan(1); // ambele afecțiuni generează propriile recomandări
     }
 
-    // ── Repo failure graceful fallback ────────────────────────────────────────
+    // ── Fallback grațios la eroarea repository-ului ────────────────────────────────────────
 
+    // Dacă citirea afecțiunilor din DB eșuează (ex: conexiune picată), motorul nu trebuie să blocheze alertarea —
+    // se păstrează severitatea de bază deja calculată, fără recomandări suplimentare specifice afecțiunilor
     [Fact]
     public async Task Evaluate_ReturnsBaseSeverity_WhenRepoThrows()
     {

@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 
 namespace LifeAlertPlus.Client.Services
 {
+    // DelegatingHandler atașat la HttpClient-urile tipizate — injectează automat token-ul JWT
+    // (citit din sessionStorage prin JS interop) ca header Authorization Bearer pe fiecare request
     public class TokenAuthorizationHandler : DelegatingHandler
     {
         private readonly IJSRuntime _jsRuntime;
@@ -12,6 +14,9 @@ namespace LifeAlertPlus.Client.Services
             _jsRuntime = jsRuntime;
         }
 
+        // Interceptează fiecare cerere HTTP înainte de a fi trimisă: citește token-ul din sessionStorage
+        // și îl atașează ca Bearer token; dacă JS interop nu e disponibil (ex: prerendering pe server),
+        // cererea continuă fără token în loc să eșueze
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             try

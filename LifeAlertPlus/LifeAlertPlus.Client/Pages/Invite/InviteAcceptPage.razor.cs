@@ -14,6 +14,8 @@ using Microsoft.JSInterop;
 
 namespace LifeAlertPlus.Client.Pages.Invite
 {
+    // Pagina accesata de un medic printr-un link de invitatie (cu token in query string) — afiseaza
+    // datele pacientului monitorizat (masuratori, grafice, momente cheie, export PDF) fara autentificare cont.
     public partial class InviteAcceptPage : ComponentBase
     {
         [Inject] private HttpClient Http { get; set; } = default!;
@@ -26,6 +28,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
         private bool IsLoading { get; set; } = true;
         private string? ErrorMessage { get; set; }
 
+        // Detalii despre invitatie (medic, pacient, data expirarii) — obtinute prin validarea token-ului pe server
         private InvitationInfoResponseDTO? InvitationInfo { get; set; }
         private LifeAlertPlus.Domain.Entities.Monitored? Patient { get; set; }
 
@@ -34,6 +37,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
         private const int PageSize = 12;
         private DayOfWeek _firstDayOfWeek = DayOfWeek.Monday;
 
+        // Token-ul de invitatie citit din query string — singura "credentiala" folosita pentru a accesa datele pacientului
         private string? _token;
 
         private ChartViewMode CurrentChartView { get; set; } = ChartViewMode.Daily;
@@ -48,12 +52,15 @@ namespace LifeAlertPlus.Client.Pages.Invite
         private List<(double X, double Y)> HeartRatePoints { get; set; } = new();
         private List<(double X, double Y)> TemperaturePoints { get; set; } = new();
 
+        // Starea modalului de export PDF: vizibil, in curs de generare si intervalul de date selectat de utilizator
         private bool _showExportModal;
         private bool _isExporting;
         private DateTime? _exportStartDate;
         private DateTime? _exportEndDate;
+        // Limitele calendarului din modal: min/max determinat din datele disponibile in Measurements
         private DateTime? _exportMinDate;
         private DateTime? _exportMaxDate;
+        // Statistici pre-calcul afisate in modal inainte de generare (numar masuratori, zile distincte)
         private int? _exportMeasurementCount;
         private int _exportDistinctDays;
 
@@ -63,7 +70,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             Weekly
         }
 
-        // Computed / UI helpers
+        // Proprietati calculate / helpere pentru UI — deriva starea afisata din lista de masuratori incarcata
         private MeasurementResponseDTO? LatestMeasurement => Measurements
             .OrderByDescending(m => m.CreatedAt)
             .FirstOrDefault();
@@ -106,6 +113,9 @@ namespace LifeAlertPlus.Client.Pages.Invite
 
         private string Ui(string en, string ro) => Lang.CurrentLanguage == "ro" ? ro : en;
 
+        // Punctul de intrare al paginii: citeste token-ul din URL si valideaza accesul medicului inainte
+        // de a incarca orice date despre pacient. Daca token-ul lipseste, e invalid sau a expirat,
+        // se opreste fluxul si se afiseaza un mesaj de eroare — nicio data sensibila nu e cerută de la server.
         protected override async Task OnInitializedAsync()
         {
             IsLoading = true;
@@ -120,10 +130,14 @@ namespace LifeAlertPlus.Client.Pages.Invite
                     return;
                 }
 
-                // 1) Invitation info (validates token + expiration)
+                // 1) Info despre invitatie — serverul valideaza token-ul (existenta + expirare) inainte de a raspunde
+                // → InvitationsController.GetInvitationInfo() [AllowAnonymous, API/Controllers/InvitationsController.cs:59]
+                //   cauta invitatia in DB pe baza hash-ului SHA-256 al token-ului (TokenHashHelper.ComputeSha256),
+                //   nu pe token-ul brut — vezi GetInvitationOrNullAsync din acelasi controller
                 var infoResp = await Http.GetAsync($"api/invitations/info?token={Uri.EscapeDataString(_token)}");
                 if (!infoResp.IsSuccessStatusCode)
                 {
+                    // 404 = token inexistent/invalid; orice alt cod = eroare generica de incarcare
                     ErrorMessage = infoResp.StatusCode == HttpStatusCode.NotFound
                         ? T("invite.invalid")
                         : T("invite.loadError");
@@ -137,13 +151,20 @@ namespace LifeAlertPlus.Client.Pages.Invite
                     return;
                 }
 
+                // Invitatia poate fi valida ca token dar expirata in timp — blocam accesul la date in acest caz
                 if (InvitationInfo.IsExpired)
                 {
                     ErrorMessage = T("invite.expired");
                     return;
                 }
 
-                // 2+3) Patient data and measurements in parallel
+                // 2+3) Datele pacientului si masuratorile se cer in paralel (acelasi token, doua endpoint-uri)
+                // pentru a reduce timpul total de incarcare
+                // → patientTask: InvitationsController.GetPatientByToken() [InvitationsController.cs:93]
+                //   → GetValidInvitationOrNullAsync() (verifica si expirarea, nu doar existenta)
+                //   → MonitoredService.GetMonitoredPersonByIdAsync() → MonitoredRepository → returneaza entitatea Monitored direct (fara DTO)
+                // → measTask: InvitationsController.GetPatientMeasurementsByToken() [InvitationsController.cs:111]
+                //   → MeasurementService.GetMeasurementsByMonitoredIdAsync() → MeasurementRepository → mapare la MeasurementResponseDTO
                 var patientTask = Http.GetAsync($"api/invitations/patient?token={Uri.EscapeDataString(_token)}");
                 var measTask    = Http.GetAsync($"api/invitations/measurements?token={Uri.EscapeDataString(_token)}&pageNumber=1&pageSize=1000");
                 await Task.WhenAll(patientTask, measTask);
@@ -157,6 +178,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
 
                 Patient = await patientResp.Content.ReadFromJsonAsync<LifeAlertPlus.Domain.Entities.Monitored>();
 
+                // Notitele medicului asociate acestei invitatii (best-effort, nu blocheaza pagina la eroare)
                 await LoadNoteAsync();
 
                 var measResp = await measTask;
@@ -178,6 +200,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             }
         }
 
+        // Reconstruieste seriile pentru grafice in functie de modul curent (zilnic/saptamanal);
+        // converteste valorile in puncte (X,Y) cu interval fix (40-120 bpm, 35-39 C) ca scala sa fie stabila intre reincarcari
         private void LoadChartData()
         {
             if (!Measurements.Any())
@@ -195,6 +219,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             TemperaturePoints = ComputePointsWithRange(TemperatureHistory, 35, 39);
         }
 
+        // Calculeaza datele grafic pentru o singura zi (offset fata de azi), cu punctele plasate orar (XFraction)
         private void LoadDailyChartData(List<MeasurementResponseDTO> measurements)
         {
             var targetDay = DateTime.Now.Date.AddDays(_dayOffset);
@@ -231,6 +256,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             }).ToList();
         }
 
+        // Calculeaza datele grafic agregate pe saptamana (medie zilnica), cu saptamana inceputa de la _firstDayOfWeek
         private void LoadWeeklyChartData(List<MeasurementResponseDTO> measurements)
         {
             var today = DateTime.Now.Date;
@@ -274,6 +300,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             }).ToList();
         }
 
+        // Comuta intre vizualizarea zilnica si saptamanala, resetand navigarea (offset-urile) la pozitia curenta
         private Task SwitchChartView(ChartViewMode mode)
         {
             CurrentChartView = mode;
@@ -283,6 +310,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return Task.CompletedTask;
         }
 
+        // Navigheaza la saptamana anterioara (numai daca exista date — _hasPrevWeekData e calculat in LoadWeeklyChartData)
         private Task GoToPreviousWeek()
         {
             if (!_hasPrevWeekData) return Task.CompletedTask;
@@ -291,6 +319,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return Task.CompletedTask;
         }
 
+        // Navigheaza la saptamana urmatoare (oprit la saptamana curenta: _weekOffset >= 0)
         private Task GoToNextWeek()
         {
             if (_weekOffset >= 0) return Task.CompletedTask;
@@ -299,6 +328,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return Task.CompletedTask;
         }
 
+        // Navigheaza la ziua anterioara (numai daca exista date — _hasPrevDayData e calculat in LoadDailyChartData)
         private Task GoToPreviousDay()
         {
             if (!_hasPrevDayData) return Task.CompletedTask;
@@ -307,6 +337,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return Task.CompletedTask;
         }
 
+        // Navigheaza la ziua urmatoare (oprit la ziua curenta: _dayOffset >= 0)
         private Task GoToNextDay()
         {
             if (_dayOffset >= 0) return Task.CompletedTask;
@@ -315,6 +346,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return Task.CompletedTask;
         }
 
+        // Reseteaza seriile graficelor la liste goale — apelat cand nu exista masuratori pentru intervalul selectat
         private void LoadEmptyChartData()
         {
             HeartRateHistory = new();
@@ -323,6 +355,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             TemperaturePoints = new();
         }
 
+        // Transforma punctele de date (ActualValue) in coordonate SVG (X,Y) folosind un interval fix de valori
+        // (fixedMin/fixedMax) astfel incat scala graficului sa nu "sara" cand se schimba setul de date afisat
         private List<(double X, double Y)> ComputePointsWithRange(List<ChartDataPoint> data, double fixedMin, double fixedMax)
         {
             if (data == null || data.Count == 0) return new();
@@ -350,6 +384,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return SpreadCloseXs(points, paddingLeft, paddingLeft + usableWidth, CurrentChartView == ChartViewMode.Daily ? 12.0 : 8.0);
         }
 
+        // Genereaza etichetele axei X pentru grafic: ore fixe (0,4,8...) in vizualizarea zilnica,
+        // respectiv ziua saptamanii pentru fiecare coloana in vizualizarea saptamanala
         private List<(string Label, double X)> GetXAxisLabels()
         {
             const double paddingLeft = 90;
@@ -372,8 +408,10 @@ namespace LifeAlertPlus.Client.Pages.Invite
                 .ToList();
         }
 
+        // Formateaza un numar cu punct decimal fix (invariant cultural) — necesar pentru sintaxa path-urilor SVG
         private static string F(double value) => value.ToString("F2", CultureInfo.InvariantCulture);
 
+        // Construieste un path SVG "umplut" (zona sub curba) pe baza liniei netede generate de GenerateSmoothPath
         private string GenerateAreaPath(List<(double X, double Y)> points, double baseline = 160)
         {
             if (points == null || points.Count == 0) return string.Empty;
@@ -384,6 +422,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return $"{linePath} L {F(points[^1].X)} {F(baseline)} L {F(points[0].X)} {F(baseline)} Z";
         }
 
+        // Genereaza un path SVG cu curbe Bezier (monotone cubic interpolation) intre punctele de date,
+        // evitand oscilatii artificiale ale curbei intre valori (algoritm tip Fritsch-Carlson)
         private string GenerateSmoothPath(List<(double X, double Y)> points)
         {
             if (points == null || points.Count == 0) return string.Empty;
@@ -441,6 +481,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return path.ToString();
         }
 
+        // Departajeaza punctele aflate prea apropiate pe axa X (sub "spacing") pentru ca markerele sa nu se suprapuna
+        // vizual pe grafic — redistribuie grupul in jurul centrului sau, limitat la marginile [minX, maxX]
         private static List<(double X, double Y)> SpreadCloseXs(List<(double X, double Y)> points, double minX, double maxX, double spacing)
         {
             if (points.Count <= 1) return points;
@@ -478,6 +520,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return result;
         }
 
+        // Schimba pagina curenta din tabelul de masuratori; ignora valorile invalide si pagina deja activa
         private void GoToPage(int page)
         {
             if (page < 1 || page > TotalPages || page == CurrentPage)
@@ -486,6 +529,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             CurrentPage = page;
         }
 
+        // Construieste lista de numere de pagina afisate in paginator, cu "-1" ca marcaj pentru elipsa (...)
+        // cand sunt prea multe pagini pentru a fi afisate toate (afiseaza primele 2, ultimele 2 si vecinii paginii curente)
         private List<int> GetPageNumbers()
         {
             var pages = new List<int>();
@@ -517,6 +562,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return pages.Distinct().ToList();
         }
 
+        // Construieste numele complet al pacientului din primul si ultimul nume (cu trim pentru spatii suplimentare)
         private string GetPatientFullName()
         {
             if (Patient == null)
@@ -525,6 +571,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return $"{Patient.FirstName} {Patient.LastName}".Trim();
         }
 
+        // Calculeaza varsta exacta in ani, ajustand cu -1 daca ziua de nastere din anul curent nu a trecut inca
         private int? GetAge()
         {
             if (Patient?.Birthdate == null)
@@ -538,6 +585,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return Math.Max(age, 0);
         }
 
+        // Determina nivelul de severitate al unei masuratori comparand pulsul/temperatura/SpO2 cu pragurile
+        // personalizate ale pacientului (sau valori implicite) — folosit pentru colorarea UI si statistici
         private string GetStatus(MeasurementResponseDTO m)
         {
             var minHr = Patient?.MinHeartRate ?? 60;
@@ -557,6 +606,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return "normal";
         }
 
+        // Transforma codul intern de status ("critical"/"alert"/"normal") in eticheta localizata pentru UI si PDF
         private string GetStatusLabel(string status) => status switch
         {
             "critical" => Ui("Critical", "Critic"),
@@ -565,6 +615,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             _ => "-"
         };
 
+        // Returneaza textul directionat pentru un semn vital individual (puls, temperatura, SpO2),
+        // comparand valoarea cu pragurile personalizate ale pacientului — afisat in cardul de semne vitale curente
         private string GetVitalStatusText(MeasurementResponseDTO measurement, string type)
         {
             return type switch
@@ -579,6 +631,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             };
         }
 
+        // Returneaza descrierea textuala a starii generale a celei mai recente masuratori
+        // (cadere > critic > alerta > normal) — afisat sub cardul de stare curenta
         private string GetCurrentStatusText(MeasurementResponseDTO measurement)
         {
             if (measurement.IsFall)
@@ -592,6 +646,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             };
         }
 
+        // Returneaza simbolul/iconita asociat statusului — afisat in badge-ul de severitate din tabelul de masuratori
         private string GetStatusIcon(string status) => status switch
         {
             "critical" => "!",
@@ -600,6 +655,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             _ => "-"
         };
 
+        // Determina clasa CSS a celulei din tabelul de masuratori pentru colorare corespunzatoare severitatii
+        // (cell-critical / cell-alert / cell-normal) per tip de semn vital (hr, temp, spo2)
         private string GetCellClass(MeasurementResponseDTO m, string type)
         {
             var minHr = Patient?.MinHeartRate ?? 60;
@@ -619,6 +676,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             };
         }
 
+        // Selecteaza cele mai relevante 6 evenimente din istoric (caderi, valori critice, SpO2 scazut, alerte),
+        // ordonate dupa severitate si apoi cronologic descrescator — afisate ca "momente cheie" in rezumat
         private List<KeyMoment> KeyMoments => Measurements
             .OrderByDescending(m => GetMomentRank(m))
             .ThenByDescending(m => m.CreatedAt)
@@ -627,6 +686,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             .Select(CreateKeyMoment)
             .ToList();
 
+        // Rang de severitate folosit la sortarea momentelor cheie (5 = cel mai grav, cadere; 0 = irelevant)
         private int GetMomentRank(MeasurementResponseDTO m)
         {
             if (m.IsFall) return 5;
@@ -636,6 +696,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return 0;
         }
 
+        // Construieste textul/descriere pentru un moment cheie, in functie de tipul evenimentului (cadere/critic/alerta)
         private KeyMoment CreateKeyMoment(MeasurementResponseDTO m)
         {
             if (m.IsFall)
@@ -663,6 +724,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
                 "alert");
         }
 
+        // Genereaza textul de rezumat general al starii pacientului, in functie de existenta momentelor critice/alertelor
         private string GetSummaryText()
         {
             if (!Measurements.Any())
@@ -677,6 +739,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return Ui("The available readings are currently stable.", "Valorile disponibile sunt in prezent stabile.");
         }
 
+        // Pregateste si afiseaza modalul de export PDF, pre-completand un interval implicit de 7 zile
+        // (ultima saptamana cu date disponibile) pe care utilizatorul il poate ajusta inainte de generare
         private void ExportPdfAsync()
         {
             if (!Measurements.Any())
@@ -708,6 +772,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             _showExportModal = false;
         }
 
+        // Recalculeaza numarul de masuratori si zile distincte din intervalul de export selectat,
+        // folosit pentru a valida ca exista suficiente date (minim 7 zile) inainte de generarea raportului
         private void UpdateExportStats()
         {
             if (!_exportStartDate.HasValue || !_exportEndDate.HasValue)
@@ -731,6 +797,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             _exportDistinctDays = filtered.Select(m => m.CreatedAt.ToLocalTime().Date).Distinct().Count();
         }
 
+        // Construieste obiectul de date pentru raportul PDF si delega generarea efectiva catre JS (pdfExport.generateMedicalReport),
+        // care ruleaza in browser. Necesita minim 7 zile distincte de date in interval pentru a fi considerat relevant clinic.
         private async Task GenerateExportPdfAsync()
         {
             if (Patient == null || !_exportStartDate.HasValue || !_exportEndDate.HasValue)
@@ -758,6 +826,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
                 var patientName = GetPatientFullName();
                 var summary = BuildExportSummary(filtered);
 
+                // Payload trimis catre scriptul JS de export — contine toate textele traduse, statisticile
+                // si datele brute necesare pentru randarea raportului medical in PDF
                 var pdfData = new
                 {
                     reportTitle = T("export.reportTitle"),
@@ -838,6 +908,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             }
         }
 
+        // Calculeaza statistici sumare (medie, min, max, deviatie standard) pentru puls, temperatura si SpO2 — sectiunea "Summary" din PDF
         private object[] BuildExportSummary(List<MeasurementResponseDTO> measurements)
         {
             if (!measurements.Any()) return Array.Empty<object>();
@@ -850,6 +921,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             };
         }
 
+        // Grupeaza masuratorile pe saptamani (incepand de la _firstDayOfWeek) cu medii pe metrica — defalcarea saptamanala din PDF
         private object[] BuildWeeklyBreakdown(List<MeasurementResponseDTO> measurements) => measurements
             .GroupBy(m =>
             {
@@ -867,6 +939,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             })
             .ToArray();
 
+        // Grupeaza masuratorile pe zi calendaristica cu medii pe metrica — defalcarea zilnica din PDF
         private object[] BuildDailyBreakdown(List<MeasurementResponseDTO> measurements) => measurements
             .GroupBy(m => m.CreatedAt.ToLocalTime().Date)
             .Select(g => new
@@ -879,6 +952,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             })
             .ToArray();
 
+        // Converteste o masuratoare in randul de tabel folosit la sectiunile "Alerts" / "Critical events" din PDF
         private object ToExportEvent(MeasurementResponseDTO m) => new
         {
             date = m.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm"),
@@ -888,6 +962,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             reason = GetStatusLabel(GetStatus(m))
         };
 
+        // Construieste interpretarea textuala generala (severitate high/medium/low) pentru sectiunea de concluzii din PDF
         private object[] BuildInterpretations(List<MeasurementResponseDTO> measurements)
         {
             if (!measurements.Any()) return Array.Empty<object>();
@@ -902,6 +977,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             };
         }
 
+        // Deviatia standard de esantion (n-1 la numitor) — folosita in statisticile din raportul PDF
         private static double StdDev(List<double> values)
         {
             if (values.Count <= 1) return 0;
@@ -920,6 +996,8 @@ namespace LifeAlertPlus.Client.Pages.Invite
             public double XFraction { get; set; } = -1;
         }
 
+        // Extrage manual un parametru din query string-ul URL-ului curent (ex: "token") — folosit pentru a
+        // citi token-ul de invitatie fara dependinte externe; orice eroare de parsare e tratata silentios (return null)
         private string? GetQueryParam(string name)
         {
             try
@@ -946,6 +1024,7 @@ namespace LifeAlertPlus.Client.Pages.Invite
             }
         }
 
+        // Extrage initialele dintr-un nume complet (ex: "Ion Popescu" → "IP") — folosit in avatarul medicului/pacientului
         private string GetInitials(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -956,21 +1035,31 @@ namespace LifeAlertPlus.Client.Pages.Invite
             return string.Join("", parts.Select(p => char.ToUpper(p[0])));
         }
 
-        // ── Doctor notes ────────────────────────────────────────────────────
+        // ── Notitele medicului ──────────────────────────────────────────────
+        // Fiecare medic invitat poate scrie propria notita privata despre pacient, identificata prin token + email
         private string _noteContent = string.Empty;
         private string _noteStatus = string.Empty;
         private bool _noteSaving;
         private DateTime? _noteUpdatedAt;
 
+        // Incarca notitele asociate invitatiei si retine doar nota care apartine medicului curent
+        // (identificat prin email-ul din InvitationInfo, nu prin autentificare — accesul fiind dat de token)
         private async Task LoadNoteAsync()
         {
             if (string.IsNullOrWhiteSpace(_token)) return;
             try
             {
+                // → InvitationsController.GetNotes() [AllowAnonymous, API/Controllers/InvitationsController.cs:193]
+                //   valideaza token-ul (GetValidInvitationOrNullAsync) si interogheaza direct _db.DoctorNotes
+                //   (fara IDoctorNoteService/Repository dedicat) — returneaza TOATE notitele pacientului, nu doar a medicului curent
                 using var resp = await Http.GetAsync($"api/invitations/notes?token={Uri.EscapeDataString(_token)}");
                 if (!resp.IsSuccessStatusCode) return;
                 var notes = await resp.Content.ReadFromJsonAsync<List<NoteDTO>>();
-                // Show the current doctor's own note (matched by email from InvitationInfo).
+                // ATENTIE (securitate): endpoint-ul GET /api/invitations/notes returneaza notitele TUTUROR
+                // medicilor pentru acest pacient (vezi InvitationsController.GetNotes). Clientul filtreaza
+                // local nota proprie comparand doar DoctorEmail-ul din InvitationInfo (string, fara verificare
+                // criptografica) — nu exista o sesiune/cont care sa garanteze identitatea medicului, deci
+                // potrivirea se bazeaza exclusiv pe valoarea token-ului din URL care a generat InvitationInfo.
                 var mine = notes?.FirstOrDefault(n =>
                     string.Equals(n.DoctorEmail, InvitationInfo?.DoctorEmail, StringComparison.OrdinalIgnoreCase));
                 if (mine != null)
@@ -982,6 +1071,13 @@ namespace LifeAlertPlus.Client.Pages.Invite
             catch { /* best-effort */ }
         }
 
+        // Salveaza/actualizeaza notita medicului pe server, autorizat tot prin token-ul de invitatie din URL
+        // → HTTP POST api/invitations/notes?token=...
+        // → InvitationsController.SaveNote() [AllowAnonymous, API/Controllers/InvitationsController.cs:213]
+        //   → GetValidInvitationOrNullAsync() (valideaza si verifica expirarea)
+        //   → UPSERT in _db.DoctorNotes (un medic = o notita per pacient, identificat prin DoctorEmail)
+        //   → notifica toti ingrijitorii pacientului prin DB Notification + Push (daca activat) + Email (daca activat)
+        //   → returneaza { Message: "Note saved." }
         private async Task SaveNoteAsync()
         {
             if (_noteSaving || string.IsNullOrWhiteSpace(_token)) return;

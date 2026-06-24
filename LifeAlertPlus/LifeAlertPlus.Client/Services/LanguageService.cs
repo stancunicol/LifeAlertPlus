@@ -1,11 +1,17 @@
 namespace LifeAlertPlus.Client.Services
 {
+    // Serviciu singleton de localizare (i18n) pentru întreaga aplicație Client — păstrează limba
+    // curentă (en/ro) și expune cele două dicționare de traduceri prin metoda T(key). Componentele UI
+    // se abonează la evenimentul OnLanguageChanged pentru a se re-randa instant la schimbarea limbii,
+    // fără reload de pagină. Dacă o cheie nu are traducere, T() returnează cheia însăși ca fallback.
     public class LanguageService
     {
         public string CurrentLanguage { get; private set; } = "en";
 
         public event Action? OnLanguageChanged;
 
+        // Schimbă limba curentă (ex: "en"/"ro") și notifică toate componentele abonate prin
+        // OnLanguageChanged, dar doar dacă noua limbă diferă de cea curentă (evită re-render-uri inutile)
         public void SetLanguage(string lang)
         {
             if (lang != CurrentLanguage)
@@ -15,6 +21,8 @@ namespace LifeAlertPlus.Client.Services
             }
         }
 
+        // Traduce o cheie în limba curentă (CurrentLanguage); dacă cheia nu există în dicționarul
+        // limbii active, returnează cheia însăși ca fallback vizibil (ușor de detectat în UI)
         public string T(string key)
         {
             if (CurrentLanguage == "ro" && _ro.TryGetValue(key, out var ro))
@@ -25,6 +33,8 @@ namespace LifeAlertPlus.Client.Services
             return key;
         }
 
+        // Traduce o cheie întotdeauna în engleză, indiferent de limba curentă selectată
+        // (folosit, de exemplu, pentru texte trimise către backend/log-uri/emailuri)
         public string TEnglish(string key)
         {
             return _en.TryGetValue(key, out var en) ? en : key;

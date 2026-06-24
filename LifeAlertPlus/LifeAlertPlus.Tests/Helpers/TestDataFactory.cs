@@ -7,8 +7,12 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Helpers;
 
+// Fabrică centralizată de date de test — evită duplicarea construcției entităților (User, Monitored, Measurement etc.)
+// în fiecare fișier de teste unitare/integrare. Valorile implicite (praguri vitale, parolă, GUID-uri fixe) sunt
+// alese arbitrar dar consistent, ca testele să fie deterministe și ușor de citit.
 public static class TestDataFactory
 {
+    // GUID-uri fixe (nu aleatoare) pentru rolurile de test — permit teste care verifică RoleId exact, fără să-l recalculeze
     public static readonly Guid DefaultRoleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
     public static readonly Guid AdminRoleId   = Guid.Parse("22222222-2222-2222-2222-222222222222");
 
@@ -26,6 +30,7 @@ public static class TestDataFactory
         CreatedAt = DateTime.UtcNow
     };
 
+    // Utilizator de test cu parolă hash-uită real (BCrypt) — necesar pentru testele de autentificare care apelează VerifyPassword
     public static User CreateUser(Guid? id = null, string email = "test@example.com", bool emailConfirmed = true) => new()
     {
         Id                  = id ?? Guid.NewGuid(),
@@ -49,6 +54,7 @@ public static class TestDataFactory
         NotifyByPush        = true
     };
 
+    // Persoană monitorizată de test cu praguri vitale standard (HR 60-100, Temp 36-37.5, SpO2 95-100)
     public static Monitored CreateMonitored(Guid? id = null) => new()
     {
         Id                 = id ?? Guid.NewGuid(),
@@ -68,6 +74,7 @@ public static class TestDataFactory
         CreatedAt          = DateTime.UtcNow
     };
 
+    // Măsurătoare de test cu valori vitale "normale" — utilă ca bază pe care testele individuale modifică un singur câmp
     public static Measurement CreateMeasurement(Guid? monitoredId = null) => new()
     {
         Id          = Guid.NewGuid(),
@@ -82,6 +89,7 @@ public static class TestDataFactory
         CreatedAt   = DateTime.UtcNow
     };
 
+    // Configurație JWT minimală pentru JwtService — cheia trebuie să aibă minim 32 bytes pentru HS256 (vezi JwtService.GenerateToken)
     public static IConfiguration CreateJwtConfiguration(string key = "super-secret-key-at-least-32-chars!!", int expiresInMinutes = 60) =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -93,6 +101,7 @@ public static class TestDataFactory
             })
             .Build();
 
+    // SMS dezactivat implicit în teste (evită trimiteri reale către Twilio la rularea suitei de teste)
     public static IConfiguration CreateAlertMonitorConfiguration() =>
         new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -129,5 +138,6 @@ public static class TestDataFactory
         return ctx;
     }
 
+    // Logger mock care nu scrie nicăieri — folosit când constructorul serviciului testat necesită un ILogger<T>, dar testul nu verifică logarea
     public static ILogger<T> CreateLogger<T>() => Mock.Of<ILogger<T>>();
 }

@@ -48,10 +48,10 @@
 #include "mbedtls/md.h"
 
 // ─── WiFi / API ───────────────────────────────────────────────────────────────
-// All secrets / deployment-specific values come from sdkconfig (gitignored),
-// generated from menuconfig options defined in main/Kconfig.projbuild.
-// Real values live in the developer's local sdkconfig; sdkconfig.defaults
-// committed to git has only empty placeholders.
+// Toate secretele / valorile specifice mediului de implementare vin din sdkconfig (ignorat de git),
+// generat din opțiunile de menuconfig definite în main/Kconfig.projbuild.
+// Valorile reale există doar în sdkconfig-ul local al dezvoltatorului; sdkconfig.defaults
+// (cel comis în git) are doar placeholder-e goale.
 #define WIFI_SSID_DEFAULT  CONFIG_LIFEALERT_DEFAULT_WIFI_SSID
 #define WIFI_PASS_DEFAULT  CONFIG_LIFEALERT_DEFAULT_WIFI_PASS
 #define WIFI_MAX_RETRY     5
@@ -65,13 +65,14 @@
 #define FIRMWARE_VERSION     "1.1.0"
 
 // ─── Timing ───────────────────────────────────────────────────────────────────
-#define SENSOR_READ_MS     500      // inner loop period
-#define API_POST_MS        5000     // how often to POST measurements
+#define SENSOR_READ_MS       500    // inner loop period
+#define API_POST_MS        20000    // interval POST date curente (20s = 3/min, în limita de 4 req/60s a serverului)
+#define QUEUE_FLUSH_MS     60000    // interval flush coadă offline (1 item/min, separat de POST)
 #define HEARTBEAT_MS       300000   // heartbeat every 5 minutes
 // În sleep mode nu se trimit date — SLEEP_POST_MS eliminat
 
-// ─── Fall detection (MPU6050) ─────────────────────────────────────────────────
-// Threshold-based detector: free-fall (low |a|) → impact spike → post-impact stillness.
+// ─── Detecție cădere (MPU6050) ─────────────────────────────────────────────────
+// Detector bazat pe praguri: cădere liberă (|a| scăzut) → vârf de impact → imobilitate post-impact.
 #define FALL_SAMPLE_MS              20      // ~50 Hz polling
 #define FALL_FREEFALL_THRESHOLD_G   0.5f    // |a| below this = free-fall in progress
 #define FALL_FREEFALL_MIN_MS        80      // sustained free-fall before impact accepted
@@ -83,7 +84,7 @@
 // ─── Offline queue (NVS) ──────────────────────────────────────────────────────
 #define QUEUE_NS              "offl_q"
 #define QUEUE_MAX             50
-#define QUEUE_FLUSH_PER_CYCLE  5    // max cereri per ciclu de POST
+#define QUEUE_FLUSH_PER_CYCLE  1    // un singur item per ciclu de flush (rata controlată prin QUEUE_FLUSH_MS)
 
 // Coadă separată pentru panic (alertele sunt rare dar critice — au prioritate)
 #define PANIC_QUEUE_NS        "panic_q"
@@ -142,7 +143,7 @@
 
 
 // =============================================================================
-// Global state
+// Stare globală
 // =============================================================================
 static uint8_t g_mux_addr = MUX_ADDR_MIN;
 static uint8_t g_mpu_addr = MPU_ADDR;
@@ -152,8 +153,9 @@ static char    g_serial[32];
 static EventGroupHandle_t s_wifi_eg;
 #define WIFI_OK_BIT    BIT0
 #define WIFI_FAIL_BIT  BIT1
-static volatile bool s_wifi_ok    = false;
-static int           s_wifi_retry = 0;
+static volatile bool s_wifi_ok       = false;
+static volatile uint32_t s_rate_limit_until_ms = 0;  // timestamp până la care HTTP e suspendat după 429
+static int           s_wifi_retry    = 0;
 
 // GPS
 typedef struct {
@@ -168,15 +170,14 @@ static char        g_gps_line[256];
 static int         g_gps_line_n = 0;
 static uint8_t     g_gps_rx[GPS_RX_BUF];
 
-// Buttons
+// Butoane
 static QueueHandle_t s_btn_q     = NULL;
-static int64_t       s_btn_last_us[2] = {}; // debounce timestamps per button
+static int64_t       s_btn_last_us[2] = {}; // timestamp-uri de debounce per buton
 static bool          s_btn_disabled[2] = { false, false }; // [0]=panic, [1]=sleep
 
-// Power-save mode (Button 2 toggle)
+// Mod economic de energie (comutat de Butonul 2)
 static volatile bool g_sleep_mode = false;
 
-// Heartbeat
 
 // Sleep auto-off: după 5s în sleep mode, stinge LED galben + OLED display
 static esp_timer_handle_t s_sleep_off_timer = NULL;
@@ -244,6 +245,7 @@ static uint32_t s_q_head = 0, s_q_tail = 0, s_q_count = 0;
 
 // Panic queue counters (NVS handle declarat lângă funcţiile sale)
 static uint32_t s_pq_head = 0, s_pq_tail = 0, s_pq_count = 0;
+
 
 // =============================================================================
 // I2C
@@ -555,20 +557,21 @@ static void pulse_task(void *)
     }
 }
 
-// Software square root — replaces sqrtf() because the Espressif newlib ships
-// __ieee754_sqrtf compiled with F-extension instructions (fmv.w.x, fsqrt.s)
-// that the ESP32-C3 (rv32imc, no FPU) does not implement. This version uses
-// only basic arithmetic routed through libgcc's soft-float (__mulsf3/__divsf3).
+// Rădăcină pătrată implementată în software — înlocuiește sqrtf() pentru că newlib-ul Espressif
+// vine cu __ieee754_sqrtf compilat cu instrucțiuni din extensia F (fmv.w.x, fsqrt.s), pe care
+// ESP32-C3 (nucleu RISC-V rv32imc, FĂRĂ unitate de virgulă mobilă hardware) nu le implementează —
+// apelarea sqrtf() ar cauza un crash/excepție de instrucțiune ilegală. Această versiune folosește
+// doar operații aritmetice de bază, rutate prin emulare soft-float din libgcc (__mulsf3/__divsf3).
 static float soft_sqrtf(float s)
 {
     if (s <= 0.0f) return 0.0f;
-    // Bit-manipulation initial estimate (integer ops only — no FP hardware)
+    // Estimare inițială prin manipulare de biți (doar operații pe întregi — fără hardware FP)
     uint32_t i;
     memcpy(&i, &s, sizeof i);
     i = 0x1fbb3b70u + (i >> 1);
     float r;
     memcpy(&r, &i, sizeof r);
-    // Three Newton-Raphson iterations; converges to <0.01% for values 0–16 (g²)
+    // Trei iterații Newton-Raphson; converge la <0.01% eroare pentru valori 0–16 (g² — suficient pentru accelerația măsurată)
     r = 0.5f * (r + s / r);
     r = 0.5f * (r + s / r);
     r = 0.5f * (r + s / r);
@@ -698,6 +701,8 @@ static bool oled_setup(void)
         vTaskDelay(pdMS_TO_TICKS(20));
     }
     vTaskDelay(pdMS_TO_TICKS(100));
+    // Secvența standard de inițializare a controller-ului SSD1306 (display off, mod adresare,
+    // orientare, contrast, oscilator intern, pompă de încărcare, display on) — comenzi din datasheet
     static const uint8_t seq[] = {
         0xAE, 0x20, 0x10, 0xB0, 0xC8, 0x00, 0x10, 0x40,
         0x81, 0xFF, 0xA1, 0xA6, 0xA8, 0x3F, 0xA4, 0xD3,
@@ -725,7 +730,7 @@ static void oled_clear(void)
     i2c_unlock();
 }
 
-// 8×8 bitmap for "LifeAlertPlus" (13 chars)
+// Bitmap 8×8 pentru titlul "LifeAlertPlus" (13 caractere) — afișat o singură dată la pornire, font dedicat
 static const uint8_t oled_font[][8] = {
     {0x7F, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x00}, // L
     {0x00, 0x00, 0x44, 0x7D, 0x40, 0x00, 0x00, 0x00}, // i
@@ -758,7 +763,7 @@ static void oled_show_title(void)
     i2c_unlock();
 }
 
-// 5×7 font — ASCII 32-127, 5 bytes per glyph (column-major, LSB=top)
+// Font 5×7 — ASCII 32-127, 5 bytes per glifă (coloane, bit cel mai puțin semnificativ = sus) — folosit pentru textul dinamic de pe OLED
 static const uint8_t g_font5x7[][5] = {
     {0x00,0x00,0x00,0x00,0x00},{0x00,0x00,0x5F,0x00,0x00},{0x00,0x07,0x00,0x07,0x00},
     {0x14,0x7F,0x14,0x7F,0x14},{0x24,0x2A,0x7F,0x2A,0x12},{0x23,0x13,0x08,0x64,0x62},
@@ -1020,6 +1025,7 @@ static void gps_feed(const uint8_t *data, int len)
 {
     for (int i = 0; i < len; i++) {
         char c = (char)data[i];
+        if (c == '$') g_gps_ok = true;  // GPS hardware detectat (răspunde cu NMEA)
         if (c == '\n') {
             g_gps_line[g_gps_line_n] = 0;
             if (g_gps_line_n > 0 && g_gps_line[0] == '$') gps_parse(g_gps_line);
@@ -1175,17 +1181,33 @@ static esp_err_t prov_save_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// Șterge credențialele WiFi din NVS — la next boot intră în modul de provisionare
+static void wifi_factory_reset(void)
+{
+    // Safe să fie apelat înainte de wifi_setup — nvs_flash_init e idempotent
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        nvs_flash_erase();
+        nvs_flash_init();
+    }
+    nvs_handle_t h;
+    if (nvs_open("wifi_cfg", NVS_READWRITE, &h) == ESP_OK) {
+        nvs_erase_all(h);
+        nvs_commit(h);
+        nvs_close(h);
+    }
+    printf("[RESET] Credentiale WiFi sterse — reboot in modul de configurare\n");
+}
+
 // Intră în modul de provisionare — nu se întoarce niciodată (esp_restart() la final)
 static void provisioning_mode(void)
 {
-    // SSID: "LifeAlert-XXXXXX" (ultimele 6 din serial), parolă: ultimele 8 din serial
+    // SSID: "LifeAlert-XXXXXX" (ultimele 6 din serial), fără parolă
     char ap_ssid[24];
-    char ap_pass[16];
     const char *suffix = g_serial + strlen(g_serial) - 6;
     snprintf(ap_ssid, sizeof(ap_ssid), "LifeAlert-%.6s", suffix);
-    snprintf(ap_pass, sizeof(ap_pass), "%.8s", g_serial + strlen(g_serial) - 8);
 
-    printf("\n[PROV] Hotspot: \"%s\"  Parola: %s\n", ap_ssid, ap_pass);
+    printf("\n[PROV] Hotspot: \"%s\" (fara parola)\n", ap_ssid);
     printf("[PROV] Dupa conectare deschide: http://192.168.4.1\n");
 
     if (g_oled_ok) {
@@ -1193,8 +1215,7 @@ static void provisioning_mode(void)
         oled_write_str(0, 10, "-- CONFIGURARE --");
         oled_write_str(2, 0,  "WiFi:");
         oled_write_str(3, 0,  ap_ssid);
-        oled_write_str(4, 0,  "Parola:");
-        oled_write_str(5, 0,  ap_pass);
+        oled_write_str(4, 0,  "Fara parola");
         oled_write_str(7, 0,  "-> 192.168.4.1");
     }
 
@@ -1210,11 +1231,10 @@ static void provisioning_mode(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
 
     wifi_config_t ap_cfg = {};
-    strncpy((char *)ap_cfg.ap.ssid,     ap_ssid, sizeof(ap_cfg.ap.ssid)     - 1);
-    strncpy((char *)ap_cfg.ap.password, ap_pass, sizeof(ap_cfg.ap.password) - 1);
+    strncpy((char *)ap_cfg.ap.ssid, ap_ssid, sizeof(ap_cfg.ap.ssid) - 1);
     ap_cfg.ap.ssid_len        = (uint8_t)strlen(ap_ssid);
     ap_cfg.ap.channel         = 1;
-    ap_cfg.ap.authmode        = WIFI_AUTH_WPA2_PSK;
+    ap_cfg.ap.authmode        = WIFI_AUTH_OPEN;
     ap_cfg.ap.max_connection  = 4;
     ap_cfg.ap.beacon_interval = 100;
     ap_cfg.ap.ssid_hidden     = 0;
@@ -1275,12 +1295,12 @@ static void on_wifi_event(void *, esp_event_base_t base, int32_t id, void *data)
     }
 }
 
-// Load up to 3 WiFi networks from NVS namespace "wifi_cfg".
-// Falls back to compile-time defaults if nothing is stored.
+// Încarcă până la 3 rețele WiFi din namespace-ul NVS "wifi_cfg".
+// Dacă nu există nimic salvat, foloseşte valorile implicite din compilare (Kconfig).
 static uint8_t  s_wifi_net_count  = 0;
-static bool     s_wifi_from_nvs   = false;  // true only when credentials came from NVS (not compiled default)
-static uint32_t g_post_interval_ms = API_POST_MS;  // updated from server via wifi-config
-static char     g_device_key[65]   = "";            // HMAC-SHA256(secret, serial) — set after serial is known
+static bool     s_wifi_from_nvs   = false;  // true doar când credențialele au venit din NVS (nu din default-ul compilat)
+static uint32_t g_post_interval_ms = API_POST_MS;  // actualizat de pe server via wifi-config (UpdateFrequency al pacientului)
+static char     g_device_key[65]   = "";            // HMAC-SHA256(secret, serial) — calculat după ce serialul e cunoscut, folosit ca header X-Device-Key
 static char    s_wifi_ssids[3][33];
 static char    s_wifi_passes[3][65];
 
@@ -1305,7 +1325,7 @@ static void wifi_load_credentials(void)
     }
     s_wifi_from_nvs = (s_wifi_net_count > 0);
     if (s_wifi_net_count == 0 && WIFI_SSID_DEFAULT[0] != '\0') {
-        // No NVS entries — fall back to the compile-time default if set.
+        // Nicio intrare în NVS — folosim default-ul din compilare, dacă e setat.
         strncpy(s_wifi_ssids[0],  WIFI_SSID_DEFAULT, sizeof(s_wifi_ssids[0]) - 1);
         strncpy(s_wifi_passes[0], WIFI_PASS_DEFAULT, sizeof(s_wifi_passes[0]) - 1);
         s_wifi_net_count = 1;
@@ -1353,8 +1373,8 @@ static bool wifi_setup(void)
     wifi_load_credentials();
 
     if (s_wifi_net_count == 0) {
-        provisioning_mode();   // starts SoftAP + HTTP form; calls esp_restart() on save
-        return false;          // unreachable
+        provisioning_mode();   // pornește SoftAP + formular HTTP; apelează esp_restart() la salvare
+        return false;          // inaccesibil (provisioning_mode nu se întoarce niciodată)
     }
 
     ESP_ERROR_CHECK(esp_netif_init());
@@ -1370,10 +1390,11 @@ static bool wifi_setup(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    // Try each stored network in sequence
+    // Încercăm pe rând fiecare rețea salvată
     for (uint8_t i = 0; i < s_wifi_net_count; i++) {
         if (wifi_try_connect(i)) {
-            // Log IP here — safe context with full stack (unlike sys_evt event handler)
+            // Logăm IP-ul aici — context sigur cu stivă completă (diferit de handler-ul de evenimente sys_evt,
+            // care are stivă mică şi nu poate folosi printf cu format complex — vezi comentariul de la s_got_ip)
             printf("[WiFi] IP: " IPSTR "\n", IP2STR(&s_got_ip));
             return true;
         }
@@ -1409,9 +1430,11 @@ static bool http_post_to(const char *path, const char *json)
     esp_err_t err = esp_http_client_perform(client);
     bool ok = false;
     if (err == ESP_OK || err == ESP_ERR_NOT_SUPPORTED) {
-        // ESP_ERR_NOT_SUPPORTED is returned when the server sends 401 with a
-        // non-Basic/Digest WWW-Authenticate scheme; the status code is still valid.
+        // ESP_ERR_NOT_SUPPORTED e returnat când serverul trimite 401 cu o schemă
+        // WWW-Authenticate diferită de Basic/Digest; codul de status rămâne totuşi valid de citit.
         int code = esp_http_client_get_status_code(client);
+        if (code == 429)
+            s_rate_limit_until_ms = xTaskGetTickCount() * portTICK_PERIOD_MS + 60000;
         ok = (code == 200);
         if (!ok) printf("[HTTP] %s → %d\n", path, code);
     } else {
@@ -1487,10 +1510,14 @@ static bool http_get_to(const char *path, char *out, int out_sz, int *out_status
 }
 
 // =============================================================================
-// Offline queue — NVS ring buffer, max QUEUE_MAX measurements
+// Coadă offline — buffer circular (ring buffer) în NVS (flash), max QUEUE_MAX măsurători.
+// Când WiFi-ul e indisponibil, măsurătorile sunt scrise aici în loc să se piardă; persistă
+// şi peste un reset/repornire a dispozitivului (NVS e memorie non-volatilă). La reconectare,
+// queue_flush() trimite treptat conţinutul către API (max QUEUE_FLUSH_PER_CYCLE per ciclu,
+// ca să nu sature reţeaua/serverul cu un burst mare dintr-o dată).
 // =============================================================================
 static nvs_handle_t s_q_nvs = 0;
-// s_q_head / s_q_tail / s_q_count declared in global state section
+// s_q_head / s_q_tail / s_q_count sunt declarate în secţiunea de stare globală
 
 static void queue_init(void)
 {
@@ -1506,7 +1533,8 @@ static void queue_push(const char *json)
 {
     if (!s_q_nvs || s_q_count >= QUEUE_MAX) {
         if (s_q_count >= QUEUE_MAX) printf("[Q] Full — dropping oldest\n");
-        // Drop oldest to make room
+        // Coada e plină — eliminăm cea mai veche măsurătoare ca să facem loc celei noi
+        // (mai relevant să păstrăm date recente decât foarte vechi, în caz de offline prelungit)
         s_q_head = (s_q_head + 1) % QUEUE_MAX;
         s_q_count--;
     }
@@ -1528,7 +1556,9 @@ static void queue_flush(void)
     printf("[Q] Flushing %lu measurements (%d per ciclu)...\n",
            (unsigned long)s_q_count, QUEUE_FLUSH_PER_CYCLE);
     int sent = 0;
-    while (s_q_count > 0 && s_wifi_ok && sent < QUEUE_FLUSH_PER_CYCLE) {
+    while (s_q_count > 0 && s_wifi_ok &&
+           (xTaskGetTickCount() * portTICK_PERIOD_MS) >= s_rate_limit_until_ms &&
+           sent < QUEUE_FLUSH_PER_CYCLE) {
         char key[8];
         snprintf(key, sizeof(key), "%lu", (unsigned long)s_q_head);
         char json[512] = {};
@@ -1591,7 +1621,8 @@ static void panic_queue_flush(void)
 {
     if (!s_pq_nvs || s_pq_count == 0 || !s_wifi_ok) return;
     printf("[PQ] Retrimitere %lu panic(uri) salvate...\n", (unsigned long)s_pq_count);
-    while (s_pq_count > 0 && s_wifi_ok) {
+    while (s_pq_count > 0 && s_wifi_ok &&
+           (xTaskGetTickCount() * portTICK_PERIOD_MS) >= s_rate_limit_until_ms) {
         char key[8];
         snprintf(key, sizeof(key), "%lu", (unsigned long)s_pq_head);
         char json[256] = {};
@@ -1683,8 +1714,8 @@ static void wifi_config_fetch_and_store(void)
     nvs_commit(h);
     nvs_close(h);
 
-    // Also update the in-memory credential arrays so the new network is usable
-    // immediately on the next reconnect attempt, without requiring a reboot.
+    // Actualizăm şi array-urile de credenţiale din memorie, ca noua reţea să fie utilizabilă
+    // imediat la următoarea încercare de reconectare, fără să fie nevoie de o repornire.
     s_wifi_net_count = (uint8_t)valid;
     s_wifi_from_nvs  = (valid > 0);
     for (int i = 0; i < valid; i++) {
@@ -1695,7 +1726,9 @@ static void wifi_config_fetch_and_store(void)
 }
 
 // =============================================================================
-// Heartbeat
+// Heartbeat — semnal periodic "sunt online" trimis la fiecare HEARTBEAT_MS (5 minute),
+// folosit de backend pentru a detecta dispozitive offline şi a expune diagnosticul
+// (RSSI, memorie liberă, uptime, coadă offline) pe pagina de administrare.
 // =============================================================================
 
 // Callback al timer-ului — la 5s după intrarea în sleep, stinge LED galben + OLED.
@@ -1736,7 +1769,8 @@ static void heartbeat_send(void)
     printf("[HB] RSSI=%d heap=%lu queue=%lu\n",
            rssi, (unsigned long)esp_get_free_heap_size(), (unsigned long)s_q_count);
 
-    // Pull any updated WiFi networks configured from the web app.
+    // Verificăm dacă au fost configurate/actualizate rețele WiFi noi din aplicația web
+    // (utilizatorul poate adăuga rețele din interfața Blazor; ESP32 le preia la următorul heartbeat)
     wifi_config_fetch_and_store();
 
     // Dacă GPS-ul a fost oprit din cauza timeout-ului, reactivăm la fiecare heartbeat
@@ -1750,7 +1784,10 @@ static void heartbeat_send(void)
 }
 
 // =============================================================================
-// Panic alert
+// Alertă panic — declanșată de Butonul 1 (vezi btn_isr mai jos); trimite imediat
+// coordonatele GPS curente (dacă există fix) către /api/ESP/panic, indiferent de
+// ciclul normal de POST. Dacă trimiterea eșuează, e pusă în coada offline dedicată
+// (panic_queue_push) ca să nu se piardă — alertele de panică au prioritate la retrimitere.
 // =============================================================================
 static void panic_send(void)
 {
@@ -1771,7 +1808,7 @@ static void panic_send(void)
 }
 
 // =============================================================================
-// Buttons
+// Butoane
 // =============================================================================
 static void IRAM_ATTR btn_isr(void *arg)
 {
@@ -1922,14 +1959,18 @@ static void buttons_setup(void)
 
 
 // =============================================================================
-// Sensor functional self-test — verifică prezență + valori sensibile
+// Auto-test funcţional al senzorilor — verifică prezenţă pe I2C + valori sensibile
+// (rulat o singură dată la boot, ÎNAINTE de a intra în loop-ul principal). Diferit
+// de flagurile g_mpu_ok/g_max_ok/etc. (care indică doar succesul iniţializării) —
+// acest test citeşte efectiv date şi detectează magistrale "agăţate" (stuck zero/railed)
+// care ar trece de iniţializare dar nu produc citiri valide.
 // =============================================================================
 static void sensors_self_test(bool mpu_present, bool max_present,
                               bool oled_present, bool mux_present)
 {
     printf("\n[SENS] ===== SENSOR FUNCTIONAL TEST =====\n");
 
-    // MUX
+    // Multiplexorul TCA9548 trebuie detectat primul — fără el, niciun senzor de pe celelalte canale nu e accesibil
     printf("[SENS] TCA9548 mux: %s (addr 0x%02X)\n",
            mux_present ? "PRESENT" : "MISSING", g_mux_addr);
 
@@ -2061,12 +2102,76 @@ static void build_json(char *buf, size_t sz,
         snprintf(buf+n, sz-n, "\"neo6m\":null}");
 }
 
+// Verifică contorul triple-RST din NVS; returnează true dacă s-au detectat 3 apăsări rapide
+// pe butonul RST fizic (EN pin). NVS trebuie inițializat înainte de apel.
+static bool rst_count_check(void)
+{
+    esp_reset_reason_t reason = esp_reset_reason();
+
+    nvs_handle_t h;
+    if (nvs_open("sys_cfg", NVS_READWRITE, &h) != ESP_OK) return false;
+
+    if (reason == ESP_RST_BROWNOUT || reason == ESP_RST_DEEPSLEEP) {
+        // Baterie slabă sau wake din deep sleep — resetăm contorul
+        nvs_erase_key(h, "rst_cnt");
+        nvs_commit(h);
+        nvs_close(h);
+        printf("[RST] Reset curat (%d) — contor golit\n", (int)reason);
+        return false;
+    }
+
+    if (reason == ESP_RST_SW   || reason == ESP_RST_PANIC   ||
+        reason == ESP_RST_WDT  || reason == ESP_RST_INT_WDT ||
+        reason == ESP_RST_TASK_WDT) {
+        // SW restart / WDT / panic — NU atingem contorul; altfel un restart
+        // software (ex: WiFi timeout) între două apăsări RST ar anula triple-click-ul
+        nvs_close(h);
+        printf("[RST] Reset SW/WDT (%d) — contor neatins\n", (int)reason);
+        return false;
+    }
+
+    // ESP_RST_POWERON, ESP_RST_EXT, ESP_RST_UNKNOWN etc.
+    // Pe ESP32-C3, butonul EN/RST raportează ESP_RST_POWERON (nu ESP_RST_EXT) —
+    // orice alt tip de reset e tratat ca apăsare de buton RST
+    // Apăsare buton RST (EN) — incrementăm contorul
+    uint8_t count = 0;
+    nvs_get_u8(h, "rst_cnt", &count);
+    count++;
+    printf("[RST] Buton RST #%u\n", count);
+    if (count >= 3) {
+        nvs_erase_key(h, "rst_cnt");
+        nvs_commit(h);
+        nvs_close(h);
+        return true;
+    }
+    nvs_set_u8(h, "rst_cnt", count);
+    nvs_commit(h);
+    nvs_close(h);
+    return false;
+}
+
+// Task one-shot: după 10s de funcționare normală șterge contorul din NVS.
+static void rst_count_clear_task(void *)
+{
+    vTaskDelay(pdMS_TO_TICKS(10000));
+    nvs_handle_t h;
+    if (nvs_open("sys_cfg", NVS_READWRITE, &h) == ESP_OK) {
+        nvs_erase_key(h, "rst_cnt");
+        nvs_commit(h);
+        nvs_close(h);
+    }
+    vTaskDelete(NULL);
+}
+
 // =============================================================================
-// app_main
+// app_main — punctul de intrare ESP-IDF (echivalentul main() pentru un proiect ESP-IDF);
+// inițializează toți senzorii/perifericele, pornește task-urile FreeRTOS (pulse, fall,
+// butoane) și apoi intră în bucla principală care citește senzorii, construiește JSON-ul
+// și îl trimite periodic la API (sau îl pune în coada offline dacă WiFi-ul e indisponibil).
 // =============================================================================
 extern "C" void app_main(void)
 {
-    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stdout, NULL, _IONBF, 0);   // dezactivăm buffering-ul pe stdout — log-urile printf apar imediat în consolă, fără întârziere
 
     // Mutex I2C recursiv — creat înainte de orice acces I2C concurent
     s_i2c_lock = xSemaphoreCreateRecursiveMutex();
@@ -2076,21 +2181,25 @@ extern "C" void app_main(void)
 
     printf("\n=== LifeAlertPlus | ESP32-C3 Mini ===\n\n");
 
-    // Sanity check on Kconfig-provided secrets — make missing values loud rather than silent.
+    // Verificare de plauzibilitate pe secretele venite din Kconfig — semnalăm explicit (printf vizibil)
+    // valorile lipsă, în loc să lăsăm dispozitivul să pornească tăcut într-o stare nefuncțională.
     if (API_DEVICE_SECRET[0] == '\0')
         printf("[CFG] WARNING: CONFIG_LIFEALERT_API_DEVICE_SECRET is empty. Device key cannot be derived — API calls will be rejected (401).\n");
     if (API_BASE_URL[0] == '\0')
         printf("[CFG] WARNING: CONFIG_LIFEALERT_API_BASE_URL is empty. No HTTP requests will be issued.\n");
 
-    // Unique serial derived from factory MAC (set monitored.DeviceSerialNumber to this value)
+    // Serial unic derivat din adresa MAC de fabrică (gravată în eFuse, nu poate fi schimbată) —
+    // această valoare trebuie setată ca Monitored.DeviceSerialNumber în baza de date, ca backend-ul
+    // să poată asocia datele primite cu pacientul corect
     uint8_t mac[6];
     esp_read_mac(mac, ESP_MAC_WIFI_STA);
     snprintf(g_serial, sizeof(g_serial), "ESP32-%02X%02X%02X%02X%02X%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     printf("[ID] %s\n", g_serial);
 
-    // Derive per-device key: HMAC-SHA256(secret=API_DEVICE_SECRET, data=serial) → hex string.
-    // Each device produces a different key; compromising one device does not expose others.
+    // Derivăm o cheie unică per dispozitiv: HMAC-SHA256(secret=API_DEVICE_SECRET, data=serial) → string hex.
+    // Fiecare dispozitiv produce o cheie diferită; compromiterea unui dispozitiv nu expune celelalte
+    // (vezi ESPControllerTests.cs din backend — testele verifică exact acest mecanism de autentificare).
     if (API_DEVICE_SECRET[0] != '\0') {
         uint8_t hmac_raw[32];
         mbedtls_md_context_t hmac_ctx;
@@ -2117,7 +2226,7 @@ extern "C" void app_main(void)
     bool mux_ok = mux_setup();
     printf("[MUX     ] %s | 0x%02X\n", mux_ok ? "OK " : "---", g_mux_addr);
 
-    // Sensors
+    // Senzori
     bool mpu_ok = mpu_setup();
     g_mpu_ok = mpu_ok;
     printf("[MPU6050 ] %s | ch%d 0x%02X\n", mpu_ok ? "OK " : "---", MUX_CH_MPU6050, g_mpu_addr);
@@ -2127,9 +2236,33 @@ extern "C" void app_main(void)
     // LED-ul rămâne aprins continuu (sleep doar prin butonul 2 / sleep mode)
     printf("[MAX30100] %s | ch%d 0x%02X (LED ON)\n", max_ok ? "OK " : "---", MUX_CH_MAX30100, M30_ADDR);
 
+    // NVS init timpuriu — necesar pentru detecția triple-RST înainte de wifi_setup()
+    {
+        esp_err_t _ret = nvs_flash_init();
+        if (_ret == ESP_ERR_NVS_NO_FREE_PAGES || _ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+            nvs_flash_erase();
+            nvs_flash_init();
+        }
+    }
+
     g_oled_ok = oled_setup();
     if (g_oled_ok) { oled_clear(); oled_show_title(); }
     printf("[OLED    ] %s | ch%d 0x%02X\n", g_oled_ok ? "OK " : "---", MUX_CH_OLED, OLED_ADDR);
+
+    // Triple-RST factory reset: 3 apăsări rapide pe RST (≤10s între ele) șterg WiFi din NVS
+    if (rst_count_check()) {
+        printf("[RESET] Triple RST — stergere WiFi + reboot in modul de configurare\n");
+        if (g_oled_ok) {
+            oled_clear();
+            oled_write_str(0, 10, "-- RESET WiFi --");
+            oled_write_str(3, 10, "Stergere date");
+            oled_write_str(4, 10, "WiFi...");
+        }
+        wifi_factory_reset();
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        esp_restart();
+    }
+    xTaskCreate(rst_count_clear_task, "rst_clr", 1024, NULL, 1, NULL);
 
     g_mlx_ok = mlx_setup();
     float    mlx_temp  = 0.0f;
@@ -2139,7 +2272,7 @@ extern "C" void app_main(void)
     gps_setup();
     printf("[GPS     ] UART init | TX=%d RX=%d (detectie dupa prima fraza NMEA)\n", GPS_TX_PIN, GPS_RX_PIN);
 
-    // LEDs
+    // LED-uri
     gpio_config_t led_conf = {};
     led_conf.pin_bit_mask = (1ULL << LED_GREEN_PIN) | (1ULL << LED_YELLOW_PIN);
     led_conf.mode         = GPIO_MODE_OUTPUT;
@@ -2148,14 +2281,14 @@ extern "C" void app_main(void)
     gpio_set_level((gpio_num_t)LED_GREEN_PIN,  1);  // green on — active-HIGH (ca galbenul)
     gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);  // yellow off initially
 
-    // Buttons
+    // Butoane
     gpio_install_isr_service(0);
     buttons_setup();
 
     // Verifică prezenţa ŞI funcţionalitatea senzorilor (citire reală de valori)
     sensors_self_test(mpu_ok, max_ok, g_oled_ok, mux_ok);
 
-    // WiFi — LED2 lights up on connect
+    // WiFi — LED-ul galben se stinge la conectare cu succes (rămâne aprins = offline)
     bool wifi_ok = wifi_setup();
     if (wifi_ok) {
         gpio_set_level((gpio_num_t)LED_YELLOW_PIN, 0);  // yellow off = connected OK
@@ -2165,7 +2298,7 @@ extern "C" void app_main(void)
         printf("[WiFi] FAILED — running offline\n");
     }
 
-    // Offline queue (NVS must be initialised inside wifi_setup already)
+    // Coadă offline (NVS trebuie să fie deja inițializat din wifi_setup, mai sus)
     queue_init();
     panic_queue_init();
 
@@ -2202,8 +2335,9 @@ extern "C" void app_main(void)
 
     int16_t accel[3] = {}, gyro[3] = {};
     uint16_t ir = 0, red = 0;
-    uint32_t last_post_ms = 0;
-    uint32_t last_hb_ms   = 0;
+    uint32_t last_post_ms        = 0;
+    uint32_t last_queue_flush_ms = 0;
+    uint32_t last_hb_ms          = 0;
     static char json_buf[512];
 
     while (true) {
@@ -2215,29 +2349,30 @@ extern "C" void app_main(void)
         // MLX90614: citire directă prin I2C (măsurare continuă, fără fereastră de conversie)
         if (g_mlx_ok) mlx_ready = mlx_read_temp(&mlx_temp);
 
-        // GPS — UART driver bufferează datele, citim pasiv
-        // Dacă nu s-a obținut fix în GPS_FIX_TIMEOUT_MS, oprim UART-ul GPS
-        // pentru a economisi ~30mA. Se reactivează la heartbeat.
-        if (s_gps_enabled) {
-            int gps_n = uart_read_bytes(GPS_UART_NUM, g_gps_rx, sizeof(g_gps_rx) - 1, pdMS_TO_TICKS(20));
-            if (gps_n > 0) {
-                g_gps_rx[gps_n] = 0;
-                printf("[GPS-RAW] %d bytes: %s\n", gps_n, (char *)g_gps_rx);
-                gps_feed(g_gps_rx, gps_n);
-            }
-            if (!g_gps.valid && (now - s_gps_start_ms) > GPS_FIX_TIMEOUT_MS) {
-                uart_driver_delete(GPS_UART_NUM);
-                s_gps_enabled = false;
-                printf("[GPS] Fără fix în %us — UART oprit (economie curent)\n",
-                       GPS_FIX_TIMEOUT_MS / 1000);
-            }
-        }
-
-        // La intervalul de POST: trezeşte MAX30100, citeşte, pune-l la somn,
-        // actualizează OLED şi trimite datele (skipped complet în sleep mode)
+        // La intervalul de POST: citim GPS, construim JSON, trimitem
         if ((now - last_post_ms) >= g_post_interval_ms) {
-            last_post_ms = now;  // actualizează mereu — evită POST imediat la wake
+            last_post_ms = now;
             if (!g_sleep_mode) {
+                // GPS — drain complet al buffer-ului UART chiar înainte de build_json
+                // (nu în bucla rapidă — evităm timeout-ul de 20ms per iterație)
+                if (s_gps_enabled) {
+                    int gps_n;
+                    while ((gps_n = uart_read_bytes(GPS_UART_NUM, g_gps_rx,
+                                                    sizeof(g_gps_rx) - 1, 0)) > 0) {
+                        g_gps_rx[gps_n] = 0;
+                        gps_feed(g_gps_rx, gps_n);
+                        if (g_gps.valid)
+                            printf("[GPS] Fix: %.6f,%.6f sat=%d\n",
+                                   g_gps.lat, g_gps.lon, g_gps.satellites);
+                    }
+                    if (!g_gps.valid && (now - s_gps_start_ms) > GPS_FIX_TIMEOUT_MS) {
+                        uart_driver_delete(GPS_UART_NUM);
+                        s_gps_enabled = false;
+                        printf("[GPS] Fara fix in %us — UART oprit\n",
+                               GPS_FIX_TIMEOUT_MS / 1000);
+                    }
+                }
+
                 // MAX30100 e eşantionat continuu de pulse_task — luăm valorile actuale
                 ir  = g_last_ir;
                 red = g_last_red;
@@ -2252,15 +2387,22 @@ extern "C" void app_main(void)
                            (uint64_t)now);
                 printf("[JSON] %s\n", json_buf);
                 if (s_wifi_ok) {
-                    // WiFi conectat: transmitem direct, fără a pune în coadă.
-                    // Dacă POST eșuează (server indisponibil temporar), datele se pierd
-                    // dar coada rămâne disponibilă exclusiv pentru perioadele offline.
-                    panic_queue_flush();   // panic-ul are prioritate
-                    queue_flush();         // golim coada acumulată offline
-                    if (http_post(json_buf)) {
-                        printf("[POST] OK -> server\n");
+                    uint32_t rl_left = (now < s_rate_limit_until_ms)
+                                       ? s_rate_limit_until_ms - now : 0;
+                    if (rl_left > 0) {
+                        printf("[POST] Rate limited — asteptare %lus\n", (unsigned long)(rl_left / 1000));
+                        queue_push(json_buf);  // salvăm în coadă să nu pierdem măsurătoarea
                     } else {
-                        printf("[POST] FAILED (WiFi activ) -> date pierdute, retry la ciclul urmator\n");
+                        // Date curente — PRIORITATE (trimise înaintea cozii)
+                        if (http_post(json_buf)) {
+                            printf("[POST] OK -> server\n");
+                        } else {
+                            printf("[POST] FAILED -> retry la ciclul urmator\n");
+                            queue_push(json_buf);
+                        }
+                        // Panic queue — prioritate după date curente, înainte de coada obișnuită
+                        if (now >= s_rate_limit_until_ms)
+                            panic_queue_flush();
                     }
                 } else {
                     printf("[POST] OFFLINE -> enqueued (queue=%lu)\n",
@@ -2270,8 +2412,18 @@ extern "C" void app_main(void)
             }
         }
 
-        // Heartbeat runs in main-loop context (not a timer callback) to avoid stack
-        // overflow in the esp_timer task — mbedTLS HTTPS needs ~6KB, timer task has ~4KB.
+        // Coadă offline — flush separat de POST (1 item la 60s) ca să nu consume din cota de rate limit
+        // a serverului (4 req/60s); datele curente au prioritate și folosesc primele 3 sloturi.
+        if (s_wifi_ok && s_q_count > 0 &&
+            (now - last_queue_flush_ms) >= QUEUE_FLUSH_MS &&
+            now >= s_rate_limit_until_ms) {
+            last_queue_flush_ms = now;
+            queue_flush();
+        }
+
+        // Heartbeat-ul rulează în contextul main loop-ului (nu ca callback de timer) pentru a evita
+        // un overflow de stivă pe task-ul esp_timer — HTTPS prin mbedTLS are nevoie de ~6KB, dar
+        // task-ul de timer are alocați doar ~4KB de stivă.
         if ((now - last_hb_ms) >= HEARTBEAT_MS) {
             last_hb_ms = now;
             heartbeat_send();

@@ -1,5 +1,8 @@
 namespace LifeAlertPlus.Shared.DTOs.Responses.User
 {
+    // Server: returnat de UserController.GetUserById/GetCurrentUser (vezi linia ~249, ~290) — profilul
+    // complet al utilizatorului curent, inclusiv praguri vitale proprii și preferințe (limbă, temă, notificări).
+    // Client: consumat de ProfilePage.razor.cs (editare date) și de SettingsPage.razor.cs (preferințe).
     public class UserProfileDTO
     {
         public Guid Id { get; set; }

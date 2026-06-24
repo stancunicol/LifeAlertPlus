@@ -1,8 +1,11 @@
-// PDF Export using jsPDF + autoTable (loaded from CDN on demand)
+// Export PDF folosind jsPDF + autoTable (încărcate de pe CDN la cerere, nu sunt în bundle-ul Blazor).
+// Apelat din Blazor (SelectedMonitored) via JSRuntime cu un obiect `data` ce conține deja tot textul
+// localizat (titluri, etichete) calculat în C# — acest fișier doar desenează PDF-ul, nu traduce nimic.
 window.pdfExport = {
     _loaded: false,
-    _loading: null,
+    _loading: null, // Promise în curs — evită încărcarea de două ori dacă se apelează generarea rapid succesiv
 
+    // Încarcă jsPDF + plugin-ul autoTable o singură dată (cache la nivel de pagină), de pe CDN
     _loadLibraries: function () {
         if (this._loaded) return Promise.resolve();
         if (this._loading) return this._loading;
@@ -18,14 +21,17 @@ window.pdfExport = {
         this._loading = loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js')
             .then(() => loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js'))
             .then(() => { this._loaded = true; })
-            .catch(err => { this._loading = null; throw err; });
+            .catch(err => { this._loading = null; throw err; }); // Permite reîncercare dacă încărcarea inițială a picat
 
         return this._loading;
     },
 
+    // Construiește raportul medical PDF complet din `data` (statistici, alerte, interpretare AI) și îl arată în preview
     generateMedicalReport: async function (data) {
         await this._loadLibraries();
 
+        // jsPDF (fontul 'helvetica' standard) nu randează corect diacriticele românești (ă,â,î,ș,ț) —
+        // le înlocuim cu echivalentul fără diacritice ca textul să nu apară cu caractere stricate în PDF.
         function normalizeRo(val) {
             if (typeof val === 'string') {
                 return val
@@ -38,7 +44,7 @@ window.pdfExport = {
             if (Array.isArray(val)) return val.map(normalizeRo);
             if (val && typeof val === 'object') {
                 const out = {};
-                for (const k of Object.keys(val)) out[k] = normalizeRo(val[k]);
+                for (const k of Object.keys(val)) out[k] = normalizeRo(val[k]); // Recursiv — `data` e un obiect imbricat (secțiuni, tabele, liste)
                 return out;
             }
             return val;
@@ -75,15 +81,17 @@ window.pdfExport = {
             yellowLt:[255, 252, 230],
         };
 
-        // ── Helpers ──
+        // ── Funcții ajutătoare de desenare (reutilizate în toate secțiunile de mai jos) ──
         function rgb(c) { doc.setTextColor(c[0], c[1], c[2]); }
         function fill(c) { doc.setFillColor(c[0], c[1], c[2]); }
         function draw(c) { doc.setDrawColor(c[0], c[1], c[2]); }
 
+        // Adaugă o pagină nouă dacă nu mai e loc suficient pe verticală (y curent + spațiu necesar > limita paginii)
         function ensureSpace(need) {
             if (y + need > ph - 18) { doc.addPage(); y = 18; }
         }
 
+        // Desenează antetul standard al unei secțiuni numerotate (insignă numerotată + titlu + linie de accent)
         function sectionHeader(num, title, accent) {
             ensureSpace(50);
             y += 4;
@@ -154,7 +162,7 @@ window.pdfExport = {
         y = 38;
 
         // ======================================================================
-        //  1. PATIENT INFORMATION
+        //  1. INFORMAȚII PACIENT
         // ======================================================================
         sectionHeader(1, data.patientSectionTitle || 'Patient Information');
 
@@ -187,7 +195,7 @@ window.pdfExport = {
         y += 28;
 
         // ======================================================================
-        //  2. SELECTED PERIOD
+        //  2. PERIOADA SELECTATĂ
         // ======================================================================
         sectionHeader(2, data.periodSectionTitle || 'Selected Period');
 
@@ -200,7 +208,7 @@ window.pdfExport = {
         y += 14;
 
         // ======================================================================
-        //  3. SUMMARY  (stat cards + table)
+        //  3. REZUMAT  (insignă total + tabel statistici agregate)
         // ======================================================================
         if (data.summary) {
             sectionHeader(3, data.summarySectionTitle || 'Summary');
@@ -245,7 +253,7 @@ window.pdfExport = {
         }
 
         // ======================================================================
-        //  4. WEEKLY BREAKDOWN  — one card per week
+        //  4. DEFALCARE SĂPTĂMÂNALĂ — un card cu tabel per săptămână
         // ======================================================================
         if (data.weeklyBreakdown && data.weeklyBreakdown.length > 0) {
             sectionHeader(4, data.weeklySectionTitle || 'Weekly Breakdown');
@@ -286,19 +294,19 @@ window.pdfExport = {
         }
 
         // ======================================================================
-        //  5. DAILY BREAKDOWN
+        //  5. DEFALCARE ZILNICĂ
         // ======================================================================
         if (data.dailyBreakdown && data.dailyBreakdown.length > 0) {
             sectionHeader(5, data.dailySectionTitle || 'Daily Breakdown');
 
-            // Split into 3 sub-tables for readability
-            // -- 5a Heart Rate daily
+            // Împărțim în 3 sub-tabele (puls/temperatură/SpO2) pentru lizibilitate — un singur tabel cu toate coloanele ar fi prea lat pentru A4
             const dayDates = data.dailyBreakdown.map(d => d.date);
             const dayCount = data.dailyBreakdown.map(d => d.count);
             const hrBody = data.dailyBreakdown.map(d => [d.date, d.count, d.pulseAvg, d.pulseMin, d.pulseMax]);
             const tmpBody = data.dailyBreakdown.map(d => [d.date, d.count, d.tempAvg, d.tempMin, d.tempMax]);
             const spoBody = data.dailyBreakdown.map(d => [d.date, d.count, d.spo2Avg, d.spo2Min, d.spo2Max]);
 
+            // Desenează un tabel mic cu etichetă deasupra — reutilizat pentru fiecare dintre cele 3 metrici
             function miniTable(label, head, body, accentColor) {
                 ensureSpace(20);
                 doc.setFontSize(8.5);
@@ -330,7 +338,7 @@ window.pdfExport = {
         }
 
         // ======================================================================
-        //  6. ALERTS
+        //  6. ALERTE (severitate ALERT — vezi AlertMonitorService din backend)
         // ======================================================================
         if (data.alerts && data.alerts.length > 0) {
             sectionHeader(6, data.alertsSectionTitle || 'Alerts', C.amber);
@@ -365,12 +373,12 @@ window.pdfExport = {
         }
 
         // ======================================================================
-        //  7. CRITICAL EVENTS  —  heavily highlighted
+        //  7. EVENIMENTE CRITICE (severitate CRITICAL) — evidențiate puternic vizual
         // ======================================================================
         if (data.criticals && data.criticals.length > 0) {
             sectionHeader(7, data.criticalsSectionTitle || 'Critical Events', C.red);
 
-            // Red warning banner
+            // Banner roșu de avertizare cu numărul total de evenimente critice
             fill(C.red);
             doc.roundedRect(m, y, cw, 9, 2.5, 2.5, 'F');
             doc.setFontSize(10);
@@ -379,10 +387,10 @@ window.pdfExport = {
             doc.text(data.criticals.length + ' critical event(s) detected', m + cw / 2, y + 6, { align: 'center' });
             y += 13;
 
-            // Each critical event as an individual highlighted card
+            // Fiecare eveniment critic apare ca un card individual evidențiat (mai vizibil decât rândurile de tabel ale alertelor)
             data.criticals.forEach((c, idx) => {
                 ensureSpace(22);
-                // Red left border card
+                // Card cu bordură roșie pe stânga
                 fill(C.redLt);
                 doc.roundedRect(m, y, cw, 18, 2, 2, 'F');
                 fill(C.red);
@@ -406,7 +414,7 @@ window.pdfExport = {
         }
 
         // ======================================================================
-        //  8. RAW DATA
+        //  8. DATE BRUTE — toate măsurătorile individuale din perioada selectată
         // ======================================================================
         if (data.rawData && data.rawData.length > 0) {
             sectionHeader(8, data.rawDataSectionTitle || 'Raw Data');
@@ -432,18 +440,21 @@ window.pdfExport = {
         }
 
         // ======================================================================
-        //  9. INTERPRETATION  — risk score, breakdown, confidence, top concerns, severity items
+        //  9. INTERPRETARE — scor de risc, defalcare, nivel confidență, principalele îngrijorări, observații severitate
+        //     Toate valorile (riskScore, riskLevel, dataConfidence, topConcerns, interpretations) sunt calculate
+        //     în C# (SelectedMonitored.razor.cs → GenerateExportPdfAsync) — aici doar le desenăm.
         // ======================================================================
         if (data.interpretations && data.interpretations.length > 0) {
             sectionHeader(9, data.interpretationSectionTitle || 'Interpretation', C.blue);
 
+            // Paletă de culori pe nivel de severitate, reutilizată pentru "Top Concerns" și cardurile de interpretare
             var sevColors = {
                 low:    { dot: C.green,  bg: C.greenLt, label: 'LOW' },
                 medium: { dot: C.orange, bg: C.orangeLt, label: 'MEDIUM' },
                 high:   { dot: C.red,    bg: C.redLt,   label: 'HIGH' }
             };
 
-            // ── Risk Score gauge + confidence ──
+            // ── Indicator scor de risc (0-100) + bară de progres colorată după nivel ──
             if (data.riskScore !== undefined) {
                 ensureSpace(30);
                 var rs = data.riskScore;
@@ -454,12 +465,12 @@ window.pdfExport = {
                 // Score card
                 fill(gbg);
                 doc.roundedRect(m, y, cw, 22, 3, 3, 'F');
-                // Score text
+                // Text scor
                 doc.setFontSize(12);
                 doc.setFont('helvetica', 'bold');
                 rgb(gc);
                 doc.text((data.riskScoreLabel || 'Risk Score') + ':  ' + rs + ' / 100  (' + rl + ')', m + 7, y + 8);
-                // Progress bar
+                // Bară de progres — lățimea proporțională cu scorul (min 3mm vizibil chiar la scor 0)
                 fill([230, 230, 230]);
                 doc.roundedRect(m + 7, y + 13, cw - 14, 5, 2.5, 2.5, 'F');
                 var barW = Math.max((rs / 100) * (cw - 14), 3);
@@ -467,7 +478,7 @@ window.pdfExport = {
                 doc.roundedRect(m + 7, y + 13, barW, 5, 2.5, 2.5, 'F');
                 y += 25;
 
-                // ── Data Confidence badge ──
+                // ── Insignă nivel de confidență a datelor (HIGH/MEDIUM/LOW — depinde de câte măsurători există în perioadă) ──
                 if (data.dataConfidence) {
                     ensureSpace(14);
                     var dc = data.dataConfidence;
@@ -488,7 +499,7 @@ window.pdfExport = {
                     y += 13;
                 }
 
-                // ── Risk Breakdown table ──
+                // ── Tabel defalcare scor — listează factorii care au contribuit la riskScore (ex: "HR ridicat: +15") ──
                 if (data.riskBreakdown && data.riskBreakdown.length > 0) {
                     ensureSpace(14);
                     doc.setFontSize(8.5);
@@ -512,7 +523,7 @@ window.pdfExport = {
                 }
             }
 
-            // ── Top Concerns ──
+            // ── Principalele îngrijorări — listă ordonată (rank) cu cele mai semnificative probleme detectate ──
             if (data.topConcerns && data.topConcerns.length > 0) {
                 ensureSpace(14);
                 doc.setFontSize(9);
@@ -527,7 +538,7 @@ window.pdfExport = {
                     doc.roundedRect(m, y, cw, 9, 2, 2, 'F');
                     fill(tsc.dot);
                     doc.rect(m, y, 3, 9, 'F');
-                    // Rank circle
+                    // Cerc cu numărul de ordine (rank)
                     fill(tsc.dot);
                     doc.circle(m + 8, y + 4.5, 3, 'F');
                     doc.setFontSize(8);
@@ -544,27 +555,29 @@ window.pdfExport = {
                 y += 4;
             }
 
-            // ── Interpretation items (dual-layer) ──
+            // ── Carduri de interpretare cu dublu strat: text "medical" + variantă simplificată (plain) ──
+            // Fiecare item poate avea un text tehnic (txt) și, opțional, o explicație pe limbaj simplu (plain)
+            // pentru utilizatorii fără pregătire medicală — ambele randate în același card, plain mai mic/italic.
             data.interpretations.forEach(function (item) {
                 var txt = typeof item === 'string' ? item : item.text;
                 var plain = (typeof item === 'object' && item.plain) ? item.plain : '';
                 var sev = (typeof item === 'object' && item.severity) ? item.severity : 'low';
                 var sc = sevColors[sev] || sevColors.low;
 
-                // Calculate card height with both layers
+                // Calculăm înălțimea cardului dinamic, în funcție de câte linii ocupă cele două straturi de text
                 var medLines = doc.splitTextToSize(txt, cw - 28);
                 var plainLines = plain ? doc.splitTextToSize(plain, cw - 28) : [];
                 var cardH = medLines.length * 4.2 + (plainLines.length > 0 ? plainLines.length * 4 + 5 : 0) + 8;
                 cardH = Math.max(cardH, 14);
 
                 ensureSpace(cardH + 3);
-                // Card bg
+                // Fundal card
                 fill(sc.bg);
                 doc.roundedRect(m, y, cw, cardH, 2, 2, 'F');
-                // Left accent
+                // Accent pe stânga
                 fill(sc.dot);
                 doc.rect(m, y, 3, cardH, 'F');
-                // Severity badge
+                // Insignă de severitate (lățime dinamică, în funcție de textul etichetei)
                 fill(sc.dot);
                 var bw = Math.max(doc.getTextWidth(sc.label) + 6, 18);
                 doc.roundedRect(m + 5, y + 2, bw, 5.5, 1.5, 1.5, 'F');
@@ -572,12 +585,12 @@ window.pdfExport = {
                 doc.setFont('helvetica', 'bold');
                 rgb(C.white);
                 doc.text(sc.label, m + 5 + bw / 2, y + 5.8, { align: 'center' });
-                // Medical text
+                // Text tehnic/medical
                 doc.setFontSize(8);
                 doc.setFont('helvetica', 'normal');
                 rgb(C.dark);
                 doc.text(medLines, m + 24, y + 5.5);
-                // Plain text (simpler explanation)
+                // Text simplificat (explicație pe înțelesul pacientului/familiei)
                 if (plainLines.length > 0) {
                     var plainY = y + medLines.length * 4.2 + 7;
                     doc.setFontSize(7.5);
@@ -591,12 +604,12 @@ window.pdfExport = {
         }
 
         // ======================================================================
-        //  10. CONCLUSION  — clinical synthesis
+        //  10. CONCLUZIE — sinteză clinică finală, generată euristic în C# (nu e diagnostic medical real)
         // ======================================================================
         if (data.conclusion && data.conclusion.length > 0) {
             sectionHeader(10, data.conclusionSectionTitle || 'Conclusion', [129, 199, 132]);
 
-            // Box color based on risk level
+            // Culoarea casetei depinde de nivelul de risc general calculat mai sus
             var rl = data.riskLevel || 'LOW';
             var boxBg = rl === 'HIGH' ? C.redLt : rl === 'MEDIUM' ? C.orangeLt : C.greenLt;
             var boxAccent = rl === 'HIGH' ? C.red : rl === 'MEDIUM' ? C.orange : C.green;
@@ -619,39 +632,41 @@ window.pdfExport = {
         }
 
         // ======================================================================
-        //  FOOTER — on every page
+        //  SUBSOL — repetat pe fiecare pagină a documentului (disclaimer + numerotare + watermark)
         // ======================================================================
         const pageCount = doc.internal.getNumberOfPages();
         for (let p = 1; p <= pageCount; p++) {
-            doc.setPage(p);
+            doc.setPage(p); // jsPDF nu are "for each page" — trebuie comutat explicit pe fiecare pagină ca să desenăm pe ea
             const pH = doc.internal.pageSize.getHeight();
-            // Subtle line
+            // Linie subtilă de separare
             draw([220, 220, 220]);
             doc.setLineWidth(0.3);
             doc.line(m, pH - 14, pw - m, pH - 14);
-            // Disclaimer
+            // Disclaimer legal/medical (raportul nu înlocuiește un diagnostic medical)
             doc.setFontSize(7);
             doc.setFont('helvetica', 'italic');
             rgb(C.muted);
             doc.text(data.footerDisclaimer || '', m, pH - 9);
-            // Page number
+            // Numărul paginii curente din total
             doc.setFont('helvetica', 'normal');
             doc.text('Page ' + p + ' / ' + pageCount, pw - m, pH - 9, { align: 'right' });
-            // Brand watermark
+            // Watermark discret cu brandul aplicației
             doc.setFontSize(7);
             rgb([210, 210, 210]);
             doc.text('Life Alert +', pw - m, pH - 5, { align: 'right' });
         }
 
-        // Preview
+        // Generăm blob-ul PDF final și îl arătăm într-un preview în-pagină (fără să descărcăm automat fișierul)
         const pdfBlob = doc.output('blob');
-        this._lastPdfBlob = pdfBlob;
+        this._lastPdfBlob = pdfBlob; // Reținut pentru getPdfBase64() — evită regenerarea PDF-ului dacă utilizatorul vrea să-l trimită pe email
         const url = URL.createObjectURL(pdfBlob);
         this._showPreview(url, data.patientName || 'patient');
     },
 
     _lastPdfBlob: null,
 
+    // Convertește ultimul PDF generat în Base64 — apelat din Blazor când utilizatorul alege "trimite pe email"
+    // (backend-ul .NET primește string Base64, nu poate accesa direct Blob-ul din browser)
     getPdfBase64: async function () {
         if (!this._lastPdfBlob) return null;
         const buf = await this._lastPdfBlob.arrayBuffer();
@@ -661,8 +676,10 @@ window.pdfExport = {
         return btoa(binary);
     },
 
+    // Construiește manual un overlay HTML cu iframe pentru previzualizarea PDF-ului + butoane Descarcă/Email/Închide
+    // (preferat peste window.open, ca să rămânem în controlul Blazor și să putem invoca DotNet.invokeMethodAsync)
     _showPreview: function (blobUrl, patientName) {
-        // Remove existing overlay if any
+        // Eliminăm un overlay anterior, dacă există (re-generare raport fără a închide manual preview-ul vechi)
         const existing = document.getElementById('pdf-preview-overlay');
         if (existing) existing.remove();
 
@@ -692,8 +709,8 @@ window.pdfExport = {
         emailBtn.style.cssText = btnStyle + 'background:#2196F3;color:#fff;';
         emailBtn.onclick = function () {
             overlay.remove();
-            URL.revokeObjectURL(blobUrl);
-            DotNet.invokeMethodAsync('LifeAlertPlus.Client', 'OpenEmailModal');
+            URL.revokeObjectURL(blobUrl); // Curățăm imediat URL-ul de obiect, nu mai e nevoie de el din moment ce trimitem Base64 către Blazor
+            DotNet.invokeMethodAsync('LifeAlertPlus.Client', 'OpenEmailModal'); // Apel JS→.NET: deschide modalul Blazor de confirmare/destinatar email
         };
 
         const closeBtn = document.createElement('button');

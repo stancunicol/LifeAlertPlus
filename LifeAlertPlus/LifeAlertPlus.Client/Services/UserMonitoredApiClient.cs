@@ -7,6 +7,8 @@ using LifeAlertPlus.Shared.DTOs.Responses.UserMonitored;
 
 namespace LifeAlertPlus.Client.Services
 {
+    // Client HTTP pentru endpoint-urile /api/usermonitored — gestionează relația many-to-many
+    // dintre utilizatori (supraveghetori) și persoanele monitorizate (asociere, listare, arhivă)
     public class UserMonitoredApiClient
     {
         private readonly HttpClient _httpClient;
@@ -16,6 +18,7 @@ namespace LifeAlertPlus.Client.Services
             _httpClient = httpClient;
         }
 
+        // Asociază o persoană monitorizată existentă cu un utilizator (supraveghetor)
         public async Task<bool> AddMonitoredPersonToUserAsync(Guid userId, Guid monitoredPersonId)
         {
             var response = await _httpClient.PostAsync($"api/usermonitored/{userId}/monitored/{monitoredPersonId}", null);
@@ -23,6 +26,8 @@ namespace LifeAlertPlus.Client.Services
             return response.IsSuccessStatusCode;
         }
 
+        // Listează persoanele monitorizate de un utilizator; includeArchived controlează dacă
+        // se includ și persoanele arhivate. Returnează listă vidă la eroare HTTP sau body gol
         public async Task<IReadOnlyList<Monitored>> GetMonitoredPeopleAsync(Guid userId, bool includeArchived = false)
         {
             var query = includeArchived ? "?includeArchived=true" : string.Empty;
@@ -37,6 +42,7 @@ namespace LifeAlertPlus.Client.Services
             return result == null ? Array.Empty<Monitored>() : result;
         }
 
+        // Listează doar persoanele monitorizate arhivate ale unui utilizator
         public async Task<IReadOnlyList<Monitored>> GetArchivedMonitoredPeopleAsync(Guid userId)
         {
             var response = await _httpClient.GetAsync($"api/usermonitored/{userId}/monitored/archived");
@@ -50,6 +56,7 @@ namespace LifeAlertPlus.Client.Services
             return result == null ? Array.Empty<Monitored>() : result;
         }
 
+        // Listează toate asocierile utilizator-persoană monitorizată din sistem (probabil uz admin)
         public async Task<IReadOnlyList<MonitoredUserDTO>> GetAllMonitoredUsersAsync()
         {
             try

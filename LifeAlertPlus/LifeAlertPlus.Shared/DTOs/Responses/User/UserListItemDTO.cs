@@ -1,5 +1,8 @@
 namespace LifeAlertPlus.Shared.DTOs.Responses.User
 {
+    // Server: returnat de UserController (GET, listă) — folosit de Admin pentru a vedea toți utilizatorii
+    // (fără PasswordHash sau alte câmpuri sensibile din entitatea User).
+    // Client: consumat de UsersPage.razor.cs (tabelul de administrare a conturilor).
     public class UserListItemDTO
     {
         public Guid Id { get; set; }

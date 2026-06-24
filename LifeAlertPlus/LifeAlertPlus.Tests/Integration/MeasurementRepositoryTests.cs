@@ -5,10 +5,11 @@ using LifeAlertPlus.Tests.Helpers;
 
 namespace LifeAlertPlus.Tests.Integration;
 
+// Teste de integrare pentru MeasurementRepository — rulează pe DB reală (SQLite in-memory sau PostgreSQL)
 public class MeasurementRepositoryTests : IDisposable
 {
     private readonly LifeAlertPlus.Infrastructure.Context.LifeAlertPlusDbContext _ctx;
-    private readonly MeasurementRepository _sut;
+    private readonly MeasurementRepository _sut; // SUT = System Under Test
     private readonly Guid _monitoredId = Guid.NewGuid();
 
     public MeasurementRepositoryTests()
@@ -18,6 +19,7 @@ public class MeasurementRepositoryTests : IDisposable
         SeedMonitored();
     }
 
+    // O măsurătoare necesită un pacient existent în DB (constrângere FK pe IdMonitored)
     private void SeedMonitored()
     {
         var monitored = TestDataFactory.CreateMonitored(_monitoredId);
@@ -65,6 +67,7 @@ public class MeasurementRepositoryTests : IDisposable
         results.Should().BeEmpty();
     }
 
+    // 5 măsurători, paginate câte 3: pagina 1 → 3 rezultate, pagina 2 → restul de 2
     [Fact]
     public async Task GetByMonitoredId_PaginatesCorrectly()
     {
@@ -78,6 +81,7 @@ public class MeasurementRepositoryTests : IDisposable
         page2.Should().HaveCount(2);
     }
 
+    // Confirmă ordinea descrescătoare după CreatedAt (cea mai recentă măsurătoare primul element)
     [Fact]
     public async Task GetByMonitoredId_ReturnsMostRecentFirst()
     {
@@ -118,6 +122,7 @@ public class MeasurementRepositoryTests : IDisposable
 
     // ── GetTodayMeasurementsCountAsync ───────────────────────────────────────
 
+    // Verifică filtrarea pe interval UTC [astăzi 00:00, mâine 00:00) — exclude măsurătoarea de ieri
     [Fact]
     public async Task GetTodayMeasurementsCount_CountsOnlyToday()
     {
@@ -136,6 +141,7 @@ public class MeasurementRepositoryTests : IDisposable
 
     // ── DeleteMeasurementsOlderThanAsync ─────────────────────────────────────
 
+    // Politica de retenție: doar măsurătorile mai vechi de cutoff sunt șterse, cele recente rămân intacte
     [Fact]
     public async Task DeleteOlderThan_RemovesOnlyExpiredMeasurements()
     {

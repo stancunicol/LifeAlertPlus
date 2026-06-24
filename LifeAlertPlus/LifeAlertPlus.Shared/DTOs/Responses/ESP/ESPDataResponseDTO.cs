@@ -1,5 +1,13 @@
 namespace LifeAlertPlus.Shared.DTOs.Responses.ESP
 {
+    // DTO cu rol dublu (numele "Response" e puțin înșelător) — folosit ca:
+    //   1) REQUEST: payload-ul brut trimis de firmware (build_json() din main.cpp) către
+    //      ESPController.IngestESPData (POST /api/ESP/ingest) și ESPController.Simulate.
+    //   2) RESPONSE: ultima măsurătoare "în direct" a unui dispozitiv, cache-uită în memorie
+    //      (SimulationManager) și citită de Client prin MonitoredApiClient.GetEspDataAsync —
+    //      consumat aproape în toate paginile cu date live (Dashboard, MonitoredPage,
+    //      MonitoredUsersPage, SelectedMonitored, ViewSelectedMonitored) prin polling periodic.
+    // Generat și pentru simulare/testare de ESPDataGenerator (Helpers), fără hardware real.
     public class ESPDataResponseDTO
     {
         public string Serial { get; set; } = string.Empty;

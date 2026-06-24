@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace LifeAlertPlus.Client.Pages.Users
 {
+	// Code-behind pentru pagina Admin de gestionare a utilizatorilor — listare, căutare/filtrare, activare/dezactivare și ștergere logică (soft delete)
 	public partial class UsersPage : ComponentBase
 	{
 		[Inject]
@@ -50,6 +51,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 
 		protected Dictionary<Guid, int> MonitoredCounts { get; private set; } = new();
 
+		// Lista afișată: exclude adminii, aplică căutarea text și filtrul de stare, sortată alfabetic după nume
 		protected IEnumerable<UserListItemDTO> FilteredUsers => Users
 			.Where(u => !IsAdminRole(u.Role))
 			.Where(u => MatchesSearch(u, SearchText))
@@ -63,6 +65,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			await LoadUsersAsync();
 		}
 
+		// Extrage din token-ul JWT identitatea administratorului curent, pentru afișare în antetul paginii
 		private async Task LoadUserFromTokenAsync()
 		{
 			var claims = await TokenParser.GetClaimsAsync();
@@ -73,6 +76,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			ProfilePictureUrl = claims.ProfilePictureUrl ?? string.Empty;
 		}
 
+		// Încarcă toți utilizatorii din API (excluzând adminii) și numărul de persoane monitorizate pentru fiecare
 		protected async Task LoadUsersAsync()
 		{
 			IsLoading = true;
@@ -103,6 +107,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			// Use admin-level aggregated endpoint to get monitored counts for all users in one call
 			try
 			{
+				// Construiește un dicționar UserId -> numărul de persoane monitorizate, pentru afișare rapidă în tabel
 				var all = await UserMonitoredApiClient.GetAllMonitoredUsersAsync();
 				var dict = new Dictionary<Guid, int>();
 				foreach (var mu in all)
@@ -117,6 +122,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			}
 		}
 
+		// Comută starea contului — dezactivează dacă e activ, reactivează dacă e deja dezactivat
 		protected async Task ToggleActive(UserListItemDTO user)
 		{
 			if (user.DeletedAt == null)
@@ -125,6 +131,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 				await ActivateUser(user);
 		}
 
+		// Dezactivează contul (soft-delete) după confirmare în browser — contul rămâne în baza de date, dar nu se mai poate autentifica
 		protected async Task DeactivateUser(UserListItemDTO user)
 		{
 			var ok = await JSRuntime.InvokeAsync<bool>("confirm", $"Deactivate user {user.Email}? This will disable the account.");
@@ -141,6 +148,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			}
 		}
 
+		// Reactivează un cont dezactivat anterior, ștergând marca DeletedAt
 		protected async Task ActivateUser(UserListItemDTO user)
 		{
 			var success = await UserApiClient.ActivateUserAsync(user.Id);
@@ -154,6 +162,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			}
 		}
 
+		// Deschide modalul de confirmare a ștergerii, memorând utilizatorul țintă
 		protected void ConfirmDelete(UserListItemDTO user)
 		{
 			_userToDelete = user;
@@ -166,6 +175,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			_userToDelete = null;
 		}
 
+		// Confirmă ștergerea logică (soft-delete) a utilizatorului selectat în modal — reutilizează același endpoint ca dezactivarea
 		protected async Task ConfirmUserSoftDeleteAsync()
 		{
 			if (_userToDelete == null) return;
@@ -190,6 +200,7 @@ namespace LifeAlertPlus.Client.Pages.Users
 			StatusFilter = filter;
 		}
 
+		// Verifică dacă termenul de căutare se găsește în prenume, nume sau email (insensibil la majuscule)
 		private static bool MatchesSearch(UserListItemDTO user, string search)
 		{
 			if (string.IsNullOrWhiteSpace(search))
@@ -211,12 +222,14 @@ namespace LifeAlertPlus.Client.Pages.Users
 			};
 		}
 
+		// Adminii nu sunt afișați în această listă (pagina e dedicată gestionării utilizatorilor obișnuiți)
 		private static bool IsAdminRole(string? role)
 		{
 			return !string.IsNullOrWhiteSpace(role)
 				&& role.IndexOf("admin", StringComparison.OrdinalIgnoreCase) >= 0;
 		}
 
+		// Generează inițialele utilizatorului (din prenume+nume) pentru avatar, cu fallback "US" dacă nu există nume
 		protected string GetInitials(UserListItemDTO user)
 		{
 			var composed = $"{user.FirstName} {user.LastName}".Trim();

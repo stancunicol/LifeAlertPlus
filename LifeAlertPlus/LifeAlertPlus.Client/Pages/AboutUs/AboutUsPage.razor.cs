@@ -3,6 +3,7 @@ using LifeAlertPlus.Client.Services;
 
 namespace LifeAlertPlus.Client.Pages.AboutUs;
 
+// Code-behind pentru pagina "Despre noi" — afișează și numele/poza utilizatorului autentificat în antet
 public partial class AboutUsPage : ComponentBase
 {
     [Inject]
@@ -21,12 +22,14 @@ public partial class AboutUsPage : ComponentBase
 
     protected override async Task OnInitializedAsync()
     {
+        // Citește mai întâi datele de bază din claims-urile token-ului (rapid, fără apel API)
         var claims = await TokenParserService.GetClaimsAsync();
         if (claims != null)
         {
             UserFullName = $"{claims.FirstName} {claims.LastName}".Trim();
             ProfilePictureUrl = claims.ProfilePictureUrl;
 
+            // Apoi suprascrie cu datele proaspete din API, dacă sunt disponibile (claims-urile pot fi vechi/incomplete)
             var userProfile = await UserApiClient.GetUserByIdAsync(claims.UserId);
             if (userProfile != null)
             {
@@ -39,6 +42,7 @@ public partial class AboutUsPage : ComponentBase
         }
         else
         {
+            // Fallback dacă utilizatorul nu e autentificat sau token-ul nu poate fi decodat
             UserFullName = "User";
         }
     }

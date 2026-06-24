@@ -1,11 +1,14 @@
+# Pipeline CI/CD pentru backend-ul ASP.NET Core (LifeAlertPlus.API) — structură identică cu client.yml,
+# dar publică proiectul API în locul Client-ului. Cele două workflow-uri rulează independent și în paralel
+# la fiecare push pe main (GitHub Actions pornește câte un job separat per fișier .yml din workflows/).
 name: Deploy API to Azure
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]       # Doar push-urile pe ramura principală declanșează deploy automat
     paths:
-      - 'LifeAlertPlus/**'
-  workflow_dispatch:
+      - 'LifeAlertPlus/**'   # Rulează doar la modificări în folderul soluției .NET
+  workflow_dispatch:         # Permite rulare manuală din interfața GitHub Actions
 
 jobs:
   build-and-deploy:
@@ -17,17 +20,21 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '8.0.x'   # Trebuie să corespundă cu net8.0 din toate .csproj-urile
 
       - name: Restore solution
-        run: dotnet restore LifeAlertPlus/LifeAlertPlus.sln
+        run: dotnet restore LifeAlertPlus/LifeAlertPlus.sln   # Restore pe toată soluția (nu doar pe API), ca testele să aibă acces la toate proiectele
 
+      # Aceleași teste ca în client.yml — rulează o singură suită de teste (LifeAlertPlus.Tests), care acoperă
+      # atât backend-ul cât și logica partajată. Dacă testele pică, deploy-ul API se oprește.
       - name: Run tests
         run: dotnet test LifeAlertPlus/LifeAlertPlus.Tests/LifeAlertPlus.Tests.csproj --no-restore --configuration Release --logger "trx;LogFileName=test-results.trx"
 
+      # Publică doar proiectul API — rezultatul (DLL-uri + appsettings + wwwroot) ajunge în ./publish
       - name: Publish API
         run: dotnet publish LifeAlertPlus/LifeAlertPlus.API/LifeAlertPlus.API.csproj --no-restore -c Release -o publish
 
+      # Deploy pe Azure Web App separat de cel al Client-ului (app-name și publish-profile diferite, secrete distincte)
       - name: Deploy to Azure Web App (API)
         uses: azure/webapps-deploy@v2
         with:

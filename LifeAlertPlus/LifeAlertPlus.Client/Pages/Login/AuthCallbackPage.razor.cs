@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 
 namespace LifeAlertPlus.Client.Pages.Login
 {
+    // Code-behind pentru pagina de callback OAuth (Google) — primește codul de autorizare din query string,
+    // îl schimbă pe un JWT propriu prin API și redirecționează utilizatorul spre consimțământ sau dashboard
     public partial class AuthCallbackPage : ComponentBase
     {
         [Inject] private NavigationManager Navigation { get; set; } = default!;
@@ -14,6 +16,7 @@ namespace LifeAlertPlus.Client.Pages.Login
 
         protected override async Task OnInitializedAsync()
         {
+            // Extrage "code" și "returnUrl" din query string-ul URL-ului de callback
             var uri = new Uri(Navigation.Uri);
             string? code      = null;
             string? returnUrl = null;
@@ -30,8 +33,8 @@ namespace LifeAlertPlus.Client.Pages.Login
                 if (key.Equals("returnUrl", StringComparison.OrdinalIgnoreCase)) returnUrl = val;
             }
 
-            // If the server forwarded an `error` in the callback URL, propagate it to /login
-            // so the user sees a concrete message instead of a silent redirect.
+            // Dacă server-ul a transmis un parametru `error` în URL-ul de callback, îl propagă spre /login
+            // ca utilizatorul să vadă un mesaj concret în loc de o redirecționare silențioasă
             string? serverError = null;
             foreach (var part in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
             {
@@ -53,7 +56,7 @@ namespace LifeAlertPlus.Client.Pages.Login
                 return;
             }
 
-            // Validate returnUrl — only allow local relative paths.
+            // Validează returnUrl — acceptă doar căi locale relative (previne open-redirect)
             if (string.IsNullOrWhiteSpace(returnUrl) ||
                 !returnUrl.StartsWith('/') ||
                 returnUrl.StartsWith("//"))
@@ -63,12 +66,13 @@ namespace LifeAlertPlus.Client.Pages.Login
 
             try
             {
+                // Schimbă codul de autorizare Google pe un JWT propriu, emis de API
                 var response = await Http.GetFromJsonAsync<TokenResponse>($"api/auth/exchange-token?code={Uri.EscapeDataString(code)}");
                 if (response?.Token is not null)
                 {
                     await JSRuntime.InvokeVoidAsync("sessionStorage.setItem", "authToken", response.Token);
 
-                    // GDPR: first-time Google users haven't given explicit consent yet.
+                    // GDPR: utilizatorii care se autentifică prima dată cu Google nu au dat încă consimțământul explicit
                     var needsConsent = false;
                     try
                     {
@@ -77,7 +81,7 @@ namespace LifeAlertPlus.Client.Pages.Login
                         var val = jwt.Claims.FirstOrDefault(c => c.Type == "needsConsent")?.Value;
                         needsConsent = string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
                     }
-                    catch { /* best-effort; on parse failure fall through to returnUrl */ }
+                    catch { /* best-effort; dacă parsarea JWT-ului eșuează, se continuă spre returnUrl */ }
 
                     Navigation.NavigateTo(needsConsent
                         ? $"/consent?returnUrl={Uri.EscapeDataString(returnUrl)}"

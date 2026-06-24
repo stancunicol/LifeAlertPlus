@@ -16,18 +16,19 @@ using Moq;
 
 namespace LifeAlertPlus.Tests.Unit.API.Controllers;
 
+// Teste pentru MeasurementController — validarea payload-ului de la ESP32 și autorizarea pe baza ownership-ului pacientului
 public class MeasurementControllerTests
 {
     private readonly Mock<IMeasurementService>   _measurementSvc   = new();
     private readonly Mock<IUserMonitoredService> _userMonitoredSvc = new();
     private readonly Guid                        _callerId         = Guid.NewGuid();
-    private readonly MeasurementController       _sut;
+    private readonly MeasurementController       _sut; // SUT = System Under Test
 
     public MeasurementControllerTests()
     {
         _sut = new MeasurementController(_measurementSvc.Object, BuildAlertMonitor(), _userMonitoredSvc.Object, TestDataFactory.CreateLogger<MeasurementController>());
 
-        // Provide an authenticated user so UserOwnsMonitoredAsync can read the caller id
+        // Simulăm un utilizator autentificat, ca UserOwnsMonitoredAsync să poată citi ID-ul apelantului din claims
         var claims = new[] { new Claim(ClaimTypes.NameIdentifier, _callerId.ToString()) };
         _sut.ControllerContext = new ControllerContext
         {
@@ -38,7 +39,7 @@ public class MeasurementControllerTests
         };
     }
 
-    // Makes _callerId the owner of the given monitored person
+    // Face din _callerId proprietarul persoanei monitorizate date (necesar pentru testele care trec de verificarea de autorizare)
     private void SetupOwnership(Guid monitoredId)
     {
         _userMonitoredSvc
@@ -46,6 +47,8 @@ public class MeasurementControllerTests
             .ReturnsAsync([new Monitored { Id = monitoredId }]);
     }
 
+    // AlertMonitorService are multe dependențe — construim una reală (nu mock) cu un IServiceScopeFactory
+    // care aruncă la CreateScope(), pentru că testele MeasurementController nu ajung de fapt să declanșeze alerte
     private static AlertMonitorService BuildAlertMonitor()
     {
         var scopeFactory = new Mock<IServiceScopeFactory>();

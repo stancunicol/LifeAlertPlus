@@ -4,18 +4,18 @@ using Microsoft.Extensions.Configuration;
 
 namespace LifeAlertPlus.Infrastructure.Context
 {
-    // Used by `dotnet ef migrations add` / `database update` at design time.
-    // Reads the same connection string the runtime uses, so credentials stay in one place.
+    // Folosit de `dotnet ef migrations add` / `database update` la design-time (generarea migrărilor).
+    // Citește același connection string ca runtime-ul, ca să existe o singură sursă de adevăr pentru credențiale.
     public class LifeAlertPlusDbContextFactory : IDesignTimeDbContextFactory<LifeAlertPlusDbContext>
     {
         public LifeAlertPlusDbContext CreateDbContext(string[] args)
         {
-            // 1. Explicit env var override wins (useful in CI).
+            // 1. Variabila de mediu explicită are prioritate (utilă în CI/CD).
             var connectionString = Environment.GetEnvironmentVariable("LIFEALERT_CONNECTION_STRING");
 
-            // 2. Otherwise read ConnectionStrings:Default from the API project's appsettings.
-            //    The tool is typically run from the solution root or the Infrastructure folder,
-            //    so try both relative locations.
+            // 2. Altfel citim ConnectionStrings:Default din appsettings-ul proiectului API.
+            //    Unealta `dotnet ef` rulează de obicei din rădăcina soluției sau din folderul Infrastructure,
+            //    deci încercăm ambele căi relative posibile.
             if (string.IsNullOrWhiteSpace(connectionString))
             {
                 var candidates = new[]
@@ -36,13 +36,13 @@ namespace LifeAlertPlus.Infrastructure.Context
                 }
             }
 
-            // 3. Last-resort fallback so `dotnet ef migrations add` (which only needs the
-            //    provider, not a real DB) still works from arbitrary locations.
+            // 3. Fallback de ultimă instanță, ca `dotnet ef migrations add` (care are nevoie doar de
+            //    providerul DB, nu de o conexiune reală) să funcționeze din orice locație.
             if (string.IsNullOrWhiteSpace(connectionString))
                 connectionString = "Host=localhost;Port=5432;Database=lifealertplus;Username=postgres;Password=postgres";
 
             var optionsBuilder = new DbContextOptionsBuilder<LifeAlertPlusDbContext>();
-            optionsBuilder.UseNpgsql(connectionString);
+            optionsBuilder.UseNpgsql(connectionString); // Provider PostgreSQL (Npgsql)
 
             return new LifeAlertPlusDbContext(optionsBuilder.Options);
         }
